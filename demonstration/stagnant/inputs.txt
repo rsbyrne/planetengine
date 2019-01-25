@@ -1,0 +1,1 @@
+{"config": {}, "options": {}, "params": {"maxVisc": 30000.0, "tau1": 10000000.0, "tau0": 1000000.0, "ratio": 1.0001, "Ra": 10000000.0, "res": 64, "isoviscous": false}}
