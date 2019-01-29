@@ -9,157 +9,132 @@ import underworld as uw
 from underworld import function as fn
 import math
 import time
+import tarfile
+import os
+import shutil
+import json
+import itertools
+import inspect
+import importlib
+import csv
 
+def testfn():
+    testvar = time.time()
+    return testvar
 
-# In[5]:
+def suite_list(listDict):
+    listOfKeys = sorted(listDict)
+    listOfVals = []
+    listOfDicts = []
+    for key in listOfKeys:
+        val = listDict[key]
+        if type(val) == list:
+            entry = val
+        else:
+            entry = [val]
+        listOfVals.append(entry)
+    combinations = list(itertools.product(*listOfVals))
+    for item in combinations:
+        newDict = {key: val for key, val in zip(listOfKeys, item)}
+        listOfDicts.append(newDict)
+    return listOfDicts
 
+def traverse(modelscript, options, params, stopCondition):
+    model = modelscript.Handler(params, options)
 
-class RuntimeCondition():
+def getDefaultKwargs(function):
+    argsignature = inspect.signature(function)
+    argbind = argsignature.bind()
+    argbind.apply_defaults()
+    argdict = dict(argbind.arguments)
+    return argdict
 
-    class CombinedCondition():
-        def __init__(self, arg, tupleOfFunctions):
-            self.tupleOfFunctions = tupleOfFunctions
-            self.arg = arg
-        def evaluate(self, MODEL):
-            boolList = [function.evaluate(MODEL) for function in self.tupleOfFunctions]
-            antiBoolList = [not x for x in boolList]
-            if self.arg == 'all':
-                return all(boolList)
-            elif self.arg == 'none':
-                return all(antiBoolList)
-            elif self.arg == 'any':
-                return not all(antiBoolList)
+class StopCondition:
+
+    def __init__(self, stopFn, stopStr):
+        self.stopFn = stopFn
+        self.stopStr = stopStr
+        self.status = "Running."
+
+    def evaluate():
+        if stopFn():
+            self.status = self.stopStr
+            return True
+        else:
+            return False
+
+class Grouper:
+    def __init__(self, indict = {}):
+        self.selfdict = {}
+        self.SetDict(indict)
+    def __bunch__(self, adict):
+        self.__dict__.update(adict)
+    def SetVal(self, key, val):
+        self.selfdict[key] = val
+        self.__bunch__(self.selfdict)
+    def SetVals(self, dictionary):
+        for key in dictionary:
+            self.SetVal(key, dictionary[key])
+    def ClearAttr(self):
+        for key in self.selfdict:
+            delattr(self, key)
+        self.selfdict = {}
+    def SetDict(self, dict):
+        self.ClearAttr()
+        self.SetVals(dict)
+    def Out(self):
+        outstring = ""
+        for key in self.selfdict:
+            thing = self.selfdict[key]
+            if isinstance(thing, self):
+                thing.Out()
             else:
-                print "CombinedCondition argument not recognised"
+                outstring += key + ": " + thing
+        return outstring
 
-    class UponCompletion():
-        def __init__(self, TrueOrFalse):
-            self.TrueOrFalse = TrueOrFalse
-        def evaluate(self, MODEL):
-            if MODEL.MISC.modelrunComplete:
-                return self.TrueOrFalse
-            else:
-                return not self.TrueOrFalse
+#class RuntimeConditions:
 
-    class ConstantBool():
-        def __init__(self, arg):
-            self.arg = arg
-        def evaluate(self, MODEL):
-            return self.arg
+    #def __init__(self, listoftuples):
 
-    class StepInterval():
-        def __init__(self, stepInterval, TrueOrFalse):
-            self.stepInterval = stepInterval
-            self.TrueOrFalse = TrueOrFalse
-        def evaluate(self, MODEL):
-            currentStep = MODEL.MISC.currentStep
-            if currentStep % self.stepInterval == 0:
-                return self.TrueOrFalse
-            else:
-                return not self.TrueOrFalse
+        #for condName, condStatement in listoftuples:
+            #setattr(self, condName, self._Condition(condStatement))
 
-    class TimeInterval():
-        def __init__(self, timeInterval, TrueOrFalse):
-            self.timeInterval = timeInterval
-            self.lastTimeOut = 0.
-            self.TrueOrFalse = TrueOrFalse
-        def evaluate(self, MODEL):
-            currentTime = MODEL.MISC.currentTime
-            if currentTime > self.lastTimeOut + self.timeInterval:
-                self.lastTimeOut += self.timeInterval
-                return self.TrueOrFalse
-            else:
-                return not self.TrueOrFalse
+    #class _Condition():
 
-    class EpochTimeInterval():
-        def __init__(self, timeInterval):
-            self.timeInterval = timeInterval
-            self.lastTimeOut = 0.
-        def evaluate(self, MODEL):
-            if MODEL.MISC.runningEpochTime > self.lastTimeOut + self.timeInterval:
-                self.lastTimeOut += self.timeInterval
-                return True
-            else:
-                return False
+        #def __init__(self, fn):
+            #self.fn = fn
 
-    class AfterStep():
-        def __init__(self, targetStep, TrueOrFalse):
-            self.targetStep = targetStep
-            self.TrueOrFalse = TrueOrFalse
-        def evaluate(self, MODEL):
-            currentStep = MODEL.MISC.currentStep
-            if currentStep == self.targetStep:
-                return self.TrueOrFalse
-            elif currentStep < self.targetStep:
-                return not self.TrueOrFalse
-            else:
-                return self.TrueOrFalse
+        #def __call__(self):
+            #return self.fn()
 
-    class AfterTime():
-        def __init__(self, targetTime, TrueOrFalse):
-            self.targetTime = targetTime
-            self.TrueOrFalse = TrueOrFalse
-        def evaluate(self, MODEL):
-            currentTime = MODEL.MISC.currentTime
-            if currentTime > self.targetTime:
-                return self.TrueOrFalse
-            else:
-                return not self.TrueOrFalse
+#class RuntimeConditions:
 
-    class AfterEpochTimeDuration():
-        def __init__(self, timeCheck, TrueOrFalse):
-            self.timeCheck = timeCheck
-            self.TrueOrFalse = TrueOrFalse
-        def evaluate(self, MODEL):
-            if MODEL.MISC.runningEpochTime < self.timeCheck:
-                return not self.TrueOrFalse
-            else:
-                return self.TrueOrFalse
+    #class Value:
 
-    class SteadyStateCriterion_1():
-        def __init__(self, keytuple, timeHorizon, threshold, TrueOrFalse):
-            self.keytuple = keytuple
-            self.timeHorizon = timeHorizon
-            self.threshold = threshold
-            self.TrueOrFalse = TrueOrFalse
-        def evaluate(self, MODEL):
-            if MODEL.MISC.freshData:
-                print "Fresh data is available - checking steady state criterion..."
-                isSteady = CheckSteadyState_1(MODEL.DATA, self.keytuple, self.timeHorizon, self.threshold)
-                if isSteady:
-                    return self.TrueOrFalse
-                else:
-                    return not self.TrueOrFalse
-            else:
-                return not self.TrueOrFalse
+        #def __init__(variable, value):
+            #self.variable = variable
+            #self.value = value
 
-    class SteadyStateCriterion_2():
-        def __init__(self, key, timeHorizon, threshold, TrueOrFalse):
-            self.key = key
-            self.timeHorizon = timeHorizon
-            self.threshold = threshold
-            self.TrueOrFalse = TrueOrFalse
-        def evaluate(self, MODEL):
-            if MODEL.MISC.freshData:
-                print "Fresh data is available - checking steady state criterion..."
-                isSteady = CheckSteadyState_2(MODEL.DATA, self.key, self.timeHorizon, self.threshold)
-                if isSteady:
-                    print "Steady state achieved!"
-                    return self.TrueOrFalse
-                else:
-                    print "Steady state not yet achieved."
-                    return not self.TrueOrFalse
-            else:
-                print "No fresh data available."
-                return not self.TrueOrFalse
+        #def evaluate(self):
+            #return bool(variable == value)
 
+    #class Group:
 
-# In[99]:
+        #def __init__(pythonfunc, listofconditions):
+            # pythonfunc can be any python function
+            # that takes a list of objects
+            # that have 'evaluate' methods that return a viable bool() input
+            # and returns a value which is itself a viable bool() input
+            #self.listofconditions = listofconditions
+            #self.pythonfunc = pythonfunc
 
+        #def evaluate(self):
+            #listofbools = [bool(item.evaluate()) for item in listofconditions]
+            #return bool(self.pythonfunc(self.listofbools))
 
-class CoordSystems():
+class CoordSystems:
 
-    class Radial():
+    class Radial:
 
         def __init__(
                 self,
@@ -204,22 +179,18 @@ class CoordSystems():
 
             return curvedBox
 
-
-# In[ ]:
-
-
-class InitialConditions():
+class InitialConditions:
     
     class Group():
 
         def __init__(self, listofICs):
             self.listofICs = listofICs
 
-        def apply_condition(self):
+        def apply(self):
             for condition in self.listofICs:
-                condition.apply_condition()
+                condition.apply()
 
-    class NoisyGradient():
+    class NoisyGradient:
 
         def __init__(
                 self, variableArray, coordArray,
@@ -234,14 +205,16 @@ class InitialConditions():
             self.smoothness = smoothness
             self.range = valRange
             self.randomSeed = randomSeed
+            self.depthFn = 1. - fn.coord()[1]
+            self.valRange = valRange
 
-        def apply_condition(self):
+        def apply(self):
             #tempGradFn = depthFn * self.gradient * (self.range[1] - self.range[0]) + self.range[0]
             #field.data[:] = CapValue(randomise(self.smoothness, self.randomSeed) * tempGradFn.evaluate(mesh), self.range)
-            tempGradFn = depthFn * self.gradient * (self.valRange[1] - self.valRange[0]) + self.valRange[0]
+            tempGradFn = self.depthFn * self.gradient * (self.valRange[1] - self.valRange[0]) + self.valRange[0]
             initialTempFn = uw.function.branching.conditional([
-                (depthFn == 0., self.valRange[0]),
-                (depthFn == 1., self.valRange[1]),
+                (self.depthFn == 0., self.valRange[0]),
+                (self.depthFn == 1., self.valRange[1]),
                 (tempGradFn < self.valRange[0], self.valRange[0]), # if this, that
                 (tempGradFn > self.valRange[1] , self.valRange[1]), # otherwise, if this, this other thing
                 (True, tempGradFn) # otherwise, this one
@@ -260,25 +233,36 @@ class InitialConditions():
                     if self.range[0] < randTemp < self.range[1]:
                         self.variableArray[i] = randTemp
 
-    class LoadField():
+    class LoadField:
 
         def __init__(
                 self,
                 field = None,
                 filename = None,
-                interpolate = True
+                inputDim = 1,
+                inputRes = (64, 64),
+                inputCoords = ((0., 0.), (1., 1.)),
+                mapper = None,
                 ):
             self.field = field
-            self.filename = filename
-            self.interpolate = interpolate
+            for proc in range(uw.nProcs()):
+                if uw.rank() == proc:
+                    inputMesh = uw.mesh.FeMesh_Cartesian(
+                        elementRes = inputRes,
+                        minCoord = inputCoords[0],
+                        maxCoord = inputCoords[1],
+                        partitioned = False
+                        )
+                    inField = inputMesh.add_variable(inputDim)
+                    inField.load(filename)
+            if type(mapper) == type(None):
+                mapper = self.field.mesh
+            self.newData = inField.evaluate(mapper)
 
-        def apply_condition(self):
-            self.field.load(
-                self.filename,
-                interpolate = self.interpolate
-                )
+        def apply(self):
+            self.field.data[:] = self.newData
 
-    class Sinusoidal():
+    class Sinusoidal:
 
         def __init__(
                 self, variableArray, coordArray,
@@ -286,6 +270,7 @@ class InitialConditions():
                 freq = 1.,
                 tempRange = (0., 1.),
                 phase = 0.,
+                boxDims = (1., 1.), # length, height
                 ):
             self.variableArray = variableArray
             self.coordArray = coordArray
@@ -293,22 +278,25 @@ class InitialConditions():
             self.tempRange = tempRange
             self.phase = phase
             self.pert = pert
+            self.boxDims = boxDims
 
         def sinusoidal_IC(self):
-            boxLength = np.max(self.coordArray[:,0]) - np.min(self.coordArray[:,0])
-            boxHeight = np.max(self.coordArray[:,1]) - np.min(self.coordArray[:,1])
+            boxLength, boxHeight = self.boxDims
             tempMin, tempMax = self.tempRange
             deltaT = self.tempRange[1] - self.tempRange[0]
-            pertArray = self.pert * np.cos(np.pi * (self.phase + self.freq * self.coordArray[:,0])) * np.sin(np.pi * self.coordArray[:,1])
+            pertArray = \
+                self.pert \
+                * np.cos(np.pi * (self.phase + self.freq * self.coordArray[:,0])) \
+                * np.sin(np.pi * self.coordArray[:,1])
             outArray = tempMin + deltaT * (boxHeight - self.coordArray[:,1]) + pertArray
             outArray = np.clip(outArray, tempMin, tempMax)
             outArray = np.array([[item] for item in outArray])
             return outArray
 
-        def apply_condition(self):
+        def apply(self):
             self.variableArray[:] = self.sinusoidal_IC()
 
-    class Extents():
+    class Extents:
 
         def __init__(self, variableArray, coordArray, initialExtents):
             self.variableArray = variableArray
@@ -325,38 +313,38 @@ class InitialConditions():
                     )
             return ICarray
 
-        def apply_condition(self):
+        def apply(self):
             self.variableArray[:] = self.initial_extents()
             
 
-    class Indices():
+    class Indices:
 
         def __init__(self, variableArray, indexControls, boundaries = None):
             self.variableArray = variableArray
             self.indexControls = indexControls
 
-        def apply_condition(self):
+        def apply(self):
             for indices, val in self.indexControls:
                 self.variableArray[indices] = val
 
-    class SetVal():
+    class SetVal:
 
         def __init__(self, variableArray, val):
             self.variableArray = variableArray
             self.val = val
 
-        def apply_condition(self):
+        def apply(self):
             if type(self.variableArray) == list:
                 for array in self.variableArray:
                     array[:] = self.val
             else:
                 self.variableArray[:] = self.val
 
-class Analysis():
+class Analysis:
 
-    class Analyse():
+    class Analyse:
 
-        class asdfDimensionlessGradient():
+        class asdfDimensionlessGradient:
 
             def __init__(self, scalarField, mesh,
                          component = 1,
@@ -381,7 +369,7 @@ class Analysis():
                     / self.intBase.evaluate()[0]
                 return Nu
 
-        class DimensionlessGradient():
+        class DimensionlessGradient:
 
             def __init__(self, scalarField, mesh,
                          component = 1,
@@ -406,7 +394,7 @@ class Analysis():
                     / self.intBase.evaluate()[0]
                 return Nu
 
-        class ScalarFieldAverage():
+        class ScalarFieldAverage:
 
             def __init__(self, field, mesh):
 
@@ -419,7 +407,7 @@ class Analysis():
                     / self.intMesh.evaluate()[0]
                 return average
 
-        class VectorFieldVolRMS():
+        class VectorFieldVolRMS:
 
             def __init__(self, vectorField, mesh):
 
@@ -433,7 +421,7 @@ class Analysis():
                     / self.intMesh.evaluate()[0]
                 return fieldrms
 
-        class VectorFieldSurfRMS():
+        class VectorFieldSurfRMS:
 
             def __init__(self, vectorField, mesh, indexSet):
 
@@ -454,7 +442,7 @@ class Analysis():
                     / self.intMesh.evaluate()[0]
                 return fieldrms
 
-        class Constant():
+        class Constant:
 
             def __init__(self, constant):
 
@@ -464,7 +452,7 @@ class Analysis():
 
                 return self.constant
 
-        class ArrayStripper():
+        class ArrayStripper:
 
             def __init__(self, arrayobj, indexer):
                 # input should be a numpy array
@@ -481,29 +469,34 @@ class Analysis():
                     value = value[index]
                 return value
 
-    class Analyser():
+    class Analyser:
 
-        def __init__(self, name, analyserDict):
+        def __init__(self, name, analyserDict, formatDict):
 
             self.analyserDict = analyserDict
-            self.header = sorted(analyserDict.keys(), key=str.lower)
+            self.formatDict = formatDict
+            self.header = sorted(analyserDict, key=str.lower)
             self.headerStr = ', '.join(self.header)
             self.dataDict = {}
             self.data = [None] * len(self.header)
             self.name = name
+            self.dataBrief = "No data."
 
-        def update(self):
+        def analyse(self):
 
             for key in self.analyserDict:
                 self.dataDict[key] = self.analyserDict[key].evaluate()
             self.data = [self.dataDict[key] for key in self.header]
+            self.keys = sorted(self.dataDict, key = str.lower)
+            self.dataBrief = [(key, self.formatDict[key].format(self.dataDict[key])) for key in self.keys]
 
-        def evaluate(self):
+        def report(self):
 
-            self.update()
-            return self.data
+            if uw.rank() == 0:
+                for pair in self.dataBrief:
+                    print(pair[0], pair[1])
 
-    class DataCollector():
+    class DataCollector:
 
         def __init__(self, analysers):
 
@@ -512,85 +505,344 @@ class Analysis():
             self.names = [analyser.name for analyser in self.analysers]
             self.datasets = [[] for analyser in self.analysers]
 
-        def update(self):
+        def collect(self, refresh = False):
 
             for index, analyser in enumerate(self.analysers):
+                if refresh:
+                    analyser.analyse()
                 self.datasets[index].append(analyser.data)
 
         def clear(self):
 
-            if not self.datasets == [[]]:
-                outdata = []
-                for name, headerStr, dataset in zip(self.names, self.headers, self.datasets):
+            outdata = []
+            for name, headerStr, dataset in zip(self.names, self.headers, self.datasets):
+                if len(dataset) > 0:
                     dataArray = np.vstack(dataset)
-                    outdata.append((name, headerStr, dataArray))
-                self.datasets = [[] for analyser in self.analysers]
-                return outdata
+                else:
+                    dataArray = None
+                outdata.append((name, headerStr, dataArray))
+            self.datasets = [[] for analyser in self.analysers]
+            return outdata
 
-    class Report():
-
-        def __init__(self, dataDict, formatDict, fig = None):
-
-            self.dataDict = dataDict
-            self.formatDict = formatDict
-            self.fig = fig
-
-        def report(self):
-            keys = sorted(self.dataDict.keys(), key = str.lower)
-            databrief = [(key, self.formatDict[key].format(self.dataDict[key])) for key in keys]
-            if uw.rank() == 0:
-                print databrief
-                if not self.fig == None:
-                    self.fig.show()
-
-class Checkpointer():
+class Checkpointer:
 
     def __init__(
             self,
-            outputPath = "",
-            extension = '.csv',
-            mode = 'ab',
-            figs = None,
             varsOfState = None,
-            dataCollector = None,
-            step = None,
+            path = '',
+            scripts = None,
+            figs = None,
+            dataCollectors = None,
+            inputs = None,
+            step = None
             ):
 
-        # 'figs', 'varsOfState', and 'data' should be of the format
-        # [(name, thing), (...,...), ...]
-        self.outputPath = outputPath
+        self.scripts = scripts
         self.figs = figs
+        self.dataCollectors = dataCollectors
         self.varsOfState = varsOfState
-        self.dataCollector = dataCollector
-        self.mode = mode
         self.step = step
+        self.inputs = inputs
+        self.path = path
 
     def checkpoint(self):
-        
+
         if uw.rank() == 0:
-            print "Checkpointing..."
-        if type(self.step) == None:
+            if not os.path.isdir(self.path):
+                os.makedirs(self.path)
+
+                if not self.scripts is None:
+                    for scriptname in self.scripts:
+                        path = self.scripts[scriptname]
+                        tweakedpath = os.path.splitext(path)[0] + ".py"
+                        newpath = self.path + "_" + scriptname + ".py"
+                        shutil.copyfile(tweakedpath, newpath)
+
+                inputFilename = os.path.join(self.path, 'inputs.txt')
+                with open(inputFilename, 'w') as file:
+                     file.write(json.dumps(self.inputs))
+
+        if uw.rank() == 0:
+            print("Checkpointing...")
+
+        if self.step is None:
             stepStr = ""
         else:
             step = self.step.value
-            stepStr = "_" + str(step).zfill(8)
-        for name, fig in self.figs:
-            fig.save(self.outputPath + name + stepStr)
-        for row in self.varsOfState:
-            variablePairs, substratePair = row
-            substrate, substrateName = substratePair
-            handle = substrate.save(self.outputPath + substrateName + stepStr + ".h5")
-            for pair in variablePairs:
-                variable, varName = pair
-                variable.save(self.outputPath + varName + stepStr + ".h5", handle)
+            stepStr = str(step).zfill(8)
+
+        self.checkpointDir = os.path.join(self.path, stepStr)
+
+        if os.path.isdir(self.checkpointDir):
+            if uw.rank() == 0:
+                print('Checkpoint directory found: skipping.')
+            return None
+        else:
+            if uw.rank() == 0:
+                os.makedirs(self.checkpointDir)
+
         if uw.rank() == 0:
-            for row in self.dataCollector.clear():
-                name, headerStr, dataArray = row
-                filename = self.outputPath + name + '.csv'
-                with open(filename, self.mode) as openedfile:
-                    np.savetxt(openedfile, dataArray,
-                        delimiter = ",",
-                        header = headerStr
-                        )
+            print("Saving figures...")
+        if not self.figs is None:
+            for name in self.figs:
+                fig = self.figs[name]
+                fig.save(os.path.join(self.checkpointDir, name))
         if uw.rank() == 0:
-            print "Checkpointed!"
+            print("Saved.")
+
+        if uw.rank() == 0:
+            print("Saving vars of state...")
+        if not self.varsOfState is None:
+            for row in self.varsOfState:
+                variablePairs, substratePair = row
+                substrateName, substrate = substratePair
+                handle = substrate.save(os.path.join(self.checkpointDir, substrateName + ".h5"))
+                for pair in variablePairs:
+                    varName, variable = pair
+                    variable.save(os.path.join(self.checkpointDir, varName + ".h5"), handle)
+        if uw.rank() == 0:
+            print("Saved.")
+
+        if uw.rank() == 0:
+            print("Saving snapshot...")
+            if not self.dataCollectors is None:
+                for dataCollector in self.dataCollectors:
+                    for index, name in enumerate(dataCollector.names):
+                        dataArray = dataCollector.datasets[index][-1:]
+                        headerStr = dataCollector.headers[index]
+                        filename = os.path.join(self.checkpointDir, + name + "_snapshot" + ".csv")
+                        if not type(dataArray) == type(None):
+                            with open(filename, 'w') as openedfile:
+                                np.savetxt(openedfile, dataArray,
+                                    delimiter = ",",
+                                    header = headerStr
+                                    )
+            print("Saved.")
+
+        if uw.rank() == 0:
+            print("Saving datasets...")
+        if not self.dataCollectors is None:
+            for dataCollector in self.dataCollectors:
+                for row in dataCollector.clear():
+                    if uw.rank() == 0:
+                        name, headerStr, dataArray = row
+                        filename = os.path.join(self.path, name + '.csv')
+                        if not type(dataArray) == type(None):
+                            with open(filename, 'ab') as openedfile:
+                                fileSize = os.stat(filename).st_size
+                                if fileSize == 0:
+                                    header = headerStr
+                                else:
+                                    header = ''
+                                np.savetxt(openedfile, dataArray,
+                                    delimiter = ",",
+                                    header = header
+                                    )
+        if uw.rank() == 0:
+            print("Saved.")
+
+        if uw.rank() == 0:
+            print("Checkpointed!")
+
+def local_import(filepath):
+
+    modname = os.path.basename(filepath)
+    
+    spec = importlib.util.spec_from_file_location(
+        modname,
+        filepath,
+        )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module
+
+def load_model(loadpath):
+
+    outputPath = os.path.dirname(loadpath)
+    instanceID = os.path.basename(loadpath)
+    
+    systemscript = local_import(os.path.join(loadpath, '_systemscript.py'))
+    handlerscript = local_import(os.path.join(loadpath, '_handlerscript.py'))
+    initialscript = local_import(os.path.join(loadpath, '_initialscript.py'))
+
+    with open(os.path.join(loadpath, 'inputs.txt')) as json_file:  
+        inputs = json.load(json_file)
+    params = inputs['params']
+    options = inputs['options']
+    config = inputs['config']
+
+    model = Model(
+        systemscript.build(**inputs['params']),
+        handlerscript.build(**inputs['options']),
+        initialscript.build(**inputs['config']),
+        outputPath = os.path.dirname(loadpath),
+        instanceID = os.path.basename(loadpath),
+        )
+
+    return model
+
+def timestamp():
+    stamp = "_" + time.strftime(
+        '%y%m%d%H%M%SZ', time.gmtime(time.time())
+        )
+    return stamp
+
+class Model:
+
+    def __init__(self, system, handler, initial,
+        outputPath = '',
+        instanceID = None,
+        ):
+
+        self.system = system
+        self.handler = handler
+        self.initial = initial
+        self.outputPath = outputPath
+
+        self.timestamp = timestamp()
+
+        if instanceID == None:
+            self.instanceID = self.timestamp
+        else:
+            self.instanceID = instanceID
+
+        self.path = os.path.join(outputPath, self.instanceID)
+
+        self.step = fn.misc.constant(0)
+        self.modeltime = fn.misc.constant(0.)
+
+        self.figs = self.handler.make_figs(system, self.step, self.modeltime)
+        self.data = self.handler.make_data(system, self.step, self.modeltime)
+
+        self.checkpointer = Checkpointer(
+            step = self.step,
+            varsOfState = self.system.varsOfState,
+            figs = self.figs,
+            dataCollectors = self.data.collectors,
+            scripts = {
+                'systemscript': self.system.script,
+                'handlerscript': self.handler.script,
+                'initialscript': self.initial.script,
+                },
+            inputs = {
+                'params': self.system.inputs,
+                'options': self.handler.inputs,
+                'config': self.initial.inputs,
+                },
+            path = self.path,
+            )
+
+        self.reset()
+        self.allDataRefreshed = False
+        self.allDataCollected = False
+        self.status = "ready"
+
+    def checkpoint(self):
+        if not self.allDataCollected:
+            self.all_collect()
+        self.checkpointer.checkpoint()
+
+    def update(self):
+        self.allDataRefreshed = False
+        self.allDataCollected = False
+
+    def all_analyse(self):
+        for analyser in self.data.analysers:
+            analyser.analyse()
+        self.allDataRefreshed = True
+
+    def report(self):
+        if not self.allDataRefreshed:
+            self.all_analyse()
+        for analyser in self.data.analysers:
+            analyser.report()
+        for figname in self.figs:
+            if uw.rank() == 0:
+                print(figname)
+            self.figs[figname].show()
+
+    def reset(self):
+        self.initial.apply(self.system)
+        self.step.value = 0
+        self.modeltime.value = 0.
+        self.update()
+
+    def all_collect(self):
+        if not self.allDataRefreshed:
+            self.all_analyse()
+        for collector in self.data.collectors:
+            collector.collect()
+        self.allDataCollected = True
+
+    def iterate(self):
+        self.modeltime.value += self.system.iterate()
+        self.step.value += 1
+        self.update()
+
+    def traverse(self, stopCondition,
+            collectCondition = lambda: False,
+            checkpointCondition = lambda: False,
+            reportCondition = lambda: False,
+            ):
+
+        self.status = "pre-traverse"
+
+        if checkpointCondition():
+            self.checkpoint()
+
+        while not stopCondition():
+
+            self.status = "traversing"
+            self.iterate()
+
+            if checkpointCondition():
+                self.checkpoint()
+            elif collectCondition():
+                self.all_collect()
+                #for index, collector in enumerate(self.data.collectors):
+                    #if type(collectConditions) == list:
+                        #condition = collectConditions[index]()
+                    #else:
+                        #condition = collectConditions()
+                    #if condition:
+                        #collector.collect()
+
+            if reportCondition():
+                self.report()
+
+        self.status = "post-traverse"
+
+        if checkpointCondition():
+            self.checkpoint()
+
+        self.status = "ready"
+
+    def load_checkpoint(self, step):
+
+        stepStr = str(step).zfill(8)
+
+        checkpointFile = os.path.join(self.path, stepStr)
+
+        for item in self.system.varsOfState:
+            for varName, var in item[0]:
+                loadName = os.path.join(checkpointFile, varName + '.h5')
+                var.load(loadName)
+
+        snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.csv') ### TO DO: CHANGE THIS
+        with open(snapshot, 'r') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            header, data = csv_reader
+        dataDict = {}
+        for dataName, dataItem in zip(header, data):
+            key = dataName[1:].lstrip()
+            dataDict[key] = dataItem
+
+        self.step.value = step #int(dataDict['step'])
+        self.modeltime.value = float(dataDict['modeltime'])
+
+        self.system.solve()
+        self.update()
+
+        if uw.rank() == 0:
+            print("Checkpoint successfully loaded.")
