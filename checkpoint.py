@@ -51,7 +51,7 @@ class Checkpointer:
                     for scriptname in self.scripts:
                         path = self.scripts[scriptname]
                         tweakedpath = os.path.splitext(path)[0] + ".py"
-                        newpath = self.path + "_" + scriptname + ".py"
+                        newpath = os.path.join(self.path, "_" + scriptname + ".py")
                         shutil.copyfile(tweakedpath, newpath)
 
                 inputFilename = os.path.join(self.path, 'inputs.txt')
