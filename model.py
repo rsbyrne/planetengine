@@ -19,15 +19,16 @@ import importlib
 import csv
 
 import planetengine
+from planetengine import utilities
 
 def load_model(loadpath):
 
     outputPath = os.path.dirname(loadpath)
     instanceID = os.path.basename(loadpath)
     
-    systemscript = local_import(os.path.join(loadpath, '_systemscript.py'))
-    handlerscript = local_import(os.path.join(loadpath, '_handlerscript.py'))
-    initialscript = local_import(os.path.join(loadpath, '_initialscript.py'))
+    systemscript = utilities.local_import(os.path.join(loadpath, '_systemscript.py'))
+    handlerscript = utilities.local_import(os.path.join(loadpath, '_handlerscript.py'))
+    initialscript = utilities.local_import(os.path.join(loadpath, '_initialscript.py'))
 
     with open(os.path.join(loadpath, 'inputs.txt')) as json_file:  
         inputs = json.load(json_file)
