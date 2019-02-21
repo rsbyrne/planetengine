@@ -1,6 +1,7 @@
 import numpy as np
 import underworld as uw
 from underworld import function as fn
+import glucifer
 import math
 import time
 import tarfile
@@ -13,6 +14,36 @@ import importlib
 import csv
 
 import planetengine
+
+def weightVar(mesh, specialSets = None):
+
+    maskVar = uw.mesh.MeshVariable(mesh, nodeDofCount = 1)
+    weightVar = uw.mesh.MeshVariable(mesh, nodeDofCount = 1)
+
+    if specialSets = None:
+        localIntegral = uw.utils.Integral(maskVar, mesh)
+    else:
+        localIntegral = uw.utils.Integral(
+            maskVar,
+            mesh,
+            integrationType = 'surface',
+            surfaceIndexSet = specialSets
+            )
+
+    for index, val in enumerate(weightVar.data):
+        maskVar.data[:] = 0.
+        maskVar.data[index] = 1.
+        weightVar.data[index] = localIntegral.evaluate()[0]
+    return weightVar
+
+def quickShow(var):
+    fig = glucifer.Figure(edgecolour = 'white')
+    try:
+        fig.append(glucifer.objects.Mesh(var))
+    except:
+        mesh = var.mesh
+        fig.append(glucifer.objects.Surface(mesh, var))
+    fig.show()
 
 def suite_list(listDict):
     listOfKeys = sorted(listDict)
