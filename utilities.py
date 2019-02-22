@@ -20,7 +20,7 @@ def weightVar(mesh, specialSets = None):
     maskVar = uw.mesh.MeshVariable(mesh, nodeDofCount = 1)
     weightVar = uw.mesh.MeshVariable(mesh, nodeDofCount = 1)
 
-    if specialSets = None:
+    if specialSets == None:
         localIntegral = uw.utils.Integral(maskVar, mesh)
     else:
         localIntegral = uw.utils.Integral(
@@ -36,14 +36,47 @@ def weightVar(mesh, specialSets = None):
         weightVar.data[index] = localIntegral.evaluate()[0]
     return weightVar
 
-def quickShow(var):
+def quickShow(*args, show = True):
     fig = glucifer.Figure(edgecolour = 'white')
-    try:
-        fig.append(glucifer.objects.Mesh(var))
-    except:
-        mesh = var.mesh
-        fig.append(glucifer.objects.Surface(mesh, var))
-    fig.show()
+    features = []
+    for var in args:
+        try:
+            if not 'mesh' in features:
+                fig.Mesh(var)
+                features.append('mesh')
+            else:
+                raise
+        except:
+            try:
+                mesh = var.mesh
+            except:
+                mesh, var = var
+            try:
+                if not 'arrows' in features:
+                    fig.VectorArrows(mesh, var)
+                    features.append('arrows')
+                else:
+                    raise
+            except:
+                if not 'surface' in features:
+                    fig.Surface(mesh, var)
+                    features.append('surface')
+                else:
+                    if not 'contours' in features:
+                        fig.Contours(
+                            mesh,
+                            fn.math.log10(var),
+                            colours = "red black",
+                            interval = 0.5,
+                            colourBar = False 
+                            )
+                        features.append('contours')
+                    else:
+                        raise Exception("Tried everything but couldn't make it work!")
+    if show:
+        fig.show()
+    else:
+        return fig
 
 def suite_list(listDict):
     listOfKeys = sorted(listDict)
