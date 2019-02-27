@@ -39,7 +39,7 @@ def weightVar(mesh, specialSets = None):
 def quickShow(*args, show = True):
     fig = glucifer.Figure(edgecolour = 'white')
     features = []
-    for var in args:
+    for invar in args:
         try:
             if not 'mesh' in features:
                 fig.Mesh(var)
@@ -48,31 +48,57 @@ def quickShow(*args, show = True):
                 raise
         except:
             try:
-                mesh = var.mesh
-            except:
-                mesh, var = var
-            try:
-                if not 'arrows' in features:
-                    fig.VectorArrows(mesh, var)
-                    features.append('arrows')
-                else:
-                    raise
-            except:
-                if not 'surface' in features:
-                    fig.Surface(mesh, var)
-                    features.append('surface')
-                else:
-                    if not 'contours' in features:
-                        fig.Contours(
-                            mesh,
-                            fn.math.log10(var),
-                            colours = "red black",
-                            interval = 0.5,
-                            colourBar = False 
-                            )
-                        features.append('contours')
+                try:
+                    mesh = invar.mesh
+                    var = invar
+                except:
+                    try:
+                        mesh, var = invar
+                    except:
+                        raise Exception("")
+                try:
+                    if not 'arrows' in features:
+                        fig.VectorArrows(mesh, var)
+                        features.append('arrows')
                     else:
-                        raise Exception("Tried everything but couldn't make it work!")
+                        raise
+                except:
+                    if not 'surface' in features:
+                        fig.Surface(mesh, var)
+                        features.append('surface')
+                    else:
+                        if not 'contours' in features:
+                            fig.Contours(
+                                mesh,
+                                fn.math.log10(var),
+                                colours = "red black",
+                                interval = 0.5,
+                                colourBar = False 
+                                )
+                            features.append('contours')
+                        else:
+                            raise Exception("Got to end of mesh-based options.")
+            except:
+                try:
+                    swarm = var.swarm
+                    var = invar
+                except:
+                    swarm, var = invar
+                try:
+                    if not 'points' in features:
+                        fig.Points(
+                            swarm,
+                            fn_colour = var,
+                            fn_mask = var,
+                            fn_size = 4.,
+                            colours = "purple",
+                            colourBar = False
+                            )
+                    else:
+                        raise Exception("Got to end of swarm-based options.")
+                except:
+                    raise Exception("Tried everything but couldn't make it work!")
+
     if show:
         fig.show()
     else:
