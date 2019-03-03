@@ -42,6 +42,7 @@ def quickShow(*args, show = True):
     for invar in args:
         try:
             if not 'mesh' in features:
+                var = invar
                 fig.Mesh(var)
                 features.append('mesh')
             else:
