@@ -166,13 +166,30 @@ class Indices:
 
 class SetVal:
 
-    def __init__(self, variableArray, val):
-        self.variableArray = variableArray
+    def __init__(self, invar, val):
+        if type(invar) is list:
+            self.variableList = invar
+        else:
+            self.variableList = [invar,]
         self.val = val
 
     def apply(self):
-        if type(self.variableArray) == list:
-            for array in self.variableArray:
-                array[:] = self.val
-        else:
-            self.variableArray[:] = self.val
+        valType = type(self.val)
+        for variable in self.variableList:
+            varType = type(variable)
+            if valType is np.ndarray:
+                if varType is np.ndarray:
+                    variable[:] = self.val[:]
+                elif varType is float or varType is int:
+                    variable = self.val[:]
+                else:
+                    raise Exception("Input to 'setval' not recognised: only np arrays, ints, or floats accepted.")
+            elif valType is float or valType is int:
+                if varType is np.ndarray:
+                    variable[:] = self.val
+                elif varType is float or varType is int:
+                    variable = self.val
+                else:
+                    raise Exception("Input to 'setval' not recognised: only np arrays, ints, or floats accepted.")
+            else:
+                raise Exception("Input to 'setval' not recognised: only np arrays, ints, or floats accepted.")

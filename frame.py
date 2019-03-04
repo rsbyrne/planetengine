@@ -21,13 +21,13 @@ import csv
 import planetengine
 from planetengine import utilities
 
-def load_model(loadpath):
+def load_frame(loadpath):
 
     outputPath = os.path.dirname(loadpath)
     instanceID = os.path.basename(loadpath)
     
     systemscript = utilities.local_import(os.path.join(loadpath, '_systemscript.py'))
-    handlerscript = utilities.local_import(os.path.join(loadpath, '_handlerscript.py'))
+    observerscript = utilities.local_import(os.path.join(loadpath, '_observerscript.py'))
     initialscript = utilities.local_import(os.path.join(loadpath, '_initialscript.py'))
 
     with open(os.path.join(loadpath, 'inputs.txt')) as json_file:  
@@ -36,26 +36,30 @@ def load_model(loadpath):
     options = inputs['options']
     config = inputs['config']
 
-    model = Model(
-        systemscript.build(**inputs['params']),
-        handlerscript.build(**inputs['options']),
-        initialscript.build(**inputs['config']),
+    frame = Frame(
+        system = systemscript.build(**inputs['params']),
+        observer = observerscript.build(**inputs['options']),
+        initial = initialscript.build(**inputs['config']),
         outputPath = os.path.dirname(loadpath),
         instanceID = os.path.basename(loadpath),
         )
 
-    return model
+    return frame
 
-class Model:
+class Frame:
 
-    def __init__(self, system, handler, initial,
-        outputPath = '',
-        instanceID = None,
-        ):
+    def __init__(self,
+            system,
+            observer,
+            initial,
+            outputPath = '',
+            instanceID = None,
+            ):
 
         self.system = system
-        self.handler = handler
-        self.initial = initial
+        self.initial = initial.attach(system)
+        self.observer = observer.attach(system)
+
         self.outputPath = outputPath
 
         self.timestamp = planetengine.utilities.timestamp()
@@ -67,25 +71,22 @@ class Model:
 
         self.path = os.path.join(outputPath, self.instanceID)
 
-        self.step = fn.misc.constant(0)
-        self.modeltime = fn.misc.constant(0.)
-
-        self.figs = self.handler.make_figs(system, self.step, self.modeltime)
-        self.data = self.handler.make_data(system, self.step, self.modeltime)
+#         self.step = fn.misc.constant(0)
+#         self.modeltime = fn.misc.constant(0.)
 
         self.checkpointer = planetengine.checkpoint.Checkpointer(
-            step = self.step,
+            step = self.system.step,
             varsOfState = self.system.varsOfState,
-            figs = self.figs,
-            dataCollectors = self.data.collectors,
+            figs = self.observer.figs,
+            dataCollectors = self.observer.data['collectors'],
             scripts = {
                 'systemscript': self.system.script,
-                'handlerscript': self.handler.script,
+                'observerscript': self.observer.script,
                 'initialscript': self.initial.script,
                 },
             inputs = {
                 'params': self.system.inputs,
-                'options': self.handler.inputs,
+                'options': self.observer.inputs,
                 'config': self.initial.inputs,
                 },
             path = self.path,
@@ -96,46 +97,50 @@ class Model:
         self.allDataCollected = False
         self.status = "ready"
 
+        self.step = self.system.step.value
+        self.modeltime = self.system.modeltime.value
+
     def checkpoint(self):
         if not self.allDataCollected:
             self.all_collect()
         self.checkpointer.checkpoint()
 
     def update(self):
+        for projector in self.observer.projectors:
+            projector.solve()
+        self.step = self.system.step.value
+        self.modeltime = self.system.modeltime.value
         self.allDataRefreshed = False
         self.allDataCollected = False
 
     def all_analyse(self):
-        for analyser in self.data.analysers:
+        for analyser in self.observer.data['analysers']:
             analyser.analyse()
         self.allDataRefreshed = True
 
     def report(self):
         if not self.allDataRefreshed:
             self.all_analyse()
-        for analyser in self.data.analysers:
+        for analyser in self.observer.data['analysers']:
             analyser.report()
-        for figname in self.figs:
+        for figname in self.observer.figs:
             if uw.rank() == 0:
                 print(figname)
-            self.figs[figname].show()
+            self.observer.figs[figname].show()
 
     def reset(self):
-        self.initial.apply(self.system)
-        self.step.value = 0
-        self.modeltime.value = 0.
+        self.initial.apply()
         self.update()
 
     def all_collect(self):
         if not self.allDataRefreshed:
             self.all_analyse()
-        for collector in self.data.collectors:
+        for collector in self.observer.data['collectors']:
             collector.collect()
         self.allDataCollected = True
 
     def iterate(self):
-        self.modeltime.value += self.system.iterate()
-        self.step.value += 1
+        self.system.iterate()
         self.update()
 
     def traverse(self, stopCondition,
@@ -158,14 +163,6 @@ class Model:
                 self.checkpoint()
             elif collectCondition():
                 self.all_collect()
-                #for index, collector in enumerate(self.data.collectors):
-                    #if type(collectConditions) == list:
-                        #condition = collectConditions[index]()
-                    #else:
-                        #condition = collectConditions()
-                    #if condition:
-                        #collector.collect()
-
             if reportCondition():
                 self.report()
 
@@ -196,8 +193,8 @@ class Model:
             key = dataName[1:].lstrip()
             dataDict[key] = dataItem
 
-        self.step.value = step #int(dataDict['step'])
-        self.modeltime.value = float(dataDict['modeltime'])
+        self.system.step.value = step #int(dataDict['step'])
+        self.system.modeltime.value = float(dataDict['modeltime'])
 
         self.system.solve()
         self.update()

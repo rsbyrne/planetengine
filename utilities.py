@@ -81,8 +81,8 @@ def quickShow(*args, show = True):
                             raise Exception("Got to end of mesh-based options.")
             except:
                 try:
-                    swarm = var.swarm
                     var = invar
+                    swarm = var.swarm
                 except:
                     swarm, var = invar
                 try:
@@ -104,6 +104,10 @@ def quickShow(*args, show = True):
         fig.show()
     else:
         return fig
+
+def expose(source, destination):
+    for key, value in source.__dict__.items():
+        destination[key] = value
 
 def suite_list(listDict):
     listOfKeys = sorted(listDict)

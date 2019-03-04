@@ -22,36 +22,9 @@ import planetengine
 
 class Analyse:
 
-    class asdfDimensionlessGradient:
+    class DimensionlessGradient:
 
-        def __init__(self, scalarField, mesh,
-                     component = 1,
-                     baseSet = None,
-                     surfSet = None
-                    ):
-
-            self.intSurfGrad = uw.utils.Integral(
-                scalarField.fn_gradient[component], mesh,
-                integrationType = 'surface',
-                surfaceIndexSet = surfSet
-                )
-            self.intBase = uw.utils.Integral(
-                scalarField, mesh,
-                integrationType = 'surface',
-                surfaceIndexSet = baseSet
-                )
-
-        def evaluate(self):
-
-            Nu = - self.intSurfGrad.evaluate()[0] \
-                / self.intBase.evaluate()[0]
-            return Nu
-
-    class CurvedDimensionlessGradient:
-
-        def __init__(self, scalarField, surface, base):
-
-            mesh = scalarField.mesh
+        def __init__(self, scalarField, mesh, surface, base):
 
             self.intFieldSurfGrad = uw.utils.Integral(
                 fn.math.dot(mesh.unitvec_r_Fn, scalarField.fn_gradient),
@@ -88,30 +61,30 @@ class Analyse:
 
             return result
 
-    class DimensionlessGradient:
+#     class DimensionlessGradient:
 
-        def __init__(self, scalarField, mesh,
-                     component = 1,
-                     surfIndexSet = None,
-                     baseIndexSet = None
-                    ):
+#         def __init__(self, scalarField, mesh,
+#                      component = 1,
+#                      surfIndexSet = None,
+#                      baseIndexSet = None
+#                     ):
 
-            self.intSurfGrad = uw.utils.Integral(
-                scalarField.fn_gradient[component], mesh,
-                integrationType = 'surface',
-                surfaceIndexSet = surfIndexSet
-                )
-            self.intBase = uw.utils.Integral(
-                scalarField, mesh,
-                integrationType = 'surface',
-                surfaceIndexSet = baseIndexSet
-                )
+#             self.intSurfGrad = uw.utils.Integral(
+#                 scalarField.fn_gradient[component], mesh,
+#                 integrationType = 'surface',
+#                 surfaceIndexSet = surfIndexSet
+#                 )
+#             self.intBase = uw.utils.Integral(
+#                 scalarField, mesh,
+#                 integrationType = 'surface',
+#                 surfaceIndexSet = baseIndexSet
+#                 )
 
-        def evaluate(self):
+#         def evaluate(self):
 
-            Nu = - self.intSurfGrad.evaluate()[0] \
-                / self.intBase.evaluate()[0]
-            return Nu
+#             Nu = - self.intSurfGrad.evaluate()[0] \
+#                 / self.intBase.evaluate()[0]
+#             return Nu
 
     class ScalarFieldAverage:
 
@@ -131,8 +104,13 @@ class Analyse:
         def __init__(self, vectorField, mesh):
 
             self.intVdotV = uw.utils.Integral(
-                fn.math.dot(vectorField, vectorField), mesh)
-            self.intMesh = uw.utils.Integral(1., mesh)
+                fn.math.dot(vectorField, vectorField),
+                mesh
+                )
+            self.intMesh = uw.utils.Integral(
+                1.,
+                mesh
+                )
 
         def evaluate(self):
 
@@ -145,12 +123,14 @@ class Analyse:
         def __init__(self, vectorField, mesh, indexSet):
 
             self.intVdotV = uw.utils.Integral(
-                fn.math.dot(vectorField, vectorField), mesh,
+                fn.math.dot(vectorField, vectorField),
+                mesh,
                 integrationType = 'surface',
                 surfaceIndexSet = indexSet
                 )
             self.intMesh = uw.utils.Integral(
-                1., mesh,
+                1.,
+                mesh,
                 integrationType = 'surface',
                 surfaceIndexSet = indexSet          
                 )
