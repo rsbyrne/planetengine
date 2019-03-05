@@ -36,8 +36,16 @@ def weightVar(mesh, specialSets = None):
         weightVar.data[index] = localIntegral.evaluate()[0]
     return weightVar
 
-def quickShow(*args, show = True):
-    fig = glucifer.Figure(edgecolour = 'white')
+def quickShow(*args,
+        show = True,
+        figArgs = {
+            'edgecolour': 'white',
+            'facecolour': 'white',
+            'quality': 2,
+            }
+        ):
+
+    fig = glucifer.Figure(**figArgs)
     features = []
     for invar in args:
         try:

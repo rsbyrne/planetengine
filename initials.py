@@ -30,45 +30,33 @@ class Group():
 class NoisyGradient:
 
     def __init__(
-            self, variableArray, coordArray,
+            self,
+            variableArray,
+            coordArray,
             gradient = 1.,
+            exponent = 1.,
             smoothness = 1,
             randomSeed = 1066,
-            valRange = (0., 1.)
+            tempRange = (0., 1.),
             ):
+
         self.variableArray = variableArray
-        self.coordArray = coordArray
-        self.gradient = gradient
-        self.smoothness = smoothness
-        self.range = valRange
-        self.randomSeed = randomSeed
-        self.depthFn = 1. - fn.coord()[1]
-        self.valRange = valRange
+
+        tempMin, tempMax = tempRange
+        deltaT = tempRange[1] - tempRange[0]
+        depthArray = 1. - coordArray[:,1]
+        outArray = (depthArray * gradient) ** exponent
+        np.random.seed(randomSeed)
+        randomArray = (np.random.rand(outArray.shape[0]) * 2. - 1.) / smoothness
+        outArray = outArray + randomArray
+        outArray = (outArray + tempMin) * deltaT
+        outArray = np.clip(outArray, tempMin, tempMax)
+        outArray = np.vstack(outArray)
+
+        self.outArray = outArray
 
     def apply(self):
-        #tempGradFn = depthFn * self.gradient * (self.range[1] - self.range[0]) + self.range[0]
-        #field.data[:] = CapValue(randomise(self.smoothness, self.randomSeed) * tempGradFn.evaluate(mesh), self.range)
-        tempGradFn = self.depthFn * self.gradient * (self.valRange[1] - self.valRange[0]) + self.valRange[0]
-        initialTempFn = uw.function.branching.conditional([
-            (self.depthFn == 0., self.valRange[0]),
-            (self.depthFn == 1., self.valRange[1]),
-            (tempGradFn < self.valRange[0], self.valRange[0]), # if this, that
-            (tempGradFn > self.valRange[1] , self.valRange[1]), # otherwise, if this, this other thing
-            (True, tempGradFn) # otherwise, this one
-            ])
-        self.variableArray = initialTempFn.evaluate(self.coordArray)
-        # Introduce some random noise
-        np.random.seed(self.randomSeed)
-        for i in range(len(self.coordArray)):
-            yCoord = self.coordArray[i][1]
-            if 0 < yCoord < 1.:
-                randnum = 0.
-                smoothness = self.smoothness
-                for number in range(smoothness):
-                    randnum += 2 * np.random.rand() / smoothness
-                randTemp = self.variableArray[i] * randnum
-                if self.range[0] < randTemp < self.range[1]:
-                    self.variableArray[i] = randTemp
+        self.variableArray[:] = self.outArray
 
 class LoadField:
 
