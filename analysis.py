@@ -114,8 +114,11 @@ class Analyse:
 
         def evaluate(self):
 
-            fieldrms = math.sqrt(self.intVdotV.evaluate()[0]) \
-                / self.intMesh.evaluate()[0]
+            vectorIntegrated = self.intVdotV.evaluate()[0]
+            meshIntegrated = self.intMesh.evaluate()[0]
+            ratio = vectorIntegrated / meshIntegrated
+            fieldrms = math.sqrt(ratio)
+
             return fieldrms
 
     class VectorFieldSurfRMS:
@@ -137,8 +140,11 @@ class Analyse:
 
         def evaluate(self):
 
-            fieldrms = math.sqrt(self.intVdotV.evaluate()[0]) \
-                / self.intMesh.evaluate()[0]
+            vectorIntegrated = self.intVdotV.evaluate()[0]
+            meshIntegrated = self.intMesh.evaluate()[0]
+            ratio = vectorIntegrated / meshIntegrated
+            fieldrms = math.sqrt(ratio)
+
             return fieldrms
 
     class Constant:
@@ -174,20 +180,21 @@ class Analyser:
 
         self.analyserDict = analyserDict
         self.formatDict = formatDict
-        self.header = sorted(analyserDict, key=str.lower)
-        self.headerStr = ', '.join(self.header)
+        self.keys = sorted(analyserDict, key=str.lower)
+        self.header = ', '.join(self.keys)
         self.dataDict = {}
-        self.data = [None] * len(self.header)
+        self.data = [None] * len(self.keys)
         self.name = name
         self.dataBrief = "No data."
 
     def analyse(self):
-
-        for key in self.analyserDict:
+        for key in self.keys:
             self.dataDict[key] = self.analyserDict[key].evaluate()
-        self.data = [self.dataDict[key] for key in self.header]
-        self.keys = sorted(self.dataDict, key = str.lower)
-        self.dataBrief = [(key, self.formatDict[key].format(self.dataDict[key])) for key in self.keys]
+        self.data = [self.dataDict[key] for key in self.keys]
+        self.dataBrief = [
+            (key, self.formatDict[key].format(self.dataDict[key])) \
+            for key in self.keys
+            ]
 
     def report(self):
 
@@ -200,7 +207,7 @@ class DataCollector:
     def __init__(self, analysers):
 
         self.analysers = analysers
-        self.headers = [analyser.headerStr for analyser in self.analysers]
+        self.headers = [analyser.header for analyser in self.analysers]
         self.names = [analyser.name for analyser in self.analysers]
         self.datasets = [[] for analyser in self.analysers]
 
@@ -214,11 +221,11 @@ class DataCollector:
     def clear(self):
 
         outdata = []
-        for name, headerStr, dataset in zip(self.names, self.headers, self.datasets):
+        for name, header, dataset in zip(self.names, self.headers, self.datasets):
             if len(dataset) > 0:
                 dataArray = np.vstack(dataset)
             else:
                 dataArray = None
-            outdata.append((name, headerStr, dataArray))
+            outdata.append((name, header, dataArray))
         self.datasets = [[] for analyser in self.analysers]
         return outdata
