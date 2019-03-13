@@ -19,6 +19,7 @@ import importlib
 import csv
 
 import planetengine
+from planetengine import utilities
 
 class Checkpointer:
 
@@ -30,7 +31,7 @@ class Checkpointer:
             figs = None,
             dataCollectors = None,
             inputs = None,
-            step = None
+            step = None,
             ):
 
         self.scripts = scripts
@@ -89,13 +90,7 @@ class Checkpointer:
         if uw.rank() == 0:
             print("Saving vars of state...")
         if not self.varsOfState is None:
-            for row in self.varsOfState:
-                variablePairs, substratePair = row
-                substrateName, substrate = substratePair
-                handle = substrate.save(os.path.join(self.checkpointDir, substrateName + ".h5"))
-                for pair in variablePairs:
-                    varName, variable = pair
-                    variable.save(os.path.join(self.checkpointDir, varName + ".h5"), handle)
+            utilities.varsOnDisk(self.varsOfState, self.checkpointDir, 'save')
         if uw.rank() == 0:
             print("Saved.")
 

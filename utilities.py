@@ -15,6 +15,53 @@ import csv
 
 import planetengine
 
+def varsOnDisk(varsOfState, directory, mode = 'save', blackhole = [0., 0.]):
+    substrates = []
+    substrateNames = []
+    substrateHandles = {}
+    extension = '.h5'
+    for var, varName in varsOfState:
+        if type(var) == uw.mesh._meshvariable.MeshVariable:
+            substrate = var.mesh
+            substrateName = 'mesh'
+        elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
+            substrate = var.swarm
+            substrateName = 'swarm'
+        else:
+            raise Exception('Variable type not recognised.')
+        if not substrate in substrates:
+            if substrateName in substrateNames:
+                nameFound = False
+                suffix = 0
+                while not nameFound:
+                    adjustedSubstrateName = substrateName + '_' + str(suffix)
+                    if not adjustedSubstrateName in substrateNames:
+                        substrateName = adjustedSubstrateName
+                        nameFound = True
+                    else:
+                        suffix += 1
+            substrateNames.append(substrateName)
+            if mode == 'save':
+                handle = substrate.save(os.path.join(directory, substrateName + extension))
+                substrateHandles[substrateName] = handle
+            elif mode == 'load':
+                if type(substrate) == uw.swarm.Swarm:
+                    with substrate.deform_swarm():
+                        substrate.particleCoordinates.data[:] = blackhole
+                substrate.load(os.path.join(directory, substrateName + extension))
+            else:
+                raise Exception("Disk mode not recognised.")
+            substrates.append(substrate)
+        else:
+            if mode == 'save':
+                handle = substrateHandles[substrateNames]
+        if mode == 'save':
+            var.save(os.path.join(directory, varName + extension), handle)
+        elif mode == 'load':
+            var.load(os.path.join(directory, varName + extension))
+        else:
+            raise Exception("Disk mode not recognised.")
+
 def weightVar(mesh, specialSets = None):
 
     maskVar = uw.mesh.MeshVariable(mesh, nodeDofCount = 1)
@@ -199,6 +246,7 @@ class CoordSystems:
                 angularExtent = (0., 360.),
                 boxDims = ((0., 1.), (0., 1.)),
                 origin = (0., 0.),
+                xFlip = True,
                 ):
             # angular extents must be given in degrees
             self.radialLengths = radialLengths
@@ -228,6 +276,8 @@ class CoordSystems:
             xs = np.where(xs >= 0., xs, xs + 360.)
             xs += (angOutScale[0] - angInScale[0])
             xs *= (angOutScale[1] - angOutScale[0]) / (angInScale[1] - angInScale[0])
+            xs -= (angOutScale[1])
+            xs *= -1.
             xs = np.clip(xs, angOutScale[0], angOutScale[1])
             ys += radOutScale[0] - radInScale[0]
             ys *= (radOutScale[1] - radOutScale[0]) / (radInScale[1] - radInScale[0])

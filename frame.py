@@ -21,10 +21,9 @@ import csv
 import planetengine
 from planetengine import utilities
 
-def load_frame(loadpath, loadStep = 0):
+def load_frame(outputPath = '', instanceID = '', loadStep = 0):
 
-    outputPath = os.path.dirname(loadpath)
-    instanceID = os.path.basename(loadpath)
+    loadpath = os.path.join(outputPath, instanceID)
     
     systemscript = utilities.local_import(os.path.join(loadpath, '_systemscript.py'))
     observerscript = utilities.local_import(os.path.join(loadpath, '_observerscript.py'))
@@ -40,10 +39,12 @@ def load_frame(loadpath, loadStep = 0):
         system = systemscript.build(**inputs['params']),
         observer = observerscript.build(**inputs['options']),
         initial = initialscript.build(**inputs['config']),
-        outputPath = os.path.dirname(loadpath),
-        instanceID = os.path.basename(loadpath),
-        loadStep = loadStep,
+        outputPath = outputPath,
+        instanceID = instanceID,
         )
+
+    if loadStep > 0:
+        frame.load_checkpoint(loadStep)
 
     return frame
 
@@ -55,7 +56,6 @@ class Frame:
             initial,
             outputPath = '',
             instanceID = None,
-            loadStep = 0,
             ):
 
         self.outputPath = outputPath
@@ -94,63 +94,13 @@ class Frame:
             path = self.path,
             )
 
-        self.allDataRefreshed = False
-        self.allDataCollected = False
-        self.status = "ready"
-
-        if not loadStep == 0:
-
-            if uw.rank() == 0:
-                print("Loading checkpoint...")
-
-            stepStr = str(loadStep).zfill(8)
-
-            checkpointFile = os.path.join(self.path, stepStr)
-
-            for item in self.system.varsOfState:
-                varList, substratePair = item
-                substrateName, substrate = substratePair
-                loadName = os.path.join(checkpointFile, substrateName + '.h5')
-                if type(substrate) == uw.swarm.Swarm:
-                    with substrate.deform_swarm():
-                        substrate.particleCoordinates.data[:] = [0., 0.]
-                substrate.load(loadName)
-                for varName, var in varList:
-                    loadName = os.path.join(checkpointFile, varName + '.h5')
-                    var.load(loadName)
-
-            snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.csv') ### TO DO: CHANGE THIS
-            with open(snapshot, 'r') as csv_file:
-                csv_reader = csv.reader(csv_file, delimiter=',')
-                header, data = csv_reader
-            dataDict = {}
-            for dataName, dataItem in zip(header, data):
-                key = dataName[1:].lstrip()
-                dataDict[key] = dataItem
-
-            self.system.step.value = loadStep
-            self.system.modeltime.value = float(dataDict['modeltime'])
-
-            self.system.solve()
-
-            if uw.rank() == 0:
-                print("Checkpoint successfully loaded.")
-
-        else:
-            if uw.rank() == 0:
-                print("Applying initial conditions...")
-
-            self.initial.apply(self.system)
-
-            if uw.rank() == 0:
-                print("Initial conditions applied.")
-
-        self.update()
+        self.reset()
 
     def checkpoint(self):
         if not self.allDataCollected:
             self.all_collect()
         self.checkpointer.checkpoint()
+        self.most_recent_check = self.step
 
     def update(self):
         try:
@@ -185,53 +135,97 @@ class Frame:
             collector.collect()
         self.allDataCollected = True
 
+    def all_clear(self):
+        for collector in self.data['collectors']:
+            collector.clear()
+
     def iterate(self):
         self.system.iterate()
         self.update()
+
+    def go(self, steps):
+        stopStep = self.step + steps
+        self.traverse(lambda: self.step >= stopStep)
 
     def traverse(self, stopCondition,
             collectCondition = lambda: False,
             checkpointCondition = lambda: False,
             reportCondition = lambda: False,
-            startStep = None,
+            forge_on = False,
             ):
-
-        if not startStep == None:
-            self.load(startStep)
 
         self.status = "pre-traverse"
 
         if checkpointCondition():
             self.checkpoint()
 
+        if uw.rank() == 0:
+            print("Running...")
+
         while not stopCondition():
 
-            self.status = "traversing"
-            self.iterate()
+            try:
+                self.status = "traversing"
+                self.iterate()
+                if checkpointCondition():
+                    self.checkpoint()
+                elif collectCondition():
+                    self.all_collect()
+                if reportCondition():
+                    self.report()
 
-            if checkpointCondition():
-                self.checkpoint()
-            elif collectCondition():
-                self.all_collect()
-            if reportCondition():
-                self.report()
+            except:
+                if forge_on:
+                    if uw.rank() == 0:
+                        print("Something went wrong...loading last checkpoint.")
+                    self.load_checkpoint(self.most_recent_check)
+                else:
+                    raise Exception("Something went wrong.")
 
         self.status = "post-traverse"
-
+        if uw.rank() == 0:
+            print("Done!")
         if checkpointCondition():
             self.checkpoint()
-
         self.status = "ready"
 
-    def load(self, step):
-        self.__init__(
-            self.system,
-            self.observer,
-            self.initial,
-            outputPath = self.outputPath,
-            instanceID = self.instanceID,
-            loadStep = step,
+    def load_checkpoint(self, loadStep):
+
+        if uw.rank() == 0:
+            print("Loading checkpoint...")
+
+        stepStr = str(loadStep).zfill(8)
+
+        checkpointFile = os.path.join(self.path, stepStr)
+
+        utilities.varsOnDisk(
+            self.system.varsOfState,
+            checkpointFile,
+            'load',
+            blackhole = self.system.blackhole,
             )
 
+        snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.csv') ### TO DO: CHANGE THIS
+        with open(snapshot, 'r') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            header, data = csv_reader
+        dataDict = {}
+        for dataName, dataItem in zip(header, data):
+            key = dataName[1:].lstrip()
+            dataDict[key] = dataItem
+
+        self.system.step.value = loadStep
+        self.system.modeltime.value = float(dataDict['modeltime'])
+
+        self.system.solve()
+
+        self.update()
+        self.status = "ready"
+
+        if uw.rank() == 0:
+            print("Checkpoint successfully loaded.")
+
     def reset(self):
-        self.load(0)
+        self.initial.apply(self.system)
+        self.update()
+        self.status = "ready"
