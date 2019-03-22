@@ -32,6 +32,7 @@ class Checkpointer:
             dataCollectors = None,
             inputs = None,
             step = None,
+            stamps = None,
             ):
 
         self.scripts = scripts
@@ -41,11 +42,26 @@ class Checkpointer:
         self.step = step
         self.inputs = inputs
         self.path = path
+        self.stamps = stamps
 
     def checkpoint(self):
 
         if uw.rank() == 0:
-            if not os.path.isdir(self.path):
+
+            if os.path.isdir(self.path):
+
+                if not os.path.isfile(os.path.join(self.path, 'stamps.txt')):
+                    raise Exception("No stamps file found. Aborting.")
+                else:
+                    with open(os.path.join(self.path, 'stamps.txt')) as json_file:
+                        loadstamps = json.load(json_file)
+                    if not loadstamps == self.stamps:
+                        raise Exception("You are trying to save a model in a different model's directory!")
+                    else:
+                        print("Pre-existing directory for this model has been found. Continuing...")
+
+            else:
+
                 os.makedirs(self.path)
 
                 if not self.scripts is None:
@@ -58,6 +74,10 @@ class Checkpointer:
                 inputFilename = os.path.join(self.path, 'inputs.txt')
                 with open(inputFilename, 'w') as file:
                      file.write(json.dumps(self.inputs))
+
+                stampFilename = os.path.join(self.path, 'stamps.txt')
+                with open(stampFilename, 'w') as file:
+                     file.write(json.dumps(self.stamps))
 
         if uw.rank() == 0:
             print("Checkpointing...")
@@ -101,13 +121,21 @@ class Checkpointer:
                     for index, name in enumerate(dataCollector.names):
                         dataArray = dataCollector.datasets[index][-1:]
                         headerStr = dataCollector.headers[index]
-                        filename = os.path.join(self.checkpointDir, name + "_snapshot" + ".csv")
+                        filename = os.path.join(self.checkpointDir, name + "_snapshot" + ".txt")
                         if not type(dataArray) == type(None):
                             with open(filename, 'w') as openedfile:
                                 np.savetxt(openedfile, dataArray,
                                     delimiter = ",",
                                     header = headerStr
                                     )
+            print("Saved.")
+
+        if uw.rank() == 0:
+            print("Saving stamps...")
+            if not self.stamps is None:
+                filename = os.path.join(self.checkpointDir, 'stamps.txt')
+                with open(filename, 'w') as file:
+                     file.write(json.dumps(self.stamps))
             print("Saved.")
 
         if uw.rank() == 0:

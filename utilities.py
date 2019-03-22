@@ -12,6 +12,8 @@ import itertools
 import inspect
 import importlib
 import csv
+import hashlib
+import random
 
 import planetengine
 
@@ -164,7 +166,7 @@ def expose(source, destination):
     for key, value in source.__dict__.items():
         destination[key] = value
 
-def suite_list(listDict):
+def suite_list(listDict, shuffle = False, chunks = 0, shuffleseed = 1066):
     listOfKeys = sorted(listDict)
     listOfVals = []
     listOfDicts = []
@@ -179,7 +181,19 @@ def suite_list(listDict):
     for item in combinations:
         newDict = {key: val for key, val in zip(listOfKeys, item)}
         listOfDicts.append(newDict)
-    return listOfDicts
+    if shuffle:
+        random.Random(shuffleseed).shuffle(listOfDicts)
+    if chunks > 0:
+        outList = split_list(listOfDicts, chunks)
+    else:
+        outlist = listOfDicts
+    return outList
+
+def split_list(a, n):
+    k, m = divmod(len(a), n)
+    return list(
+        (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
+        )
 
 def getDefaultKwargs(function):
     argsignature = inspect.signature(function)
@@ -202,9 +216,26 @@ def local_import(filepath):
     return module
 
 def timestamp():
-    stamp = "_" + time.strftime(
+    stamp = time.strftime(
         '%y%m%d%H%M%SZ', time.gmtime(time.time())
         )
+    return stamp
+
+def dictstamp(inputDict):
+    inputStr = str(
+        [(key, inputDict[key]) for key in sorted(inputDict)]
+        ).encode()
+    stamp = hashlib.md5(inputStr).hexdigest()
+    return stamp
+
+def scriptstamp(scriptPath):
+    with open(scriptPath, 'r') as file:
+        script = file.read().encode()
+    stamp = hashlib.md5(script).hexdigest()
+    return stamp
+
+def stringstamp(instring):
+    stamp = hashlib.md5(instring.encode()).hexdigest()
     return stamp
 
 class Grouper:

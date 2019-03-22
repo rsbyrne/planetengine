@@ -35,12 +35,16 @@ def load_frame(outputPath = '', instanceID = '', loadStep = 0):
     options = inputs['options']
     config = inputs['config']
 
+    with open(os.path.join(loadpath, 'stamps.txt')) as json_file:
+        stamps = json.load(json_file)
+
     frame = Frame(
         system = systemscript.build(**inputs['params']),
         observer = observerscript.build(**inputs['options']),
         initial = initialscript.build(**inputs['config']),
         outputPath = outputPath,
         instanceID = instanceID,
+        _stamps = stamps,
         )
 
     if loadStep > 0:
@@ -56,14 +60,30 @@ class Frame:
             initial,
             outputPath = '',
             instanceID = None,
+            _stamps = None,
             ):
 
         self.outputPath = outputPath
 
-        self.timestamp = planetengine.utilities.timestamp()
+        if _stamps == None:
+            self.stamps = {
+                'paramstamp': utilities.dictstamp(system.inputs),
+                'optionstamp': utilities.dictstamp(observer.inputs),
+                'configstamp': utilities.dictstamp(initial.inputs),
+                'systemstamp': utilities.scriptstamp(system.script),
+                'observerstamp': utilities.scriptstamp(observer.script),
+                'initialstamp': utilities.scriptstamp(initial.script),
+                }
+            self.allstamp = utilities.dictstamp(self.stamps)
+            self.stamps['allstamp'] = self.allstamp
+        else:
+            self.stamps = _stamps
+
+        for key in self.stamps:
+            setattr(self, key, self.stamps[key])
 
         if instanceID == None:
-            self.instanceID = 'test' + self.timestamp
+            self.instanceID = 'pemod_' + self.allstamp
         else:
             self.instanceID = instanceID
 
@@ -91,6 +111,7 @@ class Frame:
                 'options': self.observer.inputs,
                 'config': self.initial.inputs,
                 },
+            stamps = self.stamps,
             path = self.path,
             )
 
