@@ -1,11 +1,10 @@
 #!/bin/bash
-CORES=${2:-1}
+CHUNKS=${2:-100}
+CORESPERCHUNK=${3:-1}
 SCRIPT=${1:-localscript.py}
 i=0
-end=100
-DIR="$(cd "$(dirname "$0")" && pwd)"
+end=$CHUNKS
 while [ $i -le $end ]; do
-    sudo sh $DIR/uw_ann_run.sh $SCRIPT $CORES $i > /dev/null 2> /dev/null &
-    echo $i
+    mpirun -np $CORESPERCHUNK python $SCRIPT $i &
     i=$(($i+1))
 done
