@@ -18,6 +18,10 @@ import inspect
 import importlib
 import csv
 
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+
 import planetengine
 from planetengine import utilities
 
@@ -145,7 +149,7 @@ class Frame:
         for analyser in self.data['analysers']:
             analyser.report()
         for figname in self.figs:
-            if uw.rank() == 0:
+            if rank == 0:
                 print(figname)
             self.figs[figname].show()
 
@@ -180,7 +184,7 @@ class Frame:
         if checkpointCondition():
             self.checkpoint()
 
-        if uw.rank() == 0:
+        if rank == 0:
             print("Running...")
 
         while not stopCondition():
@@ -197,14 +201,14 @@ class Frame:
 
             except:
                 if forge_on:
-                    if uw.rank() == 0:
+                    if rank == 0:
                         print("Something went wrong...loading last checkpoint.")
                     self.load_checkpoint(self.most_recent_check)
                 else:
                     raise Exception("Something went wrong.")
 
         self.status = "post-traverse"
-        if uw.rank() == 0:
+        if rank == 0:
             print("Done!")
         if checkpointCondition():
             self.checkpoint()
@@ -212,7 +216,7 @@ class Frame:
 
     def load_checkpoint(self, loadStep):
 
-        if uw.rank() == 0:
+        if rank == 0:
             print("Loading checkpoint...")
 
         stepStr = str(loadStep).zfill(8)
@@ -243,7 +247,7 @@ class Frame:
         self.update()
         self.status = "ready"
 
-        if uw.rank() == 0:
+        if rank == 0:
             print("Checkpoint successfully loaded.")
 
     def reset(self):

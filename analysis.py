@@ -18,6 +18,11 @@ import inspect
 import importlib
 import csv
 
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+nProcs = comm.Get_size()
+
 import planetengine
 
 class Analyse:
@@ -198,7 +203,7 @@ class Analyser:
 
     def report(self):
 
-        if uw.rank() == 0:
+        if rank == 0:
             for pair in self.dataBrief:
                 print(pair[0], pair[1])
 

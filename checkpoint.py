@@ -18,6 +18,11 @@ import inspect
 import importlib
 import csv
 
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+nProcs = comm.Get_size()
+
 import planetengine
 from planetengine import utilities
 
@@ -46,7 +51,7 @@ class Checkpointer:
 
     def checkpoint(self):
 
-        if uw.rank() == 0:
+        if rank == 0:
 
             if os.path.isdir(self.path):
 
@@ -79,7 +84,7 @@ class Checkpointer:
                 with open(stampFilename, 'w') as file:
                      file.write(json.dumps(self.stamps))
 
-        if uw.rank() == 0:
+        if rank == 0:
             print("Checkpointing...")
 
         if self.step is None:
@@ -91,30 +96,30 @@ class Checkpointer:
         self.checkpointDir = os.path.join(self.path, stepStr)
 
         if os.path.isdir(self.checkpointDir):
-            if uw.rank() == 0:
+            if rank == 0:
                 print('Checkpoint directory found: skipping.')
             return None
         else:
-            if uw.rank() == 0:
+            if rank == 0:
                 os.makedirs(self.checkpointDir)
 
-        if uw.rank() == 0:
+        if rank == 0:
             print("Saving figures...")
         if not self.figs is None:
             for name in self.figs:
                 fig = self.figs[name]
                 fig.save(os.path.join(self.checkpointDir, name))
-        if uw.rank() == 0:
+        if rank == 0:
             print("Saved.")
 
-        if uw.rank() == 0:
+        if rank == 0:
             print("Saving vars of state...")
         if not self.varsOfState is None:
             utilities.varsOnDisk(self.varsOfState, self.checkpointDir, 'save')
-        if uw.rank() == 0:
+        if rank == 0:
             print("Saved.")
 
-        if uw.rank() == 0:
+        if rank == 0:
             print("Saving snapshot...")
             if not self.dataCollectors is None:
                 for dataCollector in self.dataCollectors:
@@ -130,7 +135,7 @@ class Checkpointer:
                                     )
             print("Saved.")
 
-        if uw.rank() == 0:
+        if rank == 0:
             print("Saving stamps...")
             if not self.stamps is None:
                 filename = os.path.join(self.checkpointDir, 'stamps.txt')
@@ -138,12 +143,12 @@ class Checkpointer:
                      file.write(json.dumps(self.stamps))
             print("Saved.")
 
-        if uw.rank() == 0:
+        if rank == 0:
             print("Saving datasets...")
         if not self.dataCollectors is None:
             for dataCollector in self.dataCollectors:
                 for row in dataCollector.clear():
-                    if uw.rank() == 0:
+                    if rank == 0:
                         name, headerStr, dataArray = row
                         filename = os.path.join(self.path, name + '.csv')
                         if not type(dataArray) == type(None):
@@ -157,8 +162,8 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = header
                                     )
-        if uw.rank() == 0:
+        if rank == 0:
             print("Saved.")
 
-        if uw.rank() == 0:
+        if rank == 0:
             print("Checkpointed!")

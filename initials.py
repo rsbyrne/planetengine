@@ -18,6 +18,11 @@ import inspect
 import importlib
 import csv
 
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+nProcs = comm.Get_size()
+
 class Group():
 
     def __init__(self, listofICs):
@@ -70,8 +75,8 @@ class LoadField:
             mapper = None,
             ):
         self.field = field
-        for proc in range(uw.nProcs()):
-            if uw.rank() == proc:
+        for proc in range(nProcs):
+            if rank == proc:
                 inputMesh = uw.mesh.FeMesh_Cartesian(
                     elementRes = inputRes,
                     minCoord = inputCoords[0],
