@@ -230,7 +230,7 @@ class Frame:
             blackhole = self.system.blackhole,
             )
 
-        snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.csv') ### TO DO: CHANGE THIS
+        snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.txt') ### TO DO: CHANGE THIS
         with open(snapshot, 'r') as csv_file:
             csv_reader = csv.reader(csv_file, delimiter=',')
             header, data = csv_reader

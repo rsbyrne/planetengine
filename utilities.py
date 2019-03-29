@@ -186,7 +186,7 @@ def suite_list(listDict, shuffle = False, chunks = 0, shuffleseed = 1066):
     if chunks > 0:
         outList = split_list(listOfDicts, chunks)
     else:
-        outlist = listOfDicts
+        outList = listOfDicts
     return outList
 
 def split_list(a, n):
