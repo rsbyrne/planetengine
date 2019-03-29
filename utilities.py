@@ -166,7 +166,7 @@ def expose(source, destination):
     for key, value in source.__dict__.items():
         destination[key] = value
 
-def suite_list(listDict, shuffle = False, chunks = 0, shuffleseed = 1066):
+def suite_list(listDict, shuffle = False, chunks = None, shuffleseed = 1066):
     listOfKeys = sorted(listDict)
     listOfVals = []
     listOfDicts = []
@@ -183,10 +183,12 @@ def suite_list(listDict, shuffle = False, chunks = 0, shuffleseed = 1066):
         listOfDicts.append(newDict)
     if shuffle:
         random.Random(shuffleseed).shuffle(listOfDicts)
-    if chunks > 0:
+    if chunks == None:
+        outList = listOfDicts
+    elif chunks > 0:
         outList = split_list(listOfDicts, chunks)
     else:
-        outList = listOfDicts
+        outList = [[thing] for thing in listOfDicts]
     return outList
 
 def split_list(a, n):
