@@ -63,7 +63,7 @@ class NoisyGradient:
     def apply(self):
         self.variableArray[:] = self.outArray
 
-class LoadField:
+class OLDLoadField:
 
     def __init__(
             self,

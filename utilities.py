@@ -270,6 +270,7 @@ class Grouper:
         return outstring
 
 class CoordSystems:
+    #OLD - DON'T USE
 
     class Radial:
 

@@ -17,6 +17,7 @@ import itertools
 import inspect
 import importlib
 import csv
+import tar
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -38,6 +39,7 @@ class Checkpointer:
             inputs = None,
             step = None,
             stamps = None,
+            archive = False
             ):
 
         self.scripts = scripts
@@ -47,9 +49,24 @@ class Checkpointer:
         self.step = step
         self.inputs = inputs
         self.path = path
+        self.tarpath = path + '.tar.gz'
         self.stamps = stamps
+        self.archive = archive
 
     def checkpoint(self):
+
+        if rank == 0:
+            if self.archive:
+                if os.path.isfile(self.tarpath):
+                    if not os.path.isdir(self.path):
+                        print("Tar found - unarchiving...")
+                        with tarfile.open(self.tarpath) as tar:
+                            tar.extractall()
+                        print("Unarchived.")
+                        if not os.path.isdir(self.path):
+                            raise Exception("Archive contained the wrong model file somehow.")
+                    else:
+                        raise Exception("Conflicting archive and directory found.")
 
         if rank == 0:
 
@@ -67,6 +84,8 @@ class Checkpointer:
 
             else:
 
+                print("No pre-existing directory for this model found. Making a new one...")
+
                 os.makedirs(self.path)
 
                 if not self.scripts is None:
@@ -83,6 +102,13 @@ class Checkpointer:
                 stampFilename = os.path.join(self.path, 'stamps.txt')
                 with open(stampFilename, 'w') as file:
                      file.write(json.dumps(self.stamps))
+
+        if rank == 0:
+            if self.archive:
+                if os.path.isfile(self.tarpath):
+                    print("Deleting unarchived archive...")
+                    os.remove(self.tarpath)
+                    print("Deleted.")
 
         if rank == 0:
             print("Checkpointing...")
@@ -164,6 +190,16 @@ class Checkpointer:
                                     )
         if rank == 0:
             print("Saved.")
+
+        if self.archive:
+            if rank == 0:
+                print("Archiving...")
+                with tarfile.open(self.tarpath, 'w:gz') as tar:
+                    tar.add(self.path)
+                print("Archived.")
+                print("Deleting superfluous files...")
+                shutil.rmtree(self.path)
+                print("Done.")
 
         if rank == 0:
             print("Checkpointed!")
