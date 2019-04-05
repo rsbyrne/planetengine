@@ -63,24 +63,24 @@ def rescale_coords(
     outArray = np.dstack(outVals)[0]
     return outArray
 
-def box(mesh, coordArray = None):
+def box(mesh, coordArray = None, boxDims = ((0., 1), (0., 1.))):
     if coordArray is None:
         coordArray = mesh.data
     outArray = rescale_coords(
         radial_coords(coordArray),
         (mesh.angularExtent, mesh.radialLengths),
-        ((0., 1), (0., 1.)),
+        boxDims,
         flip = [True, False]
         )
     return outArray
 
-def unbox(mesh, coordArray = None):
+def unbox(mesh, coordArray = None, boxDims = ((0., 1), (0., 1.))):
     if coordArray is None:
         coordArray = mesh.data
     outArray = radial_coords(
         rescale_coords(
             coordArray,
-            ((0., 1), (0., 1.)),
+            boxDims,
             (mesh.angularExtent, mesh.radialLengths),
             flip = [True, False]
             ),
