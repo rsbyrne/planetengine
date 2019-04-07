@@ -92,6 +92,35 @@ class OLDLoadField:
     def apply(self):
         self.field.data[:] = self.newData
 
+class LoadField:
+
+    def __init__(
+            self,
+            field = None,
+            filename = None,
+            inputDim = 1,
+            inputRes = (64, 64),
+            inputCoords = ((0., 0.), (1., 1.)),
+            mapper = None,
+            ):
+        self.field = field
+        for proc in range(nProcs):
+            if rank == proc:
+                inputMesh = uw.mesh.FeMesh_Cartesian(
+                    elementRes = inputRes,
+                    minCoord = inputCoords[0],
+                    maxCoord = inputCoords[1],
+                    partitioned = False
+                    )
+                inField = inputMesh.add_variable(inputDim)
+                inField.load(filename)
+        if type(mapper) == type(None):
+            mapper = self.field.mesh
+        self.newData = inField.evaluate(mapper)
+
+    def apply(self):
+        self.field.data[:] = self.newData
+
 class Sinusoidal:
 
     def __init__(

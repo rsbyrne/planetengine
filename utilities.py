@@ -162,6 +162,55 @@ def quickShow(*args,
     else:
         return fig
 
+def copyField(field1, field2, tolerance = 0.001, rounded = False):
+
+    if type(field1) == uw.mesh._meshvariable.MeshVariable:
+        inField = field1
+        inMesh = field1.mesh
+        inDim = field1.nodeDofCount
+    else:
+        inMesh = field1.swarm.mesh
+        field1Proj = uw.mesh.MeshVariable(
+            inMesh,
+            field1.count
+            )
+        field1Projector = uw.utils.MeshVariable_Projection(
+            field1Proj,
+            field1
+            )
+        field1Projector.solve()
+        inField = field1Proj
+        inDim = field1.count
+
+    outField = field2
+    if type(field2) == uw.mesh._meshvariable.MeshVariable:
+        outMesh = field2.mesh
+        outCoords = outMesh.data
+        outDim = field2.nodeDofCount
+    else:
+        outMesh = field2.swarm.mesh
+        outCoords = field2.swarm.particleCoordinates.data
+        outDim = field2.count
+
+    if not outDim == inDim:
+        raise Exception("In and Out fields have different dimensions!")
+    if not outMesh.dim == inMesh.dim:
+        raise Exception("In and Out meshes have different dimensions!")
+
+    outField.data[:] = inField.evaluate_global(
+        planetengine.mapping.unbox(
+            inMesh,
+            planetengine.mapping.box(
+                outMesh,
+                outCoords,
+                boxDims = outMesh.dim * ((tolerance, 1. - tolerance),)
+                )
+            )
+        )
+
+    if rounded:
+        field2.data[:] = np.around(field2.data)
+
 def expose(source, destination):
     for key, value in source.__dict__.items():
         destination[key] = value

@@ -3,3 +3,4 @@ import planetengine.utilities
 import planetengine.analysis
 import planetengine.checkpoint
 import planetengine.initials
+import planetengine.mapping
