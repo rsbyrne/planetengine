@@ -162,7 +162,20 @@ def quickShow(*args,
     else:
         return fig
 
-def copyField(field1, field2, tolerance = 0.001, rounded = False):
+def makeLocalAnnulus(mesh):
+    for proc in range(nProcs):
+        if rank == proc:
+            localAnn = uw.mesh.FeMesh_Annulus(
+                elementType = mesh.elementType,
+                elementRes = mesh.elementRes,
+                radialLengths = mesh.radialLengths,
+                angularExtent = mesh.angularExtent,
+                periodic = mesh.periodic,
+                partitioned = False,
+                )
+    return localAnn
+
+def copyField(field1, field2, fullInMesh = None, tolerance = 0.001, rounded = False):
 
     if type(field1) == uw.mesh._meshvariable.MeshVariable:
         inField = field1
@@ -182,6 +195,16 @@ def copyField(field1, field2, tolerance = 0.001, rounded = False):
         inField = field1Proj
         inDim = field1.count
 
+    fullInField = makeLocalAnnulus(inMesh).add_variable(inDim)
+    allData = comm.gather(inField.data, root = 0)
+    allGID = comm.gather(inField.mesh.data_nodegId, root = 0)
+    idDict = {}
+    if rank == 0:
+        for proc in range(nProcs):
+            for data, ID in zip(allData[proc], allGID[proc]):
+                fullInField.data[ID] = data
+    fullInField.data[:] = comm.bcast(fullInField.data, root = 0)
+
     outField = field2
     if type(field2) == uw.mesh._meshvariable.MeshVariable:
         outMesh = field2.mesh
@@ -192,21 +215,19 @@ def copyField(field1, field2, tolerance = 0.001, rounded = False):
         outCoords = field2.swarm.particleCoordinates.data
         outDim = field2.count
 
-    if not outDim == inDim:
-        raise Exception("In and Out fields have different dimensions!")
-    if not outMesh.dim == inMesh.dim:
-        raise Exception("In and Out meshes have different dimensions!")
+    assert outDim == inDim, "In and Out fields have different dimensions!"
+    assert outMesh.dim == inMesh.dim, "In and Out meshes have different dimensions!"
 
-    outField.data[:] = inField.evaluate_global(
-        planetengine.mapping.unbox(
-            inMesh,
-            planetengine.mapping.box(
-                outMesh,
-                outCoords,
-                boxDims = outMesh.dim * ((tolerance, 1. - tolerance),)
-                )
+    evalCoords = planetengine.mapping.unbox(
+        inMesh,
+        planetengine.mapping.box(
+            outMesh,
+            outCoords,
+            boxDims = outMesh.dim * ((tolerance, 1. - tolerance),)
             )
         )
+
+    outField.data[:] = fullInField.evaluate(evalCoords)
 
     if rounded:
         field2.data[:] = np.around(field2.data)
