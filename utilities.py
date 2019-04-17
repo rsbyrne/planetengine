@@ -17,12 +17,17 @@ import random
 
 import planetengine
 
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+nProcs = comm.Get_size()
+
 def varsOnDisk(varsOfState, directory, mode = 'save', blackhole = [0., 0.]):
     substrates = []
     substrateNames = []
     substrateHandles = {}
     extension = '.h5'
-    for var, varName in varsOfState:
+    for varName, var in sorted(varsOfState.items()):
         if type(var) == uw.mesh._meshvariable.MeshVariable:
             substrate = var.mesh
             substrateName = 'mesh'
@@ -147,10 +152,10 @@ def quickShow(*args,
                         fig.Points(
                             swarm,
                             fn_colour = var,
-                            fn_mask = var,
-                            fn_size = 4.,
-                            colours = "purple",
-                            colourBar = False
+                            opacity = 0.1,
+                            fn_size = float(swarm.particleGlobalCount) / 10000,
+                            colours = "purple, green",
+                            colourBar = True,
                             )
                     else:
                         raise Exception("Got to end of swarm-based options.")
@@ -175,7 +180,7 @@ def makeLocalAnnulus(mesh):
                 )
     return localAnn
 
-def copyField(field1, field2, fullInMesh = None, tolerance = 0.001, rounded = False):
+def copyField(field1, field2, tolerance = 0.001, rounded = False):
 
     if type(field1) == uw.mesh._meshvariable.MeshVariable:
         inField = field1
@@ -300,9 +305,26 @@ def dictstamp(inputDict):
     stamp = hashlib.md5(inputStr).hexdigest()
     return stamp
 
+def multidictstamp(dictList):
+    inputBytes = bytes()
+    for inputDict in dictList:
+        inputBytes += str(
+        [(key, inputDict[key]) for key in sorted(inputDict)]
+        ).encode()
+    stamp = hashlib.md5(inputBytes).hexdigest()
+    return stamp
+
 def scriptstamp(scriptPath):
     with open(scriptPath, 'r') as file:
         script = file.read().encode()
+    stamp = hashlib.md5(script).hexdigest()
+    return stamp
+
+def multiscriptstamp(scriptList):
+    script = bytes()
+    for scriptPath in scriptList:
+        with open(scriptPath, 'r') as file:
+            script += file.read().encode()
     stamp = hashlib.md5(script).hexdigest()
     return stamp
 
@@ -339,53 +361,18 @@ class Grouper:
                 outstring += key + ": " + thing
         return outstring
 
-class CoordSystems:
-    #OLD - DON'T USE
-
-    class Radial:
-
-        def __init__(
-                self,
-                radialLengths = (0., 1.),
-                angularExtent = (0., 360.),
-                boxDims = ((0., 1.), (0., 1.)),
-                origin = (0., 0.),
-                xFlip = True,
-                ):
-            # angular extents must be given in degrees
-            self.radialLengths = radialLengths
-            self.angularExtent = angularExtent
-            self.boxDims = boxDims
-            self.origin = origin
-
-        def recentered_coords(self, coordArray):
-            recenteredCoords = coordArray - self.origin
-            return recenteredCoords
-
-        def radial_coords(self, coordArray):
-            recenteredCoords = self.recentered_coords(coordArray)
-            xs, ys = recenteredCoords.transpose()
-            angular = np.arctan2(ys, xs) * 180. / np.pi
-            radial = np.hypot(xs, ys)
-            radialCoords = np.dstack((angular, radial))[0]
-            return radialCoords
-
-        def curved_box(self, coordArray):
-            radInScale = self.radialLengths
-            angOffset = self.angularExtent[0] // 360. * 360. 
-            angInScale = tuple([x - angOffset for x in self.angularExtent])
-            angOutScale, radOutScale = self.boxDims
-            radialCoords = self.radial_coords(coordArray)
-            xs, ys = radialCoords.transpose()
-            xs = np.where(xs >= 0., xs, xs + 360.)
-            xs += (angOutScale[0] - angInScale[0])
-            xs *= (angOutScale[1] - angOutScale[0]) / (angInScale[1] - angInScale[0])
-            xs -= (angOutScale[1])
-            xs *= -1.
-            xs = np.clip(xs, angOutScale[0], angOutScale[1])
-            ys += radOutScale[0] - radInScale[0]
-            ys *= (radOutScale[1] - radOutScale[0]) / (radInScale[1] - radInScale[0])
-            ys = np.clip(ys, radOutScale[0], radOutScale[1])
-            curvedBox = np.dstack([xs, ys])[0]
-
-            return curvedBox
+def setboundaries(variable, values):
+    try:
+        mesh = variable.mesh
+    except:
+        raise Exception("Variable does not appear to be mesh variable.")
+    walls = [
+        mesh.specialSets["inner"],
+        mesh.specialSets["outer"],
+        mesh.specialSets["MinJ_VertexSet"],
+        mesh.specialSets["MaxJ_VertexSet"],
+        ]
+    for value, wall in zip(values, walls):
+        if not value is '.':
+            variable.data[wall] = value
+        

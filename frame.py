@@ -1,9 +1,3 @@
-
-# coding: utf-8
-
-# In[1]:
-
-
 import numpy as np
 import underworld as uw
 from underworld import function as fn
@@ -28,10 +22,6 @@ from planetengine import utilities
 def load_frame(outputPath = '', instanceID = '', loadStep = 0):
 
     loadpath = os.path.join(outputPath, instanceID)
-    
-    systemscript = utilities.local_import(os.path.join(loadpath, '_systemscript.py'))
-    observerscript = utilities.local_import(os.path.join(loadpath, '_observerscript.py'))
-    initialscript = utilities.local_import(os.path.join(loadpath, '_initialscript.py'))
 
     with open(os.path.join(loadpath, 'inputs.txt')) as json_file:  
         inputs = json.load(json_file)
@@ -39,13 +29,27 @@ def load_frame(outputPath = '', instanceID = '', loadStep = 0):
     options = inputs['options']
     config = inputs['config']
 
+    systemscript = utilities.local_import(os.path.join(loadpath, '_systemscript.py'))
+    system = systemscript.build(**inputs['params'])
+
+    initial = {}
+    for varName in sorted(system.varsOfState):
+        initialLoadName = '_' + varName + '_initial.py'
+        module = utilities.local_import(
+            os.path.join(loadpath, initialLoadName)
+            )
+        initial[varName] = module.IC(**config[varName])
+
+    observerscript = utilities.local_import(os.path.join(loadpath, '_observerscript.py'))
+    observer = observerscript.build(**inputs['options'])
+
     with open(os.path.join(loadpath, 'stamps.txt')) as json_file:
         stamps = json.load(json_file)
 
     frame = Frame(
-        system = systemscript.build(**inputs['params']),
-        observer = observerscript.build(**inputs['options']),
-        initial = initialscript.build(**inputs['config']),
+        system = system,
+        observer = observer,
+        initial = initial,
         outputPath = outputPath,
         instanceID = instanceID,
         _stamps = stamps,
@@ -67,17 +71,35 @@ class Frame:
             archive = False,
             _stamps = None,
             ):
+        '''
+        'system' should be the object produced by the 'build' call
+        of a legitimate 'systemscript'.
+        'observer'... ?
+        'initial' should be a dictionary with an entry for each var mentioned
+        in the system 'varsOfState' attribute, indexed by var name, e.g.:
+        initial = {'temperatureField': tempIC, 'materialVar': materialIC}
+        ...where 'tempIC' and 'materialIC' are instances of legitimate
+        initial condition classes.
+        '''
 
         self.outputPath = outputPath
 
+        assert system.varsOfState.keys() == initial.keys()
+
         if _stamps == None:
             self.stamps = {
-                'paramstamp': utilities.dictstamp(system.inputs),
-                'optionstamp': utilities.dictstamp(observer.inputs),
-                'configstamp': utilities.dictstamp(initial.inputs),
-                'systemstamp': utilities.scriptstamp(system.script),
-                'observerstamp': utilities.scriptstamp(observer.script),
-                'initialstamp': utilities.scriptstamp(initial.script),
+                'params': utilities.dictstamp(system.inputs),
+                'options': utilities.dictstamp(observer.inputs),
+                'system': utilities.scriptstamp(system.script),
+                'observer': utilities.scriptstamp(observer.script),
+                'config': utilities.dictstamp({
+                    'scripts': utilities.multiscriptstamp(
+                        [IC.script for name, IC in sorted(initial.items())]
+                        ),
+                    'inputs': utilities.multidictstamp(
+                        [IC.inputs for name, IC in sorted(initial.items())]
+                        ),
+                    }),
                 }
             self.allstamp = utilities.dictstamp(self.stamps)
             self.stamps['allstamp'] = self.allstamp
@@ -101,21 +123,27 @@ class Frame:
         self.figs = observer.make_figs(self.system, self.tools)
         self.data = observer.make_data(self.system, self.tools)
 
+        self.scripts = dict(
+            {'systemscript': system.script, 'observerscript': observer.script},
+            **{name + '_initial': IC.script for name, IC in self.initial.items()}
+            )
+
+        self.params = self.system.inputs
+        self.options = self.observer.inputs
+        self.config = {varName: IC.inputs for varName, IC in sorted(self.initial.items())}
+        self.inputs = {
+            'params': self.params,
+            'options': self.options,
+            'config': self.config,
+            }
+
         self.checkpointer = planetengine.checkpoint.Checkpointer(
             step = self.system.step,
             varsOfState = self.system.varsOfState,
             figs = self.figs,
             dataCollectors = self.data['collectors'],
-            scripts = {
-                'systemscript': self.system.script,
-                'observerscript': self.observer.script,
-                'initialscript': self.initial.script,
-                },
-            inputs = {
-                'params': self.system.inputs,
-                'options': self.observer.inputs,
-                'config': self.initial.inputs,
-                },
+            scripts = self.scripts,
+            inputs = self.inputs,
             stamps = self.stamps,
             path = self.path,
             archive = archive,
@@ -253,6 +281,12 @@ class Frame:
             print("Checkpoint successfully loaded.")
 
     def reset(self):
-        self.initial.apply(self.system)
+        for varName in sorted(self.system.varsOfState):
+            var = self.system.varsOfState[varName]
+            IC = self.initial[varName]
+            IC.apply(var)
+        self.system.step.value = 0
+        self.system.modeltime.value = 0.
+        self.system.solve()
         self.update()
         self.status = "ready"
