@@ -61,7 +61,7 @@ class Analyse:
 
         def evaluate(self):
 
-            result = (self.intFieldSurfGrad.evaluate()[0] / self.intMeshSurf.evaluate()[0]) \
+            result = -(self.intFieldSurfGrad.evaluate()[0] / self.intMeshSurf.evaluate()[0]) \
                 / (self.intFieldBase.evaluate()[0] / self.intMeshBase.evaluate()[0])
 
             return result
