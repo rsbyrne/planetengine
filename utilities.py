@@ -368,8 +368,8 @@ def setboundaries(variable, values):
     except:
         raise Exception("Variable does not appear to be mesh variable.")
     walls = [
-        mesh.specialSets["inner"],
         mesh.specialSets["outer"],
+        mesh.specialSets["inner"],
         mesh.specialSets["MinJ_VertexSet"],
         mesh.specialSets["MaxJ_VertexSet"],
         ]
