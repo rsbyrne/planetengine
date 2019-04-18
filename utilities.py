@@ -152,9 +152,10 @@ def quickShow(*args,
                         fig.Points(
                             swarm,
                             fn_colour = var,
-                            opacity = 0.1,
-                            fn_size = float(swarm.particleGlobalCount) / 10000,
-                            colours = "purple, green",
+                            fn_mask = var,
+                            opacity = 0.5,
+                            fn_size = 1e3 / float(swarm.particleGlobalCount)**0.5,
+                            colours = "purple green brown pink red",
                             colourBar = True,
                             )
                     else:

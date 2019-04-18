@@ -32,14 +32,16 @@ class Checkpointer:
     def __init__(
             self,
             varsOfState = None,
-            path = '',
+            outputPath = '',
+            instanceID = 'test',
             scripts = None,
             figs = None,
             dataCollectors = None,
             inputs = None,
             step = None,
             stamps = None,
-            archive = False
+            archive = False,
+            inFrames = {},
             ):
 
         self.scripts = scripts
@@ -48,10 +50,29 @@ class Checkpointer:
         self.varsOfState = varsOfState
         self.step = step
         self.inputs = inputs
-        self.path = path
-        self.tarpath = path + '.tar.gz'
+        self.outputPath = outputPath
+        self.instanceID = instanceID
+        self.path = os.path.join(self.outputPath, self.instanceID)
+        self.tarpath = self.path + '.tar.gz'
         self.stamps = stamps
         self.archive = archive
+        self.inFrames = inFrames
+
+        self.inFrame_checkpointers = []
+        for hashID, inFrame in sorted(self.inFrames.items()):
+            inFrame_checkpointer = planetengine.checkpoint.Checkpointer(
+                step = inFrame.system.step,
+                varsOfState = inFrame.system.varsOfState,
+                figs = inFrame.figs,
+                dataCollectors = inFrame.data['collectors'],
+                scripts = inFrame.scripts,
+                inputs = inFrame.inputs,
+                stamps = inFrame.stamps,
+                outputPath = self.path,
+                instanceID = hashID,
+                inFrames = inFrame.inFrames,
+                )
+            self.inFrame_checkpointers.append(inFrame_checkpointer)
 
     def checkpoint(self):
 
@@ -68,9 +89,9 @@ class Checkpointer:
                     else:
                         raise Exception("Conflicting archive and directory found.")
 
-        if rank == 0:
-
-            if os.path.isdir(self.path):
+        if os.path.isdir(self.path):
+            
+            if rank == 0:
 
                 if not os.path.isfile(os.path.join(self.path, 'stamps.txt')):
                     raise Exception("No stamps file found. Aborting.")
@@ -82,7 +103,9 @@ class Checkpointer:
                     else:
                         print("Pre-existing directory for this model has been found. Continuing...")
 
-            else:
+        else:
+
+            if rank == 0:
 
                 print("No pre-existing directory for this model found. Making a new one...")
 
@@ -102,6 +125,14 @@ class Checkpointer:
                 stampFilename = os.path.join(self.path, 'stamps.txt')
                 with open(stampFilename, 'w') as file:
                      file.write(json.dumps(self.stamps))
+
+            if len(self.inFrame_checkpointers) > 0:
+                if rank == 0:
+                    print("Saving inFrames...")
+                for checkpointer in self.inFrame_checkpointers:
+                    checkpointer.checkpoint()
+                if rank == 0:
+                    print("inFrames saved.")
 
         if rank == 0:
             if self.archive:

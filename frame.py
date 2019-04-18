@@ -21,29 +21,38 @@ from planetengine import utilities
 
 def load_frame(outputPath = '', instanceID = '', loadStep = 0):
 
-    loadpath = os.path.join(outputPath, instanceID)
+    loadPath = os.path.join(outputPath, instanceID)
 
-    with open(os.path.join(loadpath, 'inputs.txt')) as json_file:  
+    with open(os.path.join(loadPath, 'inputs.txt')) as json_file:  
         inputs = json.load(json_file)
     params = inputs['params']
     options = inputs['options']
     config = inputs['config']
 
-    systemscript = utilities.local_import(os.path.join(loadpath, '_systemscript.py'))
+    systemscript = utilities.local_import(os.path.join(loadPath, '_systemscript.py'))
     system = systemscript.build(**inputs['params'])
 
     initial = {}
     for varName in sorted(system.varsOfState):
         initialLoadName = '_' + varName + '_initial.py'
         module = utilities.local_import(
-            os.path.join(loadpath, initialLoadName)
+            os.path.join(loadPath, initialLoadName)
             )
-        initial[varName] = module.IC(**config[varName])
+        # check if an identical 'initial' object already exists:
+        if module.IC in [type(IC) for IC in initial.values()]:
+            for priorVarName, IC in sorted(initial.items()):
+                if type(IC) == module.IC and config[varName] == config[priorVarName]:
+                    initial[varName] = initial[priorVarName]
+                    break
+        elif hasattr(module, 'LOADTYPE'):
+            initial[varName] = module.IC(**config[varName], _outputPath = loadPath)
+        else:
+            initial[varName] = module.IC(**config[varName])
 
-    observerscript = utilities.local_import(os.path.join(loadpath, '_observerscript.py'))
+    observerscript = utilities.local_import(os.path.join(loadPath, '_observerscript.py'))
     observer = observerscript.build(**inputs['options'])
 
-    with open(os.path.join(loadpath, 'stamps.txt')) as json_file:
+    with open(os.path.join(loadPath, 'stamps.txt')) as json_file:
         stamps = json.load(json_file)
 
     frame = Frame(
@@ -70,6 +79,7 @@ class Frame:
             instanceID = None,
             archive = False,
             _stamps = None,
+            _use_wordhash = True,
             ):
         '''
         'system' should be the object produced by the 'build' call
@@ -109,12 +119,18 @@ class Frame:
         for key in self.stamps:
             setattr(self, key, self.stamps[key])
 
+        self._use_wordhash = _use_wordhash
+        self.wordhash = planetengine.wordhash.wordhash(self.allstamp)
+        if self._use_wordhash:
+            self.hashID = 'pemod_' + self.wordhash
+        else:
+            self.hashID = 'pemod_' + self.allstamp
         if instanceID == None:
-            self.instanceID = 'pemod_' + self.allstamp
+            self.instanceID = self.hashID
         else:
             self.instanceID = instanceID
 
-        self.path = os.path.join(outputPath, self.instanceID)
+        self.path = os.path.join(self.outputPath, self.instanceID)
 
         self.system = system
         self.initial = initial
@@ -122,6 +138,8 @@ class Frame:
         self.tools = observer.make_tools(self.system)
         self.figs = observer.make_figs(self.system, self.tools)
         self.data = observer.make_data(self.system, self.tools)
+
+        self.varsOfState = self.system.varsOfState
 
         self.scripts = dict(
             {'systemscript': system.script, 'observerscript': observer.script},
@@ -137,6 +155,11 @@ class Frame:
             'config': self.config,
             }
 
+        self.inFrames = {}
+        for IC in self.initial.values():
+            if type(IC) == planetengine.initials.load.IC:
+                self.inFrames[IC.inFrame.hashID] = IC.inFrame
+
         self.checkpointer = planetengine.checkpoint.Checkpointer(
             step = self.system.step,
             varsOfState = self.system.varsOfState,
@@ -145,17 +168,21 @@ class Frame:
             scripts = self.scripts,
             inputs = self.inputs,
             stamps = self.stamps,
-            path = self.path,
+            outputPath = self.outputPath,
+            instanceID = self.instanceID,
             archive = archive,
+            inFrames = self.inFrames,
             )
 
         self.reset()
+
+        self.most_recent_checkpoint = None
 
     def checkpoint(self):
         if not self.allDataCollected:
             self.all_collect()
         self.checkpointer.checkpoint()
-        self.most_recent_check = self.step
+        self.most_recent_checkpoint = self.step
 
     def update(self):
         try:
@@ -233,7 +260,8 @@ class Frame:
                 if forge_on:
                     if rank == 0:
                         print("Something went wrong...loading last checkpoint.")
-                    self.load_checkpoint(self.most_recent_check)
+                    assert type(self.most_recent_checkpoint) == int, "No most recent checkpoint logged."
+                    self.load_checkpoint(self.most_recent_checkpoint)
                 else:
                     raise Exception("Something went wrong.")
 
@@ -249,44 +277,47 @@ class Frame:
         if rank == 0:
             print("Loading checkpoint...")
 
-        stepStr = str(loadStep).zfill(8)
+        if loadStep == self.step:
+            if rank == 0:
+                print("Already at step ", str(loadStep), " - aborting load_checkpoint.")
 
-        checkpointFile = os.path.join(self.path, stepStr)
+        elif loadStep == 0:
+            self.reset()
 
-        utilities.varsOnDisk(
-            self.system.varsOfState,
-            checkpointFile,
-            'load',
-            blackhole = self.system.blackhole,
-            )
+        else:
+            stepStr = str(loadStep).zfill(8)
 
-        snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.txt')
-        with open(snapshot, 'r') as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=',')
-            header, data = csv_reader
-        dataDict = {}
-        for dataName, dataItem in zip(header, data):
-            key = dataName[1:].lstrip()
-            dataDict[key] = dataItem
+            checkpointFile = os.path.join(self.path, stepStr)
 
-        self.system.step.value = loadStep
-        self.system.modeltime.value = float(dataDict['modeltime'])
+            utilities.varsOnDisk(
+                self.system.varsOfState,
+                checkpointFile,
+                'load',
+                blackhole = self.system.blackhole,
+                )
 
-        self.system.solve()
+            snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.txt')
+            with open(snapshot, 'r') as csv_file:
+                csv_reader = csv.reader(csv_file, delimiter=',')
+                header, data = csv_reader
+            dataDict = {}
+            for dataName, dataItem in zip(header, data):
+                key = dataName[1:].lstrip()
+                dataDict[key] = dataItem
 
-        self.update()
-        self.status = "ready"
+            self.system.step.value = loadStep
+            self.system.modeltime.value = float(dataDict['modeltime'])
 
-        if rank == 0:
-            print("Checkpoint successfully loaded.")
+            self.system.solve()
+
+            self.update()
+            self.status = "ready"
+
+            if rank == 0:
+                print("Checkpoint successfully loaded.")
 
     def reset(self):
-        for varName in sorted(self.system.varsOfState):
-            var = self.system.varsOfState[varName]
-            IC = self.initial[varName]
-            IC.apply(var)
-        self.system.step.value = 0
-        self.system.modeltime.value = 0.
+        planetengine.initials.apply(self.initial, self.system)
         self.system.solve()
         self.update()
         self.status = "ready"
