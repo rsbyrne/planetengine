@@ -43,6 +43,13 @@ class IC:
             raise Exception("inFrame input not recognised.")
         self.inputs['hashID'] = self.inFrame.hashID
         self.inVar = self.inFrame.system.varsOfState[self.sourceVarName]
+        if not type(self.invar) == uw.swarm._meshvariable.MeshVariable:
+            try:
+                self.inVar = self.inFrame.projections[self.sourceVarName]
+                if not self.inFrame.allProjected:
+                    self.inFrame.project(self.sourceVarName)
+            except:
+                pass
 
     def apply(self, outVar):
 

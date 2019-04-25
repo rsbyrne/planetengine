@@ -13,23 +13,35 @@ class IC:
     '''
 
     def __init__(
-        self,
-        vertexSets = (),
-        default = 0,
-        boxDims = ((0., 1), (0., 1.)),
-        boundaries = ('.', '.', '.', '.'),
-        ):
+            self,
+            *args,
+            shapes = None,
+            default = 0,
+            boxDims = ((0., 1), (0., 1.)),
+            boundaries = ('.', '.', '.', '.')
+            ):
 
         # HOUSEKEEPING: this should always be here
         self.inputs = locals().copy()
         del self.inputs['self']
+        del self.inputs['args']
         self.script = __file__
+
+        if shapes is None:
+            if len(np.array(args).shape) == 2:
+                shapes = args
+                self.inputs['shapes'] = shapes
+            elif len(np.array(args).shape) == 3:
+                shapes = args[0]
+                self.inputs['shapes'] = shapes
+            else:
+                raise Exception("Inputs not understood.")
 
         self.boxDims = boxDims
         self.boundaries = boundaries
 
         self.polygons = [(default, fn.misc.constant(True))]
-        for val, vertices in vertexSets:
+        for val, vertices in shapes:
             array = np.array(vertices)
             self.polygons.append(
                 (val, fn.shape.Polygon(array))

@@ -7,3 +7,4 @@ import planetengine.post
 import planetengine.utilities
 import planetengine.shapes
 import planetengine.wordhash
+import planetengine.observer

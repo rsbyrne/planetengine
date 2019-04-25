@@ -173,57 +173,100 @@ class Frame:
             archive = archive,
             inFrames = self.inFrames,
             )
+        
+        self.observerDict = {}
 
-        self.reset()
+        projections, projectors, project = utilities.make_projectors(
+            {**self.system.varsOfState, **self.observerDict}
+            )
 
+        if type(self.system.mesh) == uw.mesh._spherical_mesh.FeMesh_Annulus:
+            self.blackhole = [0., 0.]
+        else:
+            raise Exception("Only the Annulus mesh is supported at this time.")
+
+        self.initialise()
+
+    def initialise(self):
+        if rank == 0:
+            print("Initialising...")
+        planetengine.initials.apply(self.initial, self.system)
+        self.solved = False
         self.most_recent_checkpoint = None
+        self.update()
+        self.status = "ready"
+        if rank == 0:
+            print("Initialisation complete!")
+
+    def reset(self):
+        self.initialise()
 
     def checkpoint(self):
-        if not self.allDataCollected:
+        if not self.allCollected:
             self.all_collect()
         self.checkpointer.checkpoint()
         self.most_recent_checkpoint = self.step
 
     def update(self):
-        try:
-            for projectorName, projector in sorted(self.tools.projectors.items()):
-                projector.solve()
-        except AttributeError:
-            pass
         self.step = self.system.step.value
         self.modeltime = self.system.modeltime.value
-        self.allDataRefreshed = False
-        self.allDataCollected = False
+        self.allAnalysed = False
+        self.allCollected = False
+        self.allProjected = False
 
     def all_analyse(self):
+        if rank == 0:
+            print("Analysing...")
+        if not self.solved:
+            self.system.solve()
+            self.solved = True
+        if not self.allProjected:
+            self.project()
+            self.allProjected = True
         for analyser in self.data['analysers']:
             analyser.analyse()
-        self.allDataRefreshed = True
+        self.allAnalysed = True
+        if rank == 0:
+            print("Analysis complete!")
 
     def report(self):
-        if not self.allDataRefreshed:
-            self.all_analyse()
-        for analyser in self.data['analysers']:
-            analyser.report()
-        for figname in self.figs:
-            if rank == 0:
-                print(figname)
-            self.figs[figname].show()
+        if rank == 0:
+            print("Reporting...")
+        utilities.quickShow(*sorted(self.system.varsOfState.values()))
+#         if not self.allAnalysed:
+#             self.all_analyse()
+#         for analyser in self.data['analysers']:
+#             analyser.report()
+#         for figname in self.figs:
+#             if rank == 0:
+#                 print(figname)
+#             self.figs[figname].show()
+        if rank == 0:
+            print("Reporting complete!")
 
     def all_collect(self):
-        if not self.allDataRefreshed:
+        if rank == 0:
+            print("Collecting...")
+        if not self.allAnalysed:
             self.all_analyse()
         for collector in self.data['collectors']:
             collector.collect()
-        self.allDataCollected = True
+        self.allCollected = True
+        if rank == 0:
+            print("Collecting complete!")
 
     def all_clear(self):
         for collector in self.data['collectors']:
             collector.clear()
 
     def iterate(self):
+        if rank == 0:
+            print("Iterating step " + str(self.step) + " ...")
         self.system.iterate()
         self.update()
+        self.solved = True
+        if rank == 0:
+            print("Iteration complete!")
 
     def go(self, steps):
         stopStep = self.step + steps
@@ -293,7 +336,7 @@ class Frame:
                 self.system.varsOfState,
                 checkpointFile,
                 'load',
-                blackhole = self.system.blackhole,
+                self.blackhole,
                 )
 
             snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.txt')
@@ -314,10 +357,4 @@ class Frame:
             self.status = "ready"
 
             if rank == 0:
-                print("Checkpoint successfully loaded.")
-
-    def reset(self):
-        planetengine.initials.apply(self.initial, self.system)
-        self.system.solve()
-        self.update()
-        self.status = "ready"
+                print("Checkpoint successfully loaded!")

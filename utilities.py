@@ -116,7 +116,7 @@ def quickShow(*args,
                     var = invar
                 except:
                     try:
-                        mesh, var = invar
+                        var, mesh = invar
                     except:
                         raise Exception("")
                 try:
@@ -146,7 +146,7 @@ def quickShow(*args,
                     var = invar
                     swarm = var.swarm
                 except:
-                    swarm, var = invar
+                    var, swarm = invar
                 try:
                     if not 'points' in features:
                         fig.Points(
@@ -181,7 +181,10 @@ def makeLocalAnnulus(mesh):
                 )
     return localAnn
 
-def copyField(field1, field2, tolerance = 0.001, rounded = False):
+def copyField(field1, field2,
+        tolerance = 0.001,
+        rounded = False
+        ):
 
     if type(field1) == uw.mesh._meshvariable.MeshVariable:
         inField = field1
@@ -191,7 +194,7 @@ def copyField(field1, field2, tolerance = 0.001, rounded = False):
         inMesh = field1.swarm.mesh
         field1Proj = uw.mesh.MeshVariable(
             inMesh,
-            field1.count
+            field1.count,
             )
         field1Projector = uw.utils.MeshVariable_Projection(
             field1Proj,
@@ -333,6 +336,102 @@ def stringstamp(instring):
     stamp = hashlib.md5(instring.encode()).hexdigest()
     return stamp
 
+def mesh_utils(mesh, deformable = False):
+
+    try:
+        meshName, mesh = mesh
+    except:
+        mesh = mesh
+        meshName = 'None'
+
+    if hasattr(mesh, 'pe'):
+        if rank == 0:
+            print("Mesh already has 'pe' attribute: aborting.")
+        return None
+
+    pe = {
+        'deformable': deformable,
+        'meshName': meshName,
+        }
+
+    if type(mesh) == uw.mesh.FeMesh_Cartesian:
+        if mesh.dim == 2:
+            pe['ang'] = fn.misc.constant((1., 0.))
+            pe['rad'] = fn.misc.constant((0., 1.))
+        elif mesh.dim == 3:
+            pe['ang1'] = fn.misc.constant((1., 0., 0.))
+            pe['ang2'] = fn.misc.constant((0., 1., 0.))
+            pe['rad'] = fn.misc.constant((0., 0., 1.))
+        else:
+            raise Exception("Only mesh dims 2 and 3 supported...obviously?")
+        pe['inner'] = mesh.specialSets['Bottom']
+        pe['outer'] = mesh.specialSets['Top']
+    elif type(mesh) == uw.mesh.FeMesh_Annulus:
+        pe['ang'] = mesh.unitvec_theta_Fn
+        pe['rad'] = mesh.unitvec_r_Fn
+        pe['inner'] = mesh.specialSets['inner']
+        pe['outer'] = mesh.specialSets['outer']
+    else:
+        raise Exception("That kind of mesh is not supported yet.")
+
+    def getFullData():
+        fullData = fn.input().evaluate_global(mesh.data)
+        fullData = comm.bcast(fullData, root = 0)
+        return fullData
+
+    # Is this necessary?
+    if not deformable:
+        fullData = getFullData()
+        pe['fullData'] = lambda: fullData
+    else:
+        pe['fullData'] = getFullData
+
+    # REVISIT THIS WHEN 'BOX' IS IMPROVED
+    if type(mesh) == uw.mesh.FeMesh_Annulus:
+        if not deformable:
+            if mesh.dim == 2:
+                box = planetengine.mapping.box(mesh)
+                pe['box'] = lambda: box
+        else:
+            if mesh.dim == 2:
+                pe['box'] = lambda: mapping.box(mesh)
+
+    volInt = uw.utils.Integral(
+        1.,
+        mesh,
+        )
+    outerInt = uw.utils.Integral(
+        1.,
+        mesh,
+        integrationType = 'surface',
+        surfaceIndexSet = pe['outer']
+        )
+    innerInt = uw.utils.Integral(
+        1.,
+        mesh,
+        integrationType = 'surface',
+        surfaceIndexSet = pe['inner']
+        )
+
+    if not deformable:
+
+        volIntVal = volInt.evaluate()[0]
+        outerIntVal = outerInt.evaluate()[0]
+        innerIntVal = innerInt.evaluate()[0]
+
+        pe['integral'] = lambda: volIntVal
+        pe['integral_outer'] = lambda: outerIntVal
+        pe['integral_inner'] = lambda: innerIntVal
+
+    else:
+
+        pe['integral'] = lambda: volInt.evaluate()[0]
+        pe['integral_outer'] = lambda: outerInt.evaluate()[0]
+        pe['integral_inner'] = lambda: innerInt.evaluate()[0]
+
+    pe = Grouper(pe)
+    mesh.__dict__.update({'pe': pe})
+
 class Grouper:
     def __init__(self, indict = {}):
         self.selfdict = {}
@@ -376,4 +475,49 @@ def setboundaries(variable, values):
     for value, wall in zip(values, walls):
         if not value is '.':
             variable.data[wall] = value
-        
+
+def make_projectors(varDict):
+    '''
+    Takes a dictionary with keys for strings
+    and values that can be either mesh variables,
+    swarm variables, or tuples of the form:
+    (Underworld function, substrate, dimension, dType),
+    where 'substrate' is either a mesh, if the function
+    is dependent solely on mesh variables, or a swarm,
+    if the function is partly or wholely dependent
+    on a swarm variable, and dType is a string reading either
+    'double' or 'int' (the two types that Underworld functions
+    can handle).
+    Returns a tuple of objects which are used
+    to project data structures onto mesh variables
+    which are more digestible by Planetengine.
+    '''
+    projections = {}
+    projectors = {}
+    for varName, var in sorted(varDict.items()):
+        if not type(var) == uw.mesh._meshvariable.MeshVariable:
+            if type(var) == uw.swarm._swarmvariable.SwarmVariable:
+                mesh = var.swarm.mesh
+                dim = var.count
+            elif type(var) == tuple:
+                assert issubclass(type(var[0]), uw.function.Function), \
+                    "Projections must be meshvar, swarmvar, or uw function."
+                var, substrate, dim, dType = var
+                try:
+                    mesh = substrate.mesh
+                except:
+                    mesh = substrate
+            projection = uw.mesh.MeshVariable(
+                mesh,
+                dim,
+                )
+            projector = uw.utils.MeshVariable_Projection(
+                projection,
+                var,
+                )
+            projections[varName] = projection
+            projectors[varName] = projector
+    def project(varsToProject = sorted(projectors)):
+        for varName in varsToProject:
+            projectors[varName].solve()
+    return projections, projectors, project

@@ -25,71 +25,171 @@ nProcs = comm.Get_size()
 
 import planetengine
 
+class ScalarIntegral:
+
+    def __init__(
+            self,
+            field,
+            mesh,
+            gradient = None,
+            surface = None,
+            nonDim = None,
+            ):
+
+        if gradient is None:
+            var = field
+        else:
+            grad = field.fn_gradient
+            if gradient == 'natural':
+                var = grad
+            else:
+                if gradient == 'radial':
+                    comp = -mesh.unitvec_r_Fn
+                elif gradient == 'angular':
+                    comp = mesh.unitvec_theta_Fn
+                else:
+                    raise Exception(
+                        "Gradient input not recognised."
+                        )
+                var = fn.math.dot(comp, grad)
+
+        if surface == None:
+            intField = uw.utils.Integral(field, mesh)
+            intMesh = uw.utils.Integral(1., mesh)
+        else:
+            indexSet = mesh.specialSets[surface]
+            intField = uw.utils.Integral(
+                field,
+                mesh,
+                integrationType = 'surface',
+                surfaceIndexSet = indexSet
+                )
+            intMesh = uw.utils.Integral(
+                1.,
+                mesh,
+                integrationType = 'surface',
+                surfaceIndexSet = indexSet
+                )
+
+        val = lambda: \
+            intField.evaluate()[0] \
+            / intMesh.evaluate()[0]
+
+        if nonDim is None:
+            ndVal = lambda: 1.
+        else:
+            ndVal = lambda: nonDim.evaluate()
+
+        self.evaluate = lambda: val() / ndVal
+
+    def __call__(self):
+
+        return self.evaluate()
+
 class Analyse:
 
-    class DimensionlessGradient:
+    class Gradient:
 
-        def __init__(self, scalarField, mesh, surface, base):
+        def __init__(self, scalarField, mesh, surface, nonDim = 1.):
 
-            self.intFieldSurfGrad = uw.utils.Integral(
+            intFieldSurfGrad = uw.utils.Integral(
                 fn.math.dot(mesh.unitvec_r_Fn, scalarField.fn_gradient),
                 mesh,
                 integrationType = 'surface',
                 surfaceIndexSet = surface
                 )
 
-            self.intMeshSurf = uw.utils.Integral(
+            intMeshSurf = uw.utils.Integral(
                 1.,
                 mesh,
                 integrationType = 'surface',
                 surfaceIndexSet = surface
                 )
 
-            self.intMeshBase = uw.utils.Integral(
-                1.,
-                mesh,
-                integrationType = 'surface',
-                surfaceIndexSet = base
-                )
+            self.val = lambda: \
+                -intFieldSurfGrad.evaluate()[0] \
+                / intMeshSurf.evaluate()[0]
 
-            self.intFieldBase = uw.utils.Integral(
-                scalarField,
-                mesh,
-                integrationType = 'surface',
-                surfaceIndexSet = base
-                )
+            if type(nonDim) == int or type(nonDim) == float:
+
+                self.nonDimVal = lambda: float(nonDim)
+
+            elif type(nonDim) == uw.mesh._mesh.FeMesh_IndexSet:
+
+                intMeshNd = uw.utils.Integral(
+                    1.,
+                    mesh,
+                    integrationType = 'surface',
+                    surfaceIndexSet = nonDim
+                    )
+
+                intFieldNd = uw.utils.Integral(
+                    scalarField,
+                    mesh,
+                    integrationType = 'surface',
+                    surfaceIndexSet = nonDim
+                    )
+
+                self.nonDimVal = lambda: \
+                    intMeshNd.evaluate()[0] \
+                    / intFieldNd.evaluate()[0]
+
+            elif nonDim == "volume":
+
+                intMeshNd = uw.utils.Integral(1., mesh)
+                intFieldNd = uw.utils.Integral(scalarField, mesh)
+
+                self.nonDimVal = lambda: \
+                    intFieldNd.evaluate()[0] \
+                    / intMeshNd.evaluate()[0]
 
         def evaluate(self):
 
-            result = -(self.intFieldSurfGrad.evaluate()[0] / self.intMeshSurf.evaluate()[0]) \
-                / (self.intFieldBase.evaluate()[0] / self.intMeshBase.evaluate()[0])
+            result = -self.val() / self.nonDimVal
 
             return result
 
-#     class DimensionlessGradient:
+    class ScalarFieldAverage:
 
-#         def __init__(self, scalarField, mesh,
-#                      component = 1,
-#                      surfIndexSet = None,
-#                      baseIndexSet = None
-#                     ):
+        def __init__(self, scalarField, mesh, nonDim = 1.):
 
-#             self.intSurfGrad = uw.utils.Integral(
-#                 scalarField.fn_gradient[component], mesh,
-#                 integrationType = 'surface',
-#                 surfaceIndexSet = surfIndexSet
-#                 )
-#             self.intBase = uw.utils.Integral(
-#                 scalarField, mesh,
-#                 integrationType = 'surface',
-#                 surfaceIndexSet = baseIndexSet
-#                 )
+            intField = uw.utils.Integral(scalarField, mesh)
 
-#         def evaluate(self):
+            intMesh = uw.utils.Integral(1., mesh)
 
-#             Nu = - self.intSurfGrad.evaluate()[0] \
-#                 / self.intBase.evaluate()[0]
-#             return Nu
+            self.val = lambda: \
+                intField.evaluate()[0] \
+                / intMesh.evaluate()[0]
+
+            if type(nonDim) == int or type(nonDim) == float:
+
+                self.nonDimVal = lambda: float(nonDim)
+
+            elif type(nonDim) == uw.mesh._mesh.FeMesh_IndexSet:
+
+                intMeshNd = uw.utils.Integral(
+                    1.,
+                    mesh,
+                    integrationType = 'surface',
+                    surfaceIndexSet = nonDim
+                    )
+
+                intFieldNd = uw.utils.Integral(
+                    scalarField,
+                    mesh,
+                    integrationType = 'surface',
+                    surfaceIndexSet = nonDim
+                    )
+
+                self.nonDimVal = lambda: \
+                    intFieldBase.evaluate()[0] \
+                    / intMeshBase.evaluate()[0]
+
+        def evaluate(self):
+
+            result = self.val() / self.nonDimVal
+
+            return result
 
     class ScalarFieldAverage:
 
@@ -234,3 +334,4 @@ class DataCollector:
             outdata.append((name, header, dataArray))
         self.datasets = [[] for analyser in self.analysers]
         return outdata
+

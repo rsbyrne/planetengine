@@ -12,13 +12,17 @@ class IC:
             valRange = (0., 1.),
             phase = 0.,
             boxDims = ((0., 1), (0., 1.)),
-            boundaries = ('.', '.', '.', '.'),
+            boundaries = None,
             ):
 
         # HOUSEKEEPING: this should always be here
         self.inputs = locals().copy()
         del self.inputs['self']
         self.script = __file__
+
+        if boundaries is None:
+            boundaries = (valRange[0], valRange[1], '.', '.')
+            self.inputs['boundaries'] = boundaries
 
         self.freq = freq
         self.valRange = valRange
