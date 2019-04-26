@@ -28,14 +28,8 @@ class IC:
         self.script = __file__
 
         if shapes is None:
-            if len(np.array(args).shape) == 2:
-                shapes = args
-                self.inputs['shapes'] = shapes
-            elif len(np.array(args).shape) == 3:
-                shapes = args[0]
-                self.inputs['shapes'] = shapes
-            else:
-                raise Exception("Inputs not understood.")
+            shapes = args
+            self.inputs['shapes'] = shapes
 
         self.boxDims = boxDims
         self.boundaries = boundaries

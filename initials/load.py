@@ -2,6 +2,7 @@ from planetengine.mapping import box
 from planetengine.utilities import copyField
 from planetengine.utilities import setboundaries
 from planetengine import frame
+import underworld as uw
 import numpy as np
 import os
 
@@ -13,7 +14,7 @@ class IC:
             self,
             inFrame = None,
             sourceVarName = None,
-            loadStep = 0,
+            loadStep = None,
             hashID = None,
             _outputPath = '',
             ):
@@ -30,7 +31,14 @@ class IC:
         self.script = __file__
 
         self.sourceVarName = sourceVarName
-        self.loadStep = loadStep
+        if loadStep is None:
+            if type(inFrame) == frame.Frame:
+                self.loadStep = inFrame.step
+            else:
+                self.loadStep = 0
+            self.inputs['loadStep'] = self.loadStep
+        else:
+            self.loadStep = loadStep
 
         if inFrame is None and type(hashID) == str:
             self.inFrame = frame.load_frame(_outputPath, hashID, loadStep = self.loadStep)
@@ -43,7 +51,7 @@ class IC:
             raise Exception("inFrame input not recognised.")
         self.inputs['hashID'] = self.inFrame.hashID
         self.inVar = self.inFrame.system.varsOfState[self.sourceVarName]
-        if not type(self.invar) == uw.swarm._meshvariable.MeshVariable:
+        if not type(self.inVar) == uw.mesh._meshvariable.MeshVariable:
             try:
                 self.inVar = self.inFrame.projections[self.sourceVarName]
                 if not self.inFrame.allProjected:
