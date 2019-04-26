@@ -79,7 +79,7 @@ class Frame:
             instanceID = None,
             archive = False,
             _stamps = None,
-            _use_wordhash = True,
+            _use_wordhash = False,
             ):
         '''
         'system' should be the object produced by the 'build' call
@@ -176,9 +176,15 @@ class Frame:
         
         self.observerDict = {}
 
-        projections, projectors, project = utilities.make_projectors(
+        self.projections, self.projectors, self.project = utilities.make_projectors(
             {**self.system.varsOfState, **self.observerDict}
             )
+        # CHANGED WHEN NEW FEATURES ARE READY:
+        try:
+            self.projections.update(self.tools.projections)
+            self.projectors.update(self.tools.projectors)
+        except:
+            pass
 
         if type(self.system.mesh) == uw.mesh._spherical_mesh.FeMesh_Annulus:
             self.blackhole = [0., 0.]
@@ -232,15 +238,15 @@ class Frame:
     def report(self):
         if rank == 0:
             print("Reporting...")
-        utilities.quickShow(*sorted(self.system.varsOfState.values()))
-#         if not self.allAnalysed:
-#             self.all_analyse()
-#         for analyser in self.data['analysers']:
-#             analyser.report()
-#         for figname in self.figs:
-#             if rank == 0:
-#                 print(figname)
-#             self.figs[figname].show()
+#         utilities.quickShow(*sorted(self.system.varsOfState.values()))
+        if not self.allAnalysed:
+            self.all_analyse()
+        for analyser in self.data['analysers']:
+            analyser.report()
+        for figname in self.figs:
+            if rank == 0:
+                print(figname)
+            self.figs[figname].show()
         if rank == 0:
             print("Reporting complete!")
 

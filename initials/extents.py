@@ -17,11 +17,14 @@ class IC:
             *args,
             shapes = None,
             default = 0,
-            boxDims = ((0., 1), (0., 1.)),
+            boxDims = ((0., 1.), (0., 1.)),
             boundaries = ('.', '.', '.', '.')
             ):
 
         # HOUSEKEEPING: this should always be here
+        boxDims = tuple(
+            [tuple([float(inner) for inner in outer]) for outer in boxDims]
+            )
         self.inputs = locals().copy()
         del self.inputs['self']
         del self.inputs['args']
@@ -33,6 +36,9 @@ class IC:
 
         self.boxDims = boxDims
         self.boundaries = boundaries
+        if type(boundaries) == list:
+            boundaries = tuple(boundaries)
+            self.inputs['boundaries'] = boundaries
 
         self.polygons = [(default, fn.misc.constant(True))]
         for val, vertices in shapes:

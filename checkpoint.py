@@ -60,6 +60,7 @@ class Checkpointer:
 
         self.inFrame_checkpointers = []
         for hashID, inFrame in sorted(self.inFrames.items()):
+            inFrame.all_collect()
             inFrame_checkpointer = planetengine.checkpoint.Checkpointer(
                 step = inFrame.system.step,
                 varsOfState = inFrame.system.varsOfState,

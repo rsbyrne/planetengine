@@ -90,7 +90,7 @@ class Analyse:
 
     class DimensionlessGradient:
 
-        def __init__(self, scalarField, mesh, surface, nonDim = 'base'):
+        def __init__(self, scalarField, mesh, surface, nonDim = 'inner'):
 
             intFieldSurfGrad = uw.utils.Integral(
                 fn.math.dot(mesh.unitvec_r_Fn, scalarField.fn_gradient),
@@ -155,7 +155,6 @@ class Analyse:
                     intMeshNd.evaluate()[0] \
                     / intFieldNd.evaluate()[0]
 
-
             elif nonDim == "volume":
 
                 intMeshNd = uw.utils.Integral(1., mesh)
@@ -165,9 +164,13 @@ class Analyse:
                     intFieldNd.evaluate()[0] \
                     / intMeshNd.evaluate()[0]
 
+            else:
+
+                self.nonDimVal = lambda: 1.
+
         def evaluate(self):
 
-            result = -self.val() / self.nonDimVal
+            result = self.val() / self.nonDimVal()
 
             return result
 
@@ -228,7 +231,7 @@ class Analyse:
 
         def evaluate(self):
 
-            result = -self.val() / self.nonDimVal
+            result = -self.val() / self.nonDimVal()
 
             return result
 
@@ -270,7 +273,7 @@ class Analyse:
 
         def evaluate(self):
 
-            result = self.val() / self.nonDimVal
+            result = self.val() / self.nonDimVal()
 
             return result
 

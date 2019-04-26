@@ -49,9 +49,13 @@ def varsOnDisk(varsOfState, directory, mode = 'save', blackhole = [0., 0.]):
                         suffix += 1
             substrateNames.append(substrateName)
             if mode == 'save':
+                if rank == 0:
+                    print("Saving substrate to disk: ", substrateName)
                 handle = substrate.save(os.path.join(directory, substrateName + extension))
                 substrateHandles[substrateName] = handle
             elif mode == 'load':
+                if rank == 0:
+                    print("Loading substrate from disk: ", substrateName)
                 if type(substrate) == uw.swarm.Swarm:
                     with substrate.deform_swarm():
                         substrate.particleCoordinates.data[:] = blackhole
@@ -63,8 +67,12 @@ def varsOnDisk(varsOfState, directory, mode = 'save', blackhole = [0., 0.]):
             if mode == 'save':
                 handle = substrateHandles[substrateNames]
         if mode == 'save':
+            if rank == 0:
+                print("Saving var to disk: ", varName)
             var.save(os.path.join(directory, varName + extension), handle)
         elif mode == 'load':
+            if rank == 0:
+                print("Loading var from disk: ", varName)
             var.load(os.path.join(directory, varName + extension))
         else:
             raise Exception("Disk mode not recognised.")
@@ -182,7 +190,7 @@ def makeLocalAnnulus(mesh):
     return localAnn
 
 def copyField(field1, field2,
-        tolerance = 0.001,
+        tolerance = 0.01,
         rounded = False
         ):
 
@@ -227,19 +235,43 @@ def copyField(field1, field2,
     assert outDim == inDim, "In and Out fields have different dimensions!"
     assert outMesh.dim == inMesh.dim, "In and Out meshes have different dimensions!"
 
-    evalCoords = planetengine.mapping.unbox(
-        inMesh,
-        planetengine.mapping.box(
-            outMesh,
-            outCoords,
-            boxDims = outMesh.dim * ((tolerance, 1. - tolerance),)
-            )
-        )
+    def mapFn(tolerance):
 
-    outField.data[:] = fullInField.evaluate(evalCoords)
+        evalCoords = planetengine.mapping.unbox(
+            inMesh,
+            planetengine.mapping.box(
+                outMesh,
+                outCoords,
+                boxDims = outMesh.dim * ((tolerance, 1. - tolerance),)
+                )
+            )
+
+        outField.data[:] = fullInField.evaluate(evalCoords)
+
+        if rank == 0:
+            print("Mapping achieved at tolerance =", tolerance)
+        return tolerance
+
+    tryTolerance = 0.
+
+    while True:
+        try:
+            tryTolerance = mapFn(tryTolerance)
+            break
+        except:
+            if tryTolerance > 0.:
+                tryTolerance *= 1.01
+            else:
+                tryTolerance += 0.00001
+            if tryTolerance > tolerance:
+                raise Exception("Couldn't find acceptable tolerance.")
+            else:
+                pass
 
     if rounded:
         field2.data[:] = np.around(field2.data)
+
+    return tryTolerance
 
 def expose(source, destination):
     for key, value in source.__dict__.items():
@@ -517,7 +549,7 @@ def make_projectors(varDict):
                 )
             projections[varName] = projection
             projectors[varName] = projector
-    def project(varsToProject = sorted(projectors)):
-        for varName in varsToProject:
+    def project(varsToProject = projectors):
+        for varName in sorted(varsToProject):
             projectors[varName].solve()
     return projections, projectors, project

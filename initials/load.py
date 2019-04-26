@@ -17,6 +17,7 @@ class IC:
             loadStep = None,
             hashID = None,
             _outputPath = '',
+            boundaries = None,
             ):
 
         assert sourceVarName is not None, \
@@ -59,6 +60,12 @@ class IC:
             except:
                 pass
 
+        if boundaries is None:
+            boundaries = self.inFrame.initial[sourceVarName].inputs['boundaries']
+            self.inputs['boundaries'] = boundaries
+        self.boundaries = boundaries
+
     def apply(self, outVar):
 
-        copyField(self.inVar, outVar)
+        tolerance = copyField(self.inVar, outVar)
+        setboundaries(outVar, self.boundaries)

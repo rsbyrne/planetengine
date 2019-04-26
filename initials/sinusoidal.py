@@ -11,18 +11,27 @@ class IC:
             freq = 1.,
             valRange = (0., 1.),
             phase = 0.,
-            boxDims = ((0., 1), (0., 1.)),
+            boxDims = ((0., 1.), (0., 1.)),
             boundaries = None,
             ):
 
-        # HOUSEKEEPING: this should always be here
+        boxDims = tuple(
+            [tuple([float(inner) for inner in outer]) for outer in boxDims]
+            )
+        valRange = tuple([float(i) for i in valRange])
+        phase = float(phase)
+        freq = float(freq)
+        pert = float(pert)
+
         self.inputs = locals().copy()
         del self.inputs['self']
         self.script = __file__
 
         if boundaries is None:
             boundaries = (valRange[0], valRange[1], '.', '.')
-            self.inputs['boundaries'] = boundaries
+        elif type(boundaries) == list:
+            boundaries = tuple(boundaries)
+        self.inputs['boundaries'] = boundaries
 
         self.freq = freq
         self.valRange = valRange
