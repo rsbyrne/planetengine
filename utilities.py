@@ -406,6 +406,23 @@ def mesh_utils(mesh, deformable = False):
     else:
         raise Exception("That kind of mesh is not supported yet.")
 
+    if mesh.dim == 2:
+        pe['comps'] = {
+            'ang': pe['ang'],
+            'rad': pe['rad'],
+            }
+    else:
+        pe['comps'] = {
+            'ang1': pe['ang1'],
+            'ang2': pe['ang2'],
+            'rad': pe['rad'],
+            }
+
+    pe['surfaces'] = {
+        'inner': pe['inner'],
+        'outer': pe['outer'],
+        }
+
     def getFullData():
         fullData = fn.input().evaluate_global(mesh.data)
         fullData = comm.bcast(fullData, root = 0)
@@ -460,6 +477,12 @@ def mesh_utils(mesh, deformable = False):
         pe['integral'] = lambda: volInt.evaluate()[0]
         pe['integral_outer'] = lambda: outerInt.evaluate()[0]
         pe['integral_inner'] = lambda: innerInt.evaluate()[0]
+
+    pe['integrals'] = {
+        'inner': pe['integral_inner'],
+        'outer': pe['integral_outer'],
+        'volume': pe['integral'],
+        }
 
     pe = Grouper(pe)
     mesh.__dict__.update({'pe': pe})
