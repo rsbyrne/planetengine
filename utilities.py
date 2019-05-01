@@ -386,6 +386,24 @@ def mesh_utils(mesh, deformable = False):
         'meshName': meshName,
         }
 
+    pe['dummyVar1D'] = mesh.add_variable(nodeDofCount = 1)
+    pe['dummyVar2D'] = mesh.add_variable(nodeDofCount = 2)
+    pe['dummyVar3D'] = mesh.add_variable(nodeDofCount = 3)
+
+    pe['dummyVars'] = {
+        1: pe['dummyVar1D'],
+        2: pe['dummyVar2D'],
+        3: pe['dummyVar3D'],
+        }
+
+    def meshify(var):
+        data = var.evaluate(mesh)
+        dim = data.shape[1]
+        dummyVar = pe['dummyVars'][dim]
+        dummyVar.data[:] = var.evaluate(mesh)
+        return dummyVar
+    pe['meshify'] = meshify
+
     if type(mesh) == uw.mesh.FeMesh_Cartesian:
         if mesh.dim == 2:
             pe['ang'] = fn.misc.constant((1., 0.))
@@ -484,8 +502,8 @@ def mesh_utils(mesh, deformable = False):
         'volume': pe['integral'],
         }
 
-    pe = Grouper(pe)
-    mesh.__dict__.update({'pe': pe})
+    peGroup = Grouper(pe)
+    mesh.__dict__.update({'pe': peGroup})
 
 class Grouper:
     def __init__(self, indict = {}):

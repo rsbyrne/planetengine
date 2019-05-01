@@ -43,7 +43,7 @@ class ScalarIntegral:
                 var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
             else:
                 var = fn.math.dot(mesh.pe.comps[gradient], varGrad)
-            self.opTag += gradient + 'Grad_'
+            self.opTag += 'grad_' + gradient + '_'
 
         intMesh = mesh.pe.integrals[surface]
         self.opTag += surface + '_'
