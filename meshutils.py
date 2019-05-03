@@ -84,11 +84,11 @@ class MeshUtils:
             }
 
         # Is this necessary?
-        if not self.deformable:
-            fullData = self.getFullData()
-            self.fullData = lambda: fullData
-        else:
-            self.fullData = self.getFullData
+#        if not self.deformable:
+#            fullData = self.getFullData()
+#            self.fullData = lambda: fullData
+#        else:
+#            self.fullData = self.getFullData
 
         # REVISIT THIS WHEN 'BOX' IS IMPROVED
         if type(self.mesh) == uw.mesh.FeMesh_Annulus:
@@ -146,10 +146,10 @@ class MeshUtils:
             if rank == 0:
                 print("Done!")
 
-    def getFullData(self):
-        fullData = fn.input().evaluate_global(self.mesh.data)
-        fullData = comm.bcast(fullData, root = 0)
-        return fullData
+#    def getFullData(self):
+#        fullData = fn.input().evaluate_global(self.mesh.data)
+#        fullData = comm.bcast(fullData, root = 0)
+#        return fullData
 
     def meshify(self, var):
 

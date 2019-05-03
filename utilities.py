@@ -97,10 +97,10 @@ def varsOnDisk(varsOfState, directory, mode = 'save', blackhole = [0., 0.]):
                     substrateHandles[substrateName] = handle
                 elif mode == 'load':
                     message("Loading substrate from disk: ", substrateName)
-                    if type(substrate) == uw.swarm.Swarm:
-                        with substrate.deform_swarm():
-                            substrate.particleCoordinates.data[:] = blackhole
-                    substrate.load(os.path.join(directory, substrateName + extension))
+                    if type(stInp.substrate) == uw.swarm.Swarm:
+                        with stInp.substrate.deform_swarm():
+                            stInp.substrate.particleCoordinates.data[:] = blackhole
+                    stInp.substrate.load(os.path.join(directory, substrateName + extension))
                 else:
                     raise Exception("Disk mode not recognised.")
                 substrates.append(stInp.substrate)
