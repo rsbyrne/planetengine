@@ -16,66 +16,107 @@ import hashlib
 import random
 
 import planetengine
+from planetengine.visualisation import quickShow
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
+root = 0
+
+def message(*args):
+    for arg in args:
+        if rank == root:
+            print(arg)
+
+class Grouper:
+    def __init__(self, indict = {}):
+        self.selfdict = {}
+        self.SetDict(indict)
+    def __bunch__(self, adict):
+        self.__dict__.update(adict)
+    def SetVal(self, key, val):
+        self.selfdict[key] = val
+        self.__bunch__(self.selfdict)
+    def SetVals(self, dictionary):
+        for key in dictionary:
+            self.SetVal(key, dictionary[key])
+    def ClearAttr(self):
+        for key in self.selfdict:
+            delattr(self, key)
+        self.selfdict = {}
+    def SetDict(self, dict):
+        self.ClearAttr()
+        self.SetVals(dict)
+    def Out(self):
+        outstring = ""
+        for key in self.selfdict:
+            thing = self.selfdict[key]
+            if isinstance(thing, self):
+                thing.Out()
+            else:
+                outstring += key + ": " + thing
+        return outstring
+
 def varsOnDisk(varsOfState, directory, mode = 'save', blackhole = [0., 0.]):
     substrates = []
     substrateNames = []
     substrateHandles = {}
     extension = '.h5'
-    for varName, var in sorted(varsOfState.items()):
-        if type(var) == uw.mesh._meshvariable.MeshVariable:
-            substrate = var.mesh
-            substrateName = 'mesh'
-        elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
-            substrate = var.swarm
-            substrateName = 'swarm'
+    for inVar in sorted(varsOfState.items()):
+        stInp = planetengine.standards.standardise(inVar)
+        if stInp.varType == 'special':
+            raise Exception(
+                "That input not supported yet for saving and loading."
+                )
         else:
-            raise Exception('Variable type not recognised.')
-        if not substrate in substrates:
-            if substrateName in substrateNames:
-                nameFound = False
-                suffix = 0
-                while not nameFound:
-                    adjustedSubstrateName = substrateName + '_' + str(suffix)
-                    if not adjustedSubstrateName in substrateNames:
-                        substrateName = adjustedSubstrateName
-                        nameFound = True
-                    else:
-                        suffix += 1
-            substrateNames.append(substrateName)
+            if not stInp.substrate in substrates:
+
+                substrateName = stInp.substrateName
+                if substrateName in substrateNames:
+                    nameFound = False
+                    suffix = 0
+                    while not nameFound:
+                        adjustedSubstrateName = substrateName + '_' + str(suffix)
+                        if not adjustedSubstrateName in substrateNames:
+                            substrateName = adjustedSubstrateName
+                            nameFound = True
+                        else:
+                            suffix += 1
+                substrateNames.append(substrateName)
+
+                if mode == 'save':
+                    message("Saving substrate to disk: ", substrateName)
+                    handle = stInp.substrate.save(
+                        os.path.join(
+                            directory,
+                            substrateName + extension
+                            )
+                        )
+                    substrateHandles[substrateName] = handle
+                elif mode == 'load':
+                    message("Loading substrate from disk: ", substrateName)
+                    if type(substrate) == uw.swarm.Swarm:
+                        with substrate.deform_swarm():
+                            substrate.particleCoordinates.data[:] = blackhole
+                    substrate.load(os.path.join(directory, substrateName + extension))
+                else:
+                    raise Exception("Disk mode not recognised.")
+                substrates.append(stInp.substrate)
+
+            else:
+                if mode == 'save':
+                    handle = substrateHandles[substrateNames]
+
             if mode == 'save':
-                if rank == 0:
-                    print("Saving substrate to disk: ", substrateName)
-                handle = substrate.save(os.path.join(directory, substrateName + extension))
-                substrateHandles[substrateName] = handle
+                message("Saving var to disk: ", stInp.varName)
+                stInp.var.save(os.path.join(directory, stInp.varName + extension), handle)
             elif mode == 'load':
-                if rank == 0:
-                    print("Loading substrate from disk: ", substrateName)
-                if type(substrate) == uw.swarm.Swarm:
-                    with substrate.deform_swarm():
-                        substrate.particleCoordinates.data[:] = blackhole
-                substrate.load(os.path.join(directory, substrateName + extension))
+                message("Loading var from disk: ", stInp.varName)
+                stInp.var.load(os.path.join(directory, stInp.varName + extension))
             else:
                 raise Exception("Disk mode not recognised.")
-            substrates.append(substrate)
-        else:
-            if mode == 'save':
-                handle = substrateHandles[substrateNames]
-        if mode == 'save':
-            if rank == 0:
-                print("Saving var to disk: ", varName)
-            var.save(os.path.join(directory, varName + extension), handle)
-        elif mode == 'load':
-            if rank == 0:
-                print("Loading var from disk: ", varName)
-            var.load(os.path.join(directory, varName + extension))
-        else:
-            raise Exception("Disk mode not recognised.")
 
 def weightVar(mesh, specialSets = None):
 
@@ -97,84 +138,6 @@ def weightVar(mesh, specialSets = None):
         maskVar.data[index] = 1.
         weightVar.data[index] = localIntegral.evaluate()[0]
     return weightVar
-
-def quickShow(*args,
-        show = True,
-        figArgs = {
-            'edgecolour': 'white',
-            'facecolour': 'white',
-            'quality': 2,
-            }
-        ):
-
-    fig = glucifer.Figure(**figArgs)
-    features = []
-    for invar in args:
-        try:
-            if not 'mesh' in features:
-                var = invar
-                fig.Mesh(var)
-                features.append('mesh')
-            else:
-                raise
-        except:
-            try:
-                try:
-                    mesh = invar.mesh
-                    var = invar
-                except:
-                    try:
-                        var, mesh = invar
-                    except:
-                        raise Exception("")
-                try:
-                    if not 'arrows' in features:
-                        fig.VectorArrows(mesh, var)
-                        features.append('arrows')
-                    else:
-                        raise
-                except:
-                    if not 'surface' in features:
-                        fig.Surface(mesh, var)
-                        features.append('surface')
-                    else:
-                        if not 'contours' in features:
-                            fig.Contours(
-                                mesh,
-                                fn.math.log10(var),
-                                colours = "red black",
-                                interval = 0.5,
-                                colourBar = False 
-                                )
-                            features.append('contours')
-                        else:
-                            raise Exception("Got to end of mesh-based options.")
-            except:
-                try:
-                    var = invar
-                    swarm = var.swarm
-                except:
-                    var, swarm = invar
-                try:
-                    if not 'points' in features:
-                        fig.Points(
-                            swarm,
-                            fn_colour = var,
-                            fn_mask = var,
-                            opacity = 0.5,
-                            fn_size = 1e3 / float(swarm.particleGlobalCount)**0.5,
-                            colours = "purple green brown pink red",
-                            colourBar = True,
-                            )
-                    else:
-                        raise Exception("Got to end of swarm-based options.")
-                except:
-                    raise Exception("Tried everything but couldn't make it work!")
-
-    if show:
-        fig.show()
-    else:
-        return fig
 
 def makeLocalAnnulus(mesh):
     for proc in range(nProcs):
@@ -232,8 +195,10 @@ def copyField(field1, field2,
         outCoords = field2.swarm.particleCoordinates.data
         outDim = field2.count
 
-    assert outDim == inDim, "In and Out fields have different dimensions!"
-    assert outMesh.dim == inMesh.dim, "In and Out meshes have different dimensions!"
+    assert outDim == inDim, \
+        "In and Out fields have different dimensions!"
+    assert outMesh.dim == inMesh.dim, \
+        "In and Out meshes have different dimensions!"
 
     def mapFn(tolerance):
 
@@ -248,8 +213,7 @@ def copyField(field1, field2,
 
         outField.data[:] = fullInField.evaluate(evalCoords)
 
-        if rank == 0:
-            print("Mapping achieved at tolerance =", tolerance)
+        message("Mapping achieved at tolerance =", tolerance)
         return tolerance
 
     tryTolerance = 0.
@@ -367,172 +331,6 @@ def multiscriptstamp(scriptList):
 def stringstamp(instring):
     stamp = hashlib.md5(instring.encode()).hexdigest()
     return stamp
-
-def mesh_utils(mesh, deformable = False):
-
-    try:
-        meshName, mesh = mesh
-    except:
-        mesh = mesh
-        meshName = 'None'
-
-    if hasattr(mesh, 'pe'):
-        if rank == 0:
-            print("Mesh already has 'pe' attribute: aborting.")
-        return None
-
-    pe = {
-        'deformable': deformable,
-        'meshName': meshName,
-        }
-
-    pe['dummyVar1D'] = mesh.add_variable(nodeDofCount = 1)
-    pe['dummyVar2D'] = mesh.add_variable(nodeDofCount = 2)
-    pe['dummyVar3D'] = mesh.add_variable(nodeDofCount = 3)
-
-    pe['dummyVars'] = {
-        1: pe['dummyVar1D'],
-        2: pe['dummyVar2D'],
-        3: pe['dummyVar3D'],
-        }
-
-    def meshify(var):
-        data = var.evaluate(mesh)
-        dim = data.shape[1]
-        dummyVar = pe['dummyVars'][dim]
-        dummyVar.data[:] = var.evaluate(mesh)
-        return dummyVar
-    pe['meshify'] = meshify
-
-    if type(mesh) == uw.mesh.FeMesh_Cartesian:
-        if mesh.dim == 2:
-            pe['ang'] = fn.misc.constant((1., 0.))
-            pe['rad'] = fn.misc.constant((0., 1.))
-        elif mesh.dim == 3:
-            pe['ang1'] = fn.misc.constant((1., 0., 0.))
-            pe['ang2'] = fn.misc.constant((0., 1., 0.))
-            pe['rad'] = fn.misc.constant((0., 0., 1.))
-        else:
-            raise Exception("Only mesh dims 2 and 3 supported...obviously?")
-        pe['inner'] = mesh.specialSets['Bottom']
-        pe['outer'] = mesh.specialSets['Top']
-    elif type(mesh) == uw.mesh.FeMesh_Annulus:
-        pe['ang'] = mesh.unitvec_theta_Fn
-        pe['rad'] = mesh.unitvec_r_Fn
-        pe['inner'] = mesh.specialSets['inner']
-        pe['outer'] = mesh.specialSets['outer']
-    else:
-        raise Exception("That kind of mesh is not supported yet.")
-
-    if mesh.dim == 2:
-        pe['comps'] = {
-            'ang': pe['ang'],
-            'rad': pe['rad'],
-            }
-    else:
-        pe['comps'] = {
-            'ang1': pe['ang1'],
-            'ang2': pe['ang2'],
-            'rad': pe['rad'],
-            }
-
-    pe['surfaces'] = {
-        'inner': pe['inner'],
-        'outer': pe['outer'],
-        }
-
-    def getFullData():
-        fullData = fn.input().evaluate_global(mesh.data)
-        fullData = comm.bcast(fullData, root = 0)
-        return fullData
-
-    # Is this necessary?
-    if not deformable:
-        fullData = getFullData()
-        pe['fullData'] = lambda: fullData
-    else:
-        pe['fullData'] = getFullData
-
-    # REVISIT THIS WHEN 'BOX' IS IMPROVED
-    if type(mesh) == uw.mesh.FeMesh_Annulus:
-        if not deformable:
-            if mesh.dim == 2:
-                box = planetengine.mapping.box(mesh)
-                pe['box'] = lambda: box
-        else:
-            if mesh.dim == 2:
-                pe['box'] = lambda: mapping.box(mesh)
-
-    volInt = uw.utils.Integral(
-        1.,
-        mesh,
-        )
-    outerInt = uw.utils.Integral(
-        1.,
-        mesh,
-        integrationType = 'surface',
-        surfaceIndexSet = pe['outer']
-        )
-    innerInt = uw.utils.Integral(
-        1.,
-        mesh,
-        integrationType = 'surface',
-        surfaceIndexSet = pe['inner']
-        )
-
-    if not deformable:
-
-        volIntVal = volInt.evaluate()[0]
-        outerIntVal = outerInt.evaluate()[0]
-        innerIntVal = innerInt.evaluate()[0]
-
-        pe['integral'] = lambda: volIntVal
-        pe['integral_outer'] = lambda: outerIntVal
-        pe['integral_inner'] = lambda: innerIntVal
-
-    else:
-
-        pe['integral'] = lambda: volInt.evaluate()[0]
-        pe['integral_outer'] = lambda: outerInt.evaluate()[0]
-        pe['integral_inner'] = lambda: innerInt.evaluate()[0]
-
-    pe['integrals'] = {
-        'inner': pe['integral_inner'],
-        'outer': pe['integral_outer'],
-        'volume': pe['integral'],
-        }
-
-    peGroup = Grouper(pe)
-    mesh.__dict__.update({'pe': peGroup})
-
-class Grouper:
-    def __init__(self, indict = {}):
-        self.selfdict = {}
-        self.SetDict(indict)
-    def __bunch__(self, adict):
-        self.__dict__.update(adict)
-    def SetVal(self, key, val):
-        self.selfdict[key] = val
-        self.__bunch__(self.selfdict)
-    def SetVals(self, dictionary):
-        for key in dictionary:
-            self.SetVal(key, dictionary[key])
-    def ClearAttr(self):
-        for key in self.selfdict:
-            delattr(self, key)
-        self.selfdict = {}
-    def SetDict(self, dict):
-        self.ClearAttr()
-        self.SetVals(dict)
-    def Out(self):
-        outstring = ""
-        for key in self.selfdict:
-            thing = self.selfdict[key]
-            if isinstance(thing, self):
-                thing.Out()
-            else:
-                outstring += key + ": " + thing
-        return outstring
 
 def setboundaries(variable, values):
     try:

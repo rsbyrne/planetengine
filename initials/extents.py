@@ -1,3 +1,4 @@
+import underworld as uw
 from underworld import function as fn
 from planetengine.mapping import box
 from planetengine.utilities import setboundaries
@@ -57,21 +58,19 @@ class IC:
                 )
         return ICarray
 
-    def apply(self, variable):
+    def apply(self, outVar):
         try:
-            mesh = variable.mesh
+            mesh = outVar.mesh
             coords = mesh.data
         except:
             try:
-                mesh = variable.swarm.mesh
-                coords = variable.swarm.particleCoordinates.data
+                mesh = outVar.swarm.mesh
+                coords = outVar.swarm.particleCoordinates.data
             except:
                 raise Exception("Did not recognise input variable.")
         coordArray = box(mesh, coords, boxDims = self.boxDims)
-        variable.data[:] = self.initial_extents(
-            coordArray, variable.data.shape
+        outVar.data[:] = self.initial_extents(
+            coordArray, outVar.data.shape
             )
-        try:
-            setboundaries(variable, self.boundaries)
-        except:
-            pass
+        if type(outVar) == uw.mesh._meshvariable.MeshVariable:
+            setboundaries(outVar, self.boundaries)

@@ -1,9 +1,3 @@
-
-# coding: utf-8
-
-# In[1]:
-
-
 import numpy as np
 import underworld as uw
 from underworld import function as fn
@@ -102,13 +96,13 @@ class Checkpointer:
                     if not loadstamps == self.stamps:
                         raise Exception("You are trying to save a model in a different model's directory!")
                     else:
-                        print("Pre-existing directory for this model has been found. Continuing...")
+                        planetengine.message("Pre-existing directory for this model has been found. Continuing...")
 
         else:
 
             if rank == 0:
 
-                print("No pre-existing directory for this model found. Making a new one...")
+                planetengine.message("No pre-existing directory for this model found. Making a new one...")
 
                 os.makedirs(self.path)
 
@@ -128,22 +122,19 @@ class Checkpointer:
                      file.write(json.dumps(self.stamps))
 
             if len(self.inFrame_checkpointers) > 0:
-                if rank == 0:
-                    print("Saving inFrames...")
+                planetengine.message("Saving inFrames...")
                 for checkpointer in self.inFrame_checkpointers:
                     checkpointer.checkpoint()
-                if rank == 0:
-                    print("inFrames saved.")
+                planetengine.message("inFrames saved.")
 
         if rank == 0:
             if self.archive:
                 if os.path.isfile(self.tarpath):
-                    print("Deleting unarchived archive...")
+                    planetengine.message("Deleting unarchived archive...")
                     os.remove(self.tarpath)
-                    print("Deleted.")
+                    planetengine.message("Deleted.")
 
-        if rank == 0:
-            print("Checkpointing...")
+        planetengine.message("Checkpointing...")
 
         if self.step is None:
             stepStr = ""
@@ -154,31 +145,26 @@ class Checkpointer:
         self.checkpointDir = os.path.join(self.path, stepStr)
 
         if os.path.isdir(self.checkpointDir):
-            if rank == 0:
-                print('Checkpoint directory found: skipping.')
+            planetengine.message('Checkpoint directory found: skipping.')
             return None
         else:
             if rank == 0:
                 os.makedirs(self.checkpointDir)
 
-        if rank == 0:
-            print("Saving figures...")
+        planetengine.message("Saving figures...")
         if not self.figs is None:
             for name in self.figs:
                 fig = self.figs[name]
                 fig.save(os.path.join(self.checkpointDir, name))
-        if rank == 0:
-            print("Saved.")
+        planetengine.message("Saved.")
 
-        if rank == 0:
-            print("Saving vars of state...")
+        planetengine.message("Saving vars of state...")
         if not self.varsOfState is None:
             utilities.varsOnDisk(self.varsOfState, self.checkpointDir, 'save')
-        if rank == 0:
-            print("Saved.")
+        planetengine.message("Saved.")
 
         if rank == 0:
-            print("Saving snapshot...")
+            planetengine.message("Saving snapshot...")
             if not self.dataCollectors is None:
                 for dataCollector in self.dataCollectors:
                     for index, name in enumerate(dataCollector.names):
@@ -194,15 +180,14 @@ class Checkpointer:
             print("Saved.")
 
         if rank == 0:
-            print("Saving stamps...")
+            planetengine.message("Saving stamps...")
             if not self.stamps is None:
                 filename = os.path.join(self.checkpointDir, 'stamps.txt')
                 with open(filename, 'w') as file:
                      file.write(json.dumps(self.stamps))
-            print("Saved.")
+            planetengine.message("Saved.")
 
-        if rank == 0:
-            print("Saving datasets...")
+        planetengine.message("Saving datasets...")
         if not self.dataCollectors is None:
             for dataCollector in self.dataCollectors:
                 for row in dataCollector.clear():
@@ -220,18 +205,16 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = header
                                     )
-        if rank == 0:
-            print("Saved.")
+        planetengine.message("Saved.")
 
         if self.archive:
             if rank == 0:
-                print("Archiving...")
+                planetengine.message("Archiving...")
                 with tarfile.open(self.tarpath, 'w:gz') as tar:
                     tar.add(self.path)
-                print("Archived.")
-                print("Deleting superfluous files...")
+                planetengine.message("Archived.")
+                planetengine.message("Deleting superfluous files...")
                 shutil.rmtree(self.path)
-                print("Done.")
+                planetengine.message("Done.")
 
-        if rank == 0:
-            print("Checkpointed!")
+        planetengine.message("Checkpointed!")

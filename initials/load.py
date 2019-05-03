@@ -1,3 +1,4 @@
+import underworld as uw
 from planetengine.mapping import box
 from planetengine.utilities import copyField
 from planetengine.utilities import setboundaries
@@ -68,4 +69,5 @@ class IC:
     def apply(self, outVar):
 
         tolerance = copyField(self.inVar, outVar)
-        setboundaries(outVar, self.boundaries)
+        if type(outVar) == uw.mesh._meshvariable.MeshVariable:
+            setboundaries(outVar, self.boundaries)

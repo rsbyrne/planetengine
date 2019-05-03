@@ -1,37 +1,32 @@
 import underworld as uw
 from underworld import function as fn
-from planetengine.utilities import mesh_utils
+from planetengine import meshutils
 
 class ScalarIntegral:
 
     def __init__(
             self,
             inVar,
-            mesh,
-            varName = None,
             gradient = None,
             comp = None,
             surface = 'volume',
             nonDim = None,
-            **kwargs
             ):
 
         self.inputs = locals().copy()
-        del self.inputs['kwargs']
-
-        self.__dict__.update(kwargs)
-
-        mesh_utils(mesh)
+        del self.inputs['stInp']
 
         self.opTag = ''
 
-        var = inVar
+        stInp = planetengine.standards.StandardInput(inVar)
+        meshUtils = stInp.meshUtils
+        var = stInp.meshVar
 
         if not comp is None:
             if comp == 'mag':
                 var = fn.math.sqrt(fn.math.dot(var, var))
             else:
-                var = fn.math.dot(var, mesh.pe.comps[comp])
+                var = fn.math.dot(var, self.meshUtils.comps[comp])
             self.opTag += comp + '_'
 
         if not gradient is None:
@@ -42,15 +37,15 @@ class ScalarIntegral:
             if gradient == 'mag':
                 var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
             else:
-                var = fn.math.dot(mesh.pe.comps[gradient], varGrad)
+                var = fn.math.dot(self.meshUtils.comps[gradient], varGrad)
             self.opTag += 'grad_' + gradient + '_'
 
-        intMesh = mesh.pe.integrals[surface]
+        intMesh = self.meshUtils.integrals[surface]
         self.opTag += surface + '_'
         if surface == 'volume':
             intField = uw.utils.Integral(var, mesh)
         else:
-            indexSet = mesh.pe.surfaces[surface]
+            indexSet = self.meshUtils.surfaces[surface]
             intField = uw.utils.Integral(
                 var,
                 mesh,
@@ -72,8 +67,7 @@ class ScalarIntegral:
         self.opTag = self.opTag[:-1]
 
     def evaluate(self):
-        if hasattr(self, 'inheritedUpdate'):
-            self.inheritedUpdate()
+        self.stInp.update()
         return self.val()
 
     def __call__(self):
