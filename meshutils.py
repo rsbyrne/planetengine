@@ -5,7 +5,8 @@ from planetengine import mapping
 import underworld as uw
 from underworld import function as fn
 
-# import numpy as np
+import numpy as np
+
 # from planetengine.utilities import Grouper
 # from planetengine.observer import ObsVar
 
@@ -99,6 +100,9 @@ class MeshUtils:
             else:
                 if self.mesh.dim == 2:
                     self.box = lambda: mapping.box(self.mesh)
+            def unbox(coords):
+                return mapping.unbox(self.mesh, coords)
+            self.unbox = unbox
 
         volInt = uw.utils.Integral(
             1.,
@@ -139,6 +143,10 @@ class MeshUtils:
             'volume': self.integral,
             }
 
+        xs = np.linspace(self.mesh.data[:,0].min(), self.mesh.data[:,0].max(), 100)
+        ys = np.linspace(self.mesh.data[:,1].min(), self.mesh.data[:,1].max(), 100)
+        self.cartesianScope = np.array(np.meshgrid(xs, ys)).T.reshape([-1, 2])
+
         if self.attach:
             if rank == 0:
                 print("Attaching...")
@@ -155,11 +163,12 @@ class MeshUtils:
 
         for autoVar in self.autoVars.values():
             try:
-                uw.utils.MeshVariable_Projection(
+                projector = uw.utils.MeshVariable_Projection(
                     autoVar,
                     var,
-                    ).solve()
-                return autoVar
+                    )
+                projector.solve()
+                return autoVar, projector
             except:
                 pass
         raise Exception("Projection failed!")

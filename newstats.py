@@ -11,14 +11,16 @@ class ScalarIntegral:
             comp = None,
             surface = 'volume',
             nonDim = None,
+            inheritedUpdate = None
             ):
 
         self.inputs = locals().copy()
-        del self.inputs['stInp']
+        self.inheritedUpdate = inheritedUpdate
+        del self.inputs['inVar']
 
         self.opTag = ''
 
-        stInp = planetengine.standards.StandardInput(inVar)
+        stInp = planetengine.standards.standardise(inVar)
         meshUtils = stInp.meshUtils
         var = stInp.meshVar
 
@@ -30,9 +32,9 @@ class ScalarIntegral:
             self.opTag += comp + '_'
 
         if not gradient is None:
-            assert type(var) == uw.mesh._meshvariable.MeshVariable, \
-                "Only mesh variables accepted for gradient option: \
-                consider projecting your variable onto a mesh variable."
+            if not type(var) == uw.mesh._meshvariable.MeshVariable:
+                var, self.projector = meshUtils.meshify(var)
+                self.update = lambda: self.projector.solve()
             varGrad = var.fn_gradient
             if gradient == 'mag':
                 var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
@@ -67,8 +69,13 @@ class ScalarIntegral:
         self.opTag = self.opTag[:-1]
 
     def evaluate(self):
+        if hasattr(self, 'update'):
+            self.update()
+        if not self.inheritedUpdate is None:
+            self.inheritedUpdate()
         self.stInp.update()
-        return self.val()
+        val = self.val()
+        return val
 
     def __call__(self):
         return self.evaluate()
