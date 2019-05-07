@@ -13,5 +13,6 @@ import planetengine.meshutils
 import planetengine.varutils
 import planetengine.standards
 import planetengine.visualisation
+import planetengine.diagnostic
 
 from planetengine.utilities import message

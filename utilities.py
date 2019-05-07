@@ -59,21 +59,26 @@ class Grouper:
                 outstring += key + ": " + thing
         return outstring
 
-def varsOnDisk(varsOfState, directory, mode = 'save', blackhole = [0., 0.]):
+def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.], archive = False):
     substrates = []
     substrateNames = []
     substrateHandles = {}
     extension = '.h5'
-    for inVar in sorted(varsOfState.items()):
-        stInp = planetengine.standards.standardise(inVar)
-        if stInp.varType == 'special':
-            raise Exception(
-                "That input not supported yet for saving and loading."
-                )
-        else:
-            if not stInp.substrate in substrates:
 
-                substrateName = stInp.substrateName
+    for inVar in sorted(varsOfState.items()):
+
+        varName, var = inVar
+        try:
+            substrate = var.swarm
+            substrateName = 'swarm'
+        except:
+            substrate = var.mesh
+            substrateName = 'mesh'
+
+        else:
+            if not substrate in substrates:
+
+                substrateName = substrateName
                 if substrateName in substrateNames:
                     nameFound = False
                     suffix = 0
@@ -88,33 +93,34 @@ def varsOnDisk(varsOfState, directory, mode = 'save', blackhole = [0., 0.]):
 
                 if mode == 'save':
                     message("Saving substrate to disk: ", substrateName)
-                    handle = stInp.substrate.save(
+                    handle = substrate.save(
                         os.path.join(
-                            directory,
+                            checkpointDir,
                             substrateName + extension
                             )
                         )
                     substrateHandles[substrateName] = handle
                 elif mode == 'load':
                     message("Loading substrate from disk: ", substrateName)
-                    if type(stInp.substrate) == uw.swarm.Swarm:
-                        with stInp.substrate.deform_swarm():
-                            stInp.substrate.particleCoordinates.data[:] = blackhole
-                    stInp.substrate.load(os.path.join(directory, substrateName + extension))
+                    if type(substrate) == uw.swarm.Swarm:
+                        with substrate.deform_swarm():
+                            substrate.particleCoordinates.data[:] = blackhole
+                        assert substrate.particleGlobalCount == 0
+                    substrate.load(os.path.join(checkpointDir, substrateName + extension))
                 else:
                     raise Exception("Disk mode not recognised.")
-                substrates.append(stInp.substrate)
+                substrates.append(substrate)
 
             else:
                 if mode == 'save':
                     handle = substrateHandles[substrateNames]
 
             if mode == 'save':
-                message("Saving var to disk: ", stInp.varName)
-                stInp.var.save(os.path.join(directory, stInp.varName + extension), handle)
+                message("Saving var to disk: ", varName)
+                var.save(os.path.join(checkpointDir, varName + extension), handle)
             elif mode == 'load':
-                message("Loading var from disk: ", stInp.varName)
-                stInp.var.load(os.path.join(directory, stInp.varName + extension))
+                message("Loading var from disk: ", varName)
+                var.load(os.path.join(checkpointDir, varName + extension))
             else:
                 raise Exception("Disk mode not recognised.")
 

@@ -11,6 +11,7 @@ import itertools
 import inspect
 import importlib
 import csv
+from glob import glob
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -19,24 +20,48 @@ rank = comm.Get_rank()
 import planetengine
 from planetengine import utilities
 
-def load_frame(outputPath = '', instanceID = '', loadStep = 0):
+def load_frame(
+        outputPath = '',
+        instanceID = '',
+        loadStep = 0,
+        autoarchive = True
+        ):
+    '''
+    Creates a new 'frame' instance attached to a pre-existing
+    model directory. LoadStep can be an integer corresponding
+    to a previous checkpoint step, or can be the string 'max'
+    which loads the highest stable checkpoint available.
+    '''
 
-    loadPath = os.path.join(outputPath, instanceID)
+    path = os.path.join(outputPath, instanceID)
+    tarpath = path + '.tar.gz'
 
-    with open(os.path.join(loadPath, 'inputs.txt')) as json_file:  
+    if os.path.isfile(tarpath):
+        if rank == 0:
+            if not os.path.isdir(path):
+                print("Tar found - unarchiving...")
+                with tarfile.open(tarpath) as tar:
+                    tar.extractall()
+                print("Unarchived.")
+                if not os.path.isdir(path):
+                    raise Exception("Archive contained the wrong model file somehow.")
+            else:
+                raise Exception("Conflicting archive and directory found.")
+
+    with open(os.path.join(path, 'inputs.txt')) as json_file:  
         inputs = json.load(json_file)
     params = inputs['params']
     options = inputs['options']
     config = inputs['config']
 
-    systemscript = utilities.local_import(os.path.join(loadPath, '_systemscript.py'))
+    systemscript = utilities.local_import(os.path.join(path, '_systemscript.py'))
     system = systemscript.build(**inputs['params'])
 
     initial = {}
     for varName in sorted(system.varsOfState):
         initialLoadName = '_' + varName + '_initial.py'
         module = utilities.local_import(
-            os.path.join(loadPath, initialLoadName)
+            os.path.join(path, initialLoadName)
             )
         # check if an identical 'initial' object already exists:
         if module.IC in [type(IC) for IC in initial.values()]:
@@ -45,14 +70,14 @@ def load_frame(outputPath = '', instanceID = '', loadStep = 0):
                     initial[varName] = initial[priorVarName]
                     break
         elif hasattr(module, 'LOADTYPE'):
-            initial[varName] = module.IC(**config[varName], _outputPath = loadPath)
+            initial[varName] = module.IC(**config[varName], _outputPath = path)
         else:
             initial[varName] = module.IC(**config[varName])
 
-    observerscript = utilities.local_import(os.path.join(loadPath, '_observerscript.py'))
+    observerscript = utilities.local_import(os.path.join(path, '_observerscript.py'))
     observer = observerscript.build(**inputs['options'])
 
-    with open(os.path.join(loadPath, 'stamps.txt')) as json_file:
+    with open(os.path.join(path, 'stamps.txt')) as json_file:
         stamps = json.load(json_file)
 
     frame = Frame(
@@ -61,11 +86,26 @@ def load_frame(outputPath = '', instanceID = '', loadStep = 0):
         initial = initial,
         outputPath = outputPath,
         instanceID = instanceID,
-        _stamps = stamps,
+        autoarchive = autoarchive,
+        _stamps = stamps
         )
 
-    if loadStep > 0:
+    checkpoints = []
+    for directory in glob(path + '/*/'):
+        basename = os.path.basename(directory[:-1])
+        if (basename.isdigit() and len(basename) == 8):
+            if os.path.exists(directory + 'stamps.txt'):
+                checkpoints.append(int(basename))
+    frame.checkpoints = sorted(checkpoints)
+
+    if loadStep == 'max':
+        frame.load_checkpoint(frame.checkpoints[-1])
+    elif loadStep > 0:
         frame.load_checkpoint(loadStep)
+    elif loadStep == 0:
+        pass
+    else:
+        raise Exception("LoadStep input not understood.")
 
     return frame
 
@@ -77,9 +117,9 @@ class Frame:
             initial,
             outputPath = '',
             instanceID = None,
-            archive = False,
+            autoarchive = True,
             _stamps = None,
-            _use_wordhash = False,
+            _use_wordhash = True,
             ):
         '''
         'system' should be the object produced by the 'build' call
@@ -131,7 +171,17 @@ class Frame:
             self.instanceID = instanceID
 
         self.path = os.path.join(self.outputPath, self.instanceID)
+        self.tarpath = self.path + '.tar.gz'
+        self.autoarchive = autoarchive
 
+        assert not (os.path.isdir(self.path) and os.path.isfile(self.tarpath)), \
+            "Model directory and model archive cannot share same directory!"
+
+        if os.path.isfile(self.tarpath):
+            self.archived = True
+        else:
+            self.archived = False
+                          
         self.system = system
         self.initial = initial
         self.observer = observer
@@ -168,10 +218,11 @@ class Frame:
             scripts = self.scripts,
             inputs = self.inputs,
             stamps = self.stamps,
-            outputPath = self.outputPath,
-            instanceID = self.instanceID,
-            archive = archive,
-            inFrames = self.inFrames,
+            path = self.path,
+#             outputPath = self.outputPath,
+#             instanceID = self.instanceID,
+#             archive = archive,
+            inFrames = self.inFrames
             )
         
         self.observerDict = {}
@@ -190,6 +241,8 @@ class Frame:
             self.blackhole = [0., 0.]
         else:
             raise Exception("Only the Annulus mesh is supported at this time.")
+
+        self.checkpoints = []
 
         self.initialise()
 
@@ -210,8 +263,16 @@ class Frame:
     def checkpoint(self):
         if not self.allCollected:
             self.all_collect()
+
+        if self.archived:
+            self.unarchive()
+
         self.checkpointer.checkpoint()
+        if self.autoarchive:
+            self.archive()
+
         self.most_recent_checkpoint = self.step
+        self.checkpoints.append(self.step)
 
     def update(self):
         self.step = self.system.step.value
@@ -321,6 +382,60 @@ class Frame:
             self.checkpoint()
         self.status = "ready"
 
+    def archive(self, prefix = ''):
+
+        planetengine.message("Archiving...")
+
+        assert os.path.isdir(self.path), \
+            "Nothing to archive yet!"
+        assert not os.path.isfile(self.tarpath), \
+            "Destination archive already exists!"
+
+        if rank == 0:
+            with tarfile.open(self.tarpath, 'w:gz') as tar:
+                tar.add(self.path)
+
+        assert os.path.isfile(self.tarpath), \
+            "The archive should have saved, but we can't find it!"
+
+        planetengine.message("Deleting model directory...")
+
+        if rank == 0:
+            shutil.rmtree(self.path)
+
+        planetengine.message("Model directory deleted.")
+
+        self.archived = True
+
+        planetengine.message("Archived!")
+
+    def unarchive(self, prefix = ''):
+
+        planetengine.message("Unarchiving...")
+
+        assert not os.path.isdir(self.path), \
+            "Destination directory already exists!"
+        assert os.path.isfile(self.tarpath), \
+            "No archive to unpack!"
+
+        if rank == 0:
+            with tarfile.open(self.tarpath) as tar:
+                tar.extractall()
+
+        assert os.path.isdir(self.path), \
+            "The model directory doesn't appear to exist."
+
+        planetengine.message("Deleting archive...")
+
+        if rank == 0:
+            os.remove(self.tarpath)
+
+        planetengine.message("Model directory deleted.")
+
+        self.archived = False
+
+        planetengine.message("Unarchived!")
+
     def load_checkpoint(self, loadStep):
 
         if rank == 0:
@@ -334,6 +449,10 @@ class Frame:
             self.reset()
 
         else:
+
+            if self.archived:
+                self.unarchive()
+
             stepStr = str(loadStep).zfill(8)
 
             checkpointFile = os.path.join(self.path, stepStr)
@@ -342,7 +461,7 @@ class Frame:
                 self.system.varsOfState,
                 checkpointFile,
                 'load',
-                self.blackhole,
+                self.blackhole
                 )
 
             snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.txt')
@@ -361,6 +480,9 @@ class Frame:
 
             self.update()
             self.status = "ready"
+
+            if self.autoarchive:
+                self.archive()
 
             if rank == 0:
                 print("Checkpoint successfully loaded!")
