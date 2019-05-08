@@ -33,7 +33,6 @@ class Checkpointer:
             dataCollectors = None,
             inputs = None,
             step = None,
-#             archive = False,
             inFrames = {},
             ):
 
@@ -44,9 +43,7 @@ class Checkpointer:
         self.step = step
         self.inputs = inputs
         self.path = path
-#         self.tarpath = self.path + '.tar.gz'
         self.stamps = stamps
-#         self.archive = archive
         self.inFrames = inFrames
 
         self.inFrame_checkpointers = []
@@ -66,19 +63,6 @@ class Checkpointer:
             self.inFrame_checkpointers.append(inFrame_checkpointer)
 
     def checkpoint(self):
-
-#         if self.archive:
-#             if rank == 0:
-#                 if os.path.isfile(self.tarpath):
-#                     if not os.path.isdir(self.path):
-#                         print("Tar found - unarchiving...")
-#                         with tarfile.open(self.tarpath) as tar:
-#                             tar.extractall()
-#                         print("Unarchived.")
-#                         if not os.path.isdir(self.path):
-#                             raise Exception("Archive contained the wrong model file somehow.")
-#                     else:
-#                         raise Exception("Conflicting archive and directory found.")
 
         if os.path.isfile(os.path.join(self.path, 'stamps.txt')):
 
@@ -120,13 +104,6 @@ class Checkpointer:
                     checkpointer.checkpoint()
                 planetengine.message("inFrames saved.")
 
-#         if rank == 0:
-#             if self.archive:
-#                 if os.path.isfile(self.tarpath):
-#                     planetengine.message("Deleting unarchived archive...")
-#                     os.remove(self.tarpath)
-#                     planetengine.message("Deleted.")
-
         planetengine.message("Checkpointing...")
 
         if self.step is None:
@@ -137,11 +114,12 @@ class Checkpointer:
 
         checkpointDir = os.path.join(self.path, stepStr)
 
-        if os.path.isdir(checkpointDir):
-            planetengine.message('Checkpoint directory found: skipping.')
-            return None
-        else:
-            if rank == 0:
+        if rank == 0:
+            if os.path.isdir(checkpointDir):
+                planetengine.message('Checkpoint directory found: removing')
+                shutil.rmtree(checkpointDir)
+            else:
+                planetengine.message('Making checkpoint directory.')
                 os.makedirs(checkpointDir)
 
         planetengine.message("Saving figures...")
@@ -199,20 +177,8 @@ class Checkpointer:
                                     )
         planetengine.message("Saved.")
 
-        assert os.path.isfile(os.path.join(checkpointDir, 'stamps.txt')), \
-            "The files did not get saved for some reason!"
-
-#         if self.archive:
-#             if rank == 0:
-#                 planetengine.message("Archiving...")
-#                 with tarfile.open(self.tarpath, 'w:gz') as tar:
-#                     tar.add(self.path)
-#                 planetengine.message("Archived.")
-#                 planetengine.message("Deleting superfluous files...")
-#                 shutil.rmtree(self.path)
-#                 planetengine.message("Done.")
-
-#             assert os.path.isfile(self.tarpath), \
-#                 "The archive should have saved, but we can't find it!"
+        if rank == 0:
+            assert os.path.isfile(os.path.join(checkpointDir, 'stamps.txt')), \
+                "The files did not get saved for some reason!"
 
         planetengine.message("Checkpointed!")

@@ -27,8 +27,18 @@ root = 0
 
 def message(*args):
     for arg in args:
-        if rank == root:
+        if rank == 0:
             print(arg)
+
+def log(text):
+    if rank == 0:
+        if os.path.isfile("diaglog.txt"):
+            file = open("diaglog.txt", 'a')
+        else:
+            file = open("diaglog.txt", 'w')
+        file.write(text)
+        file.write('\n')
+        file.close()
 
 class Grouper:
     def __init__(self, indict = {}):
@@ -59,70 +69,72 @@ class Grouper:
                 outstring += key + ": " + thing
         return outstring
 
-def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.], archive = False):
+def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     substrates = []
     substrateNames = []
     substrateHandles = {}
     extension = '.h5'
 
-    for inVar in sorted(varsOfState.items()):
+#     planetengine.log("Doing varsOnDisk, mode: " + mode)
 
-        varName, var = inVar
-        try:
-            substrate = var.swarm
-            substrateName = 'swarm'
-        except:
+    for varName, var in sorted(varsOfState.items()):
+
+        if type(var) == uw.mesh._meshvariable.MeshVariable:
             substrate = var.mesh
             substrateName = 'mesh'
-
+        elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
+            substrate = var.swarm
+            substrateName = 'swarm'
         else:
-            if not substrate in substrates:
+            raise Exception('Variable type not recognised.')
 
-                substrateName = substrateName
-                if substrateName in substrateNames:
-                    nameFound = False
-                    suffix = 0
-                    while not nameFound:
-                        adjustedSubstrateName = substrateName + '_' + str(suffix)
-                        if not adjustedSubstrateName in substrateNames:
-                            substrateName = adjustedSubstrateName
-                            nameFound = True
-                        else:
-                            suffix += 1
-                substrateNames.append(substrateName)
-
-                if mode == 'save':
-                    message("Saving substrate to disk: ", substrateName)
-                    handle = substrate.save(
-                        os.path.join(
-                            checkpointDir,
-                            substrateName + extension
-                            )
-                        )
-                    substrateHandles[substrateName] = handle
-                elif mode == 'load':
-                    message("Loading substrate from disk: ", substrateName)
-                    if type(substrate) == uw.swarm.Swarm:
-                        with substrate.deform_swarm():
-                            substrate.particleCoordinates.data[:] = blackhole
-                        assert substrate.particleGlobalCount == 0
-                    substrate.load(os.path.join(checkpointDir, substrateName + extension))
-                else:
-                    raise Exception("Disk mode not recognised.")
-                substrates.append(substrate)
-
-            else:
-                if mode == 'save':
-                    handle = substrateHandles[substrateNames]
+        if not substrate in substrates:
+            if substrateName in substrateNames:
+                nameFound = False
+                suffix = 0
+                while not nameFound:
+                    adjustedSubstrateName = substrateName + '_' + str(suffix)
+                    if not adjustedSubstrateName in substrateNames:
+                        substrateName = adjustedSubstrateName
+                        nameFound = True
+                    else:
+                        suffix += 1
+            substrateNames.append(substrateName)
 
             if mode == 'save':
-                message("Saving var to disk: ", varName)
-                var.save(os.path.join(checkpointDir, varName + extension), handle)
+                message("Saving substrate to disk: ", substrateName)
+                handle = substrate.save(
+                    os.path.join(
+                        checkpointDir,
+                        substrateName + extension
+                        )
+                    )
+                substrateHandles[substrateName] = handle
             elif mode == 'load':
-                message("Loading var from disk: ", varName)
-                var.load(os.path.join(checkpointDir, varName + extension))
+                message("Loading substrate from disk: ", substrateName)
+                if type(substrate) == uw.swarm.Swarm:
+                    with substrate.deform_swarm():
+                        substrate.particleCoordinates.data[:] = blackhole
+                    assert substrate.particleGlobalCount == 0
+                substrate.load(os.path.join(checkpointDir, substrateName + extension))
             else:
                 raise Exception("Disk mode not recognised.")
+            substrates.append(substrate)
+
+        else:
+            if mode == 'save':
+                handle = substrateHandles[substrateNames]
+
+        if mode == 'save':
+            message("Saving var to disk: ", varName)
+            var.save(os.path.join(checkpointDir, varName + extension), handle)
+        elif mode == 'load':
+            message("Loading var from disk: ", varName)
+            var.load(os.path.join(checkpointDir, varName + extension))
+        else:
+            raise Exception("Disk mode not recognised.")
+
+#     planetengine.log("Finished doing varsOnDisk, mode: " + mode)
 
 def weightVar(mesh, specialSets = None):
 

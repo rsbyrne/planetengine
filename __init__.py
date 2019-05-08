@@ -16,3 +16,5 @@ import planetengine.visualisation
 import planetengine.diagnostic
 
 from planetengine.utilities import message
+from planetengine.utilities import log
+

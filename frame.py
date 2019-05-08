@@ -23,8 +23,7 @@ from planetengine import utilities
 def load_frame(
         outputPath = '',
         instanceID = '',
-        loadStep = 0,
-        autoarchive = True
+        loadStep = 0
         ):
     '''
     Creates a new 'frame' instance attached to a pre-existing
@@ -86,17 +85,21 @@ def load_frame(
         initial = initial,
         outputPath = outputPath,
         instanceID = instanceID,
-        autoarchive = autoarchive,
         _stamps = stamps
         )
 
     checkpoints = []
-    for directory in glob(path + '/*/'):
-        basename = os.path.basename(directory[:-1])
-        if (basename.isdigit() and len(basename) == 8):
-            if os.path.exists(directory + 'stamps.txt'):
-                checkpoints.append(int(basename))
+
+    if rank == 0:
+        for directory in glob(path + '/*/'):
+            basename = os.path.basename(directory[:-1])
+            if (basename.isdigit() and len(basename) == 8):
+                if os.path.exists(directory + 'stamps.txt'):
+                    checkpoints.append(int(basename))
+
     frame.checkpoints = sorted(checkpoints)
+
+    frame.checkpoints = comm.bcast(frame.checkpoints, root = 0)
 
     if loadStep == 'max':
         frame.load_checkpoint(frame.checkpoints[-1])
@@ -117,7 +120,7 @@ class Frame:
             initial,
             outputPath = '',
             instanceID = None,
-            autoarchive = True,
+            autoarchive = False,
             _stamps = None,
             _use_wordhash = True,
             ):
@@ -174,13 +177,19 @@ class Frame:
         self.tarpath = self.path + '.tar.gz'
         self.autoarchive = autoarchive
 
-        assert not (os.path.isdir(self.path) and os.path.isfile(self.tarpath)), \
-            "Model directory and model archive cannot share same directory!"
+        self.archived = False
 
-        if os.path.isfile(self.tarpath):
-            self.archived = True
-        else:
-            self.archived = False
+        if rank == 0:
+
+            assert not (os.path.isdir(self.path) and os.path.isfile(self.tarpath)), \
+                "Model directory and model archive cannot share same directory!"
+
+            if os.path.isfile(self.tarpath):
+                self.archived = True
+            else:
+                self.archived = False
+
+        self.archived = comm.bcast(self.archived, root = 0)
                           
         self.system = system
         self.initial = initial
@@ -267,7 +276,11 @@ class Frame:
         if self.archived:
             self.unarchive()
 
-        self.checkpointer.checkpoint()
+        if self.step in self.checkpoints:
+            planetengine.message("Checkpoint already exists! Skipping.")
+        else:
+            self.checkpointer.checkpoint()
+
         if self.autoarchive:
             self.archive()
 
@@ -386,24 +399,24 @@ class Frame:
 
         planetengine.message("Archiving...")
 
-        assert os.path.isdir(self.path), \
-            "Nothing to archive yet!"
-        assert not os.path.isfile(self.tarpath), \
-            "Destination archive already exists!"
-
         if rank == 0:
+
+            assert os.path.isdir(self.path), \
+                "Nothing to archive yet!"
+            assert not os.path.isfile(self.tarpath), \
+                "Destination archive already exists!"
+
             with tarfile.open(self.tarpath, 'w:gz') as tar:
                 tar.add(self.path)
 
-        assert os.path.isfile(self.tarpath), \
-            "The archive should have saved, but we can't find it!"
+            assert os.path.isfile(self.tarpath), \
+                "The archive should have saved, but we can't find it!"
 
-        planetengine.message("Deleting model directory...")
+            planetengine.message("Deleting model directory...")
 
-        if rank == 0:
             shutil.rmtree(self.path)
 
-        planetengine.message("Model directory deleted.")
+            planetengine.message("Model directory deleted.")
 
         self.archived = True
 
@@ -413,24 +426,24 @@ class Frame:
 
         planetengine.message("Unarchiving...")
 
-        assert not os.path.isdir(self.path), \
-            "Destination directory already exists!"
-        assert os.path.isfile(self.tarpath), \
-            "No archive to unpack!"
-
         if rank == 0:
+            assert not os.path.isdir(self.path), \
+                "Destination directory already exists!"
+            assert os.path.isfile(self.tarpath), \
+                "No archive to unpack!"
+
             with tarfile.open(self.tarpath) as tar:
                 tar.extractall()
 
-        assert os.path.isdir(self.path), \
-            "The model directory doesn't appear to exist."
 
-        planetengine.message("Deleting archive...")
+            assert os.path.isdir(self.path), \
+                "The model directory doesn't appear to exist."
 
-        if rank == 0:
+            planetengine.message("Deleting archive...")
+
             os.remove(self.tarpath)
 
-        planetengine.message("Model directory deleted.")
+            planetengine.message("Model directory deleted.")
 
         self.archived = False
 
@@ -447,6 +460,9 @@ class Frame:
 
         elif loadStep == 0:
             self.reset()
+
+        elif loadStep == 'max':
+            loadStep = max(self.checkpoints)
 
         else:
 
