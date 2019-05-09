@@ -35,17 +35,22 @@ def load_frame(
     path = os.path.join(outputPath, instanceID)
     tarpath = path + '.tar.gz'
 
-    if os.path.isfile(tarpath):
-        if rank == 0:
-            if not os.path.isdir(path):
-                print("Tar found - unarchiving...")
-                with tarfile.open(tarpath) as tar:
-                    tar.extractall()
-                print("Unarchived.")
-                if not os.path.isdir(path):
-                    raise Exception("Archive contained the wrong model file somehow.")
-            else:
-                raise Exception("Conflicting archive and directory found.")
+    if rank == 0:
+        assert os.path.isdir(path) or os.path.isfile(tarpath), \
+            "No model found at that directory!"
+
+    if rank == 0:
+        if os.path.isfile(tarpath):
+            was_archived = True
+            assert not os.path.isdir(path), \
+                "Conflicting archive and directory found."
+            planetengine.message("Tar found - unarchiving...")
+            with tarfile.open(tarpath) as tar:
+                tar.extractall()
+            planetengine.message("Unarchived.")
+            assert os.path.isdir(path), \
+                "Archive contained the wrong model file somehow."
+            os.remove(tarpath)
 
     with open(os.path.join(path, 'inputs.txt')) as json_file:  
         inputs = json.load(json_file)
@@ -76,29 +81,25 @@ def load_frame(
     observerscript = utilities.local_import(os.path.join(path, '_observerscript.py'))
     observer = observerscript.build(**inputs['options'])
 
-    with open(os.path.join(path, 'stamps.txt')) as json_file:
-        stamps = json.load(json_file)
-
     frame = Frame(
         system = system,
         observer = observer,
         initial = initial,
         outputPath = outputPath,
-        instanceID = instanceID,
-        _stamps = stamps
+        instanceID = instanceID
         )
-
-    checkpoints = []
 
     if rank == 0:
         for directory in glob(path + '/*/'):
             basename = os.path.basename(directory[:-1])
             if (basename.isdigit() and len(basename) == 8):
-                if os.path.exists(directory + 'stamps.txt'):
-                    checkpoints.append(int(basename))
-
-    frame.checkpoints = sorted(checkpoints)
-
+                with open(os.path.join(directory, 'stamps.txt')) as json_file:
+                    loadstamps = json.load(json_file)
+                assert loadstamps == frame.stamps, \
+                    "Bad checkpoint found! Aborting."
+                planetengine.message("Found checkpoint: " + basename)
+                frame.checkpoints.append(int(basename))
+        frame.checkpoints = sorted(list(set(frame.checkpoints)))
     frame.checkpoints = comm.bcast(frame.checkpoints, root = 0)
 
     if loadStep == 'max':
@@ -110,7 +111,121 @@ def load_frame(
     else:
         raise Exception("LoadStep input not understood.")
 
+    if frame.autoarchive:
+        frame.archive()
+
     return frame
+
+def make_stamps(
+        system,
+        observer,
+        initial,
+        _use_wordhash = True,
+        ):
+
+    planetengine.message("Making stamps...")
+
+    stamps = {
+        'params': utilities.dictstamp(system.inputs),
+        'options': utilities.dictstamp(observer.inputs),
+        'system': utilities.scriptstamp(system.script),
+        'observer': utilities.scriptstamp(observer.script),
+        'config': utilities.dictstamp({
+            'scripts': utilities.multiscriptstamp(
+                [IC.script for name, IC in sorted(initial.items())]
+                ),
+            'inputs': utilities.multidictstamp(
+                [IC.inputs for name, IC in sorted(initial.items())]
+                ),
+            }),
+        }
+    stamps['allstamp'] = utilities.dictstamp(stamps)
+
+    wordhash = planetengine.wordhash.wordhash(stamps['allstamp'])
+    if _use_wordhash:
+        hashID = 'pemod_' + wordhash
+    else:
+        hashID = 'pemod_' + stamps['allstamp']
+
+    planetengine.message("Stamps made.")
+
+    return stamps, hashID
+
+def make_frame(
+        system,
+        observer,
+        initial,
+        outputPath = '',
+        instanceID = None,
+        ):
+    '''
+    'system' should be the object produced by the 'build' call
+    of a legitimate 'systemscript'.
+    'observer'... ?
+    'initial' should be a dictionary with an entry for each var mentioned
+    in the system 'varsOfState' attribute, indexed by var name, e.g.:
+    initial = {'temperatureField': tempIC, 'materialVar': materialIC}
+    ...where 'tempIC' and 'materialIC' are instances of legitimate
+    initial condition classes.
+    '''
+
+    planetengine.message("Making a new frame...")
+
+    stamps, hashID = make_stamps(system, observer, initial)
+
+    if instanceID == None:
+        instanceID = hashID
+
+    path = os.path.join(outputPath, instanceID)
+    tarpath = path + '.tar.gz'
+
+    directory_state = ''
+
+    if rank == 0:
+
+        if os.path.isdir(path):
+            if os.path.isfile(tarpath):
+                raise Exception(
+                    "Cannot combine model directory and tar yet."
+                    )
+            else:
+                directory_state = 'directory'
+        elif os.path.isfile(tarpath):
+            directory_state = 'tar'
+        else:
+            directory_state = 'clean'
+
+    directory_state = comm.bcast(directory_state, root = 0)
+
+    if directory_state == 'tar':
+        if rank == 0:
+            with tarfile.open(tarpath) as tar:
+                tar.extract(os.path.join(instanceID, 'stamps.txt'))
+            with open(os.path.join(path, 'stamps.txt')) as json_file:
+                loadstamps = json.load(json_file)
+            os.remove('stamps.txt')
+            assert loadstamps == stamps
+
+    if directory_state == 'clean':
+        frame = Frame(
+            system,
+            observer,
+            initial,
+            outputPath = outputPath,
+            instanceID = instanceID
+            )
+
+    else:
+        frame = load_frame(
+            outputPath,
+            instanceID
+            )
+
+    planetengine.message("Frame made.")
+
+    return frame
+
+################
 
 class Frame:
 
@@ -119,10 +234,8 @@ class Frame:
             observer,
             initial,
             outputPath = '',
-            instanceID = None,
-            autoarchive = False,
-            _stamps = None,
-            _use_wordhash = True,
+            instanceID = 'test',
+            autoarchive = True
             ):
         '''
         'system' should be the object produced by the 'build' call
@@ -135,68 +248,32 @@ class Frame:
         initial condition classes.
         '''
 
-        self.outputPath = outputPath
-
         assert system.varsOfState.keys() == initial.keys()
 
-        if _stamps == None:
-            self.stamps = {
-                'params': utilities.dictstamp(system.inputs),
-                'options': utilities.dictstamp(observer.inputs),
-                'system': utilities.scriptstamp(system.script),
-                'observer': utilities.scriptstamp(observer.script),
-                'config': utilities.dictstamp({
-                    'scripts': utilities.multiscriptstamp(
-                        [IC.script for name, IC in sorted(initial.items())]
-                        ),
-                    'inputs': utilities.multidictstamp(
-                        [IC.inputs for name, IC in sorted(initial.items())]
-                        ),
-                    }),
-                }
-            self.allstamp = utilities.dictstamp(self.stamps)
-            self.stamps['allstamp'] = self.allstamp
-        else:
-            self.stamps = _stamps
+        planetengine.message("Building frame...")
 
-        for key in self.stamps:
-            setattr(self, key, self.stamps[key])
+        self.system = system
+        self.observer = observer
+        self.initial = initial
+        self.outputPath = outputPath
+        self.instanceID = instanceID
+        self.autoarchive = True
 
-        self._use_wordhash = _use_wordhash
-        self.wordhash = planetengine.wordhash.wordhash(self.allstamp)
-        if self._use_wordhash:
-            self.hashID = 'pemod_' + self.wordhash
-        else:
-            self.hashID = 'pemod_' + self.allstamp
-        if instanceID == None:
-            self.instanceID = self.hashID
-        else:
-            self.instanceID = instanceID
+        self.stamps, self.hashID = make_stamps(system, observer, initial)
 
         self.path = os.path.join(self.outputPath, self.instanceID)
         self.tarpath = self.path + '.tar.gz'
-        self.autoarchive = autoarchive
 
         self.archived = False
+        self.checkpoints = []
 
-        if rank == 0:
+        planetengine.message("Doing stuff with the observer...")
 
-            assert not (os.path.isdir(self.path) and os.path.isfile(self.tarpath)), \
-                "Model directory and model archive cannot share same directory!"
-
-            if os.path.isfile(self.tarpath):
-                self.archived = True
-            else:
-                self.archived = False
-
-        self.archived = comm.bcast(self.archived, root = 0)
-                          
-        self.system = system
-        self.initial = initial
-        self.observer = observer
         self.tools = observer.make_tools(self.system)
         self.figs = observer.make_figs(self.system, self.tools)
         self.data = observer.make_data(self.system, self.tools)
+
+        planetengine.message("Observer stuff complete.")
 
         self.varsOfState = self.system.varsOfState
 
@@ -214,10 +291,10 @@ class Frame:
             'config': self.config,
             }
 
-        self.inFrames = {}
+        self.inFrames = []
         for IC in self.initial.values():
             if type(IC) == planetengine.initials.load.IC:
-                self.inFrames[IC.inFrame.hashID] = IC.inFrame
+                self.inFrames.append(IC.inFrame)
 
         self.checkpointer = planetengine.checkpoint.Checkpointer(
             step = self.system.step,
@@ -227,13 +304,9 @@ class Frame:
             scripts = self.scripts,
             inputs = self.inputs,
             stamps = self.stamps,
-            path = self.path,
-#             outputPath = self.outputPath,
-#             instanceID = self.instanceID,
-#             archive = archive,
             inFrames = self.inFrames
             )
-        
+
         self.observerDict = {}
 
         self.projections, self.projectors, self.project = utilities.make_projectors(
@@ -255,37 +328,47 @@ class Frame:
 
         self.initialise()
 
+        planetengine.message("Frame built!")
+
     def initialise(self):
-        if rank == 0:
-            print("Initialising...")
+        planetengine.message("Initialising...")
         planetengine.initials.apply(self.initial, self.system)
-        self.solved = False
+        self.system.solve()
+        self.solved = True
         self.most_recent_checkpoint = None
         self.update()
         self.status = "ready"
-        if rank == 0:
-            print("Initialisation complete!")
+        planetengine.message("Initialisation complete!")
 
     def reset(self):
         self.initialise()
 
-    def checkpoint(self):
+    def checkpoint(self, path = None):
+
         if not self.allCollected:
             self.all_collect()
 
-        if self.archived:
-            self.unarchive()
+        if path is None:
 
-        if self.step in self.checkpoints:
-            planetengine.message("Checkpoint already exists! Skipping.")
+            path = self.path
+
+            if self.archived:
+                self.unarchive()
+
+            if self.step in self.checkpoints:
+                planetengine.message("Checkpoint already exists! Skipping.")
+            else:
+                self.checkpointer.checkpoint(path)
+
+            if self.autoarchive:
+                self.archive()
+
+            self.most_recent_checkpoint = self.step
+            self.checkpoints.append(self.step)
+
         else:
-            self.checkpointer.checkpoint()
 
-        if self.autoarchive:
-            self.archive()
-
-        self.most_recent_checkpoint = self.step
-        self.checkpoints.append(self.step)
+            self.checkpointer.checkpoint(path)
 
     def update(self):
         self.step = self.system.step.value
@@ -295,8 +378,7 @@ class Frame:
         self.allProjected = False
 
     def all_analyse(self):
-        if rank == 0:
-            print("Analysing...")
+        planetengine.message("Analysing...")
         if not self.solved:
             self.system.solve()
             self.solved = True
@@ -306,12 +388,10 @@ class Frame:
         for analyser in self.data['analysers']:
             analyser.analyse()
         self.allAnalysed = True
-        if rank == 0:
-            print("Analysis complete!")
+        planetengine.message("Analysis complete!")
 
     def report(self):
-        if rank == 0:
-            print("Reporting...")
+        planetengine.message("Reporting...")
 #         utilities.quickShow(*sorted(self.system.varsOfState.values()))
         if not self.allAnalysed:
             self.all_analyse()
@@ -321,32 +401,27 @@ class Frame:
             if rank == 0:
                 print(figname)
             self.figs[figname].show()
-        if rank == 0:
-            print("Reporting complete!")
+        planetengine.message("Reporting complete!")
 
     def all_collect(self):
-        if rank == 0:
-            print("Collecting...")
+        planetengine.message("Collecting...")
         if not self.allAnalysed:
             self.all_analyse()
         for collector in self.data['collectors']:
             collector.collect()
         self.allCollected = True
-        if rank == 0:
-            print("Collecting complete!")
+        planetengine.message("Collecting complete!")
 
     def all_clear(self):
         for collector in self.data['collectors']:
             collector.clear()
 
     def iterate(self):
-        if rank == 0:
-            print("Iterating step " + str(self.step) + " ...")
+        planetengine.message("Iterating step " + str(self.step) + " ...")
         self.system.iterate()
         self.update()
         self.solved = True
-        if rank == 0:
-            print("Iteration complete!")
+        planetengine.message("Iteration complete!")
 
     def go(self, steps):
         stopStep = self.step + steps
@@ -364,8 +439,7 @@ class Frame:
         if checkpointCondition():
             self.checkpoint()
 
-        if rank == 0:
-            print("Running...")
+        planetengine.message("Running...")
 
         while not stopCondition():
 
@@ -381,16 +455,14 @@ class Frame:
 
             except:
                 if forge_on:
-                    if rank == 0:
-                        print("Something went wrong...loading last checkpoint.")
+                    planetengine.message("Something went wrong...loading last checkpoint.")
                     assert type(self.most_recent_checkpoint) == int, "No most recent checkpoint logged."
                     self.load_checkpoint(self.most_recent_checkpoint)
                 else:
                     raise Exception("Something went wrong.")
 
         self.status = "post-traverse"
-        if rank == 0:
-            print("Done!")
+        planetengine.message("Done!")
         if checkpointCondition():
             self.checkpoint()
         self.status = "ready"
@@ -435,7 +507,6 @@ class Frame:
             with tarfile.open(self.tarpath) as tar:
                 tar.extractall()
 
-
             assert os.path.isdir(self.path), \
                 "The model directory doesn't appear to exist."
 
@@ -451,18 +522,20 @@ class Frame:
 
     def load_checkpoint(self, loadStep):
 
-        if rank == 0:
-            print("Loading checkpoint...")
+        planetengine.message("Loading checkpoint...")
+
+        if loadStep == 'max':
+            loadStep = max(self.checkpoints)
+        elif loadStep == 'min':
+            loadStep = min(self.checkpoints)
+        elif loadStep == 'latest':
+            loadStep = self.most_recent_checkpoint
 
         if loadStep == self.step:
-            if rank == 0:
-                print("Already at step ", str(loadStep), " - aborting load_checkpoint.")
+            planetengine.message("Already at step ", str(loadStep), " - aborting load_checkpoint.")
 
         elif loadStep == 0:
             self.reset()
-
-        elif loadStep == 'max':
-            loadStep = max(self.checkpoints)
 
         else:
 
@@ -472,6 +545,7 @@ class Frame:
             stepStr = str(loadStep).zfill(8)
 
             checkpointFile = os.path.join(self.path, stepStr)
+            print(checkpointFile)
 
             utilities.varsOnDisk(
                 self.system.varsOfState,
@@ -480,14 +554,16 @@ class Frame:
                 self.blackhole
                 )
 
-            snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.txt')
-            with open(snapshot, 'r') as csv_file:
-                csv_reader = csv.reader(csv_file, delimiter=',')
-                header, data = csv_reader
             dataDict = {}
-            for dataName, dataItem in zip(header, data):
-                key = dataName[1:].lstrip()
-                dataDict[key] = dataItem
+            if rank == 0:
+                snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.txt')
+                with open(snapshot, 'r') as csv_file:
+                    csv_reader = csv.reader(csv_file, delimiter=',')
+                    header, data = csv_reader
+                for dataName, dataItem in zip(header, data):
+                    key = dataName[1:].lstrip()
+                    dataDict[key] = dataItem
+            dataDict = comm.bcast({**dataDict}, root = 0)
 
             self.system.step.value = loadStep
             self.system.modeltime.value = float(dataDict['modeltime'])
@@ -500,5 +576,4 @@ class Frame:
             if self.autoarchive:
                 self.archive()
 
-            if rank == 0:
-                print("Checkpoint successfully loaded!")
+            planetengine.message("Checkpoint successfully loaded!")

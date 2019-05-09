@@ -172,7 +172,7 @@ def makeLocalAnnulus(mesh):
 
 def copyField(field1, field2,
         tolerance = 0.01,
-        rounded = False
+        rounded = False,
         ):
 
     if type(field1) == uw.mesh._meshvariable.MeshVariable:

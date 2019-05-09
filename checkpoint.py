@@ -27,13 +27,12 @@ class Checkpointer:
             self,
             stamps,
             varsOfState = None,
-            path = 'test',
             scripts = None,
             figs = None,
             dataCollectors = None,
             inputs = None,
             step = None,
-            inFrames = {},
+            inFrames = [],
             ):
 
         self.scripts = scripts
@@ -42,67 +41,55 @@ class Checkpointer:
         self.varsOfState = varsOfState
         self.step = step
         self.inputs = inputs
-        self.path = path
         self.stamps = stamps
         self.inFrames = inFrames
 
-        self.inFrame_checkpointers = []
-        for hashID, inFrame in sorted(self.inFrames.items()):
-            inFrame.all_collect()
-            inFrame_checkpointer = planetengine.checkpoint.Checkpointer(
-                stamps = inFrame.stamps,
-                step = inFrame.system.step,
-                varsOfState = inFrame.system.varsOfState,
-                figs = inFrame.figs,
-                dataCollectors = inFrame.data['collectors'],
-                scripts = inFrame.scripts,
-                inputs = inFrame.inputs,
-                path = os.path.join(self.path, hashID),
-                inFrames = inFrame.inFrames,
-                )
-            self.inFrame_checkpointers.append(inFrame_checkpointer)
+    def checkpoint(self, path = 'test'):
 
-    def checkpoint(self):
+        coldstart = True
 
-        if os.path.isfile(os.path.join(self.path, 'stamps.txt')):
+        if rank == 0:
 
-            if rank == 0:
+            if os.path.isfile(os.path.join(path, 'stamps.txt')):
 
-                with open(os.path.join(self.path, 'stamps.txt')) as json_file:
+                with open(os.path.join(path, 'stamps.txt')) as json_file:
                     loadstamps = json.load(json_file)
                 if not loadstamps == self.stamps:
                     raise Exception("You are trying to save a model in a different model's directory!")
                 else:
                     planetengine.message("Pre-existing directory for this model has been found. Continuing...")
 
-        else:
+                coldstart = False
+
+        coldstart = comm.bcast(coldstart, root = 0)
+
+        if coldstart:
 
             if rank == 0:
 
                 planetengine.message("No pre-existing directory for this model found. Making a new one...")
 
-                os.makedirs(self.path)
+                os.makedirs(path)
 
                 if not self.scripts is None:
                     for scriptname in self.scripts:
-                        path = self.scripts[scriptname]
-                        tweakedpath = os.path.splitext(path)[0] + ".py"
-                        newpath = os.path.join(self.path, "_" + scriptname + ".py")
+                        scriptpath = self.scripts[scriptname]
+                        tweakedpath = os.path.splitext(scriptpath)[0] + ".py"
+                        newpath = os.path.join(path, "_" + scriptname + ".py")
                         shutil.copyfile(tweakedpath, newpath)
 
-                inputFilename = os.path.join(self.path, 'inputs.txt')
+                inputFilename = os.path.join(path, 'inputs.txt')
                 with open(inputFilename, 'w') as file:
                      file.write(json.dumps(self.inputs))
 
-                stampFilename = os.path.join(self.path, 'stamps.txt')
+                stampFilename = os.path.join(path, 'stamps.txt')
                 with open(stampFilename, 'w') as file:
                      file.write(json.dumps(self.stamps))
 
-            if len(self.inFrame_checkpointers) > 0:
-                planetengine.message("Saving inFrames...")
-                for checkpointer in self.inFrame_checkpointers:
-                    checkpointer.checkpoint()
-                planetengine.message("inFrames saved.")
+            for inFrame in self.inFrames:
+                inFrame.checkpoint(
+                    os.path.join(path, inFrame.hashID)
+                    )
 
         planetengine.message("Checkpointing...")
 
@@ -112,7 +99,7 @@ class Checkpointer:
             step = self.step.value
             stepStr = str(step).zfill(8)
 
-        checkpointDir = os.path.join(self.path, stepStr)
+        checkpointDir = os.path.join(path, stepStr)
 
         if rank == 0:
             if os.path.isdir(checkpointDir):
@@ -163,7 +150,7 @@ class Checkpointer:
                 for row in dataCollector.clear():
                     if rank == 0:
                         name, headerStr, dataArray = row
-                        filename = os.path.join(self.path, name + '.csv')
+                        filename = os.path.join(path, name + '.csv')
                         if not type(dataArray) == type(None):
                             with open(filename, 'ab') as openedfile:
                                 fileSize = os.stat(filename).st_size

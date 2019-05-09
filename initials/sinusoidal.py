@@ -1,6 +1,5 @@
 from planetengine.mapping import box
 from planetengine.utilities import copyField
-from planetengine.utilities import setboundaries
 import numpy as np
 
 class IC:
@@ -9,16 +8,13 @@ class IC:
             self,
             pert = 0.2,
             freq = 1.,
-            valRange = (0., 1.),
             phase = 0.,
             boxDims = ((0., 1.), (0., 1.)),
-            boundaries = None,
             ):
 
         boxDims = tuple(
             [tuple([float(inner) for inner in outer]) for outer in boxDims]
             )
-        valRange = tuple([float(i) for i in valRange])
         phase = float(phase)
         freq = float(freq)
         pert = float(pert)
@@ -27,18 +23,12 @@ class IC:
         del self.inputs['self']
         self.script = __file__
 
-        if boundaries is None:
-            boundaries = (valRange[0], valRange[1], '.', '.')
-        elif type(boundaries) == list:
-            boundaries = tuple(boundaries)
-        self.inputs['boundaries'] = boundaries
+        self.valRange = (0., 1.)
 
         self.freq = freq
-        self.valRange = valRange
         self.phase = phase
         self.pert = pert
         self.boxDims = boxDims
-        self.boundaries = boundaries
 
     def sinusoidal_IC(self, coordArray):
         boxLength = self.boxDims[0][1] - self.boxDims[0][0]
@@ -66,7 +56,6 @@ class IC:
                 raise Exception("Did not recognise input variable.")
         coordArray = box(mesh, boxDims = self.boxDims)
         meshVar.data[:] = self.sinusoidal_IC(coordArray)
-        setboundaries(meshVar, self.boundaries)
         if not meshVar is variable:
             copyField(meshVar, variable)
             del meshVar

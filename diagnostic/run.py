@@ -1,4 +1,6 @@
+import planetengine
 from planetengine.diagnostic import diagnostics
+from timeit import timeit
 
-diagnostics.diagnostic_01()
-# diagnostics.diagnostic_02()
+result = timeit(diagnostics.diagnostic_01, setup="gc.enable()", number=3)
+planetengine.message(result)
