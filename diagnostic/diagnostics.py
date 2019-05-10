@@ -7,7 +7,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
-def diagnostic_01():
+def diagnostic_01(delete = True):
 
     planetengine.log("Building model1 initials...")
 
@@ -135,8 +135,9 @@ def diagnostic_01():
 
     planetengine.log("Cleaning up...")
     if rank == 0:
-        os.remove(model1.tarpath)
-        os.remove(model2.tarpath)
-        os.remove(model3.tarpath)
-        os.remove('diaglog.txt')
+        if delete:
+            os.remove(model1.tarpath)
+            os.remove(model2.tarpath)
+            os.remove(model3.tarpath)
+            os.remove('diaglog.txt')
     planetengine.message("Diagnostic complete!")
