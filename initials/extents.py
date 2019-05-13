@@ -58,7 +58,7 @@ class IC:
                 )
         return ICarray
 
-    def apply(self, outVar):
+    def apply(self, outVar, boxDims = None):
         try:
             mesh = outVar.mesh
             coords = mesh.data
@@ -68,7 +68,9 @@ class IC:
                 coords = outVar.swarm.particleCoordinates.data
             except:
                 raise Exception("Did not recognise input variable.")
-        coordArray = box(mesh, coords, boxDims = self.boxDims)
+        if boxDims is None:
+            boxDims = self.boxDims
+        coordArray = box(mesh, coords, boxDims = boxDims)
         outVar.data[:] = self.initial_extents(
             coordArray, outVar.data.shape
             )

@@ -57,8 +57,8 @@ class MeshUtils:
                 self.rad = fn.misc.constant((0., 0., 1.))
             else:
                 raise Exception("Only mesh dims 2 and 3 supported...obviously?")
-            self.inner = mesh.specialSets['Bottom']
-            self.outer = mesh.specialSets['Top']
+            self.inner = mesh.specialSets['Bottom_VertexSet']
+            self.outer = mesh.specialSets['Top_VertexSet']
         elif type(mesh) == uw.mesh.FeMesh_Annulus:
             self.ang = mesh.unitvec_theta_Fn
             self.rad = mesh.unitvec_r_Fn

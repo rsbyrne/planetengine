@@ -3,11 +3,22 @@ import planetengine.initials.extents
 import planetengine.initials.load
 from planetengine.utilities import setboundaries
 
-def apply(initial, system):
+def apply(initial, inputs):
+    if hasattr(inputs, "sub_systems"):
+        for system in inputs.sub_systems:
+            _apply(initial, system)
+    else:
+        _apply(initial, inputs)
+
+def _apply(initial, system):
     for varName in sorted(system.varsOfState):
         var = system.varsOfState[varName]
         IC = initial[varName]
-        IC.apply(var)
+        if hasattr(system, 'boxDims'):
+            boxDims = system.boxDims
+        else:
+            boxDims = None
+        IC.apply(var, boxDims)
         if varName in system.varScales:
             minVal, maxVal = system.varScales[varName]
             valRange = maxVal - minVal

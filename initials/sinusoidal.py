@@ -44,7 +44,7 @@ class IC:
         outArray = np.array([[item] for item in outArray])
         return outArray
 
-    def apply(self, variable):
+    def apply(self, variable, boxDims = None):
         try:
             mesh = variable.mesh
             meshVar = variable
@@ -54,7 +54,9 @@ class IC:
                 meshVar = mesh.add_variable(variable.count)
             except:
                 raise Exception("Did not recognise input variable.")
-        coordArray = box(mesh, boxDims = self.boxDims)
+        if boxDims is None:
+            boxDims = self.boxDims
+        coordArray = box(mesh, boxDims = boxDims)
         meshVar.data[:] = self.sinusoidal_IC(coordArray)
         if not meshVar is variable:
             copyField(meshVar, variable)

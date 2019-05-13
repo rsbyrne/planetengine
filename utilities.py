@@ -170,9 +170,23 @@ def makeLocalAnnulus(mesh):
                 )
     return localAnn
 
+def makeLocalCart(mesh):
+    for proc in range(nProcs):
+        if rank == proc:
+            localMesh = uw.mesh.FeMesh_Cartesian(
+                elementType = mesh.elementType,
+                elementRes = mesh.elementRes,
+                minCoord = mesh.minCoord,
+                maxCoord = mesh.maxCoord,
+                periodic = mesh.periodic,
+                partitioned = False,
+                )
+    return localMesh
+
 def copyField(field1, field2,
         tolerance = 0.01,
         rounded = False,
+        boxDims = ((0., 1.), (0., 1.))
         ):
 
     if type(field1) == uw.mesh._meshvariable.MeshVariable:
@@ -220,12 +234,17 @@ def copyField(field1, field2,
 
     def mapFn(tolerance):
 
+        adjBoxDims = (
+            (boxDims[0][0] + tolerance, boxDims[0][1] - tolerance),
+            (boxDims[1][0] + tolerance, boxDims[1][1] - tolerance)
+            )
+
         evalCoords = planetengine.mapping.unbox(
             inMesh,
             planetengine.mapping.box(
                 outMesh,
                 outCoords,
-                boxDims = outMesh.dim * ((tolerance, 1. - tolerance),)
+                boxDims = adjBoxDims
                 )
             )
 

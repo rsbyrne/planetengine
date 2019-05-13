@@ -60,6 +60,9 @@ class IC:
             except:
                 pass
 
-    def apply(self, outVar):
+    def apply(self, outVar, boxDims = None):
 
-        tolerance = copyField(self.inVar, outVar)
+        if boxDims is None:
+            tolerance = copyField(self.inVar, outVar)
+        else:
+            tolerance = copyField(self.inVar, outVar, boxDims)
