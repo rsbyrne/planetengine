@@ -18,7 +18,10 @@ def _apply(initial, system):
             boxDims = system.boxDims
         else:
             boxDims = None
-        IC.apply(var, boxDims)
+        try:
+            IC.apply(var, boxDims)
+        except:
+            IC.apply(var)
         if varName in system.varScales:
             minVal, maxVal = system.varScales[varName]
             valRange = maxVal - minVal

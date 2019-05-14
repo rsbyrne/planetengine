@@ -14,6 +14,7 @@ import importlib
 import csv
 import hashlib
 import random
+import io
 
 import planetengine
 from planetengine.visualisation import quickShow
@@ -329,44 +330,51 @@ def local_import(filepath):
 
     return module
 
+def stringify(*args):
+    outStr = '('
+    if len(args) > 1:
+        for inputObject in args:
+            outStr += stringify(inputObject)
+    else:
+        inputObject = args[0]
+        objType = type(inputObject)
+        if objType == str:
+            outStr += inputObject
+        elif objType == bool:
+            outStr += str(inputObject)
+        elif objType == int:
+            outStr += str(float(inputObject))
+        elif objType == float:
+            outStr += str(inputObject)
+        elif objType in [list, tuple]:
+            for item in inputObject:
+                outStr += stringify(item)
+        elif objType == set:
+            for item in sorted(inputObject):
+                outStr += stringify(item)
+        elif objType == dict:
+            for key, val in sorted(inputObject.items()):
+                outStr += (stringify(key))
+                outStr += (stringify(val))
+        elif objType == io.TextIOWrapper:
+            file = inputObject.read()
+            outStr += file
+            inputObject.close()
+        else:
+            errormsg = "Type: " + str(type(inputObject)) + " not accepted."
+            raise Exception(errormsg)
+    outStr += ')'
+    return outStr
+
+def hashstamp(inputObj):
+    inputStr = stringify(inputObj).encode()
+    stamp = hashlib.md5(inputStr).hexdigest()
+    return stamp
+
 def timestamp():
     stamp = time.strftime(
         '%y%m%d%H%M%SZ', time.gmtime(time.time())
         )
-    return stamp
-
-def dictstamp(inputDict):
-    inputStr = str(
-        [(key, inputDict[key]) for key in sorted(inputDict)]
-        ).encode()
-    stamp = hashlib.md5(inputStr).hexdigest()
-    return stamp
-
-def multidictstamp(dictList):
-    inputBytes = bytes()
-    for inputDict in dictList:
-        inputBytes += str(
-        [(key, inputDict[key]) for key in sorted(inputDict)]
-        ).encode()
-    stamp = hashlib.md5(inputBytes).hexdigest()
-    return stamp
-
-def scriptstamp(scriptPath):
-    with open(scriptPath, 'r') as file:
-        script = file.read().encode()
-    stamp = hashlib.md5(script).hexdigest()
-    return stamp
-
-def multiscriptstamp(scriptList):
-    script = bytes()
-    for scriptPath in scriptList:
-        with open(scriptPath, 'r') as file:
-            script += file.read().encode()
-    stamp = hashlib.md5(script).hexdigest()
-    return stamp
-
-def stringstamp(instring):
-    stamp = hashlib.md5(instring.encode()).hexdigest()
     return stamp
 
 def setboundaries(variable, values):

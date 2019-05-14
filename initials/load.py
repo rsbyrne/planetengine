@@ -25,10 +25,10 @@ class IC:
         assert inFrame is not None or type(hashID) == str, \
             "Must provide a str or frame instance for 'inFrame' keyword argument."
 
-        self.inputs = locals().copy()
-        del self.inputs['self']
-        del self.inputs['inFrame']
-        del self.inputs['_outputPath']
+        self.inputs = {
+            'sourceVarName': sourceVarName,
+            'loadStep': loadStep
+            }
         self.script = __file__
 
         self.sourceVarName = sourceVarName
@@ -42,15 +42,27 @@ class IC:
             self.loadStep = loadStep
 
         if inFrame is None and type(hashID) == str:
-            self.inFrame = frame.load_frame(_outputPath, hashID, loadStep = self.loadStep)
+            self.inFrame = frame.load_frame(
+                _outputPath,
+                hashID,
+                loadStep = self.loadStep,
+                _isInternalFrame = True
+                )
         elif type(inFrame) == str:
-            self.inFrame = frame.load_frame(inFrame, loadStep = self.loadStep)
+            self.inFrame = frame.load_frame(
+                os.path.dirname(inFrame),
+                os.path.basename(inFrame),
+                loadStep = self.loadStep,
+                _isInternalFrame = True
+                )
         elif type(inFrame) == frame.Frame:
             self.inFrame = inFrame
             self.inFrame.load_checkpoint(self.loadStep)
         else:
             raise Exception("inFrame input not recognised.")
+
         self.inputs['hashID'] = self.inFrame.hashID
+
         self.inVar = self.inFrame.system.varsOfState[self.sourceVarName]
         if not type(self.inVar) == uw.mesh._meshvariable.MeshVariable:
             try:

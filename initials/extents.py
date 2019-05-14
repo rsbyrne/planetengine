@@ -26,14 +26,15 @@ class IC:
         boxDims = tuple(
             [tuple([float(inner) for inner in outer]) for outer in boxDims]
             )
-        self.inputs = locals().copy()
-        del self.inputs['self']
-        del self.inputs['args']
         self.script = __file__
+        self.inputs = {}
+        self.inputs['default'] = default
+        self.inputs['boxDims'] = boxDims
+        self.inputs['boundaries'] = boundaries
 
         if shapes is None:
             shapes = args
-            self.inputs['shapes'] = shapes
+        self.inputs['shapes'] = shapes
 
         self.boxDims = boxDims
         self.boundaries = boundaries

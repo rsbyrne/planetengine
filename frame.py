@@ -23,7 +23,8 @@ from planetengine import utilities
 def load_frame(
         outputPath = '',
         instanceID = '',
-        loadStep = 0
+        loadStep = 0,
+        _isInternalFrame = False,
         ):
     '''
     Creates a new 'frame' instance attached to a pre-existing
@@ -46,7 +47,7 @@ def load_frame(
                 "Conflicting archive and directory found."
             planetengine.message("Tar found - unarchiving...")
             with tarfile.open(tarpath) as tar:
-                tar.extractall()
+                tar.extractall(path)
             planetengine.message("Unarchived.")
             assert os.path.isdir(path), \
                 "Archive contained the wrong model file somehow."
@@ -86,7 +87,10 @@ def load_frame(
         observer = observer,
         initial = initial,
         outputPath = outputPath,
-        instanceID = instanceID
+        instanceID = instanceID,
+        _isInternalFrame = _isInternalFrame,
+#         _isPreexisting = True,
+#         _isArchived = was_archived
         )
 
     if rank == 0:
@@ -95,6 +99,8 @@ def load_frame(
             if (basename.isdigit() and len(basename) == 8):
                 with open(os.path.join(directory, 'stamps.txt')) as json_file:
                     loadstamps = json.load(json_file)
+                with open(os.path.join(path, 'inputs.txt')) as json_file:
+                    loadconfig = json.load(json_file)
                 assert loadstamps == frame.stamps, \
                     "Bad checkpoint found! Aborting."
                 planetengine.message("Found checkpoint: " + basename)
@@ -126,20 +132,15 @@ def make_stamps(
     planetengine.message("Making stamps...")
 
     stamps = {
-        'params': utilities.dictstamp(system.inputs),
-        'options': utilities.dictstamp(observer.inputs),
-        'system': utilities.scriptstamp(system.script),
-        'observer': utilities.scriptstamp(observer.script),
-        'config': utilities.dictstamp({
-            'scripts': utilities.multiscriptstamp(
-                [IC.script for name, IC in sorted(initial.items())]
-                ),
-            'inputs': utilities.multidictstamp(
-                [IC.inputs for name, IC in sorted(initial.items())]
-                ),
-            }),
+        'params': utilities.hashstamp(system.inputs),
+        'options': utilities.hashstamp(observer.inputs),
+        'system': utilities.hashstamp(open(system.script)),
+        'observer': utilities.hashstamp(open(observer.script)),
+        'config': utilities.hashstamp(
+            [(IC.inputs, open(IC.script)) for name, IC in sorted(initial.items())]
+            ),
         }
-    stamps['allstamp'] = utilities.dictstamp(stamps)
+    stamps['allstamp'] = utilities.hashstamp(stamps)
 
     wordhash = planetengine.wordhash.wordhash(stamps['allstamp'])
     if _use_wordhash:
@@ -200,10 +201,10 @@ def make_frame(
     if directory_state == 'tar':
         if rank == 0:
             with tarfile.open(tarpath) as tar:
-                tar.extract(os.path.join(instanceID, 'stamps.txt'))
+                tar.extract('stamps.txt', path)
             with open(os.path.join(path, 'stamps.txt')) as json_file:
                 loadstamps = json.load(json_file)
-            os.remove('stamps.txt')
+            os.remove(os.path.join(path, 'stamps.txt'))
             assert loadstamps == stamps
 
     if directory_state == 'clean':
@@ -235,7 +236,10 @@ class Frame:
             initial,
             outputPath = '',
             instanceID = 'test',
-            autoarchive = True
+            autoarchive = True,
+            _isInternalFrame = False,
+#             _isPreexisting = False,
+#             _isArchived = False,
             ):
         '''
         'system' should be the object produced by the 'build' call
@@ -257,14 +261,16 @@ class Frame:
         self.initial = initial
         self.outputPath = outputPath
         self.instanceID = instanceID
-        self.autoarchive = True
+        self.autoarchive = autoarchive
+        self._isInternalFrame = _isInternalFrame
 
         self.stamps, self.hashID = make_stamps(system, observer, initial)
 
         self.path = os.path.join(self.outputPath, self.instanceID)
-        self.tarpath = self.path + '.tar.gz'
+        self.tarname = self.instanceID + '.tar.gz'
+        self.tarpath = os.path.join(self.outputPath, self.tarname)
 
-        self.archived = False
+        self.archived = False #_isArchived
         self.checkpoints = []
 
         planetengine.message("Doing stuff with the observer...")
@@ -284,17 +290,25 @@ class Frame:
 
         self.params = self.system.inputs
         self.options = self.observer.inputs
-        self.config = {varName: IC.inputs for varName, IC in sorted(self.initial.items())}
+        self.config = {
+            varName: IC.inputs for varName, IC in sorted(self.initial.items())
+            }
         self.inputs = {
             'params': self.params,
             'options': self.options,
             'config': self.config,
             }
 
+        planetengine.message("Loading interior frames...")
         self.inFrames = []
         for IC in self.initial.values():
-            if type(IC) == planetengine.initials.load.IC:
+            try:
                 self.inFrames.append(IC.inFrame)
+            except:
+                pass
+        planetengine.message(
+            "Loaded " + str(len(self.inFrames)) + " interior frames."
+            )
 
         self.checkpointer = planetengine.checkpoint.Checkpointer(
             step = self.system.step,
@@ -334,7 +348,6 @@ class Frame:
         planetengine.message("Initialising...")
         planetengine.initials.apply(self.initial, self.system)
         self.system.solve()
-        self.solved = True
         self.most_recent_checkpoint = None
         self.update()
         self.status = "ready"
@@ -348,20 +361,17 @@ class Frame:
         if not self.allCollected:
             self.all_collect()
 
+        if self.archived:
+            self.unarchive()
+
         if path is None:
 
             path = self.path
-
-            if self.archived:
-                self.unarchive()
 
             if self.step in self.checkpoints:
                 planetengine.message("Checkpoint already exists! Skipping.")
             else:
                 self.checkpointer.checkpoint(path)
-
-            if self.autoarchive:
-                self.archive()
 
             self.most_recent_checkpoint = self.step
             self.checkpoints.append(self.step)
@@ -369,6 +379,12 @@ class Frame:
         else:
 
             self.checkpointer.checkpoint(path)
+
+            if self.autoarchive:
+                self.archive(path)
+
+        if self.autoarchive:
+            self.archive()
 
     def update(self):
         self.step = self.system.step.value
@@ -379,9 +395,6 @@ class Frame:
 
     def all_analyse(self):
         planetengine.message("Analysing...")
-        if not self.solved:
-            self.system.solve()
-            self.solved = True
         if not self.allProjected:
             self.project()
             self.allProjected = True
@@ -420,7 +433,6 @@ class Frame:
         planetengine.message("Iterating step " + str(self.step) + " ...")
         self.system.iterate()
         self.update()
-        self.solved = True
         planetengine.message("Iteration complete!")
 
     def go(self, steps):
@@ -467,56 +479,123 @@ class Frame:
             self.checkpoint()
         self.status = "ready"
 
-    def archive(self, prefix = ''):
+    def fork(self, extPath, return_frame = False):
 
-        planetengine.message("Archiving...")
+        planetengine.message("Forking model to new directory...")
 
         if rank == 0:
 
-            assert os.path.isdir(self.path), \
+            if self.archived:
+                shutil.copyfile(
+                    self.tarpath,
+                    os.path.join(
+                        extPath,
+                        self.tarname
+                        )
+                    )
+                planetengine.message(
+                    "Model forked to directory: " + extPath + self.tarname
+                    )
+            else:
+                shutil.copytree(
+                    self.path,
+                    os.path.join(
+                        extPath,
+                        self.instanceID
+                        )
+                    )
+                planetengine.message(
+                    "Model forked to directory: " + extPath + self.instanceID
+                    )
+
+        if return_frame:
+            planetengine.message(
+                "Loading newly forked frame at current model step: "
+                )
+            newframe = load_frame(extPath, self.instanceID, loadStep = self.step)
+            planetengine.message(
+                "Loaded newly forked frame."
+                )
+            return newframe
+
+    def archive(self, _path = None):
+
+        planetengine.message("Archiving...")
+
+        if self._isInternalFrame:
+            planetengine.message("Archiving disabled for internal frames.")
+            return None
+
+        if _path is None:
+            path = self.path
+            tarpath = self.tarpath
+            localArchive = True
+        else:
+            path = _path
+            tarpath = path + '.tar.gz'
+            localArchive = False
+
+        if rank == 0:
+
+            assert os.path.isdir(path), \
                 "Nothing to archive yet!"
-            assert not os.path.isfile(self.tarpath), \
+            assert not os.path.isfile(tarpath), \
                 "Destination archive already exists!"
 
-            with tarfile.open(self.tarpath, 'w:gz') as tar:
-                tar.add(self.path)
+            with tarfile.open(tarpath, 'w:gz') as tar:
+                tar.add(path, arcname = '')
 
-            assert os.path.isfile(self.tarpath), \
+            assert os.path.isfile(tarpath), \
                 "The archive should have saved, but we can't find it!"
 
             planetengine.message("Deleting model directory...")
 
-            shutil.rmtree(self.path)
+            shutil.rmtree(path)
 
             planetengine.message("Model directory deleted.")
 
-        self.archived = True
+        if localArchive:
+            self.archived = True
 
         planetengine.message("Archived!")
 
-    def unarchive(self, prefix = ''):
+    def unarchive(self, _path = None):
 
         planetengine.message("Unarchiving...")
 
+        if self._isInternalFrame:
+            planetengine.message("Archiving disabled for internal frames.")
+            return None
+
+        if _path is None:
+            path = self.path
+            tarpath = self.tarpath
+            localArchive = True
+        else:
+            path = _path
+            tarpath = path + '.tar.gz'
+            localArchive = False
+
         if rank == 0:
-            assert not os.path.isdir(self.path), \
+            assert not os.path.isdir(path), \
                 "Destination directory already exists!"
-            assert os.path.isfile(self.tarpath), \
+            assert os.path.isfile(tarpath), \
                 "No archive to unpack!"
 
-            with tarfile.open(self.tarpath) as tar:
-                tar.extractall()
+            with tarfile.open(tarpath) as tar:
+                tar.extractall(path)
 
-            assert os.path.isdir(self.path), \
+            assert os.path.isdir(path), \
                 "The model directory doesn't appear to exist."
 
             planetengine.message("Deleting archive...")
 
-            os.remove(self.tarpath)
+            os.remove(tarpath)
 
             planetengine.message("Model directory deleted.")
 
-        self.archived = False
+        if localArchive:
+            self.archived = True
 
         planetengine.message("Unarchived!")
 
@@ -532,7 +611,9 @@ class Frame:
             loadStep = self.most_recent_checkpoint
 
         if loadStep == self.step:
-            planetengine.message("Already at step ", str(loadStep), " - aborting load_checkpoint.")
+            planetengine.message(
+                "Already at step " + str(loadStep) + ": aborting load_checkpoint."
+                )
 
         elif loadStep == 0:
             self.reset()
@@ -545,7 +626,6 @@ class Frame:
             stepStr = str(loadStep).zfill(8)
 
             checkpointFile = os.path.join(self.path, stepStr)
-            print(checkpointFile)
 
             utilities.varsOnDisk(
                 self.system.varsOfState,

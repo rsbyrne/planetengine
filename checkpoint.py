@@ -44,7 +44,7 @@ class Checkpointer:
         self.stamps = stamps
         self.inFrames = inFrames
 
-    def checkpoint(self, path = 'test'):
+    def checkpoint(self, path = 'test', light = False):
 
         coldstart = True
 
@@ -87,8 +87,11 @@ class Checkpointer:
                      file.write(json.dumps(self.stamps))
 
             for inFrame in self.inFrames:
-                inFrame.checkpoint(
-                    os.path.join(path, inFrame.hashID)
+                if not inFrame.allCollected:
+                    inFrame.all_collect()
+                inFrame.checkpointer.checkpoint(
+                    os.path.join(path, inFrame.hashID),
+                    light = True
                     )
 
         planetengine.message("Checkpointing...")
@@ -144,25 +147,26 @@ class Checkpointer:
                  file.write(json.dumps(self.stamps))
             planetengine.message("Saved.")
 
-        planetengine.message("Saving datasets...")
-        if not self.dataCollectors is None:
-            for dataCollector in self.dataCollectors:
-                for row in dataCollector.clear():
-                    if rank == 0:
-                        name, headerStr, dataArray = row
-                        filename = os.path.join(path, name + '.csv')
-                        if not type(dataArray) == type(None):
-                            with open(filename, 'ab') as openedfile:
-                                fileSize = os.stat(filename).st_size
-                                if fileSize == 0:
-                                    header = headerStr
-                                else:
-                                    header = ''
-                                np.savetxt(openedfile, dataArray,
-                                    delimiter = ",",
-                                    header = header
-                                    )
-        planetengine.message("Saved.")
+        if light:
+            planetengine.message("Saving datasets...")
+            if not self.dataCollectors is None:
+                for dataCollector in self.dataCollectors:
+                    for row in dataCollector.clear():
+                        if rank == 0:
+                            name, headerStr, dataArray = row
+                            filename = os.path.join(path, name + '.csv')
+                            if not type(dataArray) == type(None):
+                                with open(filename, 'ab') as openedfile:
+                                    fileSize = os.stat(filename).st_size
+                                    if fileSize == 0:
+                                        header = headerStr
+                                    else:
+                                        header = ''
+                                    np.savetxt(openedfile, dataArray,
+                                        delimiter = ",",
+                                        header = header
+                                        )
+            planetengine.message("Saved.")
 
         if rank == 0:
             assert os.path.isfile(os.path.join(checkpointDir, 'stamps.txt')), \
