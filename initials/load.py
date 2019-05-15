@@ -1,9 +1,7 @@
 import underworld as uw
-from planetengine.mapping import box
-from planetengine.utilities import copyField
-from planetengine.utilities import setboundaries
+from planetengine.mapping import unbox
+from planetengine.utilities import meshify
 from planetengine import frame
-import underworld as uw
 import numpy as np
 import os
 
@@ -21,15 +19,20 @@ class IC:
             ):
 
         assert sourceVarName is not None, \
-            "sourceVarName input must be a string correlating to a varsOfState attribute on the input frame."
+            "sourceVarName input must be a string \
+            correlating to a varsOfState attribute \
+            on the input frame."
         assert inFrame is not None or type(hashID) == str, \
-            "Must provide a str or frame instance for 'inFrame' keyword argument."
+            "Must provide a str or frame instance \
+            for 'inFrame' keyword argument."
 
         self.inputs = {
             'sourceVarName': sourceVarName,
             'loadStep': loadStep
             }
         self.script = __file__
+
+        self.LOADTYPE = None
 
         self.sourceVarName = sourceVarName
         if loadStep is None:
@@ -64,17 +67,9 @@ class IC:
         self.inputs['hashID'] = self.inFrame.hashID
 
         self.inVar = self.inFrame.system.varsOfState[self.sourceVarName]
-        if not type(self.inVar) == uw.mesh._meshvariable.MeshVariable:
-            try:
-                self.inVar = self.inFrame.projections[self.sourceVarName]
-                if not self.inFrame.allProjected:
-                    self.inFrame.project(self.sourceVarName)
-            except:
-                pass
+        self.meshVar = meshify(self.inVar)
 
-    def apply(self, outVar, boxDims = None):
-
-        if boxDims is None:
-            tolerance = copyField(self.inVar, outVar)
-        else:
-            tolerance = copyField(self.inVar, outVar, boxDims)
+    def evaluate(self, coordArray):
+        meshVar = self.meshVar()
+        unboxed = unbox(meshVar.mesh, coordArray)
+        outArray = self.meshVar().evaluate(unboxed)

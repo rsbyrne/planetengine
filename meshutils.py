@@ -1,6 +1,7 @@
 import planetengine
 from planetengine import utilities
 from planetengine import mapping
+from planetengine.standards import basic_unpack
 
 import underworld as uw
 from underworld import function as fn
@@ -14,6 +15,18 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
+
+def mesh_utils(
+        mesh,
+        meshName = None,
+        attach = True,
+        deformable = False,
+        ):
+
+    if hasattr(mesh, 'pe'):
+        pe = mesh.pe
+    else:
+        pe = MeshUtils(*args, **kwargs)
 
 class MeshUtils:
 
@@ -48,41 +61,43 @@ class MeshUtils:
             }
 
         if type(self.mesh) == uw.mesh.FeMesh_Cartesian:
+            self.surfaces = {
+                'inner': mesh.specialSets['MinJ_VertexSet'],
+                'outer': mesh.specialSets['MaxJ_VertexSet'],
+                'left': mesh.specialSets['MinI_VertexSet'],
+                'right': mesh.specialSets['MaxI_VertexSet']
+                }
             if self.mesh.dim == 2:
-                self.ang = fn.misc.constant((1., 0.))
-                self.rad = fn.misc.constant((0., 1.))
+                self.comps = {
+                    'ang': fn.misc.constant((1., 0.)),
+                    'rad': fn.misc.constant((0., 1.)),
+                    }
             elif mesh.dim == 3:
-                self.ang1 = fn.misc.constant((1., 0., 0.))
-                self.ang2 = fn.misc.constant((0., 1., 0.))
-                self.rad = fn.misc.constant((0., 0., 1.))
-            else:
-                raise Exception("Only mesh dims 2 and 3 supported...obviously?")
-            self.inner = mesh.specialSets['Bottom_VertexSet']
-            self.outer = mesh.specialSets['Top_VertexSet']
+                self.comps = {
+                    'ang1': fn.misc.constant((1., 0., 0.)),
+                    'ang2': fn.misc.constant((0., 1., 0.)),
+                    'rad': fn.misc.constant((0., 0., 1.)),
+                    }
+                self.surfaces['front'] = mesh.specialSets['MinK_VertexSet']
+                self.surfaces['back'] = mesh.specialSets['MaxK_VertexSet']
         elif type(mesh) == uw.mesh.FeMesh_Annulus:
-            self.ang = mesh.unitvec_theta_Fn
-            self.rad = mesh.unitvec_r_Fn
-            self.inner = mesh.specialSets['inner']
-            self.outer = mesh.specialSets['outer']
+            self.comps = {
+                'ang': mesh.unitvec_theta_Fn,
+                'rad': mesh.unitvec_r_Fn,
+                }
+            self.surfaces = {
+                'inner': mesh.specialSets['inner'],
+                'outer': mesh.specialSets['outer'],
+                'left': mesh.specialSets['MinJ_VertexSet'],
+                'right': mesh.specialSets['MaxJ_VertexSet']
+                }
         else:
             raise Exception("That kind of mesh is not supported yet.")
 
-        if mesh.dim == 2:
-            self.comps = {
-                'ang': self.ang,
-                'rad': self.rad,
-                }
-        else:
-            self.comps = {
-                'ang1': self.ang1,
-                'ang2': self.ang2,
-                'rad': self.rad,
-                }
+        self.__dict__.update(self.comps)
+        self.__dict__.update(self.surfaces)
 
-        self.surfaces = {
-            'inner': self.inner,
-            'outer': self.outer,
-            }
+        self.scales = mapping.get_scales(mesh, partitioned = True)
 
         # Is this necessary?
 #        if not self.deformable:
@@ -150,7 +165,7 @@ class MeshUtils:
         if self.attach:
             if rank == 0:
                 print("Attaching...")
-            self.mesh.__dict__.update({'pe_meshUtils': self})
+            self.mesh.__dict__.update({'pe': self})
             if rank == 0:
                 print("Done!")
 
@@ -159,16 +174,32 @@ class MeshUtils:
 #        fullData = comm.bcast(fullData, root = 0)
 #        return fullData
 
-    def meshify(self, var):
+    def meshify(self, var, return_func = True):
 
-        for autoVar in self.autoVars.values():
-            try:
-                projector = uw.utils.MeshVariable_Projection(
-                    autoVar,
-                    var,
-                    )
-                projector.solve()
-                return autoVar, projector
-            except:
-                pass
+        if type(var) == uw.mesh._meshvariable.MeshVariable:
+            planetengine.message(
+                "Already a mesh var..."
+                )
+            if return_func:
+                def meshVar():
+                    return var
+            else:
+                return meshVar, None
+        else:
+            for autoVar in self.autoVars.values():
+                try:
+                    projector = uw.utils.MeshVariable_Projection(
+                        autoVar,
+                        var,
+                        )
+                    projector.solve()
+                    if return_func:
+                        def meshVar():
+                            projector.solve()
+                            return autoVar
+                        return meshVar
+                    else:
+                        return autoVar, projector
+                except:
+                    pass
         raise Exception("Projection failed!")

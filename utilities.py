@@ -275,6 +275,11 @@ def copyField(field1, field2,
 
     return tryTolerance
 
+def meshify(*args):
+    varName, var, mesh, swarm, coords = basic_unpack(*args)
+    pemesh = planetengine.meshutils.mesh_utils(mesh)
+    meshVar = pemesh.meshify(var)
+
 def expose(source, destination):
     for key, value in source.__dict__.items():
         destination[key] = value
@@ -376,21 +381,6 @@ def timestamp():
         '%y%m%d%H%M%SZ', time.gmtime(time.time())
         )
     return stamp
-
-def setboundaries(variable, values):
-    try:
-        mesh = variable.mesh
-    except:
-        raise Exception("Variable does not appear to be mesh variable.")
-    walls = [
-        mesh.specialSets["outer"],
-        mesh.specialSets["inner"],
-        mesh.specialSets["MinJ_VertexSet"],
-        mesh.specialSets["MaxJ_VertexSet"],
-        ]
-    for value, wall in zip(values, walls):
-        if not value is '.':
-            variable.data[wall] = value
 
 def make_projectors(varDict):
     '''

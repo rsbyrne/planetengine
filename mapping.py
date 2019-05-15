@@ -1,5 +1,27 @@
 import numpy as np
 
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+nProcs = comm.Get_size()
+
+def get_scales(variable, partitioned = False):
+    scales = []
+    if type(variable) == np.ndarray:
+        data = variable
+    else:
+        data = variable.data
+    if partitioned:
+        data = comm.gather(data, root = 0)
+    if rank == 0:
+        for i in range(data.shape[1]):
+            scales.append(
+                data[:,i].min(),
+                data[:,i].max()
+                )
+    scales = comm.bcast(scales, root = 0)
+    return scales
+
 def recentered_coords(
         coordArray,
         origin = (0., 0.),
@@ -36,14 +58,14 @@ def radial_coords(
 
     return outArray
 
-def rescale_coords(
-        coordArray,
+def rescale_array(
+        inArray,
         inScales,
         outScales,
         flip = None
         ):
 
-    transposed = coordArray.transpose()
+    transposed = inArray.transpose()
     outVals = []
     for nD in range(len(transposed)):
         vals = transposed[nD]
@@ -66,7 +88,7 @@ def rescale_coords(
 def box(mesh, coordArray = None, boxDims = ((0., 1), (0., 1.))):
     if coordArray is None:
         coordArray = mesh.data
-    outArray = rescale_coords(
+    outArray = rescale_array(
         radial_coords(coordArray),
         (mesh.angularExtent, mesh.radialLengths),
         boxDims,
@@ -78,7 +100,7 @@ def unbox(mesh, coordArray = None, boxDims = ((0., 1), (0., 1.))):
     if coordArray is None:
         coordArray = mesh.data
     outArray = radial_coords(
-        rescale_coords(
+        rescale_array(
             coordArray,
             boxDims,
             (mesh.angularExtent, mesh.radialLengths),

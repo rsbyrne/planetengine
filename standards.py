@@ -3,6 +3,54 @@ from underworld import function as fn
 import planetengine
 import numpy as np
 
+def basic_unpack(*args):
+
+    if len(args) == 1 and type(args[0]) == tuple:
+        args = args[0]
+    varName = 'noname'
+    substrate = None
+    if len(args) == 1:
+        var = args[0]
+    elif len(args) == 2:
+        if type(args[0]) == str:
+            varName, var = args
+        else:
+            var, substrate = args
+    elif len(args) == 3:
+        varName, var, substrate = args
+    else:
+        raise Exception("Input not understood.")
+
+    if substrate is None:
+        try:
+            substrate = var.swarm
+        except:
+            substrate = var.mesh
+    try:
+        swarm = substrate
+        mesh = swarm.mesh
+        coords = swarm.particleCoordinates.data
+    except:
+        substrate = var.mesh
+        mesh = substrate
+        swarm = None
+        coords = mesh.data
+
+    data = var.evaluate(substrate)
+
+    if str(data.dtype) == 'int32':
+        dType = 'int'
+    elif str(data.dtype) == 'float64':
+        dType = 'double'
+    elif str(data.dtype) == 'bool':
+        dType = 'boolean'
+    else:
+        raise Exception(
+            "Input data type not acceptable."
+            )
+
+    return varName, var, mesh, swarm, coords, data, dType
+
 def standardise(
         *args,
         attach = True,

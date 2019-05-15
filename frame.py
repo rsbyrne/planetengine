@@ -64,6 +64,7 @@ def load_frame(
 
     initial = {}
     for varName in sorted(system.varsOfState):
+        initial[varName] = {**config[varName]}
         initialLoadName = '_' + varName + '_initial.py'
         module = utilities.local_import(
             os.path.join(path, initialLoadName)
@@ -72,14 +73,20 @@ def load_frame(
         if module.IC in [type(IC) for IC in initial.values()]:
             for priorVarName, IC in sorted(initial.items()):
                 if type(IC) == module.IC and config[varName] == config[priorVarName]:
-                    initial[varName] = initial[priorVarName]
+                    initial[varName]['IC'] = initial[priorVarName]['IC']
                     break
         elif hasattr(module, 'LOADTYPE'):
-            initial[varName] = module.IC(**config[varName], _outputPath = path)
+            initial[varName]['IC'] = module.IC(
+                **config[varName]['IC_inputs'], _outputPath = path
+                )
         else:
-            initial[varName] = module.IC(**config[varName])
+            initial[varName]['IC'] = module.IC(
+                **config[varName]['IC_inputs']
+                )
 
-    observerscript = utilities.local_import(os.path.join(path, '_observerscript.py'))
+    observerscript = utilities.local_import(
+        os.path.join(path, '_observerscript.py')
+        )
     observer = observerscript.build(**inputs['options'])
 
     frame = Frame(
@@ -123,22 +130,25 @@ def load_frame(
     return frame
 
 def make_stamps(
-        system,
-        observer,
-        initial,
+        params,
+        options,
+        configs,
+        scripts,
         _use_wordhash = True,
         ):
 
     planetengine.message("Making stamps...")
 
+    openScripts = {
+        name: open(script) \
+        for name, script in sorted(scripts.items())
+        }
+
     stamps = {
-        'params': utilities.hashstamp(system.inputs),
-        'options': utilities.hashstamp(observer.inputs),
-        'system': utilities.hashstamp(open(system.script)),
-        'observer': utilities.hashstamp(open(observer.script)),
-        'config': utilities.hashstamp(
-            [(IC.inputs, open(IC.script)) for name, IC in sorted(initial.items())]
-            ),
+        'params': utilities.hashstamp(params),
+        'options': utilities.hashstamp(options),
+        'configs': utilities.hashstamp(configs),
+        'scripts': utilities.hashstamp(openScripts)
         }
     stamps['allstamp'] = utilities.hashstamp(stamps)
 
@@ -155,7 +165,7 @@ def make_stamps(
 def make_frame(
         system,
         observer,
-        initial,
+        initials,
         outputPath = '',
         instanceID = None,
         ):
@@ -163,16 +173,36 @@ def make_frame(
     'system' should be the object produced by the 'build' call
     of a legitimate 'systemscript'.
     'observer'... ?
-    'initial' should be a dictionary with an entry for each var mentioned
+    'initials' should be a dictionary with an entry for each var mentioned
     in the system 'varsOfState' attribute, indexed by var name, e.g.:
-    initial = {'temperatureField': tempIC, 'materialVar': materialIC}
+    initials = {'temperatureField': tempIC, 'materialVar': materialIC}
     ...where 'tempIC' and 'materialIC' are instances of legitimate
-    initial condition classes.
+    initials condition classes.
     '''
 
     planetengine.message("Making a new frame...")
 
-    stamps, hashID = make_stamps(system, observer, initial)
+    scripts = {
+        'systemscript': system.script,
+        'observerscript': observer.script
+        }
+
+    configs = {}
+    for varName, initial in sorted(initials.items()):
+        subdict = {
+            key: val for key, val in initial if not key == 'IC'
+            }
+        IC = initial['IC']
+        subdict['IC_inputs'] = IC.inputs
+        scripts[varName + '_initials'] = IC.script
+        configs[varName] = subdict
+
+    stamps, hashID = make_stamps(
+        system.inputs,
+        observer.inputs,
+        configs,
+        scripts
+        )
 
     if instanceID == None:
         instanceID = hashID
@@ -211,9 +241,9 @@ def make_frame(
         frame = Frame(
             system,
             observer,
-            initial,
-            outputPath = outputPath,
-            instanceID = instanceID
+            initials,
+            outputPath,
+            instanceID
             )
 
     else:
@@ -233,7 +263,7 @@ class Frame:
     def __init__(self,
             system,
             observer,
-            initial,
+            initials,
             outputPath = '',
             instanceID = 'test',
             autoarchive = True,
@@ -245,26 +275,57 @@ class Frame:
         'system' should be the object produced by the 'build' call
         of a legitimate 'systemscript'.
         'observer'... ?
-        'initial' should be a dictionary with an entry for each var mentioned
+        'initials' should be a dictionary with an entry for each var mentioned
         in the system 'varsOfState' attribute, indexed by var name, e.g.:
-        initial = {'temperatureField': tempIC, 'materialVar': materialIC}
+        initials = {'temperatureField': tempIC, 'materialVar': materialIC}
         ...where 'tempIC' and 'materialIC' are instances of legitimate
-        initial condition classes.
+        initials condition classes.
         '''
 
-        assert system.varsOfState.keys() == initial.keys()
+        assert system.varsOfState.keys() == initials.keys()
 
         planetengine.message("Building frame...")
 
         self.system = system
         self.observer = observer
-        self.initial = initial
+        self.initials = initials
         self.outputPath = outputPath
         self.instanceID = instanceID
         self.autoarchive = autoarchive
         self._isInternalFrame = _isInternalFrame
 
-        self.stamps, self.hashID = make_stamps(system, observer, initial)
+        scripts = {
+            'systemscript': system.script,
+            'observerscript': observer.script
+            }
+
+        configs = {}
+        for varName, initial in sorted(initials.items()):
+            subdict = {
+                key: val for key, val in initial if not key == 'IC'
+                }
+            IC = initial['IC']
+            subdict['IC_inputs'] = IC.inputs
+            scripts[varName + '_initials'] = IC.script
+            configs[varName] = subdict
+
+        self.params = self.system.inputs
+        self.options = self.observer.inputs
+        self.configs = configs
+        self.scripts = scripts
+
+        self.inputs = {
+            'params': self.params,
+            'options': self.options,
+            'configs': self.configs
+            }
+
+        self.stamps, self.hashID = make_stamps(
+            self.params,
+            self.options,
+            self.configs,
+            self.scripts
+            )
 
         self.path = os.path.join(self.outputPath, self.instanceID)
         self.tarname = self.instanceID + '.tar.gz'
@@ -283,25 +344,17 @@ class Frame:
 
         self.varsOfState = self.system.varsOfState
 
-        self.scripts = dict(
-            {'systemscript': system.script, 'observerscript': observer.script},
-            **{name + '_initial': IC.script for name, IC in self.initial.items()}
-            )
-
-        self.params = self.system.inputs
-        self.options = self.observer.inputs
-        self.config = {
-            varName: IC.inputs for varName, IC in sorted(self.initial.items())
-            }
-        self.inputs = {
-            'params': self.params,
-            'options': self.options,
-            'config': self.config,
-            }
+#         if varsOfState is None:
+#             try: self.varsOfState = self.system.varsOfState
+#             except: raise Exception("No vars of state provided!")
+#         else:
+#             self.varsOfState = varsOfState
+#         if varScales is None:
+#             try: self.varsOfState = self.system.varsOfState
 
         planetengine.message("Loading interior frames...")
         self.inFrames = []
-        for IC in self.initial.values():
+        for IC in self.initials.values():
             try:
                 self.inFrames.append(IC.inFrame)
             except:
@@ -346,7 +399,10 @@ class Frame:
 
     def initialise(self):
         planetengine.message("Initialising...")
-        planetengine.initials.apply(self.initial, self.system)
+        planetengine.initials.apply(
+            self.initials, 
+            self.system,
+            )
         self.system.solve()
         self.most_recent_checkpoint = None
         self.update()

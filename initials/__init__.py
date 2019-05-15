@@ -1,41 +1,71 @@
 import planetengine.initials.sinusoidal
 import planetengine.initials.extents
 import planetengine.initials.load
-from planetengine.utilities import setboundaries
+from planetengine import mapping
+from planetengine.meshutils import mesh_utils
+from planetengine.standards import basic_unpack
 
-def apply(initial, inputs):
-    if hasattr(inputs, "sub_systems"):
-        for system in inputs.sub_systems:
-            _apply(initial, system)
+def set_boundaries(variable, values):
+
+    try:
+        mesh = variable.mesh
+    except:
+        raise Exception("Variable does not appear to be mesh variable.")
+
+    pemesh = mesh_utils(mesh)
+
+    for value, wall in zip(values, pemesh.surfaces):
+        if not value is '.':
+            variable.data[wall] = value
+
+def apply(initials, system):
+
+    if hasattr(system, "sub_systems"):
+        for sub_system in inputs.sub_systems:
+            apply(initials, sub_system)
     else:
-        _apply(initial, inputs)
+        _apply(initials, system)
 
-def _apply(initial, system):
-    for varName in sorted(system.varsOfState):
-        var = system.varsOfState[varName]
-        IC = initial[varName]
-        if hasattr(system, 'boxDims'):
-            boxDims = system.boxDims
-        else:
-            boxDims = None
-        try:
-            IC.apply(var, boxDims)
-        except:
-            IC.apply(var)
-        if varName in system.varScales:
-            minVal, maxVal = system.varScales[varName]
-            valRange = maxVal - minVal
-            if hasattr(IC, 'inFrame'):
-                if IC.sourceVarName in IC.inFrame.system.varScales:
-                    in_minVal, in_maxVal = IC.inFrame.system.varScales[IC.sourceVarName]
-                else:
-                    # MAKE THIS MORE ROBUST
-                    in_minVal, in_maxVal = (0., 1.)
-                in_delta = in_maxVal - in_minVal
-                var.data[:] = (var.data[:] - in_minVal) / in_delta
-            var.data[:] = (var.data[:] + minVal) / valRange
-        if varName in system.varBounds:
-            boundaries = system.varBounds[varName]
-            setboundaries(var, boundaries)
+def _apply(initials, system):
+
+    varsOfState = system.varsOfState
+
+    # MAIN LOOP:
+
+    for varName, var in sorted(varsOfState.items()):
+
+        initial = initials[varName]
+        IC = initial['IC']
+        ignore, var, mesh, swarm, coords, data, dType = basic_unpack(var)
+        try: boxDims = initial['boxDims']
+        except: boxDims = ((0., 1.),) * system.mesh.dim
+
+        # APPLY VALUES:
+
+        if hasattr(IC, 'LOADTYPE'):
+            tolerance = copyField(IC.inVar, var)
+
+        else: # hence is an ordinary IC:
+            box = mapping.box(mesh, coords, boxDims)
+            var.data[:] = IC.evaluate(box)
+
+        # APPLY SCALES:
+
+        if 'varScales' in initial:
+            varScale = initial['varScales']
+            mapping.rescale_array(
+                var.data,
+                mapping.get_scales(var),
+                varScale
+                )
+
+        # APPLY BOUNDARIES:
+
+        if 'varBounds' in initial:
+            varBounds = initial['varBounds']
+            set_boundaries(var, varBounds)
+
+    # RESET PROGRESS VARS:
+
     system.step.value = 0
     system.modeltime.value = 0.

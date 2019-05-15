@@ -1,79 +1,35 @@
-import underworld as uw
 from underworld import function as fn
-from planetengine.mapping import box
-from planetengine.utilities import setboundaries
 import numpy as np
 
 class IC:
-    '''
-    Takes inputs in the form of a tuple (not list!)
-    of tuples. For each sub-tuple:
-    (value, tuple of tuples)
-    The interior tuples of tuples are turned into Underworld
-    polygon functions and evaluated for the input variable.
-    '''
 
     def __init__(
             self,
             *args,
-            shapes = None,
-            default = 0,
-            boxDims = ((0., 1.), (0., 1.)),
-            boundaries = ('.', '.', '.', '.')
+            shapes = None
             ):
 
         # HOUSEKEEPING: this should always be here
-        boxDims = tuple(
-            [tuple([float(inner) for inner in outer]) for outer in boxDims]
-            )
         self.script = __file__
         self.inputs = {}
-        self.inputs['default'] = default
-        self.inputs['boxDims'] = boxDims
-        self.inputs['boundaries'] = boundaries
 
         if shapes is None:
             shapes = args
         self.inputs['shapes'] = shapes
 
-        self.boxDims = boxDims
-        self.boundaries = boundaries
-        if type(boundaries) == list:
-            boundaries = tuple(boundaries)
-            self.inputs['boundaries'] = boundaries
-
-        self.polygons = [(default, fn.misc.constant(True))]
+        self.polygons = [(0, fn.misc.constant(True))]
         for val, vertices in shapes:
             array = np.array(vertices)
             self.polygons.append(
                 (val, fn.shape.Polygon(array))
                 )
 
-    def initial_extents(self, coordArray, variableShape):
-        ICarray = np.zeros(variableShape, dtype=np.int)
+    def evaluate(self, coordArray):
+        outArray = np.zeros(coordArray.shape, dtype=np.int)
         for val, polygonFn in self.polygons:
-            ICarray = np.where(
+            outArray = np.where(
                 polygonFn.evaluate(coordArray),
                 [val],
-                ICarray
+                outArray
                 )
-        return ICarray
-
-    def apply(self, outVar, boxDims = None):
-        try:
-            mesh = outVar.mesh
-            coords = mesh.data
-        except:
-            try:
-                mesh = outVar.swarm.mesh
-                coords = outVar.swarm.particleCoordinates.data
-            except:
-                raise Exception("Did not recognise input variable.")
-        if boxDims is None:
-            boxDims = self.boxDims
-        coordArray = box(mesh, coords, boxDims = boxDims)
-        outVar.data[:] = self.initial_extents(
-            coordArray, outVar.data.shape
-            )
-        if type(outVar) == uw.mesh._meshvariable.MeshVariable:
-            setboundaries(outVar, self.boundaries)
+        return outArray
