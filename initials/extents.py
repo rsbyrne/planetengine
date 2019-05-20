@@ -25,11 +25,13 @@ class IC:
                 )
 
     def evaluate(self, coordArray):
-        outArray = np.zeros(coordArray.shape, dtype=np.int)
+        outArray = np.zeros(
+            (coordArray.shape[0], 1), dtype = np.int
+            )
         for val, polygonFn in self.polygons:
             outArray = np.where(
                 polygonFn.evaluate(coordArray),
-                [val],
+                val,
                 outArray
                 )
         return outArray

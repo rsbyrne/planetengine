@@ -12,12 +12,13 @@ def get_scales(variable, partitioned = False):
     else:
         data = variable.data
     if partitioned:
-        data = comm.gather(data, root = 0)
+        data = comm.gather(data, root = 0)[0]
+        data = np.vstack(data)
     if rank == 0:
         for i in range(data.shape[1]):
             scales.append(
-                data[:,i].min(),
-                data[:,i].max()
+                [data[:,i].min(),
+                data[:,i].max()]
                 )
     scales = comm.bcast(scales, root = 0)
     return scales

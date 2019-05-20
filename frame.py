@@ -190,7 +190,7 @@ def make_frame(
     configs = {}
     for varName, initial in sorted(initials.items()):
         subdict = {
-            key: val for key, val in initial if not key == 'IC'
+            key: val for key, val in initial.items() if not key == 'IC'
             }
         IC = initial['IC']
         subdict['IC_inputs'] = IC.inputs
@@ -302,7 +302,7 @@ class Frame:
         configs = {}
         for varName, initial in sorted(initials.items()):
             subdict = {
-                key: val for key, val in initial if not key == 'IC'
+                key: val for key, val in initial.items() if not key == 'IC'
                 }
             IC = initial['IC']
             subdict['IC_inputs'] = IC.inputs

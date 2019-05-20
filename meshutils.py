@@ -26,7 +26,14 @@ def mesh_utils(
     if hasattr(mesh, 'pe'):
         pe = mesh.pe
     else:
-        pe = MeshUtils(*args, **kwargs)
+        pe = MeshUtils(
+            mesh,
+            meshName,
+            attach,
+            deformable
+            )
+
+    return pe
 
 class MeshUtils:
 
@@ -46,9 +53,6 @@ class MeshUtils:
             self.meshName = 'noname'
         else:
             self.meshName = meshName
-
-        if self.attach == True and hasattr(self.mesh, 'pe'):
-            raise Exception("Mesh already has 'pe' attribute: aborting.")
 
         self.var1D = mesh.add_variable(nodeDofCount = 1)
         self.var2D = mesh.add_variable(nodeDofCount = 2)
@@ -93,6 +97,18 @@ class MeshUtils:
                 }
         else:
             raise Exception("That kind of mesh is not supported yet.")
+
+        self.wallsList = [
+            self.surfaces['outer'],
+            self.surfaces['inner'],
+            self.surfaces['left'],
+            self.surfaces['right']
+            ]
+        try:
+            walls.append(self.surfaces['front'])
+            walls.append(self.surfaces['back'])
+        except:
+            pass
 
         self.__dict__.update(self.comps)
         self.__dict__.update(self.surfaces)
@@ -163,11 +179,9 @@ class MeshUtils:
         self.cartesianScope = np.array(np.meshgrid(xs, ys)).T.reshape([-1, 2])
 
         if self.attach:
-            if rank == 0:
-                print("Attaching...")
+            planetengine.message("Attaching...")
             self.mesh.__dict__.update({'pe': self})
-            if rank == 0:
-                print("Done!")
+            planetengine.message("Done!")
 
 #    def getFullData(self):
 #        fullData = fn.input().evaluate_global(self.mesh.data)
@@ -202,4 +216,4 @@ class MeshUtils:
                         return autoVar, projector
                 except:
                     pass
-        raise Exception("Projection failed!")
+            raise Exception("Projection failed!")

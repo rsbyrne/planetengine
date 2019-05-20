@@ -18,6 +18,7 @@ import io
 
 import planetengine
 from planetengine.visualisation import quickShow
+from planetengine.standards import basic_unpack
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -276,9 +277,10 @@ def copyField(field1, field2,
     return tryTolerance
 
 def meshify(*args):
-    varName, var, mesh, swarm, coords = basic_unpack(*args)
+    varName, var, mesh, swarm, coords, data, dType = \
+        basic_unpack(*args)
     pemesh = planetengine.meshutils.mesh_utils(mesh)
-    meshVar = pemesh.meshify(var)
+    return pemesh.meshify(var)
 
 def expose(source, destination):
     for key, value in source.__dict__.items():

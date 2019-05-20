@@ -33,7 +33,6 @@ def basic_unpack(*args):
     except:
         substrate = var.mesh
         mesh = substrate
-        swarm = None
         coords = mesh.data
 
     data = var.evaluate(substrate)
@@ -49,7 +48,7 @@ def basic_unpack(*args):
             "Input data type not acceptable."
             )
 
-    return varName, var, mesh, swarm, coords, data, dType
+    return varName, var, mesh, substrate, coords, data, dType
 
 def standardise(
         *args,
@@ -171,21 +170,20 @@ class StandardInput:
                 "Only scalars and spatially-referenced vectors accepted."
                 )
 
-        if not hasattr(self.mesh, 'pe_meshUtils'):
-            planetengine.meshutils.MeshUtils(self.mesh)
-        self.meshUtils = self.mesh.pe_meshUtils
+        self.pemesh = planetengine.meshutils.mesh_utils(self.mesh)
 
         if not self.varType in {'mesh', 'swarm'}:
-
-            if self.varType == 'meshVar':
-                self.meshVar = self.var
+            if not self.heavy:
+                self.meshVar = self.pemesh.meshify(self.var)
             else:
-                if not self.heavy:
-                    self.meshVar, self.projector = self.meshUtils.meshify(self.var)
-                else:
-                    self._make_projector()
-                    self.meshVar = self.projection
-            self.gradient = self.meshVar.fn_gradient
+                self._make_projector()
+                def meshVar(self):
+                    if not self.inheritedUpdate is None:
+                        self.inheritedUpdate()
+                    self.project()
+                    return self.projection
+                self.meshVar = meshVar
+        self.gradient = self.meshVar().fn_gradient
 
     def _make_projector(self):
         self.projection = uw.mesh.MeshVariable(
@@ -196,18 +194,19 @@ class StandardInput:
             self.projection,
             self.var,
             )
-
-    def project(self):
-        self.projector.solve()
-        if 'discrete' in self.types:
-            self.meshVar.data[:] = np.round(
-                self.meshVar.data
-                )
+        def project(self):
+            self.projector.solve()
+            if 'discrete' in self.types:
+                self.projection.data[:] = np.round(
+                    self.projection.data
+                    )
+        self.project = project
 
     def update(self):
         if not self.inheritedUpdate is None:
             self.inheritedUpdate()
         if not self.varType == 'meshVar':
-            self.project()
+            if hasattr(self, 'project'):
+                self.project()
         if self.varType in {'meshFn', 'swarmFn', 'special'}:
             self.data = self.var.evaluate(self.substrate)

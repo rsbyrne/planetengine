@@ -4,6 +4,7 @@ import planetengine.initials.load
 from planetengine import mapping
 from planetengine.meshutils import mesh_utils
 from planetengine.standards import basic_unpack
+from planetengine.utilities import copyField
 
 def set_boundaries(variable, values):
 
@@ -12,9 +13,9 @@ def set_boundaries(variable, values):
     except:
         raise Exception("Variable does not appear to be mesh variable.")
 
-    pemesh = mesh_utils(mesh)
+    walls = mesh_utils(mesh).wallsList
 
-    for value, wall in zip(values, pemesh.surfaces):
+    for value, wall in zip(values, walls):
         if not value is '.':
             variable.data[wall] = value
 
@@ -52,18 +53,19 @@ def _apply(initials, system):
         # APPLY SCALES:
 
         if 'varScales' in initial:
-            varScale = initial['varScales']
-            mapping.rescale_array(
+            var.data[:] = mapping.rescale_array(
                 var.data,
                 mapping.get_scales(var),
-                varScale
+                initial['varScales']
                 )
 
         # APPLY BOUNDARIES:
 
         if 'varBounds' in initial:
-            varBounds = initial['varBounds']
-            set_boundaries(var, varBounds)
+            set_boundaries(
+                var,
+                initial['varBounds']
+                )
 
     # RESET PROGRESS VARS:
 

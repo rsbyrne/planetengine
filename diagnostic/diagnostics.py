@@ -12,8 +12,8 @@ def diagnostic_01(delete = True):
     planetengine.log("Building model1 initials...")
 
     initial = {
-        'temperatureField': planetengine.initials.sinusoidal.IC(),
-        'materialVar': planetengine.initials.extents.IC((1, planetengine.shapes.trapezoid()))
+        'temperatureField': {'IC': planetengine.initials.sinusoidal.IC()},
+        'materialVar': {'IC': planetengine.initials.extents.IC(([1], planetengine.shapes.trapezoid()))}
         }
 
     planetengine.log("Building model1...")
@@ -41,8 +41,8 @@ def diagnostic_01(delete = True):
 
     planetengine.log("Building model2 initials...")
     initial = {
-        'temperatureField': planetengine.initials.load.IC(model1, 'temperatureField'),
-        'materialVar': planetengine.initials.extents.IC((1, planetengine.shapes.trapezoid()))
+        'temperatureField': {'IC': planetengine.initials.load.IC(model1, 'temperatureField')},
+        'materialVar': {'IC': planetengine.initials.extents.IC(([1], planetengine.shapes.trapezoid()))}
         }
 
     planetengine.log("Building model2...")
@@ -84,8 +84,8 @@ def diagnostic_01(delete = True):
 
     planetengine.log("Building model3 initials...")
     initial = {
-        'temperatureField': planetengine.initials.load.IC(model2, 'temperatureField', loadStep = 'max'),
-        'materialVar': planetengine.initials.extents.IC((1, planetengine.shapes.trapezoid()))
+        'temperatureField': {'IC': planetengine.initials.load.IC(model2, 'temperatureField', loadStep = 'max')},
+        'materialVar': {'IC': planetengine.initials.extents.IC(([1], planetengine.shapes.trapezoid()))}
         }
 
     planetengine.log("Building model3...")
