@@ -25,8 +25,7 @@ class QuickFig:
             elif hasattr(arg, 'particleCoordinates'):
                 self.add_swarm(arg)
             else:
-                variable = planetengine.standards.standardise(arg)
-                variable.update()
+                variable = planetengine.pevar.make_pevar(arg)
                 self.variables.append(variable)
 
         self.inventory = [
@@ -57,14 +56,16 @@ class QuickFig:
             "Fitted " + str(variables_fitted) + " variables to the figure."
             )
 
-    def add_stipple(self, stInp):
-        assert 'discrete' in stInp.types
-        assert 'binary' in stInp.types
-        assert 'scalar' in stInp.types
+    def add_stipple(self, variable):
+        assert variable.discrete
+        assert variable.binary
+        assert not variable.vector
         drawing = glucifer.objects.Drawing()
-        for coord in stInp.meshUtils.cartesianScope:
+#         allCoords = variable.meshUtils.cartesianScope
+        allCoords = stInp.mesh.data
+        for coord in allCoords:
             try:
-                if stInp.meshVar.evaluate(np.array([coord])):
+                if variable.meshVar().evaluate(np.array([coord])):
                     drawing.point(coord)
             except:
                 pass
@@ -86,50 +87,50 @@ class QuickFig:
                 )
             )
 
-    def add_surface(self, stInp):
-        assert 'continuous' in stInp.types
-        assert 'scalar' in stInp.types
+    def add_surface(self, variable):
+        assert not variable.discrete
+        assert not variable.vector
         self.fig.append(
             glucifer.objects.Surface(
-                stInp.mesh,
-                stInp.meshVar,
+                variable.mesh,
+                variable.meshVar(),
                 colourBar = False
                 )
             )
 
-    def add_contours(self, stInp):
-        assert 'continuous' in stInp.types
-        assert 'scalar' in stInp.types
+    def add_contours(self, variable):
+        assert not variable.discrete
+        assert not variable.vector
         self.fig.append(
             glucifer.objects.Contours(
-                stInp.mesh,
-                fn.math.log10(stInp.meshVar),
+                variable.mesh,
+                fn.math.log10(variable.meshVar()),
                 colours = "red black",
                 interval = 0.5,
                 colourBar = False
                 )
             )
 
-    def add_arrows(self, stInp):
-        assert 'continuous' in stInp.types
-        assert 'vector' in stInp.types
+    def add_arrows(self, variable):
+        assert not variable.discrete
+        assert not variable.vector
         self.fig.append(
             glucifer.objects.VectorArrows(
-                stInp.mesh,
-                stInp.meshVar,
+                variable.mesh,
+                variable.meshVar(),
                 )
             )
 
-    def add_points(self, stInp):
-        assert 'swarm' in stInp.types
-        assert 'scalar' in stInp.types
+    def add_points(self, variable):
+        assert variable.varType in ('swarmVar', 'swarmFn')
+        assert not variable.vector
         self.fig.append(
             glucifer.objects.Points(
-                stInp.swarm,
-                fn_colour = stInp.var,
-                fn_mask = stInp.var,
+                variable.swarm,
+                fn_colour = variable.var,
+                fn_mask = variable.var,
                 opacity = 1.,
-                fn_size = 1e3 / float(stInp.swarm.particleGlobalCount)**0.5,
+                fn_size = 1e3 / float(variable.swarm.particleGlobalCount)**0.5,
                 colours = "purple green brown pink red",
                 colourBar = False
                 )

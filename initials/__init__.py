@@ -3,7 +3,7 @@ import planetengine.initials.extents
 import planetengine.initials.load
 from planetengine import mapping
 from planetengine.meshutils import mesh_utils
-from planetengine.standards import basic_unpack
+from planetengine.utilities import unpack_var
 from planetengine.utilities import copyField
 
 def set_boundaries(variable, values):
@@ -37,7 +37,7 @@ def _apply(initials, system):
 
         initial = initials[varName]
         IC = initial['IC']
-        ignore, var, mesh, swarm, coords, data, dType = basic_unpack(var)
+        var, varType, mesh, substrate, data, dType, varDim = unpack_var(var)
         try: boxDims = initial['boxDims']
         except: boxDims = ((0., 1.),) * system.mesh.dim
 
@@ -47,7 +47,7 @@ def _apply(initials, system):
             tolerance = copyField(IC.inVar, var)
 
         else: # hence is an ordinary IC:
-            box = mapping.box(mesh, coords, boxDims)
+            box = mapping.box(mesh, substrate.data, boxDims)
             var.data[:] = IC.evaluate(box)
 
         # APPLY SCALES:

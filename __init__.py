@@ -10,10 +10,10 @@ import planetengine.wordhash
 import planetengine.observer
 import planetengine.newstats
 import planetengine.meshutils
-import planetengine.varutils
-import planetengine.standards
+# import planetengine.varutils
+# import planetengine.standards
 import planetengine.visualisation
-import planetengine.diagnostic
+import planetengine.diagnostics
 
 from planetengine.utilities import message
 from planetengine.utilities import log

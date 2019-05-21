@@ -1,7 +1,6 @@
 import planetengine
 from planetengine import utilities
 from planetengine import mapping
-from planetengine.standards import basic_unpack
 
 import underworld as uw
 from underworld import function as fn
@@ -190,12 +189,19 @@ class MeshUtils:
 
     def meshify(self, var, return_func = True):
 
+        inherited_projectors = []
+        for subVar in var._underlyingDataItems:
+            try: inherited_projectors.append(subVar._inheritedProj)
+            except: pass
+
         if type(var) == uw.mesh._meshvariable.MeshVariable:
             planetengine.message(
                 "Already a mesh var..."
                 )
             if return_func:
                 def meshVar():
+                    for inheritedProj in inherited_projectors:
+                        inheritedProj()
                     return var
             else:
                 return meshVar, None
@@ -209,6 +215,8 @@ class MeshUtils:
                     projector.solve()
                     if return_func:
                         def meshVar():
+                            for inheritedProj in inherited_projectors:
+                                inheritedProj()
                             projector.solve()
                             return autoVar
                         return meshVar

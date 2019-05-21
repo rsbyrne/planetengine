@@ -1,0 +1,7 @@
+import planetengine.diagnostics.MS98X_systemscript
+import planetengine.diagnostics.MS98X_observerscript
+import planetengine.diagnostics.MS98_systemscript
+import planetengine.diagnostics.MS98_observerscript
+import planetengine.diagnostics.isovisc_systemscript
+import planetengine.diagnostics.isovisc_observerscript
+from planetengine.diagnostics.diagnostics import diagnostic_01

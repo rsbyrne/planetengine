@@ -354,7 +354,8 @@ class Frame:
 
         planetengine.message("Loading interior frames...")
         self.inFrames = []
-        for IC in self.initials.values():
+        for initial in self.initials.values():
+            IC = initial['IC']
             try:
                 self.inFrames.append(IC.inFrame)
             except:

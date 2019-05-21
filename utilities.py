@@ -18,7 +18,6 @@ import io
 
 import planetengine
 from planetengine.visualisation import quickShow
-from planetengine.standards import basic_unpack
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -70,6 +69,87 @@ class Grouper:
             else:
                 outstring += key + ": " + thing
         return outstring
+
+def unpack_var(*args):
+
+    if len(args) == 1 and type(args[0]) == tuple:
+        args = args[0]
+    substrate = None
+    if len(args) == 1:
+        var = args[0]
+    elif len(args) == 2:
+        if type(args[0]) == str:
+            varName, var = args
+        else:
+            var, substrate = args
+    elif len(args) == 3:
+        varName, var, substrate = args
+    else:
+        raise Exception("Input not understood.")
+
+    if substrate is None:
+        try:
+            substrate = var.swarm
+        except:
+            try:
+                substrate = var.mesh
+            except:
+                subVars = []
+                for subVar in var._underlyingDataItems:
+                    try: subVars.append(unpack_var(subVar))
+                    except: pass
+                assert len(subVars) > 0, \
+                    "No substrate provided, and no \
+                    implicit substrate could not be found."
+                subSwarms = list(set([
+                    subVar[3] for subVar in subVars \
+                        if subVar[1] in ('swarmVar', 'swarmFn')
+                    ]))
+                if len(subSwarms) > 0:
+                    assert len(subSwarms) < 2, \
+                        "Multiple swarm dependencies detected: \
+                        try providing a substrate manually."
+                    substrate = subSwarms[0]
+                else:
+                    subMeshes = list(set([
+                        subVar[3] for subVar in subVars \
+                            if subVar[1] in ('meshVar', 'meshFn')
+                        ]))
+                    assert len(subMeshes) < 2, \
+                        "Multiple mesh dependencies detected: \
+                        try providing a substrate manually."
+                    substrate = subMeshes[0]
+
+    try:
+        mesh = substrate.mesh
+    except:
+        mesh = substrate
+
+    if type(var) == uw.swarm._swarmvariable.SwarmVariable:
+        varType = 'swarmVar'
+    elif type(var) == uw.mesh._meshvariable.MeshVariable:
+        varType = 'meshVar'
+    else:
+        if hasattr(substrate, 'particleCoordinates'):
+            varType = 'swarmFn'
+        else:
+            varType = 'meshFn'
+
+    data = var.evaluate(substrate)
+    varDim = data.shape[1]
+
+    if str(data.dtype) == 'int32':
+        dType = 'int'
+    elif str(data.dtype) == 'float64':
+        dType = 'double'
+    elif str(data.dtype) == 'bool':
+        dType = 'boolean'
+    else:
+        raise Exception(
+            "Input data type not acceptable."
+            )
+
+    return var, varType, mesh, substrate, data, dType, varDim
 
 def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     substrates = []
@@ -277,8 +357,8 @@ def copyField(field1, field2,
     return tryTolerance
 
 def meshify(*args):
-    varName, var, mesh, swarm, coords, data, dType = \
-        basic_unpack(*args)
+    var, varType, mesh, substrate, data, dType, varDim = \
+        unpack_var(*args)
     pemesh = planetengine.meshutils.mesh_utils(mesh)
     return pemesh.meshify(var)
 
@@ -384,6 +464,40 @@ def timestamp():
         )
     return stamp
 
+def make_projector(*args):
+
+    var, varType, mesh, substrate, data, dType, varDim = unpack_var(args)
+    projection = uw.mesh.MeshVariable(
+        mesh,
+        varDim,
+        )
+    projector = uw.utils.MeshVariable_Projection(
+        projection,
+        var,
+        )
+
+    inherited_proj = []
+    for subVar in var._underlyingDataItems:
+        try: inherited_proj.append(subVar.project)
+        except: pass
+
+    def project():
+        for inheritedProj in inherited_proj:
+            inheritedProj()
+        projector.solve()
+        if dType in ('int', 'boolean'):
+            projection.data[:] = np.round(
+                projection.data
+                )
+
+    setattr(projection, 'projector', projector)
+    setattr(projection, 'project', project)
+    setattr(projection, 'inherited_proj', inherited_proj)
+
+    return projection
+
+####### GET RID OF THIS:
+# (is mentioned in 'frame', observerscripts etc.)
 def make_projectors(varDict):
     '''
     Takes a dictionary with keys for strings
