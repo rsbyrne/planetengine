@@ -15,6 +15,7 @@ def make_pevar(var, attach = True):
         pevar = PeVar(unpacked)
         if attach:
             setattr(var, 'pevar', pevar)
+    return pevar
 
 class PeVar:
     
