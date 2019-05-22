@@ -5,10 +5,11 @@ import numpy as np
 
 def make_pevar(var, attach = True):
 
-    if hasattr(var, 'pevar'):
-        pevar = var.pevar
-    elif hasattr(var, 'isPevar'):
+    if type(var) is PeVar:
         pevar = var
+    elif hasattr(var, 'pevar'):
+        assert type(var.pevar) is PeVar
+        pevar = var.pevar
     else:
         unpacked = planetengine.utilities.unpack_var(var)
         var = unpacked[0]
@@ -34,22 +35,27 @@ class PeVar:
 
         self.vector = self.varDim == self.mesh.dim
         self.discrete = self.dType == 'int'
+        self.boolean = self.dType == 'boolean'
         self.particles = self.varType in ('swarmVar', 'swarmFn')
 
         self.isPevar = True
+
+        self.meshUtils = planetengine.meshutils.mesh_utils(self.mesh)
 
         if not self.varType == 'meshVar':
             self.projection = planetengine.utilities.make_projector(
                 self.var, self.substrate
                 )
 
-    def meshVar(self):
+    def meshVar(self, update = True):
         if self.varType == 'meshVar':
             if hasattr(self.var, 'project'):
-                self.var.project()
+                if update:
+                    self.var.project()
             return self.var
         else:
-            self.projection.project()
+            if update:
+                self.projection.project()
             return self.projection
 
 # def standardise(

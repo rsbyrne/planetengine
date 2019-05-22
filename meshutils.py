@@ -187,41 +187,37 @@ class MeshUtils:
 #        fullData = comm.bcast(fullData, root = 0)
 #        return fullData
 
-    def meshify(self, var, return_func = True):
+        self.meshifieds = {}
 
-        inherited_projectors = []
-        for subVar in var._underlyingDataItems:
-            try: inherited_projectors.append(subVar._inheritedProj)
-            except: pass
+    def meshify(self, var):
 
-        if type(var) == uw.mesh._meshvariable.MeshVariable:
-            planetengine.message(
-                "Already a mesh var..."
-                )
-            if return_func:
-                def meshVar():
-                    for inheritedProj in inherited_projectors:
-                        inheritedProj()
-                    return var
-            else:
-                return meshVar, None
+        if var in self.meshifieds:
+            projection, projector, inherited_projectors = self.meshifieds[var]
         else:
-            for autoVar in self.autoVars.values():
-                try:
-                    projector = uw.utils.MeshVariable_Projection(
-                        autoVar,
-                        var,
-                        )
-                    projector.solve()
-                    if return_func:
-                        def meshVar():
-                            for inheritedProj in inherited_projectors:
-                                inheritedProj()
-                            projector.solve()
-                            return autoVar
-                        return meshVar
-                    else:
-                        return autoVar, projector
-                except:
-                    pass
-            raise Exception("Projection failed!")
+            inherited_projectors = []
+            for subVar in var._underlyingDataItems:
+                try: inherited_projectors.append(subVar._inheritedProj)
+                except: pass
+            projector = None
+            if not type(var) == uw.mesh._meshvariable.MeshVariable:
+                projector = None
+                for autoVar in self.autoVars.values():
+                    try:
+                        for inheritedProj in inherited_projectors:
+                            inheritedProj()
+                        projector = uw.utils.MeshVariable_Projection(
+                            autoVar,
+                            var,
+                            )
+                        projection = autoVar
+                    except:
+                        pass
+                if projector is None:
+                    raise Exception("Projection failed!")
+            else:
+                projection = var
+        for inheritedProj in inherited_projectors:
+            inheritedProj()
+        if not projector is None:
+            projector.solve()
+        return projection

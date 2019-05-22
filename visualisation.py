@@ -56,21 +56,6 @@ class QuickFig:
             "Fitted " + str(variables_fitted) + " variables to the figure."
             )
 
-    def add_stipple(self, variable):
-        assert variable.discrete
-        assert variable.binary
-        assert not variable.vector
-        drawing = glucifer.objects.Drawing()
-#         allCoords = variable.meshUtils.cartesianScope
-        allCoords = stInp.mesh.data
-        for coord in allCoords:
-            try:
-                if variable.meshVar().evaluate(np.array([coord])):
-                    drawing.point(coord)
-            except:
-                pass
-        self.fig.append(drawing)
-
     def add_grid(self, arg):
         self.fig.append(
             glucifer.objects.Mesh(
@@ -86,6 +71,22 @@ class QuickFig:
                 colourBar = False
                 )
             )
+
+    def add_stipple(self, variable):
+        assert variable.discrete or variable.boolean
+        assert not variable.vector
+        staticVar = variable.meshVar()
+        drawing = glucifer.objects.Drawing()
+        allCoords = variable.meshUtils.cartesianScope
+#         allCoords = variable.mesh.data
+        for coord in allCoords:
+            try:
+                val = staticVar.evaluate(np.array([coord]))
+                if bool(val):
+                    drawing.point(coord)
+            except:
+                pass
+        self.fig.append(drawing)
 
     def add_surface(self, variable):
         assert not variable.discrete
@@ -113,7 +114,7 @@ class QuickFig:
 
     def add_arrows(self, variable):
         assert not variable.discrete
-        assert not variable.vector
+        assert variable.vector
         self.fig.append(
             glucifer.objects.VectorArrows(
                 variable.mesh,
@@ -122,15 +123,15 @@ class QuickFig:
             )
 
     def add_points(self, variable):
-        assert variable.varType in ('swarmVar', 'swarmFn')
+        assert variable.particles
         assert not variable.vector
         self.fig.append(
             glucifer.objects.Points(
-                variable.swarm,
+                variable.substrate,
                 fn_colour = variable.var,
                 fn_mask = variable.var,
                 opacity = 1.,
-                fn_size = 1e3 / float(variable.swarm.particleGlobalCount)**0.5,
+                fn_size = 1e3 / float(variable.substrate.particleGlobalCount)**0.5,
                 colours = "purple green brown pink red",
                 colourBar = False
                 )
