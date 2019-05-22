@@ -1,5 +1,5 @@
 import underworld as uw
-from planetengine.mapping import unbox
+from planetengine import mapping
 from planetengine.utilities import meshify
 from planetengine import frame
 import numpy as np
@@ -70,6 +70,6 @@ class IC:
         self.meshVar = meshify(self.inVar)
 
     def evaluate(self, coordArray):
-        meshVar = self.meshVar()
-        unboxed = unbox(meshVar.mesh, coordArray)
-        outArray = self.meshVar().evaluate(unboxed)
+        meshVar = self.meshVar
+        unboxed = mapping.unbox(meshVar.mesh, coordArray)
+        outArray = self.meshVar.evaluate(unboxed)

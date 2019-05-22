@@ -17,7 +17,6 @@ import random
 import io
 
 import planetengine
-from planetengine.visualisation import quickShow
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -40,6 +39,11 @@ def log(text):
         file.write(text)
         file.write('\n')
         file.close()
+
+def quickShow(*args, **kwargs):
+
+    quickFig = planetengine.visualisation.QuickFig(*args, **kwargs)
+    quickFig.show()
 
 class Grouper:
     def __init__(self, indict = {}):
@@ -98,27 +102,45 @@ def unpack_var(*args):
                 for subVar in var._underlyingDataItems:
                     try: subVars.append(unpack_var(subVar))
                     except: pass
-                assert len(subVars) > 0, \
-                    "No substrate provided, and no \
-                    implicit substrate could not be found."
-                subSwarms = list(set([
-                    subVar[3] for subVar in subVars \
-                        if subVar[1] in ('swarmVar', 'swarmFn')
-                    ]))
-                if len(subSwarms) > 0:
-                    assert len(subSwarms) < 2, \
-                        "Multiple swarm dependencies detected: \
-                        try providing a substrate manually."
-                    substrate = subSwarms[0]
+                if len(subVars) == 0:
+                    planetengine.message(
+                        "No substrate detected or was provided: \
+                        using default mesh."
+                        )
+                    substrate = None
                 else:
-                    subMeshes = list(set([
+                    subSwarms = list(set([
                         subVar[3] for subVar in subVars \
-                            if subVar[1] in ('meshVar', 'meshFn')
+                            if subVar[1] in ('swarmVar', 'swarmFn')
                         ]))
-                    assert len(subMeshes) < 2, \
-                        "Multiple mesh dependencies detected: \
-                        try providing a substrate manually."
-                    substrate = subMeshes[0]
+                    if len(subSwarms) > 0:
+                        assert len(subSwarms) < 2, \
+                            "Multiple swarm dependencies detected: \
+                            try providing a substrate manually."
+                        substrate = subSwarms[0]
+                    else:
+                        subMeshes = list(set([
+                            subVar[3] for subVar in subVars \
+                                if subVar[1] in ('meshVar', 'meshFn')
+                            ]))
+                        assert len(subMeshes) < 2, \
+                            "Multiple mesh dependencies detected: \
+                            try providing a substrate manually."
+                        substrate = subMeshes[0]
+
+    if substrate is None:
+        try:
+            data = var.evaluate(
+                planetengine.standards.default_mesh_2D
+                )
+        except:
+            data = var.evaluate(
+                planetengine.standards.default_mesh_3D
+                )
+    else:
+        data = var.evaluate(substrate)
+
+    varDim = data.shape[1]
 
     try:
         mesh = substrate.mesh
@@ -134,9 +156,6 @@ def unpack_var(*args):
             varType = 'swarmFn'
         else:
             varType = 'meshFn'
-
-    data = var.evaluate(substrate)
-    varDim = data.shape[1]
 
     if str(data.dtype) == 'int32':
         dType = 'int'
@@ -309,6 +328,9 @@ def copyField(field1, field2,
         outCoords = field2.swarm.particleCoordinates.data
         outDim = field2.count
 
+    inPemesh = planetengine.standards.make_pemesh(inMesh)
+    outPemesh = planetengine.standards.make_pemesh(outMesh)
+
     assert outDim == inDim, \
         "In and Out fields have different dimensions!"
     assert outMesh.dim == inMesh.dim, \
@@ -354,13 +376,26 @@ def copyField(field1, field2,
     if rounded:
         field2.data[:] = np.around(field2.data)
 
+    for inWall, outWall in zip(inPemesh.wallsList, outPemesh.wallsList):
+        planetengine.mapping.boundary_interpolate(
+            (inField, inMesh, inWall),
+            (outField, outMesh, outWall),
+            inDim
+            )
+
     return tryTolerance
 
-def meshify(*args):
+def meshify(*args, return_project = False):
     var, varType, mesh, substrate, data, dType, varDim = \
         unpack_var(*args)
-    pemesh = planetengine.meshutils.mesh_utils(mesh)
-    return pemesh.meshify(var)
+    pemesh = planetengine.standards.make_pemesh(mesh)
+    rounded = dType in ('int', 'boolean')
+    meshVar = pemesh.meshify(
+        var,
+        return_project = return_project,
+        rounded = rounded
+        )
+    return meshVar
 
 def expose(source, destination):
     for key, value in source.__dict__.items():

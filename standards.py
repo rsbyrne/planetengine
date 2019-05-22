@@ -7,15 +7,45 @@ from underworld import function as fn
 
 import numpy as np
 
-# from planetengine.utilities import Grouper
-# from planetengine.observer import ObsVar
-
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
-def mesh_utils(
+default_mesh_2D = uw.mesh.FeMesh_Cartesian(
+    elementRes = [16, 16],
+    minCoord = [0., 0.],
+    maxCoord = [1., 1.]
+    )
+default_mesh_3D = uw.mesh.FeMesh_Cartesian(
+    elementRes = [16, 16, 16],
+    minCoord = [0., 0., 0.],
+    maxCoord = [1., 1., 1.]
+    )
+
+def make_pevar(var, attach = True, force = False):
+
+    if type(var) is PeVar:
+        pevar = var
+        planetengine.message("Input is already a PeVar.")
+    elif hasattr(var, 'pevar') and not force:
+        assert type(var.pevar) is PeVar
+        pevar = var.pevar
+        planetengine.message(
+            "Input already has a PeVar. \
+            To force creation of a new one, \
+            set the 'force' kwarg = True."
+            )
+    else:
+        unpacked = planetengine.utilities.unpack_var(var)
+        var = unpacked[0]
+        pevar = PeVar(unpacked)
+        if attach:
+            setattr(var, 'pevar', pevar)
+    pevar.update()
+    return pevar
+
+def make_pemesh(
         mesh,
         meshName = None,
         attach = True,
@@ -23,18 +53,56 @@ def mesh_utils(
         ):
 
     if hasattr(mesh, 'pe'):
-        pe = mesh.pe
+        pemesh = mesh.pemesh
     else:
-        pe = MeshUtils(
+        pemesh = PeMesh(
             mesh,
             meshName,
             attach,
             deformable
             )
 
-    return pe
+    return pemesh
 
-class MeshUtils:
+def standardise(var):
+    try: stVar = make_pevar(var)
+    except: stVar = make_pemesh(var)
+    return stVar
+
+class PeVar:
+    
+    def __init__(
+            self,
+            unpackedVar
+            ):
+
+        self.var = unpackedVar[0]
+        self.varType = unpackedVar[1]
+        self.mesh = unpackedVar[2]
+        self.substrate = unpackedVar[3]
+        self.data = unpackedVar[4]
+        self.dType = unpackedVar[5]
+        self.varDim = unpackedVar[6]
+
+        self.vector = self.varDim == self.mesh.dim
+        self.discrete = self.dType == 'int'
+        self.boolean = self.dType == 'boolean'
+        self.particles = self.varType in ('swarmVar', 'swarmFn')
+
+        self.pemesh = make_pemesh(self.mesh)
+
+        if self.varType == 'meshVar':
+            self.meshVar = self.var
+        else:
+            self.meshVar = planetengine.utilities.make_projector(
+                self.var, self.substrate
+                )
+
+    def update(self):
+        try: self.meshVar.project()
+        except: pass
+
+class PeMesh:
 
     def __init__(
             self,
@@ -60,7 +128,7 @@ class MeshUtils:
         self.autoVars = {
             1: self.var1D,
             2: self.var2D,
-            3: self.var2D,
+            3: self.var3D,
             }
 
         if type(self.mesh) == uw.mesh.FeMesh_Cartesian:
@@ -179,7 +247,7 @@ class MeshUtils:
 
         if self.attach:
             planetengine.message("Attaching...")
-            self.mesh.__dict__.update({'pe': self})
+            self.mesh.__dict__.update({'pemesh': self})
             planetengine.message("Done!")
 
 #    def getFullData(self):
@@ -189,35 +257,47 @@ class MeshUtils:
 
         self.meshifieds = {}
 
-    def meshify(self, var):
+    def meshify(self, var, return_project = True, rounded = False):
 
+        assert not var in self.autoVars.values(), \
+            "Cannot meshify an already meshified variable!"
         if var in self.meshifieds:
             projection, projector, inherited_projectors = self.meshifieds[var]
         else:
             inherited_projectors = []
             for subVar in var._underlyingDataItems:
-                try: inherited_projectors.append(subVar._inheritedProj)
+                assert not subVar in self.autoVars.values(), \
+                    "Variable contains a meshified variable already."
+                # see utilities.make_projector:
+                try: inherited_projectors.append(subVar.inherited_proj)
                 except: pass
-            projector = None
-            if not type(var) == uw.mesh._meshvariable.MeshVariable:
-                projector = None
+            if type(var) == uw.mesh._meshvariable.MeshVariable:
+                projection = var
+                def project():
+                    pass
+            else:
+                project = None
                 for autoVar in self.autoVars.values():
                     try:
-                        for inheritedProj in inherited_projectors:
-                            inheritedProj()
                         projector = uw.utils.MeshVariable_Projection(
                             autoVar,
                             var,
                             )
                         projection = autoVar
+                        def project():
+                            for inheritedProj in inherited_projectors:
+                                inheritedProj()
+                            projector.solve()
+                            if rounded:
+                                projection.data[:] = np.round(
+                                    projection.data
+                                    )
                     except:
                         pass
-                if projector is None:
+                if project is None:
                     raise Exception("Projection failed!")
-            else:
-                projection = var
-        for inheritedProj in inherited_projectors:
-            inheritedProj()
-        if not projector is None:
-            projector.solve()
-        return projection
+        project()
+        if return_project:
+            return projection, project
+        else:
+            return projection

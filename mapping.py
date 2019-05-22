@@ -1,9 +1,53 @@
 import numpy as np
+import math
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
+
+def boundary_interpolate(fromData, toData, dim):
+
+    fromField, fromMesh, fromIndexSet = fromData
+    comp = 0
+    outArrs = []
+    while comp < dim:
+
+        coordSet = fromMesh.data[fromIndexSet]
+        previousCoord = coordSet[0]
+        cumulativeDistance = 0.
+        fromPositions = []
+        fromValues = []
+        for index, currentCoord in enumerate(coordSet):
+            cumulativeDistance += math.hypot(
+                currentCoord[0] - previousCoord[0],
+                currentCoord[1] - previousCoord[1]
+                )
+            value = fromField.data[list(fromIndexSet)[index]][comp]
+            fromPositions.append(cumulativeDistance)
+            fromValues.append(value)
+            previousCoord = currentCoord
+
+        toField, toMesh, toIndexSet = toData
+        coordSet = toMesh.data[toIndexSet]
+        previousCoord = coordSet[0]
+        cumulativeDistance = 0.
+        toPositions = []
+        for index, currentCoord in enumerate(coordSet):
+            cumulativeDistance += math.hypot(
+                currentCoord[0] - previousCoord[0],
+                currentCoord[1] - previousCoord[1]
+                )
+            toPositions.append(cumulativeDistance)
+            previousCoord = currentCoord
+
+        toValues = np.interp(toPositions, fromPositions, fromValues)
+        outArrs.append(toValues)
+        comp += 1
+
+    outArr = np.dstack(outArrs)
+
+    toField.data[toIndexSet] = outArr
 
 def get_scales(variable, partitioned = False):
     scales = []

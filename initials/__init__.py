@@ -2,7 +2,6 @@ import planetengine.initials.sinusoidal
 import planetengine.initials.extents
 import planetengine.initials.load
 from planetengine import mapping
-from planetengine.meshutils import mesh_utils
 from planetengine.utilities import unpack_var
 from planetengine.utilities import copyField
 
@@ -13,7 +12,7 @@ def set_boundaries(variable, values):
     except:
         raise Exception("Variable does not appear to be mesh variable.")
 
-    walls = mesh_utils(mesh).wallsList
+    walls = standards.make_pemesh(mesh).wallsList
 
     for value, wall in zip(values, walls):
         if not value is '.':
@@ -71,3 +70,18 @@ def _apply(initials, system):
 
     system.step.value = 0
     system.modeltime.value = 0.
+
+def preview(IC, _2D = True):
+    try:
+        pemesh = planetengine.standardise(
+            planetengine.standards.default_mesh_2D
+            )
+        preview_data = IC.evaluate(pemesh.mesh.data)
+    except:
+        pemesh = planetengine.standardise(
+            planetengine.standards.default_mesh_3D
+            )
+        preview_data = IC.evaluate(pemesh.mesh.data)
+    standinVar = pemesh.autoVars[preview_data.shape[1]]
+    standinVar.data[:] = preview_data
+    planetengine.quickShow(standinVar)

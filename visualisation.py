@@ -6,18 +6,13 @@ import math
 
 import planetengine
 
-def quickShow(*args, **kwargs):
-
-    quickFig = QuickFig(*args, **kwargs)
-    quickFig.show()
-
 class QuickFig:
 
     def __init__(self, *args, **kwargs):
 
         self.fig = glucifer.Figure(**kwargs)
         self.features = set()
-        self.variables = []
+        self.pevars = []
 
         for arg in args:
             if hasattr(arg, 'subMesh'):
@@ -25,8 +20,8 @@ class QuickFig:
             elif hasattr(arg, 'particleCoordinates'):
                 self.add_swarm(arg)
             else:
-                variable = planetengine.pevar.make_pevar(arg)
-                self.variables.append(variable)
+                pevar = planetengine.standards.make_pevar(arg)
+                self.pevars.append(pevar)
 
         self.inventory = [
             self.add_surface,
@@ -38,13 +33,13 @@ class QuickFig:
 
         variables_fitted = 0
         functions_used = []
-        for variable in self.variables:
+        for pevar in self.pevars:
             found = False
             for function in self.inventory:
                 if not function in functions_used:
                     if not found:
                         try:
-                            function(variable)
+                            function(pevar)
                             found = True
                             functions_used.append(function)
                         except:
@@ -72,66 +67,65 @@ class QuickFig:
                 )
             )
 
-    def add_stipple(self, variable):
-        assert variable.discrete or variable.boolean
-        assert not variable.vector
-        staticVar = variable.meshVar()
+    def add_stipple(self, pevar):
+        assert pevar.discrete or pevar.boolean
+        assert not pevar.vector
         drawing = glucifer.objects.Drawing()
-        allCoords = variable.meshUtils.cartesianScope
+        allCoords = pevar.pemesh.cartesianScope
 #         allCoords = variable.mesh.data
         for coord in allCoords:
             try:
-                val = staticVar.evaluate(np.array([coord]))
+                val = pevar.meshVar.evaluate(np.array([coord]))
                 if bool(val):
                     drawing.point(coord)
             except:
                 pass
         self.fig.append(drawing)
 
-    def add_surface(self, variable):
-        assert not variable.discrete
-        assert not variable.vector
+    def add_surface(self, pevar):
+        assert not pevar.discrete
+        assert not pevar.vector
         self.fig.append(
             glucifer.objects.Surface(
-                variable.mesh,
-                variable.meshVar(),
+                pevar.mesh,
+                pevar.meshVar,
                 colourBar = False
                 )
             )
 
-    def add_contours(self, variable):
-        assert not variable.discrete
-        assert not variable.vector
+    def add_contours(self, pevar):
+        assert not pevar.discrete
+        assert not pevar.vector
         self.fig.append(
             glucifer.objects.Contours(
-                variable.mesh,
-                fn.math.log10(variable.meshVar()),
+                pevar.mesh,
+                fn.math.log10(pevar.meshVar),
                 colours = "red black",
                 interval = 0.5,
                 colourBar = False
                 )
             )
 
-    def add_arrows(self, variable):
-        assert not variable.discrete
-        assert variable.vector
+    def add_arrows(self, pevar):
+        assert not pevar.discrete
+        assert pevar.vector
         self.fig.append(
             glucifer.objects.VectorArrows(
-                variable.mesh,
-                variable.meshVar(),
+                pevar.mesh,
+                pevar.meshVar,
                 )
             )
 
-    def add_points(self, variable):
-        assert variable.particles
-        assert not variable.vector
+    def add_points(self, pevar):
+        assert pevar.particles
+        assert not pevar.vector
         self.fig.append(
             glucifer.objects.Points(
-                variable.substrate,
-                fn_colour = variable.var,
-                fn_mask = variable.var,
-                opacity = 1.,
-                fn_size = 1e3 / float(variable.substrate.particleGlobalCount)**0.5,
+                pevar.substrate,
+                fn_colour = pevar.var,
+                fn_mask = pevar.var,
+                opacity = 0.5,
+                fn_size = 1e3 / float(pevar.substrate.particleGlobalCount)**0.5,
                 colours = "purple green brown pink red",
                 colourBar = False
                 )
