@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import underworld as uw
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -133,12 +134,19 @@ def rescale_array(
 def box(mesh, coordArray = None, boxDims = ((0., 1), (0., 1.))):
     if coordArray is None:
         coordArray = mesh.data
-    outArray = rescale_array(
-        radial_coords(coordArray),
-        (mesh.angularExtent, mesh.radialLengths),
-        boxDims,
-        flip = [True, False]
-        )
+    if type(mesh) == uw.mesh.FeMesh_Annulus:
+        outArray = rescale_array(
+            radial_coords(coordArray),
+            (mesh.angularExtent, mesh.radialLengths),
+            boxDims,
+            flip = [True, False]
+            )
+    else:
+        outArray = rescale_array(
+            coordArray,
+            list(zip(mesh.minCoord, mesh.maxCoord)),
+            boxDims
+            )
     return outArray
 
 def unbox(mesh, coordArray = None, boxDims = ((0., 1), (0., 1.))):

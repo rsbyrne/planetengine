@@ -18,4 +18,6 @@ from planetengine.utilities import log
 
 from planetengine.utilities import copyField
 from planetengine.utilities import quickShow
+from planetengine.utilities import meshify
+from planetengine.utilities import unpack_var
 from planetengine.standards import standardise

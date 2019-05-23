@@ -13,12 +13,12 @@ rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
 default_mesh_2D = uw.mesh.FeMesh_Cartesian(
-    elementRes = [16, 16],
+    elementRes = [64, 64],
     minCoord = [0., 0.],
     maxCoord = [1., 1.]
     )
 default_mesh_3D = uw.mesh.FeMesh_Cartesian(
-    elementRes = [16, 16, 16],
+    elementRes = [64, 64, 64],
     minCoord = [0., 0., 0.],
     maxCoord = [1., 1., 1.]
     )
@@ -133,10 +133,10 @@ class PeMesh:
 
         if type(self.mesh) == uw.mesh.FeMesh_Cartesian:
             self.surfaces = {
-                'inner': mesh.specialSets['MinJ_VertexSet'],
-                'outer': mesh.specialSets['MaxJ_VertexSet'],
-                'left': mesh.specialSets['MinI_VertexSet'],
-                'right': mesh.specialSets['MaxI_VertexSet']
+                'inner': mesh.specialSets['Bottom_VertexSet'],
+                'outer': mesh.specialSets['Top_VertexSet'],
+                'left': mesh.specialSets['Left_VertexSet'],
+                'right': mesh.specialSets['Right_VertexSet']
                 }
             if self.mesh.dim == 2:
                 self.comps = {
@@ -159,8 +159,8 @@ class PeMesh:
             self.surfaces = {
                 'inner': mesh.specialSets['inner'],
                 'outer': mesh.specialSets['outer'],
-                'left': mesh.specialSets['MinJ_VertexSet'],
-                'right': mesh.specialSets['MaxJ_VertexSet']
+                'left': mesh.specialSets['MaxJ_VertexSet'],
+                'right': mesh.specialSets['MinJ_VertexSet']
                 }
         else:
             raise Exception("That kind of mesh is not supported yet.")

@@ -123,6 +123,11 @@ def unpack_var(*args):
                             subVar[3] for subVar in subVars \
                                 if subVar[1] in ('meshVar', 'meshFn')
                             ]))
+                        for a, b in itertools.combinations(subMeshes, 2):
+                            if a is b.subMesh:
+                                subMeshes.pop(a)
+                            elif b is a.subMesh:
+                                subMeshes.pop(b)
                         assert len(subMeshes) < 2, \
                             "Multiple mesh dependencies detected: \
                             try providing a substrate manually."

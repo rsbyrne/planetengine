@@ -12,11 +12,20 @@ def set_boundaries(variable, values):
     except:
         raise Exception("Variable does not appear to be mesh variable.")
 
-    walls = standards.make_pemesh(mesh).wallsList
+    walls = planetengine.standardise(mesh).wallsList
 
-    for value, wall in zip(values, walls):
-        if not value is '.':
-            variable.data[wall] = value
+    for i, component in enumerate(values):
+        for value, wall in zip(component, walls):
+            if not value is '.':
+                variable.data[wall, i] = value
+
+def set_scales(variable, values):
+
+    variable.data[:] = mapping.rescale_array(
+        variable.data,
+        mapping.get_scales(variable),
+        values
+        )
 
 def apply(initials, system):
 
@@ -52,19 +61,12 @@ def _apply(initials, system):
         # APPLY SCALES:
 
         if 'varScales' in initial:
-            var.data[:] = mapping.rescale_array(
-                var.data,
-                mapping.get_scales(var),
-                initial['varScales']
-                )
+            set_scales(var, initial['varScales'])
 
         # APPLY BOUNDARIES:
 
         if 'varBounds' in initial:
-            set_boundaries(
-                var,
-                initial['varBounds']
-                )
+            set_boundaries(var, initial['varBounds'])
 
     # RESET PROGRESS VARS:
 
@@ -72,16 +74,30 @@ def _apply(initials, system):
     system.modeltime.value = 0.
 
 def preview(IC, _2D = True):
-    try:
-        pemesh = planetengine.standardise(
-            planetengine.standards.default_mesh_2D
-            )
-        preview_data = IC.evaluate(pemesh.mesh.data)
-    except:
-        pemesh = planetengine.standardise(
-            planetengine.standards.default_mesh_3D
-            )
-        preview_data = IC.evaluate(pemesh.mesh.data)
-    standinVar = pemesh.autoVars[preview_data.shape[1]]
-    standinVar.data[:] = preview_data
+    if hasattr(IC, 'LOADTYPE'):
+        var, varType, mesh, substrate, data, dType, varDim = \
+            planetengine.unpack_var(IC.inVar)
+        if mesh.dim == 2:
+            pemesh = planetengine.standardise(
+                planetengine.standards.default_mesh_2D
+                )
+        else:
+            pemesh = planetengine.standardise(
+                planetengine.standards.default_mesh_3D
+                )
+        standinVar = pemesh.autoVars[varDim]
+        planetengine.copyField(var, standinVar)
+    else:
+        try:
+            pemesh = planetengine.standardise(
+                planetengine.standards.default_mesh_2D
+                )
+            preview_data = IC.evaluate(pemesh.mesh.data)
+        except:
+            pemesh = planetengine.standardise(
+                planetengine.standards.default_mesh_3D
+                )
+            preview_data = IC.evaluate(pemesh.mesh.data)
+        standinVar = pemesh.autoVars[preview_data.shape[1]]
+        standinVar.data[:] = preview_data
     planetengine.quickShow(standinVar)

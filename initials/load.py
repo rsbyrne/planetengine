@@ -67,9 +67,3 @@ class IC:
         self.inputs['hashID'] = self.inFrame.hashID
 
         self.inVar = self.inFrame.system.varsOfState[self.sourceVarName]
-        self.meshVar = meshify(self.inVar)
-
-    def evaluate(self, coordArray):
-        meshVar = self.meshVar
-        unboxed = mapping.unbox(meshVar.mesh, coordArray)
-        outArray = self.meshVar.evaluate(unboxed)
