@@ -74,7 +74,7 @@ class Grouper:
                 outstring += key + ": " + thing
         return outstring
 
-def unpack_var(*args):
+def unpack_var(*args, return_dict = False):
 
     if len(args) == 1 and type(args[0]) == tuple:
         args = args[0]
@@ -135,13 +135,11 @@ def unpack_var(*args):
 
     if substrate is None:
         try:
-            data = var.evaluate(
-                planetengine.standards.default_mesh_2D
-                )
+            substrate = planetengine.standards.default_mesh[2]
+            data = var.evaluate(substrate)
         except:
-            data = var.evaluate(
-                planetengine.standards.default_mesh_3D
-                )
+            substrate = planetengine.standards.default_mesh[3]
+            data = var.evaluate(substrate)
     else:
         data = var.evaluate(substrate)
 
@@ -173,7 +171,19 @@ def unpack_var(*args):
             "Input data type not acceptable."
             )
 
-    return var, varType, mesh, substrate, data, dType, varDim
+    if return_dict:
+        outDict = {
+            'var': var,
+            'varType': varType,
+            'mesh': mesh,
+            'substrate': substrate,
+            'data': data,
+            'dType': dType,
+            'varDim': varDim
+            }
+        return outDict
+    else:
+        return var, varType, mesh, substrate, data, dType, varDim
 
 def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     substrates = []

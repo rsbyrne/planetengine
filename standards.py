@@ -12,30 +12,32 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
-default_mesh_2D = uw.mesh.FeMesh_Cartesian(
-    elementRes = [64, 64],
-    minCoord = [0., 0.],
-    maxCoord = [1., 1.]
-    )
-default_mesh_3D = uw.mesh.FeMesh_Cartesian(
-    elementRes = [64, 64, 64],
-    minCoord = [0., 0., 0.],
-    maxCoord = [1., 1., 1.]
-    )
+default_mesh = {
+    2: uw.mesh.FeMesh_Cartesian(
+        elementRes = [64, 64],
+        minCoord = [0., 0.],
+        maxCoord = [1., 1.]
+        ),
+    3: uw.mesh.FeMesh_Cartesian(
+        elementRes = [64, 64, 64],
+        minCoord = [0., 0., 0.],
+        maxCoord = [1., 1., 1.]
+        )
+    }
 
 def make_pevar(var, attach = True, force = False):
 
     if type(var) is PeVar:
         pevar = var
-        planetengine.message("Input is already a PeVar.")
+#         planetengine.message("Input is already a PeVar.")
     elif hasattr(var, 'pevar') and not force:
         assert type(var.pevar) is PeVar
         pevar = var.pevar
-        planetengine.message(
-            "Input already has a PeVar. \
-            To force creation of a new one, \
-            set the 'force' kwarg = True."
-            )
+#         planetengine.message(
+#             "Input already has a PeVar. \
+#             To force creation of a new one, \
+#             set the 'force' kwarg = True."
+#             )
     else:
         unpacked = planetengine.utilities.unpack_var(var)
         var = unpacked[0]
@@ -47,20 +49,19 @@ def make_pevar(var, attach = True, force = False):
 
 def make_pemesh(
         mesh,
-        meshName = None,
         attach = True,
         deformable = False,
         ):
 
-    if hasattr(mesh, 'pe'):
+    if hasattr(mesh, 'pemesh'):
         pemesh = mesh.pemesh
     else:
         pemesh = PeMesh(
             mesh,
-            meshName,
-            attach,
             deformable
             )
+        if attach:
+            setattr(mesh, 'pemesh', pemesh)
 
     return pemesh
 
@@ -99,27 +100,19 @@ class PeVar:
                 )
 
     def update(self):
-        try: self.meshVar.project()
-        except: pass
+        if hasattr(self.meshVar, 'project'):
+            self.meshVar.project()
 
 class PeMesh:
 
     def __init__(
             self,
             mesh,
-            meshName = None,
-            attach = True,
             deformable = False,
             ):
 
         self.mesh = mesh
-        self.attach = attach
         self.deformable = deformable
-
-        if meshName is None:
-            self.meshName = 'noname'
-        else:
-            self.meshName = meshName
 
         self.var1D = mesh.add_variable(nodeDofCount = 1)
         self.var2D = mesh.add_variable(nodeDofCount = 2)
@@ -245,11 +238,6 @@ class PeMesh:
         ys = np.linspace(self.mesh.data[:,1].min(), self.mesh.data[:,1].max(), 100)
         self.cartesianScope = np.array(np.meshgrid(xs, ys)).T.reshape([-1, 2])
 
-        if self.attach:
-            planetengine.message("Attaching...")
-            self.mesh.__dict__.update({'pemesh': self})
-            planetengine.message("Done!")
-
 #    def getFullData(self):
 #        fullData = fn.input().evaluate_global(self.mesh.data)
 #        fullData = comm.bcast(fullData, root = 0)
@@ -269,7 +257,7 @@ class PeMesh:
                 assert not subVar in self.autoVars.values(), \
                     "Variable contains a meshified variable already."
                 # see utilities.make_projector:
-                try: inherited_projectors.append(subVar.inherited_proj)
+                try: inherited_projectors.append(subVar.project)
                 except: pass
             if type(var) == uw.mesh._meshvariable.MeshVariable:
                 projection = var
@@ -296,8 +284,8 @@ class PeMesh:
                         pass
                 if project is None:
                     raise Exception("Projection failed!")
-        project()
         if return_project:
             return projection, project
         else:
+            project()
             return projection

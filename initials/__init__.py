@@ -77,26 +77,15 @@ def preview(IC, _2D = True):
     if hasattr(IC, 'LOADTYPE'):
         var, varType, mesh, substrate, data, dType, varDim = \
             planetengine.unpack_var(IC.inVar)
-        if mesh.dim == 2:
-            pemesh = planetengine.standardise(
-                planetengine.standards.default_mesh_2D
-                )
-        else:
-            pemesh = planetengine.standardise(
-                planetengine.standards.default_mesh_3D
-                )
+        pemesh = planetengine.standards.default_mesh[mesh.dim]
         standinVar = pemesh.autoVars[varDim]
         planetengine.copyField(var, standinVar)
     else:
         try:
-            pemesh = planetengine.standardise(
-                planetengine.standards.default_mesh_2D
-                )
+            pemesh = planetengine.standards.default_mesh[2]
             preview_data = IC.evaluate(pemesh.mesh.data)
         except:
-            pemesh = planetengine.standardise(
-                planetengine.standards.default_mesh_3D
-                )
+            pemesh = planetengine.standards.default_mesh[3]
             preview_data = IC.evaluate(pemesh.mesh.data)
         standinVar = pemesh.autoVars[preview_data.shape[1]]
         standinVar.data[:] = preview_data

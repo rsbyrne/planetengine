@@ -407,4 +407,3 @@ class DataCollector:
             outdata.append((name, header, dataArray))
         self.datasets = [[] for analyser in self.analysers]
         return outdata
-
