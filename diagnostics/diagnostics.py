@@ -19,8 +19,8 @@ def diagnostic_01(delete = True):
     planetengine.log("Building model1...")
 
     model1 = planetengine.frame.make_frame(
-        planetengine.diagnostic.MS98X_systemscript.build(res = 16, f = 1., tau = 1e5),
-        planetengine.diagnostic.MS98X_observerscript.build(),
+        planetengine.diagnostics.MS98X_systemscript.build(res = 16, f = 1., tau = 1e5),
+        planetengine.diagnostics.MS98X_observerscript.build(),
         initial
         )
 
@@ -47,8 +47,8 @@ def diagnostic_01(delete = True):
 
     planetengine.log("Building model2...")
     model2 = planetengine.frame.make_frame(
-        planetengine.diagnostic.MS98X_systemscript.build(res = 32, f = 0.5, tau = 4e5),
-        planetengine.diagnostic.MS98X_observerscript.build(),
+        planetengine.diagnostics.MS98X_systemscript.build(res = 32, f = 0.5, tau = 4e5),
+        planetengine.diagnostics.MS98X_observerscript.build(),
         initial
         )
 
@@ -90,8 +90,8 @@ def diagnostic_01(delete = True):
 
     planetengine.log("Building model3...")
     model3 = planetengine.frame.make_frame(
-        planetengine.diagnostic.MS98X_systemscript.build(res = 64, f = 1., tau = 1e6),
-        planetengine.diagnostic.MS98X_observerscript.build(),
+        planetengine.diagnostics.MS98X_systemscript.build(res = 64, f = 1., tau = 1e6),
+        planetengine.diagnostics.MS98X_observerscript.build(),
         initial
         )
 

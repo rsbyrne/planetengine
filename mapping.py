@@ -8,12 +8,14 @@ rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
 def boundary_interpolate(fromData, toData, dim):
+    # NOT PARALLEL SAFE
+
+    assert nProcs == 1
 
     fromField, fromMesh, fromIndexSet = fromData
     comp = 0
     outArrs = []
     while comp < dim:
-
         coordSet = fromMesh.data[fromIndexSet]
         previousCoord = coordSet[0]
         cumulativeDistance = 0.
@@ -57,9 +59,9 @@ def get_scales(variable, partitioned = False):
     else:
         data = variable.data
     if partitioned:
-        data = comm.gather(data, root = 0)[0]
-        data = np.vstack(data)
+        data = comm.gather(data, root = 0)
     if rank == 0:
+        data = np.vstack(data)
         for i in range(data.shape[1]):
             scales.append(
                 [data[:,i].min(),

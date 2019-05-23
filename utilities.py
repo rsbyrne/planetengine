@@ -333,9 +333,6 @@ def copyField(field1, field2,
         outCoords = field2.swarm.particleCoordinates.data
         outDim = field2.count
 
-    inPemesh = planetengine.standards.make_pemesh(inMesh)
-    outPemesh = planetengine.standards.make_pemesh(outMesh)
-
     assert outDim == inDim, \
         "In and Out fields have different dimensions!"
     assert outMesh.dim == inMesh.dim, \
@@ -381,12 +378,14 @@ def copyField(field1, field2,
     if rounded:
         field2.data[:] = np.around(field2.data)
 
-    for inWall, outWall in zip(inPemesh.wallsList, outPemesh.wallsList):
-        planetengine.mapping.boundary_interpolate(
-            (inField, inMesh, inWall),
-            (outField, outMesh, outWall),
-            inDim
-            )
+#     inPemesh = planetengine.standards.make_pemesh(inMesh)
+#     outPemesh = planetengine.standards.make_pemesh(outMesh)
+#     for inWall, outWall in zip(inPemesh.wallsList, outPemesh.wallsList):
+#         planetengine.mapping.boundary_interpolate(
+#             (inField, inMesh, inWall),
+#             (outField, outMesh, outWall),
+#             inDim
+#             )
 
     return tryTolerance
 
