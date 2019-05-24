@@ -4,7 +4,7 @@ import planetengine
 from planetengine import unpack_var
 from planetengine import standardise
 
-class ScalarIntegral:
+class StandardIntegral:
     '''
     Takes Underworld variables and functions
     and a variety of options and builds
@@ -12,11 +12,10 @@ class ScalarIntegral:
     inVar: the variable to be integrate.
     - an Underworld variable or function based on a variable.
     comp: for multi-dimensional fields, choose the component
-    to analyse.
-    - None, 'ang', 'ang1', 'ang2', 'rad', 'mag'.
+    to analyse. Defaults to the magnitude.
+    - 'mag', 'ang', 'ang1', 'ang2', 'rad'.
     gradient: choose the component of the gradient to integrate,
-    if any. Also accepted: a tuple of two components, e.g.
-    the change in the radial gradient in the angular direction.
+    if any.
     - None, 'ang', 'ang1', 'ang2', 'rad', 'mag'.
     surface: choose the surface over which to integrate,
     or integrate 'volume' by default.
@@ -29,7 +28,7 @@ class ScalarIntegral:
     def __init__(
             self,
             inVar,
-            comp = None,
+            comp = 'mag',
             gradient = None,
             surface = 'volume',
             nonDim = None,
@@ -43,46 +42,37 @@ class ScalarIntegral:
 
         self.opTag = ''
 
-        pevar = standardise(inVar)
-        var = pevar.var
-        mesh = pevar.mesh
-        pemesh = pevar.pemesh
+        unpacked = planetengine.unpack_var(inVar, return_dict = True)
+        var = unpacked['var']
+        mesh = unpacked['mesh']
+        pemesh = planetengine.standardise(mesh)
 
-        if not comp is None:
+        if unpacked['varDim'] == mesh.dim:
+            # hence is vector
             if comp == 'mag':
                 var = fn.math.sqrt(fn.math.dot(var, var))
             else:
                 var = fn.math.dot(var, pemesh.comps[comp])
-            self.opTag += comp + 'Comp_'
+                self.opTag += comp + 'Comp_'
+        else:
+            assert unpacked['varDim'] == 1
+            # hence is scalar.
+            comp = 'mag'
+            self.inputs['comp'] = comp
 
         if not gradient is None:
 
-            if type(gradient) == str:
-                gradient1 = gradient
-                gradient2 = ''
-            else:
-                gradient1, gradient2 = gradient
-
-            var = pevar.meshVar
-            self.project = pevar.update
+            var, self.project = pemesh.meshify(
+                var,
+                return_project = True
+                )
             varGrad = var.fn_gradient
-            if gradient1 == 'mag':
+            if gradient == 'mag':
                 var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
             else:
-                var = fn.math.dot(pemesh.comps[gradient1], varGrad)
+                var = fn.math.dot(pemesh.comps[gradient], varGrad)
 
-            if not gradient2 == '':
-                var, self.project = pemesh.meshify(
-                    var,
-                    return_project = True
-                    )
-                varGrad = var.fn_gradient
-                if gradient2 == 'mag':
-                    var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
-                else:
-                    var = fn.math.dot(pemesh.comps[gradient2], varGrad)
-
-            self.opTag += gradient1 + gradient2 + 'Grad_'
+            self.opTag += gradient + 'Grad_'
 
         intMesh = pemesh.integrals[surface]
         self.opTag += surface + 'Int_'
