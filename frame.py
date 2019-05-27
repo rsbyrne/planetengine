@@ -42,7 +42,6 @@ def load_frame(
 
     if rank == 0:
         if os.path.isfile(tarpath):
-            was_archived = True
             assert not os.path.isdir(path), \
                 "Conflicting archive and directory found."
             planetengine.message("Tar found - unarchiving...")
@@ -57,31 +56,31 @@ def load_frame(
         inputs = json.load(json_file)
     params = inputs['params']
     options = inputs['options']
-    config = inputs['config']
+    configs = inputs['configs']
 
     systemscript = utilities.local_import(os.path.join(path, '_systemscript.py'))
     system = systemscript.build(**inputs['params'])
 
-    initial = {}
+    initials = {}
     for varName in sorted(system.varsOfState):
-        initial[varName] = {**config[varName]}
-        initialLoadName = '_' + varName + '_initial.py'
+        initials[varName] = {**configs[varName]}
+        initialsLoadName = '_' + varName + '_initials.py'
         module = utilities.local_import(
-            os.path.join(path, initialLoadName)
+            os.path.join(path, initialsLoadName)
             )
         # check if an identical 'initial' object already exists:
-        if module.IC in [type(IC) for IC in initial.values()]:
-            for priorVarName, IC in sorted(initial.items()):
-                if type(IC) == module.IC and config[varName] == config[priorVarName]:
-                    initial[varName]['IC'] = initial[priorVarName]['IC']
+        if module.IC in [type(IC) for IC in initials.values()]:
+            for priorVarName, IC in sorted(initials.items()):
+                if type(IC) == module.IC and configs[varName] == configs[priorVarName]:
+                    initials[varName]['IC'] = initials[priorVarName]['IC']
                     break
         elif hasattr(module, 'LOADTYPE'):
-            initial[varName]['IC'] = module.IC(
-                **config[varName]['IC_inputs'], _outputPath = path
+            initials[varName]['IC'] = module.IC(
+                **configs[varName]['IC_inputs'], _outputPath = path
                 )
         else:
-            initial[varName]['IC'] = module.IC(
-                **config[varName]['IC_inputs']
+            initials[varName]['IC'] = module.IC(
+                **configs[varName]['IC_inputs']
                 )
 
     observerscript = utilities.local_import(
@@ -92,12 +91,10 @@ def load_frame(
     frame = Frame(
         system = system,
         observer = observer,
-        initial = initial,
+        initials = initials,
         outputPath = outputPath,
         instanceID = instanceID,
         _isInternalFrame = _isInternalFrame,
-#         _isPreexisting = True,
-#         _isArchived = was_archived
         )
 
     if rank == 0:
@@ -124,7 +121,7 @@ def load_frame(
     else:
         raise Exception("LoadStep input not understood.")
 
-    if frame.autoarchive:
+    if frame.autoarchive and not frame.archived:
         frame.archive()
 
     return frame

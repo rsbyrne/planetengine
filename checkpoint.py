@@ -44,7 +44,11 @@ class Checkpointer:
         self.stamps = stamps
         self.inFrames = inFrames
 
-    def checkpoint(self, path = 'test', light = False):
+    def checkpoint(
+            self,
+            path = 'test',
+            saveData = True
+            ):
 
         coldstart = True
 
@@ -87,11 +91,13 @@ class Checkpointer:
                      file.write(json.dumps(self.stamps))
 
             for inFrame in self.inFrames:
+                if not inFrame.allAnalysed:
+                    inFrame.all_analyse()
                 if not inFrame.allCollected:
                     inFrame.all_collect()
                 inFrame.checkpointer.checkpoint(
                     os.path.join(path, inFrame.hashID),
-                    light = True
+                    saveData = False
                     )
 
         planetengine.message("Checkpointing...")
@@ -117,15 +123,15 @@ class Checkpointer:
             for name in self.figs:
                 fig = self.figs[name]
                 fig.save(os.path.join(checkpointDir, name))
-        planetengine.message("Saved.")
+        planetengine.message("Figures saved.")
 
         planetengine.message("Saving vars of state...")
         if not self.varsOfState is None:
             utilities.varsOnDisk(self.varsOfState, checkpointDir, 'save')
         planetengine.message("Saved.")
 
+        planetengine.message("Saving snapshot...")
         if rank == 0:
-            planetengine.message("Saving snapshot...")
             if not self.dataCollectors is None:
                 for dataCollector in self.dataCollectors:
                     for index, name in enumerate(dataCollector.names):
@@ -138,16 +144,16 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = headerStr
                                     )
-            print("Saved.")
+        planetengine.message("Snapshot saved.")
 
+        planetengine.message("Saving stamps...")
         if rank == 0:
-            planetengine.message("Saving stamps...")
             filename = os.path.join(checkpointDir, 'stamps.txt')
             with open(filename, 'w') as file:
                  file.write(json.dumps(self.stamps))
-            planetengine.message("Saved.")
+        planetengine.message("Stamps saved.")
 
-        if light:
+        if saveData:
             planetengine.message("Saving datasets...")
             if not self.dataCollectors is None:
                 for dataCollector in self.dataCollectors:
@@ -166,7 +172,7 @@ class Checkpointer:
                                         delimiter = ",",
                                         header = header
                                         )
-            planetengine.message("Saved.")
+            planetengine.message("Datasets saved.")
 
         if rank == 0:
             assert os.path.isfile(os.path.join(checkpointDir, 'stamps.txt')), \

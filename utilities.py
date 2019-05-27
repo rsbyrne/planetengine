@@ -40,11 +40,6 @@ def log(text):
         file.write('\n')
         file.close()
 
-def quickShow(*args, **kwargs):
-
-    quickFig = planetengine.visualisation.QuickFig(*args, **kwargs)
-    quickFig.show()
-
 class Grouper:
     def __init__(self, indict = {}):
         self.selfdict = {}

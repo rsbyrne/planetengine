@@ -6,6 +6,11 @@ import math
 
 import planetengine
 
+def quickShow(*args, **kwargs):
+
+    quickFig = planetengine.visualisation.QuickFig(*args, **kwargs)
+    quickFig.show()
+
 class QuickFig:
 
     def __init__(self, *args, **kwargs):
@@ -63,16 +68,17 @@ class QuickFig:
             glucifer.objects.Points(
                 arg,
                 fn_size = 1e3 / float(arg.particleGlobalCount)**0.5,
-                colourBar = False
+                colourBar = True
                 )
             )
 
     def add_stipple(self, pevar):
         assert pevar.discrete or pevar.boolean
         assert not pevar.vector
-        drawing = glucifer.objects.Drawing()
+        drawing = glucifer.objects.Drawing(
+            pointsize = 3.,
+            )
         allCoords = pevar.pemesh.cartesianScope
-#         allCoords = variable.mesh.data
         for coord in allCoords:
             try:
                 val = pevar.meshVar.evaluate(np.array([coord]))
@@ -89,7 +95,7 @@ class QuickFig:
             glucifer.objects.Surface(
                 pevar.mesh,
                 pevar.meshVar,
-                colourBar = False
+                colourBar = True
                 )
             )
 
@@ -102,7 +108,7 @@ class QuickFig:
                 fn.math.log10(pevar.meshVar),
                 colours = "red black",
                 interval = 0.5,
-                colourBar = False
+                colourBar = True
                 )
             )
 
@@ -127,9 +133,12 @@ class QuickFig:
                 opacity = 0.5,
                 fn_size = 1e3 / float(pevar.substrate.particleGlobalCount)**0.5,
                 colours = "purple green brown pink red",
-                colourBar = False
+                colourBar = True
                 )
             )
 
     def show(self):
         self.fig.show()
+
+    def save(self, path):
+        self.fig.save(path)
