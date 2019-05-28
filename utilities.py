@@ -361,7 +361,7 @@ def copyField(field1, field2,
 
         outField.data[:] = fullInField.evaluate(evalCoords)
 
-        message("Mapping achieved at tolerance =", tolerance)
+        message("Mapping achieved at tolerance = " + str(tolerance))
         return tolerance
 
     tryTolerance = 0.

@@ -73,7 +73,8 @@ class Checkpointer:
 
                 planetengine.message("No pre-existing directory for this model found. Making a new one...")
 
-                os.makedirs(path)
+                if not os.path.isdir(path):
+                    os.makedirs(path)
 
                 if not self.scripts is None:
                     for scriptname in self.scripts:
@@ -91,13 +92,9 @@ class Checkpointer:
                      file.write(json.dumps(self.stamps))
 
             for inFrame in self.inFrames:
-                if not inFrame.allAnalysed:
-                    inFrame.all_analyse()
-                if not inFrame.allCollected:
-                    inFrame.all_collect()
-                inFrame.checkpointer.checkpoint(
+                inFrame.checkpoint(
                     os.path.join(path, inFrame.hashID),
-                    saveData = False
+                    archive_remote = False
                     )
 
         planetengine.message("Checkpointing...")

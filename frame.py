@@ -11,6 +11,7 @@ import itertools
 import inspect
 import importlib
 import csv
+import copy
 from glob import glob
 
 from mpi4py import MPI
@@ -24,7 +25,7 @@ def load_frame(
         outputPath = '',
         instanceID = '',
         loadStep = 0,
-        _isInternalFrame = False,
+        _is_child = False,
         ):
     '''
     Creates a new 'frame' instance attached to a pre-existing
@@ -76,7 +77,7 @@ def load_frame(
                     break
         elif hasattr(module, 'LOADTYPE'):
             initials[varName]['IC'] = module.IC(
-                **configs[varName]['IC_inputs'], _outputPath = path
+                **configs[varName]['IC_inputs'], _outputPath = path, _is_child = True
                 )
         else:
             initials[varName]['IC'] = module.IC(
@@ -94,8 +95,13 @@ def load_frame(
         initials = initials,
         outputPath = outputPath,
         instanceID = instanceID,
-        _isInternalFrame = _isInternalFrame,
         )
+
+    # If it's a loaded frame, it must have been saved to disk at some point -
+    # hence its internal frames will all be held as copies inside
+    # the loaded frame. We need to flag this:
+    for inFrame in frame.inFrames:
+        inFrame._parentFrame = frame
 
     if rank == 0:
         for directory in glob(path + '/*/'):
@@ -121,7 +127,7 @@ def load_frame(
     else:
         raise Exception("LoadStep input not understood.")
 
-    if frame.autoarchive and not frame.archived:
+    if all([frame.autoarchive, not frame.archived, not _is_child]):
         frame.archive()
 
     return frame
@@ -264,9 +270,7 @@ class Frame:
             outputPath = '',
             instanceID = 'test',
             autoarchive = True,
-            _isInternalFrame = False,
-#             _isPreexisting = False,
-#             _isArchived = False,
+            _parentFrame = None,
             ):
         '''
         'system' should be the object produced by the 'build' call
@@ -289,7 +293,7 @@ class Frame:
         self.outputPath = outputPath
         self.instanceID = instanceID
         self.autoarchive = autoarchive
-        self._isInternalFrame = _isInternalFrame
+        self._parentFrame = _parentFrame
 
         scripts = {
             'systemscript': system.script,
@@ -410,7 +414,7 @@ class Frame:
     def reset(self):
         self.initialise()
 
-    def checkpoint(self, path = None):
+    def checkpoint(self, path = None, archive_remote = False):
 
         if not self.allCollected:
             self.all_collect()
@@ -418,7 +422,7 @@ class Frame:
         if self.archived:
             self.unarchive()
 
-        if path is None:
+        if path is None or path == self.path:
 
             path = self.path
 
@@ -432,9 +436,9 @@ class Frame:
 
         else:
 
-            self.checkpointer.checkpoint(path)
+            self.checkpointer.checkpoint(path, saveData = False)
 
-            if self.autoarchive:
+            if archive_remote:
                 self.archive(path)
 
         if self.autoarchive:
@@ -539,119 +543,175 @@ class Frame:
 
         if rank == 0:
 
-            if self.archived:
+            if self.archived and self._parentFrame is None:
+                newpath = os.path.join(
+                    extPath,
+                    self.tarname
+                    )
                 shutil.copyfile(
                     self.tarpath,
-                    os.path.join(
-                        extPath,
-                        self.tarname
-                        )
+                    newpath
                     )
                 planetengine.message(
                     "Model forked to directory: " + extPath + self.tarname
                     )
+                hardFork = True
             else:
-                shutil.copytree(
-                    self.path,
-                    os.path.join(
+                if self.archived:
+                    self.unarchive()
+                if os.path.isdir(self.path):
+                    newpath = os.path.join(
                         extPath,
                         self.instanceID
                         )
-                    )
-                planetengine.message(
-                    "Model forked to directory: " + extPath + self.instanceID
-                    )
+                    shutil.copytree(
+                        self.path,
+                        newpath
+                        )
+                    planetengine.message(
+                        "Model forked to directory: " + extPath + self.instanceID
+                        )
+                    if self.autoarchive:
+                        self.archive()
+                        self.archive(newpath)
+                    hardFork = True
+                else:
+                    planetengine.message("No files to fork yet.")
+                    hardFork = False
 
         if return_frame:
-            planetengine.message(
-                "Loading newly forked frame at current model step: "
-                )
-            newframe = load_frame(extPath, self.instanceID, loadStep = self.step)
-            planetengine.message(
-                "Loaded newly forked frame."
-                )
+            if hardFork:
+                planetengine.message(
+                    "Loading newly forked frame at current model step: "
+                    )
+                newframe = load_frame(extPath, self.instanceID, loadStep = self.step)
+                planetengine.message(
+                    "Loaded newly forked frame."
+                    )
+            else:
+                planetengine.message(
+                    "Returning a copy of the current class object \
+                    with a new outputPath."
+                    )
+                newframe = copy.deepcopy(self)
+                newframe.outputPath = extPath
+
+            return newframe
+
+    def branch(self, extPath, return_frame = False, archive_remote = True):
+        newpath = os.path.join(extPath, self.instanceID)
+        self.checkpoint(
+            newpath,
+            archive_remote = archive_remote
+            )
+        if return_frame:
+            newframe = load_frame(extPath, self.instanceID)
             return newframe
 
     def archive(self, _path = None):
 
-        planetengine.message("Archiving...")
-
-        if self._isInternalFrame:
-            planetengine.message("Archiving disabled for internal frames.")
+        if self.archived and (_path is None or _path == self.path):
+            planetengine.message("Already archived!")
             return None
 
-        if _path is None:
-            path = self.path
-            tarpath = self.tarpath
-            localArchive = True
+        # If this frame happens to be located inside another frame,
+        # we need to bump the call up to that parent frame:
+        if not self._parentFrame is None:
+            self._parentFrame.archive(_path)
+
         else:
-            path = _path
-            tarpath = path + '.tar.gz'
-            localArchive = False
 
-        if rank == 0:
+            planetengine.message("Archiving...")
 
-            assert os.path.isdir(path), \
-                "Nothing to archive yet!"
-            assert not os.path.isfile(tarpath), \
-                "Destination archive already exists!"
+            if _path is None or _path == self.path:
+                path = self.path
+                tarpath = self.tarpath
+                localArchive = True
+            else:
+                path = _path
+                tarpath = path + '.tar.gz'
+                localArchive = False
 
-            with tarfile.open(tarpath, 'w:gz') as tar:
-                tar.add(path, arcname = '')
+            if rank == 0:
 
-            assert os.path.isfile(tarpath), \
-                "The archive should have saved, but we can't find it!"
+                print(path)
+                if not os.path.isdir(path):
+                    planetengine.message("Nothing to archive yet!")
+                    return None
+                assert not os.path.isfile(tarpath), \
+                    "Destination archive already exists!"
 
-            planetengine.message("Deleting model directory...")
+                with tarfile.open(tarpath, 'w:gz') as tar:
+                    tar.add(path, arcname = '')
 
-            shutil.rmtree(path)
+                assert os.path.isfile(tarpath), \
+                    "The archive should have saved, but we can't find it!"
 
-            planetengine.message("Model directory deleted.")
+                planetengine.message("Deleting model directory...")
 
-        if localArchive:
-            self.archived = True
+                shutil.rmtree(path)
 
-        planetengine.message("Archived!")
+                planetengine.message("Model directory deleted.")
+
+            if localArchive:
+                self.archived = True
+                self._set_inner_archive_status(self.archived)
+
+            planetengine.message("Archived!")
 
     def unarchive(self, _path = None):
 
-        planetengine.message("Unarchiving...")
-
-        if self._isInternalFrame:
-            planetengine.message("Archiving disabled for internal frames.")
+        if not self.archived and (_path is None or _path == self.path):
+            planetengine.message("Already unarchived!")
             return None
 
-        if _path is None:
-            path = self.path
-            tarpath = self.tarpath
-            localArchive = True
+        # If this frame happens to be located inside another frame,
+        # we need to bump the call up to that parent frame:
+        if not self._parentFrame is None:
+            self._parentFrame.unarchive(_path)
+
         else:
-            path = _path
-            tarpath = path + '.tar.gz'
-            localArchive = False
 
-        if rank == 0:
-            assert not os.path.isdir(path), \
-                "Destination directory already exists!"
-            assert os.path.isfile(tarpath), \
-                "No archive to unpack!"
+            planetengine.message("Unarchiving...")
 
-            with tarfile.open(tarpath) as tar:
-                tar.extractall(path)
+            if _path is None or _path == self.path:
+                path = self.path
+                tarpath = self.tarpath
+                localArchive = True
+            else:
+                path = _path
+                tarpath = path + '.tar.gz'
+                localArchive = False
 
-            assert os.path.isdir(path), \
-                "The model directory doesn't appear to exist."
+            if rank == 0:
+                assert not os.path.isdir(path), \
+                    "Destination directory already exists!"
+                if not os.path.isfile(tarpath):
+                    planetengine.message("No archive to unpack!")
+                    return None
 
-            planetengine.message("Deleting archive...")
+                with tarfile.open(tarpath) as tar:
+                    tar.extractall(path)
 
-            os.remove(tarpath)
+                assert os.path.isdir(path), \
+                    "The model directory doesn't appear to exist."
 
-            planetengine.message("Model directory deleted.")
+                planetengine.message("Deleting archive...")
 
-        if localArchive:
-            self.archived = True
+                os.remove(tarpath)
 
-        planetengine.message("Unarchived!")
+                planetengine.message("Model directory deleted.")
+
+            if localArchive:
+                self.archived = False
+                self._set_inner_archive_status(self.archived)
+
+            planetengine.message("Unarchived!")
+
+    def _set_inner_archive_status(self, status):
+        self.archived = status
+        for inFrame in self.inFrames:
+            inFrame._set_inner_archive_status(status)
 
     def load_checkpoint(self, loadStep):
 

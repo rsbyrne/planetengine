@@ -16,6 +16,7 @@ class IC:
             loadStep = None,
             hashID = None,
             _outputPath = '',
+            _is_child = False,
             ):
 
         assert sourceVarName is not None, \
@@ -49,14 +50,14 @@ class IC:
                 _outputPath,
                 hashID,
                 loadStep = self.loadStep,
-                _isInternalFrame = True
+                _is_child = _is_child
                 )
         elif type(inFrame) == str:
             self.inFrame = frame.load_frame(
                 os.path.dirname(inFrame),
                 os.path.basename(inFrame),
                 loadStep = self.loadStep,
-                _isInternalFrame = True
+                _is_child = _is_child
                 )
         elif type(inFrame) == frame.Frame:
             self.inFrame = inFrame
