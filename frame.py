@@ -38,9 +38,10 @@ def load_frame(
     # another planetengine directory:
 
     if not _is_child:
-        assert not os.path.isfile(os.path.join(outputPath, 'stamps.txt')), \
-            "Loading a child model as an independent frame \
-            not currently supported."
+        if rank == 0:
+            assert not os.path.isfile(os.path.join(outputPath, 'stamps.txt')), \
+                "Loading a child model as an independent frame \
+                not currently supported."
 
     path = os.path.join(outputPath, instanceID)
     tarpath = path + '.tar.gz'
@@ -61,8 +62,12 @@ def load_frame(
                 "Archive contained the wrong model file somehow."
             os.remove(tarpath)
 
-    with open(os.path.join(path, 'inputs.txt')) as json_file:  
-        inputs = json.load(json_file)
+    inputs = {}
+    if rank == 0:
+        with open(os.path.join(path, 'inputs.txt')) as json_file:  
+            inputs = json.load(json_file)
+    inputs = comm.bcast(inputs, root = 0)
+
     params = inputs['params']
     options = inputs['options']
     configs = inputs['configs']
@@ -154,18 +159,22 @@ def make_stamps(
 
     planetengine.message("Making stamps...")
 
-    openScripts = {
-        name: open(script) \
-        for name, script in sorted(scripts.items())
-        }
+    stamps = {}
+    if rank == 0:
+        openScripts = {
+            name: open(script) \
+            for name, script in sorted(scripts.items())
+            }
 
-    stamps = {
-        'params': utilities.hashstamp(params),
-        'options': utilities.hashstamp(options),
-        'configs': utilities.hashstamp(configs),
-        'scripts': utilities.hashstamp(openScripts)
-        }
-    stamps['allstamp'] = utilities.hashstamp(stamps)
+        stamps = {
+            'params': utilities.hashstamp(params),
+            'options': utilities.hashstamp(options),
+            'configs': utilities.hashstamp(configs),
+            'scripts': utilities.hashstamp(openScripts)
+            }
+        stamps['allstamp'] = utilities.hashstamp(stamps)
+
+    stamps = comm.bcast(stamps, root = 0)
 
     wordhash = planetengine.wordhash.wordhash(stamps['allstamp'])
     if _use_wordhash:
