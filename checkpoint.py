@@ -47,7 +47,7 @@ class Checkpointer:
     def checkpoint(
             self,
             path = 'test',
-            saveData = True
+            clear_data = True,
             ):
 
         coldstart = True
@@ -127,13 +127,30 @@ class Checkpointer:
             utilities.varsOnDisk(self.varsOfState, checkpointDir, 'save')
         planetengine.message("Saved.")
 
+#         planetengine.message("Saving snapshot...")
+#         if rank == 0:
+#             if not self.dataCollectors is None:
+#                 for dataCollector in self.dataCollectors:
+#                     for index, name in enumerate(dataCollector.names):
+#                         dataArray = dataCollector.datasets[index][-1:]
+#                         headerStr = dataCollector.headers[index]
+#                         filename = os.path.join(checkpointDir, name + "_snapshot" + ".txt")
+#                         if not type(dataArray) == type(None):
+#                             with open(filename, 'w') as openedfile:
+#                                 np.savetxt(openedfile, dataArray,
+#                                     delimiter = ",",
+#                                     header = headerStr
+#                                     )
+#         planetengine.message("Snapshot saved.")
+
         planetengine.message("Saving snapshot...")
         if rank == 0:
             if not self.dataCollectors is None:
                 for dataCollector in self.dataCollectors:
-                    for index, name in enumerate(dataCollector.names):
-                        dataArray = dataCollector.datasets[index][-1:]
-                        headerStr = dataCollector.headers[index]
+                    for analyser in dataCollector.analysers:
+                        name = analyser.name
+                        headerStr = analyser.header
+                        dataArray = [analyser.data,]
                         filename = os.path.join(checkpointDir, name + "_snapshot" + ".txt")
                         if not type(dataArray) == type(None):
                             with open(filename, 'w') as openedfile:
@@ -150,26 +167,25 @@ class Checkpointer:
                  file.write(json.dumps(self.stamps))
         planetengine.message("Stamps saved.")
 
-        if saveData:
-            planetengine.message("Saving datasets...")
-            if not self.dataCollectors is None:
-                for dataCollector in self.dataCollectors:
-                    for row in dataCollector.clear():
-                        if rank == 0:
-                            name, headerStr, dataArray = row
-                            filename = os.path.join(path, name + '.csv')
-                            if not type(dataArray) == type(None):
-                                with open(filename, 'ab') as openedfile:
-                                    fileSize = os.stat(filename).st_size
-                                    if fileSize == 0:
-                                        header = headerStr
-                                    else:
-                                        header = ''
-                                    np.savetxt(openedfile, dataArray,
-                                        delimiter = ",",
-                                        header = header
-                                        )
-            planetengine.message("Datasets saved.")
+        planetengine.message("Saving datasets...")
+        if not self.dataCollectors is None:
+            for dataCollector in self.dataCollectors:
+                for row in dataCollector.out(clear = clear_data):
+                    if rank == 0:
+                        name, headerStr, dataArray = row
+                        filename = os.path.join(path, name + '.csv')
+                        if not type(dataArray) == type(None):
+                            with open(filename, 'ab') as openedfile:
+                                fileSize = os.stat(filename).st_size
+                                if fileSize == 0:
+                                    header = headerStr
+                                else:
+                                    header = ''
+                                np.savetxt(openedfile, dataArray,
+                                    delimiter = ",",
+                                    header = header
+                                    )
+        planetengine.message("Datasets saved.")
 
         if rank == 0:
             assert os.path.isfile(os.path.join(checkpointDir, 'stamps.txt')), \

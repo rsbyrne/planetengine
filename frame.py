@@ -34,6 +34,14 @@ def load_frame(
     which loads the highest stable checkpoint available.
     '''
 
+    # Check that target directory is not inside
+    # another planetengine directory:
+
+    if not _is_child:
+        assert not os.path.isfile(os.path.join(outputPath, 'stamps.txt')), \
+            "Loading a child model as an independent frame \
+            not currently supported."
+
     path = os.path.join(outputPath, instanceID)
     tarpath = path + '.tar.gz'
 
@@ -73,15 +81,15 @@ def load_frame(
         if module.IC in [type(IC) for IC in initials.values()]:
             for priorVarName, IC in sorted(initials.items()):
                 if type(IC) == module.IC and configs[varName] == configs[priorVarName]:
-                    initials[varName]['IC'] = initials[priorVarName]['IC']
+                    initials[varName] = initials[priorVarName]
                     break
         elif hasattr(module, 'LOADTYPE'):
-            initials[varName]['IC'] = module.IC(
-                **configs[varName]['IC_inputs'], _outputPath = path, _is_child = True
+            initials[varName] = module.IC(
+                **configs[varName], _outputPath = path, _is_child = True
                 )
         else:
-            initials[varName]['IC'] = module.IC(
-                **configs[varName]['IC_inputs']
+            initials[varName] = module.IC(
+                **configs[varName]
                 )
 
     observerscript = utilities.local_import(
@@ -95,7 +103,11 @@ def load_frame(
         initials = initials,
         outputPath = outputPath,
         instanceID = instanceID,
+        _is_child = _is_child
         )
+
+    # we may know it's a child already,
+    # but we may not have constructed the parent yet.
 
     # If it's a loaded frame, it must have been saved to disk at some point -
     # hence its internal frames will all be held as copies inside
@@ -191,14 +203,9 @@ def make_frame(
         }
 
     configs = {}
-    for varName, initial in sorted(initials.items()):
-        subdict = {
-            key: val for key, val in initial.items() if not key == 'IC'
-            }
-        IC = initial['IC']
-        subdict['IC_inputs'] = IC.inputs
+    for varName, IC in sorted(initials.items()):
         scripts[varName + '_initials'] = IC.script
-        configs[varName] = subdict
+        configs[varName] = IC.inputs
 
     stamps, hashID = make_stamps(
         system.inputs,
@@ -271,6 +278,7 @@ class Frame:
             instanceID = 'test',
             autoarchive = True,
             _parentFrame = None,
+            _is_child = False
             ):
         '''
         'system' should be the object produced by the 'build' call
@@ -294,6 +302,7 @@ class Frame:
         self.instanceID = instanceID
         self.autoarchive = autoarchive
         self._parentFrame = _parentFrame
+        self._is_child = _is_child
 
         scripts = {
             'systemscript': system.script,
@@ -301,14 +310,9 @@ class Frame:
             }
 
         configs = {}
-        for varName, initial in sorted(initials.items()):
-            subdict = {
-                key: val for key, val in initial.items() if not key == 'IC'
-                }
-            IC = initial['IC']
-            subdict['IC_inputs'] = IC.inputs
+        for varName, IC in sorted(initials.items()):
             scripts[varName + '_initials'] = IC.script
-            configs[varName] = subdict
+            configs[varName] = IC.inputs
 
         self.params = self.system.inputs
         self.options = self.observer.inputs
@@ -355,8 +359,7 @@ class Frame:
 
         planetengine.message("Loading interior frames...")
         self.inFrames = []
-        for initial in self.initials.values():
-            IC = initial['IC']
+        for IC in self.initials.values():
             try:
                 self.inFrames.append(IC.inFrame)
             except:
@@ -416,13 +419,13 @@ class Frame:
 
     def checkpoint(self, path = None, archive_remote = False):
 
-        if not self.allCollected:
-            self.all_collect()
-
         if self.archived:
             self.unarchive()
 
         if path is None or path == self.path:
+
+            if not self.allCollected:
+                self.all_collect()
 
             path = self.path
 
@@ -436,7 +439,9 @@ class Frame:
 
         else:
 
-            self.checkpointer.checkpoint(path, saveData = False)
+            self.all_analyse()
+
+            self.checkpointer.checkpoint(path, clear_data = False)
 
             if archive_remote:
                 self.archive(path)
@@ -488,6 +493,8 @@ class Frame:
             collector.clear()
 
     def iterate(self):
+        assert not self._is_child, \
+            "Cannot iterate child models indendently."
         planetengine.message("Iterating step " + str(self.step) + " ...")
         self.system.iterate()
         self.update()
@@ -543,7 +550,7 @@ class Frame:
 
         if rank == 0:
 
-            if self.archived and self._parentFrame is None:
+            if self.archived and not self._is_child:
                 newpath = os.path.join(
                     extPath,
                     self.tarname
@@ -616,7 +623,9 @@ class Frame:
 
         # If this frame happens to be located inside another frame,
         # we need to bump the call up to that parent frame:
-        if not self._parentFrame is None:
+
+        if self._is_child:
+            planetengine.message("Bumping archive call up to parent...")
             self._parentFrame.archive(_path)
 
         else:
@@ -627,17 +636,17 @@ class Frame:
                 path = self.path
                 tarpath = self.tarpath
                 localArchive = True
+                planetengine.message("Making a local archive...")
             else:
                 path = _path
                 tarpath = path + '.tar.gz'
                 localArchive = False
+                planetengine.message("Making a remote archive...")
 
             if rank == 0:
 
-                print(path)
-                if not os.path.isdir(path):
-                    planetengine.message("Nothing to archive yet!")
-                    return None
+                assert os.path.isdir(path), \
+                    "Nothing to archive yet!"
                 assert not os.path.isfile(tarpath), \
                     "Destination archive already exists!"
 
@@ -654,8 +663,7 @@ class Frame:
                 planetengine.message("Model directory deleted.")
 
             if localArchive:
-                self.archived = True
-                self._set_inner_archive_status(self.archived)
+                self._set_inner_archive_status(True)
 
             planetengine.message("Archived!")
 
@@ -667,7 +675,8 @@ class Frame:
 
         # If this frame happens to be located inside another frame,
         # we need to bump the call up to that parent frame:
-        if not self._parentFrame is None:
+        if self._is_child:
+            planetengine.message("Bumping unarchive call up to parent...")
             self._parentFrame.unarchive(_path)
 
         else:
@@ -678,17 +687,18 @@ class Frame:
                 path = self.path
                 tarpath = self.tarpath
                 localArchive = True
+                planetengine.message("Unarchiving the local archive...")
             else:
                 path = _path
                 tarpath = path + '.tar.gz'
                 localArchive = False
+                planetengine.message("Unarchiving a remote archive...")
 
             if rank == 0:
                 assert not os.path.isdir(path), \
                     "Destination directory already exists!"
-                if not os.path.isfile(tarpath):
-                    planetengine.message("No archive to unpack!")
-                    return None
+                assert os.path.isfile(tarpath), \
+                    "No archive to unpack!"
 
                 with tarfile.open(tarpath) as tar:
                     tar.extractall(path)
@@ -703,15 +713,15 @@ class Frame:
                 planetengine.message("Model directory deleted.")
 
             if localArchive:
-                self.archived = False
-                self._set_inner_archive_status(self.archived)
+                self._set_inner_archive_status(False)
 
             planetengine.message("Unarchived!")
 
     def _set_inner_archive_status(self, status):
         self.archived = status
         for inFrame in self.inFrames:
-            inFrame._set_inner_archive_status(status)
+            if inFrame._is_child:
+                inFrame._set_inner_archive_status(status)
 
     def load_checkpoint(self, loadStep):
 
@@ -767,7 +777,7 @@ class Frame:
             self.update()
             self.status = "ready"
 
-            if self.autoarchive:
+            if self.autoarchive and not self._is_child:
                 self.archive()
 
             planetengine.message("Checkpoint successfully loaded!")

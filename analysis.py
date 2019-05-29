@@ -396,7 +396,7 @@ class DataCollector:
                 analyser.analyse()
             self.datasets[index].append(analyser.data)
 
-    def clear(self):
+    def out(self, clear = False):
 
         outdata = []
         for name, header, dataset in zip(self.names, self.headers, self.datasets):
@@ -405,5 +405,9 @@ class DataCollector:
             else:
                 dataArray = None
             outdata.append((name, header, dataArray))
-        self.datasets = [[] for analyser in self.analysers]
+        if clear:
+            self.datasets = [[] for analyser in self.analysers]
         return outdata
+
+    def clear(self):
+        return self.out(clear = True)

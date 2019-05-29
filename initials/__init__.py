@@ -43,10 +43,9 @@ def _apply(initials, system):
 
     for varName, var in sorted(varsOfState.items()):
 
-        initial = initials[varName]
-        IC = initial['IC']
+        IC = initials[varName]
         var, varType, mesh, substrate, data, dType, varDim = unpack_var(var)
-        try: boxDims = initial['boxDims']
+        try: boxDims = system.boxDims
         except: boxDims = ((0., 1.),) * system.mesh.dim
 
         # APPLY VALUES:
@@ -60,13 +59,15 @@ def _apply(initials, system):
 
         # APPLY SCALES:
 
-        if 'varScales' in initial:
-            set_scales(var, initial['varScales'])
+        if hasattr(system, 'varScales'):
+            if varName in system.varScales:
+                set_scales(var, system.varScales[varName])
 
         # APPLY BOUNDARIES:
 
-        if 'varBounds' in initial:
-            set_boundaries(var, initial['varBounds'])
+        if hasattr(system, 'varBounds'):
+            if varName in system.varBounds:
+                set_boundaries(var, system.varBounds[varName])
 
     # RESET PROGRESS VARS:
 
