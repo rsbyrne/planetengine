@@ -102,10 +102,14 @@ class QuickFig:
     def add_contours(self, pevar):
         assert not pevar.discrete
         assert not pevar.vector
+        inFn = pevar.meshVar
+        data = inFn.evaluate(pevar.mesh)
+        inScales = planetengine.mapping.get_scales(data)[0]
+        rescaledFn = (inFn - inScales[0]) / (inScales[1] - inScales[0])
         self.fig.append(
             glucifer.objects.Contours(
                 pevar.mesh,
-                fn.math.log10(pevar.meshVar),
+                fn.math.log10(rescaledFn * 1e5 + 1.),
                 colours = "red black",
                 interval = 0.5,
                 colourBar = True

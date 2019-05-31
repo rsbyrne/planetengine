@@ -94,7 +94,8 @@ def radial_coords(
     if not inverse:
         xs, ys = recenteredCoords.transpose()
         angular = np.arctan2(ys, xs) * 180. / np.pi
-        #angular = np.where(xs >= 0., angular, angular + 360.)
+#         angular = np.arctan2(ys, xs) * 180. / np.pi
+#         angular = np.where(xs >= 0., angular, angular + 360.)
         radial = np.hypot(xs, ys)
         outArray = np.dstack((angular, radial))[0]
 
@@ -104,6 +105,17 @@ def radial_coords(
         ys = radial * np.sin(angular * np.pi / 180.)
         outArray = np.dstack((xs, ys))[0]
 
+    return outArray
+
+def rotate_coords(
+        coordArray,
+        rotation
+        ):
+    # rotation is in degrees;
+    # positive is anticlockwise
+    angs, rads = coordArray.transpose()
+    angs += rotation
+    outArray = np.dstack((angs, rads))[0]
     return outArray
 
 def rescale_array(
@@ -137,10 +149,16 @@ def box(mesh, coordArray = None, boxDims = ((0., 1), (0., 1.))):
     if coordArray is None:
         coordArray = mesh.data
     if type(mesh) == uw.mesh.FeMesh_Annulus:
+        radialCoords = radial_coords(coordArray)
+        inScales = [mesh.angularExtent, mesh.radialLengths]
+#         rotatedCoords = rotate_coords(radialCoords, 
+#         inScales = get_scales(radialCoords)
+#         print(inScales)
+        outScales = boxDims
         outArray = rescale_array(
-            radial_coords(coordArray),
-            (mesh.angularExtent, mesh.radialLengths),
-            boxDims,
+            rotatedCoords,
+            inScales,
+            outScales,
             flip = [True, False]
             )
     else:

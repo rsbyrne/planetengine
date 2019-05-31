@@ -186,8 +186,6 @@ def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     substrateHandles = {}
     extension = '.h5'
 
-#     planetengine.log("Doing varsOnDisk, mode: " + mode)
-
     for varName, var in sorted(varsOfState.items()):
 
         if type(var) == uw.mesh._meshvariable.MeshVariable:
@@ -213,7 +211,7 @@ def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.]):
             substrateNames.append(substrateName)
 
             if mode == 'save':
-                message("Saving substrate to disk: ", substrateName)
+                message("Saving substrate to disk: " + substrateName)
                 handle = substrate.save(
                     os.path.join(
                         checkpointDir,
@@ -222,7 +220,7 @@ def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.]):
                     )
                 substrateHandles[substrateName] = handle
             elif mode == 'load':
-                message("Loading substrate from disk: ", substrateName)
+                message("Loading substrate from disk: " + substrateName)
                 if type(substrate) == uw.swarm.Swarm:
                     with substrate.deform_swarm():
                         substrate.particleCoordinates.data[:] = blackhole
@@ -237,10 +235,10 @@ def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.]):
                 handle = substrateHandles[substrateNames]
 
         if mode == 'save':
-            message("Saving var to disk: ", varName)
+            message("Saving var to disk: " + varName)
             var.save(os.path.join(checkpointDir, varName + extension), handle)
         elif mode == 'load':
-            message("Loading var from disk: ", varName)
+            message("Loading var from disk: " + varName)
             var.load(os.path.join(checkpointDir, varName + extension))
         else:
             raise Exception("Disk mode not recognised.")
