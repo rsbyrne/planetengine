@@ -424,7 +424,9 @@ def suite_list(listDict, shuffle = False, chunks = None, shuffleseed = 1066):
         newDict = {key: val for key, val in zip(listOfKeys, item)}
         listOfDicts.append(newDict)
     if shuffle:
-        random.Random(shuffleseed).shuffle(listOfDicts)
+        random.seed(shuffleseed)
+        random.shuffle(listOfDicts)
+        random.seed()
     if chunks == None:
         outList = listOfDicts
     elif chunks > 0:
