@@ -10,6 +10,6 @@ while [ $i -le $end ]
 do
     touch logs/job$i.out
     touch logs/job$i.error
-    mpirun -np $CORESPERCHUNK python $SCRIPT $CHUNKS $i > job$i.out 2> job$i.error &
+    mpirun -np $CORESPERCHUNK python $SCRIPT $CHUNKS $i > logs/job$i.out 2> logs/job$i.error &
     i=$(($i+1))
 done
