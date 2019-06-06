@@ -31,10 +31,10 @@ def message(*args):
             print(arg)
 
 def log(text, outputPath = '', outputName = 'diaglog.txt'):
-    filename = os.path.join(outputPath, outputName)
-    if not os.path.exists(outputPath):
-        os.mkdir(outputPath)
     if rank == 0:
+        filename = os.path.join(outputPath, outputName)
+        if not os.path.exists(outputPath):
+            os.mkdir(outputPath)
         if os.path.isfile(filename):
             file = open(filename, 'a')
         else:
