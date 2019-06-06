@@ -30,12 +30,15 @@ def message(*args):
         if rank == 0:
             print(arg)
 
-def log(text):
+def log(text, outputPath = '', outputName = 'diaglog.txt'):
+    filename = os.path.join(outputPath, outputName)
+    if not os.path.exists(outputPath):
+        os.mkdir(outputPath)
     if rank == 0:
-        if os.path.isfile("diaglog.txt"):
-            file = open("diaglog.txt", 'a')
+        if os.path.isfile(filename):
+            file = open(filename, 'a')
         else:
-            file = open("diaglog.txt", 'w')
+            file = open(filename, 'w')
         file.write(text)
         file.write('\n')
         file.close()
