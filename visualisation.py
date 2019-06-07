@@ -3,6 +3,12 @@ from underworld import function as fn
 import glucifer
 import numpy as np
 import math
+import os
+
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+nProcs = comm.Get_size()
 
 import planetengine
 
@@ -44,7 +50,7 @@ class QuickFig:
                 if not function in functions_used:
                     if not found:
                         try:
-                            function(pevar)
+                            function(pevar, **kwargs)
                             found = True
                             functions_used.append(function)
                         except:
@@ -56,23 +62,24 @@ class QuickFig:
             "Fitted " + str(variables_fitted) + " variables to the figure."
             )
 
-    def add_grid(self, arg):
+    def add_grid(self, arg, **kwargs):
         self.fig.append(
             glucifer.objects.Mesh(
-                arg
+                arg,
+                **kwargs
                 )
             )
 
-    def add_swarm(self, arg):
+    def add_swarm(self, arg, **kwargs):
         self.fig.append(
             glucifer.objects.Points(
                 arg,
                 fn_size = 1e3 / float(arg.particleGlobalCount)**0.5,
-                colourBar = True
+                **kwargs
                 )
             )
 
-    def add_stipple(self, pevar):
+    def add_stipple(self, pevar, **kwargs):
         assert pevar.discrete or pevar.boolean
         assert not pevar.vector
         drawing = glucifer.objects.Drawing(
@@ -88,18 +95,18 @@ class QuickFig:
                 pass
         self.fig.append(drawing)
 
-    def add_surface(self, pevar):
+    def add_surface(self, pevar, **kwargs):
         assert not pevar.discrete
         assert not pevar.vector
         self.fig.append(
             glucifer.objects.Surface(
                 pevar.mesh,
                 pevar.meshVar,
-                colourBar = True
+                **kwargs
                 )
             )
 
-    def add_contours(self, pevar):
+    def add_contours(self, pevar, **kwargs):
         assert not pevar.discrete
         assert not pevar.vector
         inFn = pevar.meshVar
@@ -112,21 +119,22 @@ class QuickFig:
                 fn.math.log10(rescaledFn * 1e5 + 1.),
                 colours = "red black",
                 interval = 0.5,
-                colourBar = True
+                **kwargs
                 )
             )
 
-    def add_arrows(self, pevar):
+    def add_arrows(self, pevar, **kwargs):
         assert not pevar.discrete
         assert pevar.vector
         self.fig.append(
             glucifer.objects.VectorArrows(
                 pevar.mesh,
                 pevar.meshVar,
+                **kwargs
                 )
             )
 
-    def add_points(self, pevar):
+    def add_points(self, pevar, **kwargs):
         assert pevar.particles
         assert not pevar.vector
         self.fig.append(
@@ -137,7 +145,7 @@ class QuickFig:
                 opacity = 0.5,
                 fn_size = 1e3 / float(pevar.substrate.particleGlobalCount)**0.5,
                 colours = "purple green brown pink red",
-                colourBar = True
+                **kwargs
                 )
             )
 
@@ -145,4 +153,8 @@ class QuickFig:
         self.fig.show()
 
     def save(self, path):
+        if rank == 0:
+            directory = os.path.dirname(path)
+            if not os.path.isdir(directory):
+                os.mkdir(directory)
         self.fig.save(path)

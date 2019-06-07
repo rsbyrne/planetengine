@@ -1,11 +1,11 @@
 #!/bin/bash
 umask 0000
 SCRIPT=${1:-localscript.py}
-CHUNKS=${2:-100}
+CHUNKS=${2:-1}
 CORESPERCHUNK=${3:-1}
 i=0
 end=$CHUNKS
-mkdir logs
+mkdir -p logs
 while [ $i -le $end ]
 do
     touch logs/job$i.out
