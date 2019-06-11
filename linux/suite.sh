@@ -4,6 +4,7 @@ SCRIPT=${1:-localscript.py}
 CHUNKS=${2:-1}
 CORESPERCHUNK=${3:-1}
 CHUNKNO=0
+rm -rf logs
 mkdir -p logs
 while [ $CHUNKNO -lt $CHUNKS ]
 do
@@ -11,4 +12,5 @@ do
     touch logs/job$CHUNKNO.error
     mpirun -np $CORESPERCHUNK python $SCRIPT $CHUNKS $CHUNKNO > logs/job$CHUNKNO.out 2> logs/job$CHUNKNO.error &
     CHUNKNO=$(($CHUNKNO+1))
+    echo "Submitting chunk " $CHUNKNO
 done
