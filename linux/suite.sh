@@ -3,13 +3,12 @@ umask 0000
 SCRIPT=${1:-localscript.py}
 CHUNKS=${2:-1}
 CORESPERCHUNK=${3:-1}
-i=0
-end=$CHUNKS
+CHUNKNO=0
 mkdir -p logs
-while [ $i -le $end ]
+while [ $CHUNKNO -lt $CHUNKS ]
 do
-    touch logs/job$i.out
-    touch logs/job$i.error
-    mpirun -np $CORESPERCHUNK python $SCRIPT $CHUNKS $i > logs/job$i.out 2> logs/job$i.error &
-    i=$(($i+1))
+    touch logs/job$CHUNKNO.out
+    touch logs/job$CHUNKNO.error
+    mpirun -np $CORESPERCHUNK python $SCRIPT $CHUNKS $CHUNKNO > logs/job$CHUNKNO.out 2> logs/job$CHUNKNO.error &
+    CHUNKNO=$(($CHUNKNO+1))
 done
