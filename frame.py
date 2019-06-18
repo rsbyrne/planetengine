@@ -253,7 +253,7 @@ def make_frame(
                 tar.extract('stamps.txt', path)
             with open(os.path.join(path, 'stamps.txt')) as json_file:
                 loadstamps = json.load(json_file)
-            os.remove(os.path.join(path, 'stamps.txt'))
+            shutil.rmtree(os.path.join(path, 'stamps.txt'))
             assert loadstamps == stamps
 
     if directory_state == 'clean':
@@ -287,7 +287,8 @@ class Frame:
             instanceID = 'test',
             autoarchive = True,
             _parentFrame = None,
-            _is_child = False
+            _is_child = False,
+            _autobackup = True,
             ):
         '''
         'system' should be the object produced by the 'build' call
@@ -312,6 +313,7 @@ class Frame:
         self.autoarchive = autoarchive
         self._parentFrame = _parentFrame
         self._is_child = _is_child
+        self._autobackup = _autobackup
 
         scripts = {
             'systemscript': system.script,
@@ -344,6 +346,9 @@ class Frame:
         self.path = os.path.join(self.outputPath, self.instanceID)
         self.tarname = self.instanceID + '.tar.gz'
         self.tarpath = os.path.join(self.outputPath, self.tarname)
+        self.backupdir = os.path.join(self.outputPath, 'backup')
+        self.backuppath = os.path.join(self.backupdir, self.instanceID)
+        self.backuptarpath = os.path.join(self.backupdir, self.tarname)
 
         self.archived = False #_isArchived
         self.checkpoints = []
@@ -458,6 +463,9 @@ class Frame:
         if self.autoarchive:
             self.archive()
 
+        if self._autobackup:
+            self.fork(self.backupdir)
+
     def update(self):
         self.step = self.system.step.value
         self.modeltime = self.system.modeltime.value
@@ -558,6 +566,8 @@ class Frame:
         planetengine.message("Forking model to new directory...")
 
         if rank == 0:
+
+            os.makedirs(extPath, exist_ok = True)
 
             if self.archived and not self._is_child:
                 newpath = os.path.join(
