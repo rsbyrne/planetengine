@@ -120,20 +120,7 @@ def load_frame(
     for inFrame in frame.inFrames:
         inFrame._parentFrame = frame
 
-    if rank == 0:
-        for directory in glob(path + '/*/'):
-            basename = os.path.basename(directory[:-1])
-            if (basename.isdigit() and len(basename) == 8):
-                with open(os.path.join(directory, 'stamps.txt')) as json_file:
-                    loadstamps = json.load(json_file)
-                with open(os.path.join(path, 'inputs.txt')) as json_file:
-                    loadconfig = json.load(json_file)
-                assert loadstamps == frame.stamps, \
-                    "Bad checkpoint found! Aborting."
-                planetengine.message("Found checkpoint: " + basename)
-                frame.checkpoints.append(int(basename))
-        frame.checkpoints = sorted(list(set(frame.checkpoints)))
-    frame.checkpoints = comm.bcast(frame.checkpoints, root = 0)
+    frame.checkpoints = find_checkpoints(path, frame.stamps)
 
     if loadStep == 'max':
         frame.load_checkpoint(frame.checkpoints[-1])
@@ -148,6 +135,24 @@ def load_frame(
         frame.archive()
 
     return frame
+
+def find_checkpoints(path, stamps):
+    checkpoints_found = []
+    if rank == 0:
+        for directory in glob(path + '/*/'):
+            basename = os.path.basename(directory[:-1])
+            if (basename.isdigit() and len(basename) == 8):
+                with open(os.path.join(directory, 'stamps.txt')) as json_file:
+                    loadstamps = json.load(json_file)
+                with open(os.path.join(path, 'inputs.txt')) as json_file:
+                    loadconfig = json.load(json_file)
+                assert loadstamps == stamps, \
+                    "Bad checkpoint found! Aborting."
+                planetengine.message("Found checkpoint: " + basename)
+                checkpoints_found.append(int(basename))
+        checkpoints_found = sorted(list(set(checkpoints_found)))
+    checkpoints_found = comm.bcast(checkpoints_found, root = 0)
+    return checkpoints_found
 
 def make_stamps(
         params,
@@ -351,7 +356,6 @@ class Frame:
         self.backuptarpath = os.path.join(self.backupdir, self.tarname)
 
         self.archived = False #_isArchived
-        self.checkpoints = []
 
         planetengine.message("Doing stuff with the observer...")
 
@@ -450,6 +454,7 @@ class Frame:
 
             self.most_recent_checkpoint = self.step
             self.checkpoints.append(self.step)
+            self.checkpoints = sorted(set(self.checkpoints))
 
         else:
 
@@ -464,7 +469,7 @@ class Frame:
             self.archive()
 
         if self._autobackup:
-            self.fork(self.backupdir)
+            self.backup()
 
     def update(self):
         self.step = self.system.step.value
@@ -623,6 +628,52 @@ class Frame:
                 newframe.outputPath = extPath
 
             return newframe
+
+    def backup(self):
+        planetengine.message("Making a backup...")
+        self.fork(self.backupdir)
+        planetengine.message("Backup saved.")
+
+    def recover(self):
+        planetengine.message("Reverting to backup...")
+
+        # Should make this robust: force it to do a stamp check first
+
+        backup_archived = False
+
+        if rank == 0:
+
+            assert os.path.exists(self.backuppath) or os.path.exists(self.backuptarpath), \
+                "No backup found!"
+            assert not os.path.exists(self.backuppath) and os.path.exists(self.backuptarpath), \
+                "Conflicting backups found!"
+
+            if self.archived:
+                os.remove(self.tarpath)
+            else:
+                shutil.rmtree(self.path)
+
+            if os.path.exists(self.backuptarpath):
+                backup_archived = True
+                shutil.copyfile(self.backuptarpath, self.tarpath)
+            else:
+                shutil.copytree(self.backuppath, self.path)
+
+        backup_archived = comm.bcast(backup_archived, root = 0)
+
+        was_archived = self.archived
+        if backup_archived:
+            self.archived = True
+            self.unarchive()
+
+        self.checkpoints = find_checkpoints(self.path, self.stamps)
+
+        self.load_checkpoint(min(self.checkpoints, key=lambda x:abs(x - self.step)))
+
+        if was_archived:
+            self.archive()
+
+        planetengine.message("Reverted to backup.")
 
     def branch(self, extPath, return_frame = False, archive_remote = True):
         newpath = os.path.join(extPath, self.instanceID)
