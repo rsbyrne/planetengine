@@ -258,7 +258,7 @@ def make_frame(
                 tar.extract('stamps.txt', path)
             with open(os.path.join(path, 'stamps.txt')) as json_file:
                 loadstamps = json.load(json_file)
-            shutil.rmtree(os.path.join(path, 'stamps.txt'))
+            shutil.rmtree(path)
             assert loadstamps == stamps
 
     if directory_state == 'clean':
