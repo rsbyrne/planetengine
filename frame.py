@@ -611,6 +611,7 @@ class Frame:
                     hardFork = False
 
         if return_frame:
+
             if hardFork:
                 planetengine.message(
                     "Loading newly forked frame at current model step: "
