@@ -7,6 +7,14 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
+def get_pureBoxDims(coordArray):
+    pureBoxDims = ((0., 1.),) * coordArray.shape[1]
+    return pureBoxDims
+
+def get_pureFreqs(coordArray):
+    pureFreqs = tuple([1. for dim in range(coordArray.shape[1])])
+    return pureFreqs
+
 def boundary_interpolate(fromData, toData, dim):
     # NOT PARALLEL SAFE
 
@@ -110,7 +118,7 @@ def rescale_array(
         inArray,
         inScales,
         outScales,
-        flip = None
+        flip = None,
         ):
 
     transposed = inArray.transpose()
@@ -133,9 +141,76 @@ def rescale_array(
     outArray = np.dstack(outVals)[0]
     return outArray
 
-def box(mesh, coordArray = None, boxDims = ((0., 1), (0., 1.))):
+def modulate(
+        coordArray,
+        freqs,
+        boxDims = None,
+        mirrored = False,
+        ):
+
+    pureBoxDims = get_pureBoxDims(coordArray)
+    if boxDims is None:
+        boxDims = pureBoxDims
+
+    freqDims = (np.array(pureBoxDims).T * freqs).T
+    outArray = rescale_array(coordArray, boxDims, freqDims)
+    outArray %= (1. + 1e-15)
+    outArray = rescale_array(outArray, pureBoxDims, boxDims)
+
+    return outArray
+
+def shrink_box(
+        coordArray,
+        boxDims = None,
+        tolerance = 0.01,
+        ):
+
+    pureBoxDims = get_pureBoxDims(coordArray)
+    if boxDims is None:
+        boxDims = pureBoxDims
+
+    # scale to unit box if necessary:
+    if not boxDims == pureBoxDims:
+        outBox = rescale_array(
+            coordArray,
+            boxDims,
+            pureBoxDims
+            )
+    else:
+        outBox = coordArray
+
+    # shrink the box to a specified tolerance:
+    adjBoxDims = ((0. + tolerance, 1. - tolerance),) * outBox.shape[1]
+    outBox = rescale_array(
+        outBox,
+        pureBoxDims,
+        adjBoxDims
+        )
+
+    # return box to original dimensions:
+    if not boxDims == pureBoxDims:
+        outBox = rescale_array(
+            outBox,
+            pureBoxDims,
+            boxDims
+            )
+
+    return outBox
+
+def box(
+        mesh,
+        coordArray = None,
+        boxDims = None,
+        freqs = None,
+        mirrored = False,
+        ):
+
     if coordArray is None:
         coordArray = mesh.data
+
+    if boxDims is None:
+        boxDims = get_pureBoxDims(coordArray)
+
     if type(mesh) == uw.mesh.FeMesh_Annulus:
         radialCoords = radial_coords(coordArray)
         inScales = [mesh.angularExtent, mesh.radialLengths]
@@ -152,18 +227,47 @@ def box(mesh, coordArray = None, boxDims = ((0., 1), (0., 1.))):
             list(zip(mesh.minCoord, mesh.maxCoord)),
             boxDims
             )
+
+    if (not freqs is None) or mirrored:
+        outArray = modulate(
+            outArray,
+            freqs,
+            boxDims,
+            mirrored
+            )
+
     return outArray
 
-def unbox(mesh, coordArray = None, boxDims = ((0., 1), (0., 1.))):
+def unbox(
+        mesh,
+        coordArray = None,
+        boxDims = None,
+        tolerance = 0.,
+        ):
+
     if coordArray is None:
-        coordArray = mesh.data
+        coordArray = mesh.data[:]
+    pureBoxDims = get_pureBoxDims(coordArray)
+    if boxDims is None:
+        boxDims = pureBoxDims
+
+    inBox = coordArray
+
+    if tolerance > 0.:
+        inBox = shrink_box(coordArray, boxDims, tolerance)
+    else:
+        inBox = coordArray
+
+    outBoxDims = (mesh.angularExtent, mesh.radialLengths)
+
     outArray = radial_coords(
         rescale_array(
-            coordArray,
+            inBox,
             boxDims,
-            (mesh.angularExtent, mesh.radialLengths),
+            outBoxDims,
             flip = [True, False]
             ),
         inverse = True
         )
+
     return outArray

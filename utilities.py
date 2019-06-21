@@ -298,8 +298,14 @@ def makeLocalCart(mesh):
 def copyField(field1, field2,
         tolerance = 0.01,
         rounded = False,
-        boxDims = ((0., 1.), (0., 1.))
+        boxDims = None,
+        freqs = None,
+        mirrored = False
         ):
+
+    if not boxDims is None:
+        assert np.max(np.array(boxDims)) <= 1., "Max boxdim is 1."
+        assert np.min(np.array(boxDims)) >= 0., "Min boxdim is 0."
 
     if type(field1) == uw.mesh._meshvariable.MeshVariable:
         inField = field1
@@ -344,20 +350,20 @@ def copyField(field1, field2,
     assert outMesh.dim == inMesh.dim, \
         "In and Out meshes have different dimensions!"
 
-    def mapFn(tolerance):
+    outBox = planetengine.mapping.box(
+        outMesh,
+        outCoords,
+        boxDims,
+        freqs,
+        mirrored
+        )
 
-        adjBoxDims = (
-            (boxDims[0][0] + tolerance, boxDims[0][1] - tolerance),
-            (boxDims[1][0] + tolerance, boxDims[1][1] - tolerance)
-            )
+    def mapFn(tolerance):
 
         evalCoords = planetengine.mapping.unbox(
             inMesh,
-            planetengine.mapping.box(
-                outMesh,
-                outCoords,
-                boxDims = adjBoxDims
-                )
+            outBox,
+            tolerance = tolerance
             )
 
         outField.data[:] = fullInField.evaluate(evalCoords)
