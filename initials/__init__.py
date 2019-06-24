@@ -51,7 +51,10 @@ def _apply(initials, system):
         # APPLY VALUES:
 
         if hasattr(IC, 'LOADTYPE'):
-            tolerance = copyField(IC.inVar, var)
+            tolerance = copyField(
+                IC.inVar,
+                var,
+                )
 
         else: # hence is an ordinary IC:
             box = mapping.box(mesh, substrate.data, boxDims)

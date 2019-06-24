@@ -300,7 +300,8 @@ def copyField(field1, field2,
         rounded = False,
         boxDims = None,
         freqs = None,
-        mirrored = False
+        mirrored = None,
+        blendweight = None,
         ):
 
     if not boxDims is None:
@@ -366,7 +367,16 @@ def copyField(field1, field2,
             tolerance = tolerance
             )
 
-        outField.data[:] = fullInField.evaluate(evalCoords)
+        newData = fullInField.evaluate(evalCoords)
+        oldData = outField.data[:]
+        if not blendweight is None:
+            newData = np.sum(
+                np.array([oldData, blendweight * newData]),
+                axis = 0
+                ) \
+                / (blendweight + 1)
+
+        outField.data[:] = newData
 
         message("Mapping achieved at tolerance = " + str(tolerance))
         return tolerance
