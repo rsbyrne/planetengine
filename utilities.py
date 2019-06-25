@@ -43,6 +43,25 @@ def log(text, outputPath = '', outputName = 'diaglog.txt'):
         file.write('\n')
         file.close()
 
+def hash_var(var):
+    hashVal = 0
+    if hasattr(var, 'value'):
+        hashVal += hash(str(var.value))
+    if hasattr(var, 'data'):
+        hashVal += hash(str(var.data))
+    if hasattr(var, 'mesh'):
+        hashVal += hash_var(var.mesh)
+    if hasattr(var, 'swarm'):
+        hashVal += hash_var(var.swarm)
+    if hasattr(var, '_underlyingDataItems'):
+        for subVar in var._underlyingDataItems:
+            if not var is subVar:
+                hashVal += hash_var(subVar)
+    assert not hashVal == 0, \
+        "Not a valid var for hashing!"
+    global_hashVal = sum(comm.allgather(hashVal))
+    return global_hashVal
+
 class Grouper:
     def __init__(self, indict = {}):
         self.selfdict = {}
@@ -175,13 +194,12 @@ def unpack_var(*args, return_dict = False):
             'varType': varType,
             'mesh': mesh,
             'substrate': substrate,
-            'data': data,
             'dType': dType,
             'varDim': varDim
             }
         return outDict
     else:
-        return var, varType, mesh, substrate, data, dType, varDim
+        return var, varType, mesh, substrate, dType, varDim
 
 def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     substrates = []
@@ -412,7 +430,7 @@ def copyField(field1, field2,
     return tryTolerance
 
 def meshify(*args, return_project = False):
-    var, varType, mesh, substrate, data, dType, varDim = \
+    var, varType, mesh, substrate, dType, varDim = \
         unpack_var(*args)
     pemesh = planetengine.standards.make_pemesh(mesh)
     rounded = dType in ('int', 'boolean')
@@ -529,7 +547,7 @@ def timestamp():
 
 def make_projector(*args):
 
-    var, varType, mesh, substrate, data, dType, varDim = unpack_var(args)
+    var, varType, mesh, substrate, dType, varDim = unpack_var(args)
     projection = uw.mesh.MeshVariable(
         mesh,
         varDim,
@@ -544,14 +562,25 @@ def make_projector(*args):
         try: inherited_proj.append(subVar.project)
         except: pass
 
+    setattr(projection, 'lasthash', 0)
+
     def project():
-        for inheritedProj in inherited_proj:
-            inheritedProj()
-        projector.solve()
-        if dType in ('int', 'boolean'):
-            projection.data[:] = np.round(
-                projection.data
+        currenthash = hash_var(var)
+        if projection.lasthash == currenthash:
+            planetengine.message(
+                "No underlying change detected: \
+                skipping projection."
                 )
+            pass
+        else:
+            for inheritedProj in inherited_proj:
+                inheritedProj()
+            projector.solve()
+            if dType in ('int', 'boolean'):
+                projection.data[:] = np.round(
+                    projection.data
+                    )
+            projection.lasthash = currenthash
 
     setattr(projection, 'projector', projector)
     setattr(projection, 'project', project)

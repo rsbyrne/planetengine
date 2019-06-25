@@ -18,8 +18,7 @@ import planetengine.mapping
 
 import planetengine.shapes
 import planetengine.wordhash
-# import planetengine.observer
-import planetengine.newstats
+import planetengine.observer
 import planetengine.standards
 import planetengine.visualisation
 import planetengine.diagnostics

@@ -19,13 +19,17 @@ def quickShow(*args, **kwargs):
 
 class QuickFig:
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, figname = 'default', **kwargs):
 
         self.fig = glucifer.Figure(**kwargs)
+        self.figname = figname
         self.features = set()
         self.pevars = []
+        self.fittedvars = []
 
         for arg in args:
+            if type(arg) is tuple:
+                argname, arg = arg
             if hasattr(arg, 'subMesh'):
                 self.add_grid(arg)
             elif hasattr(arg, 'particleCoordinates'):
@@ -56,10 +60,11 @@ class QuickFig:
                         except:
                             continue
             if found:
-                variables_fitted += 1
+                self.fittedvars.append(pevar)
+        self.notfittedvars = [var for var in self.pevars if not var in self.fittedvars]
 
         planetengine.message(
-            "Fitted " + str(variables_fitted) + " variables to the figure."
+            "Fitted " + str(len(self.fittedvars)) + " variables to the figure."
             )
 
     def add_grid(self, arg, **kwargs):
@@ -110,13 +115,14 @@ class QuickFig:
         assert not pevar.discrete
         assert not pevar.vector
         inFn = pevar.meshVar
-        data = inFn.evaluate(pevar.mesh)
-        inScales = planetengine.mapping.get_scales(data)[0]
-        rescaledFn = (inFn - inScales[0]) / (inScales[1] - inScales[0])
+#         data = inFn.evaluate(pevar.mesh)
+#         inScales = planetengine.mapping.get_scales(data)[0]
+#         rescaledFn = (inFn - inScales[0]) / (inScales[1] - inScales[0])
         self.fig.append(
             glucifer.objects.Contours(
                 pevar.mesh,
-                fn.math.log10(rescaledFn * 1e5 + 1.),
+                fn.math.log10(inFn),
+#                 fn.math.log10(rescaledFn * 1e5 + 1.),
                 colours = "red black",
                 interval = 0.5,
                 **kwargs
@@ -149,12 +155,19 @@ class QuickFig:
                 )
             )
 
+    def update(self):
+        for pevar in self.pevars:
+            pevar.update()
+
     def show(self):
+        self.update()
         self.fig.show()
 
-    def save(self, path):
+    def save(self, path = '', name = None):
+        self.update()
+        if name is None:
+            name = self.figname
         if rank == 0:
-            directory = os.path.dirname(path)
-            if not os.path.isdir(directory):
-                os.mkdir(directory)
-        self.fig.save(path)
+            if not os.path.isdir(path):
+                os.mkdir(path)
+        self.fig.save(os.path.join(path, name))

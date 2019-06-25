@@ -47,7 +47,6 @@ class Checkpointer:
     def checkpoint(
             self,
             path = 'test',
-            clear_data = True,
             ):
 
         coldstart = True
@@ -117,31 +116,14 @@ class Checkpointer:
 
         planetengine.message("Saving figures...")
         if not self.figs is None:
-            for name in self.figs:
-                fig = self.figs[name]
-                fig.save(os.path.join(checkpointDir, name))
+            for fig in self.figs:
+                fig.save(checkpointDir)
         planetengine.message("Figures saved.")
 
         planetengine.message("Saving vars of state...")
         if not self.varsOfState is None:
             utilities.varsOnDisk(self.varsOfState, checkpointDir, 'save')
         planetengine.message("Saved.")
-
-#         planetengine.message("Saving snapshot...")
-#         if rank == 0:
-#             if not self.dataCollectors is None:
-#                 for dataCollector in self.dataCollectors:
-#                     for index, name in enumerate(dataCollector.names):
-#                         dataArray = dataCollector.datasets[index][-1:]
-#                         headerStr = dataCollector.headers[index]
-#                         filename = os.path.join(checkpointDir, name + "_snapshot" + ".txt")
-#                         if not type(dataArray) == type(None):
-#                             with open(filename, 'w') as openedfile:
-#                                 np.savetxt(openedfile, dataArray,
-#                                     delimiter = ",",
-#                                     header = headerStr
-#                                     )
-#         planetengine.message("Snapshot saved.")
 
         planetengine.message("Saving snapshot...")
         if rank == 0:
@@ -170,7 +152,7 @@ class Checkpointer:
         planetengine.message("Saving datasets...")
         if not self.dataCollectors is None:
             for dataCollector in self.dataCollectors:
-                for row in dataCollector.out(clear = clear_data):
+                for row in dataCollector.out():
                     if rank == 0:
                         name, headerStr, dataArray = row
                         filename = os.path.join(path, name + '.csv')

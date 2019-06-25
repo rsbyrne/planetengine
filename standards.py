@@ -81,9 +81,8 @@ class PeVar:
         self.varType = unpackedVar[1]
         self.mesh = unpackedVar[2]
         self.substrate = unpackedVar[3]
-        self.data = unpackedVar[4]
-        self.dType = unpackedVar[5]
-        self.varDim = unpackedVar[6]
+        self.dType = unpackedVar[4]
+        self.varDim = unpackedVar[5]
 
         self.vector = self.varDim == self.mesh.dim
         self.discrete = self.dType == 'int'

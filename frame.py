@@ -97,6 +97,8 @@ def load_frame(
                 **configs[varName]
                 )
 
+    # !!! NEEDS TO BE FIXED !!! #
+
     observerscript = utilities.local_import(
         os.path.join(path, '_observerscript.py')
         )
@@ -357,14 +359,6 @@ class Frame:
 
         self.archived = False #_isArchived
 
-        planetengine.message("Doing stuff with the observer...")
-
-        self.tools = observer.make_tools(self.system)
-        self.figs = observer.make_figs(self.system, self.tools)
-        self.data = observer.make_data(self.system, self.tools)
-
-        planetengine.message("Observer stuff complete.")
-
         self.varsOfState = self.system.varsOfState
 
 #         if varsOfState is None:
@@ -389,25 +383,13 @@ class Frame:
         self.checkpointer = planetengine.checkpoint.Checkpointer(
             step = self.system.step,
             varsOfState = self.system.varsOfState,
-            figs = self.figs,
-            dataCollectors = self.data['collectors'],
+            figs = self.observer.figs,
+            dataCollectors = self.observer.collectors,
             scripts = self.scripts,
             inputs = self.inputs,
             stamps = self.stamps,
             inFrames = self.inFrames
             )
-
-        self.observerDict = {}
-
-        self.projections, self.projectors, self.project = utilities.make_projectors(
-            {**self.system.varsOfState, **self.observerDict}
-            )
-        # CHANGED WHEN NEW FEATURES ARE READY:
-        try:
-            self.projections.update(self.tools.projections)
-            self.projectors.update(self.tools.projectors)
-        except:
-            pass
 
         if type(self.system.mesh) == uw.mesh._spherical_mesh.FeMesh_Annulus:
             self.blackhole = [0., 0.]
@@ -435,15 +417,30 @@ class Frame:
     def reset(self):
         self.initialise()
 
+    def all_analyse(self):
+        planetengine.message("Analysing...")
+        for analyser in self.observer.analysers:
+            analyser.analyse()
+        planetengine.message("Analysis complete!")
+
+    def all_collect(self):
+        planetengine.message("Collecting...")
+        for collector in self.observer.collectors:
+            collector.collect()
+        planetengine.message("Collecting complete!")
+
+    def all_clear(self):
+        for collector in self.observer.collectors:
+            collector.clear()
+
     def checkpoint(self, path = None, archive_remote = False):
 
         if self.archived:
             self.unarchive()
 
-        if path is None or path == self.path:
+        self.all_collect()
 
-            if not self.allCollected:
-                self.all_collect()
+        if path is None or path == self.path:
 
             path = self.path
 
@@ -452,15 +449,15 @@ class Frame:
             else:
                 self.checkpointer.checkpoint(path)
 
+            self.all_clear()
+
             self.most_recent_checkpoint = self.step
             self.checkpoints.append(self.step)
             self.checkpoints = sorted(set(self.checkpoints))
 
         else:
 
-            self.all_analyse()
-
-            self.checkpointer.checkpoint(path, clear_data = False)
+            self.checkpointer.checkpoint(path)
 
             if archive_remote:
                 self.archive(path)
@@ -474,45 +471,14 @@ class Frame:
     def update(self):
         self.step = self.system.step.value
         self.modeltime = self.system.modeltime.value
-        self.allAnalysed = False
-        self.allCollected = False
-        self.allProjected = False
-
-    def all_analyse(self):
-        planetengine.message("Analysing...")
-        if not self.allProjected:
-            self.project()
-            self.allProjected = True
-        for analyser in self.data['analysers']:
-            analyser.analyse()
-        self.allAnalysed = True
-        planetengine.message("Analysis complete!")
 
     def report(self):
         planetengine.message("Reporting...")
-#         utilities.quickShow(*sorted(self.system.varsOfState.values()))
-        if not self.allAnalysed:
-            self.all_analyse()
-        for analyser in self.data['analysers']:
+        for analyser in self.observer.analysers:
             analyser.report()
-        for figname in self.figs:
-            if rank == 0:
-                print(figname)
-            self.figs[figname].show()
+        for fig in self.observer.figs:
+            fig.show()
         planetengine.message("Reporting complete!")
-
-    def all_collect(self):
-        planetengine.message("Collecting...")
-        if not self.allAnalysed:
-            self.all_analyse()
-        for collector in self.data['collectors']:
-            collector.collect()
-        self.allCollected = True
-        planetengine.message("Collecting complete!")
-
-    def all_clear(self):
-        for collector in self.data['collectors']:
-            collector.clear()
 
     def iterate(self):
         assert not self._is_child, \
@@ -527,13 +493,17 @@ class Frame:
         self.traverse(lambda: self.step >= stopStep)
 
     def traverse(self, stopCondition,
-            collectCondition = lambda: False,
+            collectConditions = lambda: False,
             checkpointCondition = lambda: False,
             reportCondition = lambda: False,
             forge_on = False,
             ):
 
         self.status = "pre-traverse"
+
+        if not type(collectConditions) is list:
+            collectConditions = [collectConditions,]
+            assert len(collectConditions) == len(self.observer.collectors)
 
         if checkpointCondition():
             self.checkpoint()
@@ -547,8 +517,13 @@ class Frame:
                 self.iterate()
                 if checkpointCondition():
                     self.checkpoint()
-                elif collectCondition():
-                    self.all_collect()
+                else:
+                    for collector, collectCondition in zip(
+                            self.observer.collectors,
+                            collectConditions
+                            ):
+                        if collectCondition():
+                            collector.collect()
                 if reportCondition():
                     self.report()
 
@@ -831,7 +806,12 @@ class Frame:
 
             dataDict = {}
             if rank == 0:
-                snapshot = os.path.join(checkpointFile, 'zerodData_snapshot.txt')
+                filelist = sorted(os.listdir(checkpointFile))
+                for file in filelist:
+                    if '_snapshot.txt' in file:
+                        # Any saved data will do:
+                        snapshot = os.path.join(checkpointFile, file)
+                        break
                 with open(snapshot, 'r') as csv_file:
                     csv_reader = csv.reader(csv_file, delimiter=',')
                     header, data = csv_reader

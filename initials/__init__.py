@@ -44,7 +44,7 @@ def _apply(initials, system):
     for varName, var in sorted(varsOfState.items()):
 
         IC = initials[varName]
-        var, varType, mesh, substrate, data, dType, varDim = unpack_var(var)
+        var, varType, mesh, substrate, dType, varDim = unpack_var(var)
         try: boxDims = system.boxDims
         except: boxDims = ((0., 1.),) * system.mesh.dim
 
@@ -79,7 +79,7 @@ def _apply(initials, system):
 
 def preview(IC, _2D = True):
     if hasattr(IC, 'LOADTYPE'):
-        var, varType, mesh, substrate, data, dType, varDim = \
+        var, varType, mesh, substrate, dType, varDim = \
             planetengine.unpack_var(IC.inVar)
         pemesh = planetengine.standards.default_mesh[mesh.dim]
         standinVar = pemesh.autoVars[varDim]
