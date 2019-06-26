@@ -1,9 +1,10 @@
 import underworld as uw
-from planetengine import mapping
-from planetengine.utilities import meshify
-from planetengine import frame
 import numpy as np
 import os
+
+from .. import mapping
+from .. import frame
+from ..utilities import meshify
 
 LOADTYPE = True
 

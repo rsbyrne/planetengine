@@ -18,8 +18,8 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
-import planetengine
-from planetengine import utilities
+from . import utilities
+from .utilities import message
 
 class Checkpointer:
 
@@ -60,7 +60,7 @@ class Checkpointer:
                 if not loadstamps == self.stamps:
                     raise Exception("You are trying to save a model in a different model's directory!")
                 else:
-                    planetengine.message("Pre-existing directory for this model has been found. Continuing...")
+                    message("Pre-existing directory for this model has been found. Continuing...")
 
                 coldstart = False
 
@@ -70,7 +70,7 @@ class Checkpointer:
 
             if rank == 0:
 
-                planetengine.message("No pre-existing directory for this model found. Making a new one...")
+                message("No pre-existing directory for this model found. Making a new one...")
 
                 if not os.path.isdir(path):
                     os.makedirs(path)
@@ -96,7 +96,7 @@ class Checkpointer:
                     archive_remote = False
                     )
 
-        planetengine.message("Checkpointing...")
+        message("Checkpointing...")
 
         if self.step is None:
             stepStr = ""
@@ -108,24 +108,24 @@ class Checkpointer:
 
         if rank == 0:
             if os.path.isdir(checkpointDir):
-                planetengine.message('Checkpoint directory found: removing')
+                message('Checkpoint directory found: removing')
                 shutil.rmtree(checkpointDir)
             else:
-                planetengine.message('Making checkpoint directory.')
+                message('Making checkpoint directory.')
                 os.makedirs(checkpointDir)
 
-        planetengine.message("Saving figures...")
+        message("Saving figures...")
         if not self.figs is None:
             for fig in self.figs:
                 fig.save(checkpointDir)
-        planetengine.message("Figures saved.")
+        message("Figures saved.")
 
-        planetengine.message("Saving vars of state...")
+        message("Saving vars of state...")
         if not self.varsOfState is None:
             utilities.varsOnDisk(self.varsOfState, checkpointDir, 'save')
-        planetengine.message("Saved.")
+        message("Saved.")
 
-        planetengine.message("Saving snapshot...")
+        message("Saving snapshot...")
         if rank == 0:
             if not self.dataCollectors is None:
                 for dataCollector in self.dataCollectors:
@@ -140,16 +140,16 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = headerStr
                                     )
-        planetengine.message("Snapshot saved.")
+        message("Snapshot saved.")
 
-        planetengine.message("Saving stamps...")
+        message("Saving stamps...")
         if rank == 0:
             filename = os.path.join(checkpointDir, 'stamps.txt')
             with open(filename, 'w') as file:
                  file.write(json.dumps(self.stamps))
-        planetengine.message("Stamps saved.")
+        message("Stamps saved.")
 
-        planetengine.message("Saving datasets...")
+        message("Saving datasets...")
         if not self.dataCollectors is None:
             for dataCollector in self.dataCollectors:
                 for row in dataCollector.out():
@@ -167,10 +167,10 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = header
                                     )
-        planetengine.message("Datasets saved.")
+        message("Datasets saved.")
 
         if rank == 0:
             assert os.path.isfile(os.path.join(checkpointDir, 'stamps.txt')), \
                 "The files did not get saved for some reason!"
 
-        planetengine.message("Checkpointed!")
+        message("Checkpointed!")

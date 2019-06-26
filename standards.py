@@ -1,6 +1,5 @@
-import planetengine
-from planetengine import utilities
-from planetengine import mapping
+from . import utilities
+from . import mapping
 
 import underworld as uw
 from underworld import function as fn
@@ -39,7 +38,7 @@ def make_pevar(var, attach = True, force = False):
 #             set the 'force' kwarg = True."
 #             )
     else:
-        unpacked = planetengine.utilities.unpack_var(var)
+        unpacked = utilities.unpack_var(var)
         var = unpacked[0]
         pevar = PeVar(unpacked)
         if attach:
@@ -94,7 +93,7 @@ class PeVar:
         if self.varType == 'meshVar':
             self.meshVar = self.var
         else:
-            self.meshVar = planetengine.utilities.make_projector(
+            self.meshVar = utilities.make_projector(
                 self.var, self.substrate
                 )
 

@@ -6,10 +6,11 @@ import glucifer
 import numpy as np
 import math
 
-import planetengine
-from planetengine.utilities import Grouper
-from planetengine import analysis
-from planetengine import visualisation
+from . import utilities
+from . import analysis
+from . import visualisation
+from .utilities import Grouper
+from .standards import standardise
 
 def build(obsVars, step, modeltime):
 
@@ -26,7 +27,7 @@ def build(obsVars, step, modeltime):
 
     for varName, var in sorted(obsVars.items()):
 
-        pevar = planetengine.standardise(var)
+        pevar = standardise(var)
         var = pevar.var
 
         standardIntegralSuite = {
@@ -35,7 +36,7 @@ def build(obsVars, step, modeltime):
             'gradient': [None, 'ang', 'rad']
             }
 
-        for inputDict in planetengine.utilities.suite_list(standardIntegralSuite):
+        for inputDict in utilities.suite_list(standardIntegralSuite):
 
             anVar = analysis.Analyse.StandardIntegral(
                 var,

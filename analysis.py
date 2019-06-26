@@ -12,9 +12,9 @@ import inspect
 import importlib
 import csv
 
-import planetengine
-from planetengine import unpack_var
-from planetengine import standardise
+from . import utilities
+from .standards import standardise
+from .utilities import message
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -53,7 +53,7 @@ class Analyse:
                 nonDim = None,
                 ):
 
-            planetengine.message("Building integral...")
+            message("Building integral...")
 
             self.inputs = locals().copy()
             del self.inputs['inVar']
@@ -61,11 +61,11 @@ class Analyse:
 
             self.opTag = ''
 
-            unpacked = planetengine.unpack_var(inVar, return_dict = True)
+            unpacked = utilities.unpack_var(inVar, return_dict = True)
             self.rawvar = unpacked['var']
             var = self.rawvar
             mesh = unpacked['mesh']
-            pemesh = planetengine.standardise(mesh)
+            pemesh = standardise(mesh)
 
             if unpacked['varDim'] == mesh.dim:
                 # hence is vector
@@ -122,12 +122,12 @@ class Analyse:
             self.lasthash = 0
             self.val = self.evaluate()
 
-            planetengine.message("Integral built.")
+            message("Integral built.")
 
         def evaluate(self):
-            currenthash = planetengine.utilities.hash_var(self.rawvar)
+            currenthash = utilities.hash_var(self.rawvar)
             if currenthash == self.lasthash:
-                planetengine.message(
+                message(
                     "No underlying change detected: \
                     skipping evaluation."
                     )
@@ -209,7 +209,7 @@ class Analyser:
     def report(self):
         self.analyse()
         for pair in self.dataBrief:
-            planetengine.message(pair[0], pair[1])
+            message(pair[0], pair[1])
 
 class DataCollector:
 

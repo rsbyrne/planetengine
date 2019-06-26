@@ -16,12 +16,13 @@ import hashlib
 import random
 import io
 
-import planetengine
-
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
+
+from . import standards
+from . import mapping
 
 root = 0
 
@@ -120,7 +121,7 @@ def unpack_var(*args, return_dict = False):
                     try: subVars.append(unpack_var(subVar))
                     except: pass
                 if len(subVars) == 0:
-                    planetengine.message(
+                    message(
                         "No substrate detected or was provided: \
                         using default mesh."
                         )
@@ -152,10 +153,10 @@ def unpack_var(*args, return_dict = False):
 
     if substrate is None:
         try:
-            substrate = planetengine.standards.default_mesh[2]
+            substrate = standards.default_mesh[2]
             data = var.evaluate(substrate)
         except:
-            substrate = planetengine.standards.default_mesh[3]
+            substrate = standards.default_mesh[3]
             data = var.evaluate(substrate)
     else:
         data = var.evaluate(substrate)
@@ -369,7 +370,7 @@ def copyField(field1, field2,
     assert outMesh.dim == inMesh.dim, \
         "In and Out meshes have different dimensions!"
 
-    outBox = planetengine.mapping.box(
+    outBox = mapping.box(
         outMesh,
         outCoords,
         boxDims,
@@ -379,7 +380,7 @@ def copyField(field1, field2,
 
     def mapFn(tolerance):
 
-        evalCoords = planetengine.mapping.unbox(
+        evalCoords = mapping.unbox(
             inMesh,
             outBox,
             tolerance = tolerance
@@ -432,7 +433,7 @@ def copyField(field1, field2,
 def meshify(*args, return_project = False):
     var, varType, mesh, substrate, dType, varDim = \
         unpack_var(*args)
-    pemesh = planetengine.standards.make_pemesh(mesh)
+    pemesh = standards.make_pemesh(mesh)
     rounded = dType in ('int', 'boolean')
     meshVar = pemesh.meshify(
         var,
@@ -567,7 +568,7 @@ def make_projector(*args):
     def project():
         currenthash = hash_var(var)
         if projection.lasthash == currenthash:
-            planetengine.message(
+            message(
                 "No underlying change detected: \
                 skipping projection."
                 )
@@ -587,51 +588,3 @@ def make_projector(*args):
     setattr(projection, 'inherited_proj', inherited_proj)
 
     return projection
-
-####### GET RID OF THIS:
-# (is mentioned in 'frame', observerscripts etc.)
-def make_projectors(varDict):
-    '''
-    Takes a dictionary with keys for strings
-    and values that can be either mesh variables,
-    swarm variables, or tuples of the form:
-    (Underworld function, substrate, dimension, dType),
-    where 'substrate' is either a mesh, if the function
-    is dependent solely on mesh variables, or a swarm,
-    if the function is partly or wholely dependent
-    on a swarm variable, and dType is a string reading either
-    'double' or 'int' (the two types that Underworld functions
-    can handle).
-    Returns a tuple of objects which are used
-    to project data structures onto mesh variables
-    which are more digestible by Planetengine.
-    '''
-    projections = {}
-    projectors = {}
-    for varName, var in sorted(varDict.items()):
-        if not type(var) == uw.mesh._meshvariable.MeshVariable:
-            if type(var) == uw.swarm._swarmvariable.SwarmVariable:
-                mesh = var.swarm.mesh
-                dim = var.count
-            elif type(var) == tuple:
-                assert issubclass(type(var[0]), uw.function.Function), \
-                    "Projections must be meshvar, swarmvar, or uw function."
-                var, substrate, dim, dType = var
-                try:
-                    mesh = substrate.mesh
-                except:
-                    mesh = substrate
-            projection = uw.mesh.MeshVariable(
-                mesh,
-                dim,
-                )
-            projector = uw.utils.MeshVariable_Projection(
-                projection,
-                var,
-                )
-            projections[varName] = projection
-            projectors[varName] = projector
-    def project(varsToProject = projectors):
-        for varName in sorted(varsToProject):
-            projectors[varName].solve()
-    return projections, projectors, project

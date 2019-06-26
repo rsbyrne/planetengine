@@ -1,24 +1,19 @@
-import planetengine.utilities
+from . import utilities
+from . import analysis
+from . import checkpoint
+from . import frame
+from . import initials
+from . import mapping
+from . import shapes
+from . import wordhash
+from . import observer
+from . import standards
+from . import visualisation
 
-from planetengine.utilities import message
-from planetengine.utilities import log
-
-from planetengine.utilities import copyField
-from planetengine.visualisation import quickShow
-from planetengine.utilities import meshify
-from planetengine.utilities import unpack_var
-from planetengine.standards import standardise
-
-import planetengine.analysis
-import planetengine.checkpoint
-import planetengine.frame
-import planetengine.initials
-import planetengine.mapping
-# import planetengine.post
-
-import planetengine.shapes
-import planetengine.wordhash
-import planetengine.observer
-import planetengine.standards
-import planetengine.visualisation
-import planetengine.diagnostics
+from .utilities import message
+from .utilities import log
+from .utilities import copyField
+from .visualisation import quickShow
+from .utilities import meshify
+from .utilities import unpack_var
+from .standards import standardise

@@ -1,6 +1,7 @@
-from planetengine.mapping import box
-from planetengine.utilities import copyField
 import numpy as np
+
+from ..mapping import box
+from ..utilities import copyField
 
 class IC:
 

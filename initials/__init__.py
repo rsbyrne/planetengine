@@ -1,9 +1,13 @@
-import planetengine.initials.sinusoidal
-import planetengine.initials.extents
-import planetengine.initials.load
-from planetengine import mapping
-from planetengine.utilities import unpack_var
-from planetengine.utilities import copyField
+from . import sinusoidal
+from . import extents
+from . import load
+
+from .. import mapping
+from .. import standards
+from ..utilities import unpack_var
+from ..utilities import copyField
+from ..standards import standardise
+from ..visualisation import quickShow
 
 def set_boundaries(variable, values):
 
@@ -12,7 +16,7 @@ def set_boundaries(variable, values):
     except:
         raise Exception("Variable does not appear to be mesh variable.")
 
-    walls = planetengine.standardise(mesh).wallsList
+    walls = standardise(mesh).wallsList
 
     for i, component in enumerate(values):
         for value, wall in zip(component, walls):
@@ -80,17 +84,17 @@ def _apply(initials, system):
 def preview(IC, _2D = True):
     if hasattr(IC, 'LOADTYPE'):
         var, varType, mesh, substrate, dType, varDim = \
-            planetengine.unpack_var(IC.inVar)
-        pemesh = planetengine.standards.default_mesh[mesh.dim]
+            unpack_var(IC.inVar)
+        pemesh = standards.default_mesh[mesh.dim]
         standinVar = pemesh.autoVars[varDim]
-        planetengine.copyField(var, standinVar)
+        copyField(var, standinVar)
     else:
         try:
-            pemesh = planetengine.standards.default_mesh[2]
+            pemesh = standards.default_mesh[2]
             preview_data = IC.evaluate(pemesh.mesh.data)
         except:
-            pemesh = planetengine.standards.default_mesh[3]
+            pemesh = standards.default_mesh[3]
             preview_data = IC.evaluate(pemesh.mesh.data)
         standinVar = pemesh.autoVars[preview_data.shape[1]]
         standinVar.data[:] = preview_data
-    planetengine.quickShow(standinVar)
+    quickShow(standinVar)

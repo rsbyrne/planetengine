@@ -10,11 +10,12 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
-import planetengine
+from . import standards
+from .utilities import message
 
 def quickShow(*args, **kwargs):
 
-    quickFig = planetengine.visualisation.QuickFig(*args, **kwargs)
+    quickFig = QuickFig(*args, **kwargs)
     quickFig.show()
 
 class QuickFig:
@@ -35,7 +36,7 @@ class QuickFig:
             elif hasattr(arg, 'particleCoordinates'):
                 self.add_swarm(arg)
             else:
-                pevar = planetengine.standards.make_pevar(arg)
+                pevar = standards.make_pevar(arg)
                 self.pevars.append(pevar)
 
         self.inventory = [
@@ -63,7 +64,7 @@ class QuickFig:
                 self.fittedvars.append(pevar)
         self.notfittedvars = [var for var in self.pevars if not var in self.fittedvars]
 
-        planetengine.message(
+        message(
             "Fitted " + str(len(self.fittedvars)) + " variables to the figure."
             )
 

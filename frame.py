@@ -18,8 +18,11 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
-import planetengine
-from planetengine import utilities
+from . import utilities
+from .wordhash import wordhash as wordhashFn
+from . import checkpoint
+from .initials import apply
+from .utilities import message
 
 def load_frame(
         outputPath = '',
@@ -54,10 +57,10 @@ def load_frame(
         if os.path.isfile(tarpath):
             assert not os.path.isdir(path), \
                 "Conflicting archive and directory found."
-            planetengine.message("Tar found - unarchiving...")
+            message("Tar found - unarchiving...")
             with tarfile.open(tarpath) as tar:
                 tar.extractall(path)
-            planetengine.message("Unarchived.")
+            message("Unarchived.")
             assert os.path.isdir(path), \
                 "Archive contained the wrong model file somehow."
             os.remove(tarpath)
@@ -150,7 +153,7 @@ def find_checkpoints(path, stamps):
                     loadconfig = json.load(json_file)
                 assert loadstamps == stamps, \
                     "Bad checkpoint found! Aborting."
-                planetengine.message("Found checkpoint: " + basename)
+                message("Found checkpoint: " + basename)
                 checkpoints_found.append(int(basename))
         checkpoints_found = sorted(list(set(checkpoints_found)))
     checkpoints_found = comm.bcast(checkpoints_found, root = 0)
@@ -164,7 +167,7 @@ def make_stamps(
         _use_wordhash = True,
         ):
 
-    planetengine.message("Making stamps...")
+    message("Making stamps...")
 
     stamps = {}
     if rank == 0:
@@ -183,13 +186,13 @@ def make_stamps(
 
     stamps = comm.bcast(stamps, root = 0)
 
-    wordhash = planetengine.wordhash.wordhash(stamps['allstamp'])
+    wordhash = wordhashFn(stamps['allstamp'])
     if _use_wordhash:
         hashID = 'pemod_' + wordhash
     else:
         hashID = 'pemod_' + stamps['allstamp']
 
-    planetengine.message("Stamps made.")
+    message("Stamps made.")
 
     return stamps, hashID
 
@@ -211,7 +214,7 @@ def make_frame(
     initials condition classes.
     '''
 
-    planetengine.message("Making a new frame...")
+    message("Making a new frame...")
 
     scripts = {
         'systemscript': system.script,
@@ -278,7 +281,7 @@ def make_frame(
             instanceID
             )
 
-    planetengine.message("Frame made.")
+    message("Frame made.")
 
     return frame
 
@@ -310,7 +313,7 @@ class Frame:
 
         assert system.varsOfState.keys() == initials.keys()
 
-        planetengine.message("Building frame...")
+        message("Building frame...")
 
         self.system = system
         self.observer = observer
@@ -369,18 +372,18 @@ class Frame:
 #         if varScales is None:
 #             try: self.varsOfState = self.system.varsOfState
 
-        planetengine.message("Loading interior frames...")
+        message("Loading interior frames...")
         self.inFrames = []
         for IC in self.initials.values():
             try:
                 self.inFrames.append(IC.inFrame)
             except:
                 pass
-        planetengine.message(
+        message(
             "Loaded " + str(len(self.inFrames)) + " interior frames."
             )
 
-        self.checkpointer = planetengine.checkpoint.Checkpointer(
+        self.checkpointer = checkpoint.Checkpointer(
             step = self.system.step,
             varsOfState = self.system.varsOfState,
             figs = self.observer.figs,
@@ -400,11 +403,11 @@ class Frame:
 
         self.initialise()
 
-        planetengine.message("Frame built!")
+        message("Frame built!")
 
     def initialise(self):
-        planetengine.message("Initialising...")
-        planetengine.initials.apply(
+        message("Initialising...")
+        apply(
             self.initials, 
             self.system,
             )
@@ -412,22 +415,22 @@ class Frame:
         self.most_recent_checkpoint = None
         self.update()
         self.status = "ready"
-        planetengine.message("Initialisation complete!")
+        message("Initialisation complete!")
 
     def reset(self):
         self.initialise()
 
     def all_analyse(self):
-        planetengine.message("Analysing...")
+        message("Analysing...")
         for analyser in self.observer.analysers:
             analyser.analyse()
-        planetengine.message("Analysis complete!")
+        message("Analysis complete!")
 
     def all_collect(self):
-        planetengine.message("Collecting...")
+        message("Collecting...")
         for collector in self.observer.collectors:
             collector.collect()
-        planetengine.message("Collecting complete!")
+        message("Collecting complete!")
 
     def all_clear(self):
         for collector in self.observer.collectors:
@@ -445,7 +448,7 @@ class Frame:
             path = self.path
 
             if self.step in self.checkpoints:
-                planetengine.message("Checkpoint already exists! Skipping.")
+                message("Checkpoint already exists! Skipping.")
             else:
                 self.checkpointer.checkpoint(path)
 
@@ -473,20 +476,20 @@ class Frame:
         self.modeltime = self.system.modeltime.value
 
     def report(self):
-        planetengine.message("Reporting...")
+        message("Reporting...")
         for analyser in self.observer.analysers:
             analyser.report()
         for fig in self.observer.figs:
             fig.show()
-        planetengine.message("Reporting complete!")
+        message("Reporting complete!")
 
     def iterate(self):
         assert not self._is_child, \
             "Cannot iterate child models indendently."
-        planetengine.message("Iterating step " + str(self.step) + " ...")
+        message("Iterating step " + str(self.step) + " ...")
         self.system.iterate()
         self.update()
-        planetengine.message("Iteration complete!")
+        message("Iteration complete!")
 
     def go(self, steps):
         stopStep = self.step + steps
@@ -508,7 +511,7 @@ class Frame:
         if checkpointCondition():
             self.checkpoint()
 
-        planetengine.message("Running...")
+        message("Running...")
 
         while not stopCondition():
 
@@ -529,21 +532,21 @@ class Frame:
 
             except:
                 if forge_on:
-                    planetengine.message("Something went wrong...loading last checkpoint.")
+                    message("Something went wrong...loading last checkpoint.")
                     assert type(self.most_recent_checkpoint) == int, "No most recent checkpoint logged."
                     self.load_checkpoint(self.most_recent_checkpoint)
                 else:
                     raise Exception("Something went wrong.")
 
         self.status = "post-traverse"
-        planetengine.message("Done!")
+        message("Done!")
         if checkpointCondition():
             self.checkpoint()
         self.status = "ready"
 
     def fork(self, extPath, return_frame = False):
 
-        planetengine.message("Forking model to new directory...")
+        message("Forking model to new directory...")
 
         if rank == 0:
 
@@ -558,7 +561,7 @@ class Frame:
                     self.tarpath,
                     newpath
                     )
-                planetengine.message(
+                message(
                     "Model forked to directory: " + extPath + self.tarname
                     )
                 hardFork = True
@@ -574,7 +577,7 @@ class Frame:
                         self.path,
                         newpath
                         )
-                    planetengine.message(
+                    message(
                         "Model forked to directory: " + extPath + self.instanceID
                         )
                     if self.autoarchive:
@@ -582,21 +585,21 @@ class Frame:
                         self.archive(newpath)
                     hardFork = True
                 else:
-                    planetengine.message("No files to fork yet.")
+                    message("No files to fork yet.")
                     hardFork = False
 
         if return_frame:
 
             if hardFork:
-                planetengine.message(
+                message(
                     "Loading newly forked frame at current model step: "
                     )
                 newframe = load_frame(extPath, self.instanceID, loadStep = self.step)
-                planetengine.message(
+                message(
                     "Loaded newly forked frame."
                     )
             else:
-                planetengine.message(
+                message(
                     "Returning a copy of the current class object \
                     with a new outputPath."
                     )
@@ -606,12 +609,12 @@ class Frame:
             return newframe
 
     def backup(self):
-        planetengine.message("Making a backup...")
+        message("Making a backup...")
         self.fork(self.backupdir)
-        planetengine.message("Backup saved.")
+        message("Backup saved.")
 
     def recover(self):
-        planetengine.message("Reverting to backup...")
+        message("Reverting to backup...")
 
         # Should make this robust: force it to do a stamp check first
 
@@ -649,7 +652,7 @@ class Frame:
         if was_archived:
             self.archive()
 
-        planetengine.message("Reverted to backup.")
+        message("Reverted to backup.")
 
     def branch(self, extPath, return_frame = False, archive_remote = True):
         newpath = os.path.join(extPath, self.instanceID)
@@ -664,30 +667,30 @@ class Frame:
     def archive(self, _path = None):
 
         if self.archived and (_path is None or _path == self.path):
-            planetengine.message("Already archived!")
+            message("Already archived!")
             return None
 
         # If this frame happens to be located inside another frame,
         # we need to bump the call up to that parent frame:
 
         if self._is_child:
-            planetengine.message("Bumping archive call up to parent...")
+            message("Bumping archive call up to parent...")
             self._parentFrame.archive(_path)
 
         else:
 
-            planetengine.message("Archiving...")
+            message("Archiving...")
 
             if _path is None or _path == self.path:
                 path = self.path
                 tarpath = self.tarpath
                 localArchive = True
-                planetengine.message("Making a local archive...")
+                message("Making a local archive...")
             else:
                 path = _path
                 tarpath = path + '.tar.gz'
                 localArchive = False
-                planetengine.message("Making a remote archive...")
+                message("Making a remote archive...")
 
             if rank == 0:
 
@@ -702,43 +705,43 @@ class Frame:
                 assert os.path.isfile(tarpath), \
                     "The archive should have saved, but we can't find it!"
 
-                planetengine.message("Deleting model directory...")
+                message("Deleting model directory...")
 
                 shutil.rmtree(path)
 
-                planetengine.message("Model directory deleted.")
+                message("Model directory deleted.")
 
             if localArchive:
                 self._set_inner_archive_status(True)
 
-            planetengine.message("Archived!")
+            message("Archived!")
 
     def unarchive(self, _path = None):
 
         if not self.archived and (_path is None or _path == self.path):
-            planetengine.message("Already unarchived!")
+            message("Already unarchived!")
             return None
 
         # If this frame happens to be located inside another frame,
         # we need to bump the call up to that parent frame:
         if self._is_child:
-            planetengine.message("Bumping unarchive call up to parent...")
+            message("Bumping unarchive call up to parent...")
             self._parentFrame.unarchive(_path)
 
         else:
 
-            planetengine.message("Unarchiving...")
+            message("Unarchiving...")
 
             if _path is None or _path == self.path:
                 path = self.path
                 tarpath = self.tarpath
                 localArchive = True
-                planetengine.message("Unarchiving the local archive...")
+                message("Unarchiving the local archive...")
             else:
                 path = _path
                 tarpath = path + '.tar.gz'
                 localArchive = False
-                planetengine.message("Unarchiving a remote archive...")
+                message("Unarchiving a remote archive...")
 
             if rank == 0:
                 assert not os.path.isdir(path), \
@@ -752,16 +755,16 @@ class Frame:
                 assert os.path.isdir(path), \
                     "The model directory doesn't appear to exist."
 
-                planetengine.message("Deleting archive...")
+                message("Deleting archive...")
 
                 os.remove(tarpath)
 
-                planetengine.message("Model directory deleted.")
+                message("Model directory deleted.")
 
             if localArchive:
                 self._set_inner_archive_status(False)
 
-            planetengine.message("Unarchived!")
+            message("Unarchived!")
 
     def _set_inner_archive_status(self, status):
         self.archived = status
@@ -771,7 +774,7 @@ class Frame:
 
     def load_checkpoint(self, loadStep):
 
-        planetengine.message("Loading checkpoint...")
+        message("Loading checkpoint...")
 
         if loadStep == 'max':
             loadStep = max(self.checkpoints)
@@ -781,7 +784,7 @@ class Frame:
             loadStep = self.most_recent_checkpoint
 
         if loadStep == self.step:
-            planetengine.message(
+            message(
                 "Already at step " + str(loadStep) + ": aborting load_checkpoint."
                 )
 
@@ -831,4 +834,4 @@ class Frame:
             if self.autoarchive and not self._is_child:
                 self.archive()
 
-            planetengine.message("Checkpoint successfully loaded!")
+            message("Checkpoint successfully loaded!")
