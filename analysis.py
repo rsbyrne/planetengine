@@ -32,7 +32,7 @@ class Analyse:
         - an Underworld variable or function based on a variable.
         comp: for multi-dimensional fields, choose the component
         to analyse. Defaults to the magnitude.
-        - 'mag', 'ang', 'ang1', 'ang2', 'rad'.
+        - None, 'ang', 'ang1', 'ang2', 'rad'.
         gradient: choose the component of the gradient to integrate,
         if any.
         - None, 'ang', 'ang1', 'ang2', 'rad', 'mag'.
@@ -47,7 +47,8 @@ class Analyse:
         def __init__(
                 self,
                 inVar,
-                comp = 'mag',
+                comp = None,
+                cutoff = None,
                 gradient = None,
                 surface = 'volume',
                 nonDim = None,
@@ -55,45 +56,101 @@ class Analyse:
 
             message("Building integral...")
 
+            # Getting everything ready:
+
             self.inputs = locals().copy()
             del self.inputs['inVar']
             del self.inputs['self']
 
+            self.updateFuncs = []
+
             self.opTag = ''
 
-            unpacked = utilities.unpack_var(inVar, return_dict = True)
-            self.rawvar = unpacked['var']
-            var = self.rawvar
-            mesh = unpacked['mesh']
+            pevar = standardise(inVar)
+            var = pevar.meshVar
+            self.updateFuncs.append(var.update)
+
+            mesh = pevar.mesh
             pemesh = standardise(mesh)
 
-            if unpacked['varDim'] == mesh.dim:
-                # hence is vector
-                if comp == 'mag':
+            # Check inputs: (Is this really necessary??)
+
+            ## Check that the dimension is sensible:
+            if not mesh.dim in {2, 3}:
+                raise Exception
+            if not pevar.varDim in {1, mesh.dim}:
+                raise Exception
+
+            ## Check 'comp' input is correct:
+            if pevar.vector:
+                if mesh.dim == 2:
+                    if not comp in {None, 'ang', 'rad'}:
+                        raise Exception
+                elif mesh.dim == 3:
+                    if not comp in {None, 'ang1', 'ang2', 'rad'}:
+                        raise Exception
+            else:
+                if not comp is None:
+                    raise Exception
+
+            ## Check 'gradient' input is correct:
+            if not pevar.disrete:
+                if mesh.dim == 2:
+                    if not gradient in {None, 'ang', 'rad'}:
+                        raise Exception
+                elif mesh.dim == 3:
+                    if not gradient in {None, 'ang1', 'ang2', 'rad'}:
+                        raise Exception
+            else:
+                if not gradient is None:
+                    raise Exception
+
+            ## Check 'cutoff' input is correct:
+            cutoffFn = uw.function.Function.convert(cutoff)
+            if not cutoff is None:
+                if not isinstance(cutoffFn, uw.function.Function):
+                    raise Exception
+
+            ## Check 'surface' input is correct:
+            if mesh.dim == 2:
+                if not surface in {'volume', 'outer', 'inner', 'left', 'right'}:
+                    raise Exception
+            elif mesh.dim == 3:
+                if not surface in {'volume', 'outer', 'inner', 'left', 'right', 'front', 'back'}:
+                    raise Exception
+
+            # Build the integral:
+
+            ## Add comp if required:
+            if pevar.vector:
+                if comp is None:
                     var = fn.math.sqrt(fn.math.dot(var, var))
                 else:
                     var = fn.math.dot(var, pemesh.comps[comp])
                     self.opTag += comp + 'Comp_'
-            else:
-                assert unpacked['varDim'] == 1
-                # hence is scalar.
-                comp = 'mag'
-                self.inputs['comp'] = comp
 
+            ## Add cutoff if required:
+            if not cutoff is None:
+                var = fn.branching.conditional([
+                    (var >= cutoffFn, 1.),
+                    (True, 0.),
+                    ])
+
+            ## Add gradient if required:
             if not gradient is None:
-
-                var, self.project = pemesh.meshify(
+                var, project = pemesh.meshify(
                     var,
                     return_project = True
                     )
+                self.updateFuncs.append(project)
                 varGrad = var.fn_gradient
                 if gradient == 'mag':
                     var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
                 else:
                     var = fn.math.dot(pemesh.comps[gradient], varGrad)
-
                 self.opTag += gradient + 'Grad_'
 
+            ## Do the integral over the desired surface:
             intMesh = pemesh.integrals[surface]
             self.opTag += surface + 'Int_'
             if surface == 'volume':
@@ -107,34 +164,41 @@ class Analyse:
                     surfaceIndexSet = indexSet
                     )
 
+            ## Non-dimensionalise if specifed:
             if nonDim is None:
                 nonDim = lambda: 1.
             else:
                 self.opTag += 'nd_' + nonDim.opTag + '_'
 
+            ## Define the evalFn that makes everything go:
             self.evalFn = lambda: \
                 intField.evaluate()[0] \
                 / intMesh() \
                 / nonDim()
 
+            # Keeping house:
+
+            ## Finalise the opTag:
             self.opTag = self.opTag[:-1]
 
+            ## Get a starting value
             self.lasthash = 0
             self.val = self.evaluate()
 
+            ## Done!
             message("Integral built.")
 
         def evaluate(self):
             currenthash = utilities.hash_var(self.rawvar)
             if currenthash == self.lasthash:
-                message(
-                    "No underlying change detected: \
-                    skipping evaluation."
-                    )
+#                 message(
+#                     "No underlying change detected: \
+#                     skipping evaluation."
+#                     )
                 return self.val
             else:
-                if hasattr(self, 'project'):
-                    self.project()
+                for updateFunc in self.updateFuncs:
+                    updateFuncs()
                 self.val = self.evalFn()
                 self.lasthash = currenthash
             return self.val

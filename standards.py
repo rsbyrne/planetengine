@@ -84,6 +84,7 @@ class PeVar:
         self.varDim = unpackedVar[5]
 
         self.vector = self.varDim == self.mesh.dim
+        assert self.vector or self.varDim == 1
         self.discrete = self.dType == 'int'
         self.boolean = self.dType == 'boolean'
         self.particles = self.varType in ('swarmVar', 'swarmFn')
@@ -96,10 +97,16 @@ class PeVar:
             self.meshVar = utilities.make_projector(
                 self.var, self.substrate
                 )
+            self.meshVar.project()
+        if self.discrete:
+            self.valSet = utilities.get_valSet(self.meshVar)
 
     def update(self):
         if hasattr(self.meshVar, 'project'):
             self.meshVar.project()
+        self.pemesh.update()
+        if self.discrete:
+            self.valSet = utilities.get_valSet(self.meshVar)
 
 class PeMesh:
 
@@ -111,6 +118,7 @@ class PeMesh:
 
         self.mesh = mesh
         self.deformable = deformable
+        self.updateFuncs = []
 
         self.var1D = mesh.add_variable(nodeDofCount = 1)
         self.var2D = mesh.add_variable(nodeDofCount = 2)
@@ -132,20 +140,20 @@ class PeMesh:
             if self.mesh.dim == 2:
                 self.comps = {
                     'ang': fn.misc.constant((1., 0.)),
-                    'rad': fn.misc.constant((0., 1.)),
+                    'rad': fn.misc.constant((0., -1.)),
                     }
             elif mesh.dim == 3:
                 self.comps = {
                     'ang1': fn.misc.constant((1., 0., 0.)),
                     'ang2': fn.misc.constant((0., 1., 0.)),
-                    'rad': fn.misc.constant((0., 0., 1.)),
+                    'rad': fn.misc.constant((0., 0., -1.)),
                     }
                 self.surfaces['front'] = mesh.specialSets['MinK_VertexSet']
                 self.surfaces['back'] = mesh.specialSets['MaxK_VertexSet']
         elif type(mesh) == uw.mesh.FeMesh_Annulus:
             self.comps = {
                 'ang': mesh.unitvec_theta_Fn,
-                'rad': mesh.unitvec_r_Fn,
+                'rad': -mesh.unitvec_r_Fn,
                 }
             self.surfaces = {
                 'inner': mesh.specialSets['inner'],
@@ -163,8 +171,8 @@ class PeMesh:
             self.surfaces['right']
             ]
         try:
-            walls.append(self.surfaces['front'])
-            walls.append(self.surfaces['back'])
+            wallsList.append(self.surfaces['front'])
+            wallsList.append(self.surfaces['back'])
         except:
             pass
 
@@ -172,6 +180,47 @@ class PeMesh:
         self.__dict__.update(self.surfaces)
 
         self.scales = mapping.get_scales(mesh, partitioned = True)
+
+        # WEIGHTVARS:
+        self.weightVar_volume = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
+        self.weightVar_outer = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
+        self.weightVar_inner = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
+        self.weightVars = {
+            'volume': self.weightVar_volume,
+            'outer': self.weightVar_outer,
+            'inner': self.weightVar_inner
+            }
+        weightVar_maskVar = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
+        weightVar_integral_volume = uw.utils.Integral(
+            weightVar_maskVar,
+            self.mesh
+            )
+        weightVar_integral_outer = uw.utils.Integral(
+            weightVar_maskVar,
+            self.mesh,
+            integrationType = 'surface',
+            surfaceIndexSet = self.outer
+            )
+        weightVar_integral_inner = uw.utils.Integral(
+            weightVar_maskVar,
+            self.mesh,
+            integrationType = 'surface',
+            surfaceIndexSet = self.inner
+            )
+        weightVarIntegrals = {
+            'volume': weightVar_integral_volume,
+            'outer': weightVar_integral_outer,
+            'inner': weightVar_integral_inner
+            }
+        def update_weightVars():
+            for key, weightVar in sorted(self.weightVars.items()):
+                integral = weightVarIntegrals[key]
+                for index, val in enumerate(weightVar.data):
+                    weightVar_maskVar.data[:] = 0.
+                    weightVar_maskVar.data[index] = 1.
+                    weightVar.data[index] = integral.evaluate()[0]
+        update_weightVars()
+        self.updateFuncs.append(update_weightVars)
 
         # Is this necessary?
 #        if not self.deformable:
@@ -287,3 +336,8 @@ class PeMesh:
         else:
             project()
             return projection
+
+    def update(self):
+        if self.deformable:
+            for updateFunc in self.updateFuncs:
+                updateFunc()

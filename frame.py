@@ -23,6 +23,9 @@ from .wordhash import wordhash as wordhashFn
 from . import checkpoint
 from .initials import apply
 from .utilities import message
+from . import observer
+
+standard_observer = observer.build()
 
 def load_frame(
         outputPath = '',
@@ -42,7 +45,7 @@ def load_frame(
 
     if not _is_child:
         if rank == 0:
-            assert not os.path.isfile(os.path.join(outputPath, 'stamps.txt')), \
+            assert not os.path.isfile(os.path.join(outputPath, 'stamps.json')), \
                 "Loading a child model as an independent frame \
                 not currently supported."
 
@@ -65,18 +68,26 @@ def load_frame(
                 "Archive contained the wrong model file somehow."
             os.remove(tarpath)
 
-    inputs = {}
+    params = {}
     if rank == 0:
-        with open(os.path.join(path, 'inputs.txt')) as json_file:  
-            inputs = json.load(json_file)
-    inputs = comm.bcast(inputs, root = 0)
+        with open(os.path.join(path, 'params.json')) as json_file:  
+            params = json.load(json_file)
+    params = comm.bcast(params, root = 0)
 
-    params = inputs['params']
-    options = inputs['options']
-    configs = inputs['configs']
+    configs = {}
+    if rank == 0:
+        with open(os.path.join(path, 'configs.json')) as json_file:  
+            configs = json.load(json_file)
+    configs = comm.bcast(configs, root = 0)
+
+    options = {}
+    if rank == 0:
+        with open(os.path.join(path, 'options.json')) as json_file:  
+            options = json.load(json_file)
+    options = comm.bcast(options, root = 0)
 
     systemscript = utilities.local_import(os.path.join(path, '_systemscript.py'))
-    system = systemscript.build(**inputs['params'])
+    system = systemscript.build(**params)
 
     initials = {}
     for varName in sorted(system.varsOfState):
@@ -102,14 +113,26 @@ def load_frame(
 
     # !!! NEEDS TO BE FIXED !!! #
 
-    observerscript = utilities.local_import(
-        os.path.join(path, '_observerscript.py')
-        )
-    observer = observerscript.build(**inputs['options'])
+#     observerscripts = []
+#     if rank == 0:
+#         for file in os.listdir(path):
+#             if '_observerscript.py' in file:
+#                 observerscripts.append(file)
+#     observerscripts = comm.bcast(observerscripts, root = 0)
+
+#     observers = []
+#     for filename in observerscripts:
+#         observerscript = utilities.local_import(filename)
+#         for obsKey, obsInps in sorted(inputs['options'].items()):
+#             hashID = utilities.hashstamp(observerscript, inputs)
+#             if hashID == obsKey:
+#                 observer = observerscript.build(**obsInps)
+#                 observers.append(observer)
+#                 break
 
     frame = Frame(
         system = system,
-        observer = observer,
+#         observers = observers,
         initials = initials,
         outputPath = outputPath,
         instanceID = instanceID,
@@ -147,10 +170,10 @@ def find_checkpoints(path, stamps):
         for directory in glob(path + '/*/'):
             basename = os.path.basename(directory[:-1])
             if (basename.isdigit() and len(basename) == 8):
-                with open(os.path.join(directory, 'stamps.txt')) as json_file:
+                with open(os.path.join(directory, 'stamps.json')) as json_file:
                     loadstamps = json.load(json_file)
-                with open(os.path.join(path, 'inputs.txt')) as json_file:
-                    loadconfig = json.load(json_file)
+#                 with open(os.path.join(path, 'inputs.txt')) as json_file:
+#                     loadconfig = json.load(json_file)
                 assert loadstamps == stamps, \
                     "Bad checkpoint found! Aborting."
                 message("Found checkpoint: " + basename)
@@ -171,11 +194,7 @@ def make_stamps(
 
     stamps = {}
     if rank == 0:
-        openScripts = {
-            name: open(script) \
-            for name, script in sorted(scripts.items())
-            }
-
+        openScripts = {name: open(script) for name, script in sorted(scripts.items())}
         stamps = {
             'params': utilities.hashstamp(params),
             'options': utilities.hashstamp(options),
@@ -183,7 +202,6 @@ def make_stamps(
             'scripts': utilities.hashstamp(openScripts)
             }
         stamps['allstamp'] = utilities.hashstamp(stamps)
-
     stamps = comm.bcast(stamps, root = 0)
 
     wordhash = wordhashFn(stamps['allstamp'])
@@ -198,7 +216,7 @@ def make_stamps(
 
 def make_frame(
         system,
-        observer,
+#         observers,
         initials,
         outputPath = '',
         instanceID = None,
@@ -216,20 +234,40 @@ def make_frame(
 
     message("Making a new frame...")
 
-    scripts = {
-        'systemscript': system.script,
-        'observerscript': observer.script
-        }
+#     if not type(observer) is list:
+#         observers = [observers,]
+
+    scripts = {}
+    scripts['systemscript'] = system.script
+
+#     observerDict = {observer.hashID: observer for observer in observers}
+
+#     for obsKey, observer in sorted(observers.items()):
+#         name_n = 0
+#         nameFound = False
+#         while not nameFound:
+#             observerScriptName = observer.name + str(name_n) + '_observerscript'
+#             if observerScriptName in scripts:
+#                 name_n += 1
+#             else:
+#                 nameFound = True
+#                 scripts[observerScriptName] = observer.script
+
+    params = system.inputs
 
     configs = {}
     for varName, IC in sorted(initials.items()):
         scripts[varName + '_initials'] = IC.script
         configs[varName] = IC.inputs
 
+    options = {}
+#     for observer in observers:
+#         options[observer.hashID] = observer.inputs
+
     stamps, hashID = make_stamps(
-        system.inputs,
-        observer.inputs,
+        params,
         configs,
+        options,
         scripts
         )
 
@@ -260,8 +298,8 @@ def make_frame(
     if directory_state == 'tar':
         if rank == 0:
             with tarfile.open(tarpath) as tar:
-                tar.extract('stamps.txt', path)
-            with open(os.path.join(path, 'stamps.txt')) as json_file:
+                tar.extract('stamps.json', path)
+            with open(os.path.join(path, 'stamps.json')) as json_file:
                 loadstamps = json.load(json_file)
             shutil.rmtree(path)
             assert loadstamps == stamps
@@ -269,7 +307,7 @@ def make_frame(
     if directory_state == 'clean':
         frame = Frame(
             system,
-            observer,
+#             observers,
             initials,
             outputPath,
             instanceID
@@ -291,7 +329,7 @@ class Frame:
 
     def __init__(self,
             system,
-            observer,
+#             observers,
             initials,
             outputPath = '',
             instanceID = 'test',
@@ -316,7 +354,7 @@ class Frame:
         message("Building frame...")
 
         self.system = system
-        self.observer = observer
+#         self.observers = observers
         self.initials = initials
         self.outputPath = outputPath
         self.instanceID = instanceID
@@ -327,7 +365,7 @@ class Frame:
 
         scripts = {
             'systemscript': system.script,
-            'observerscript': observer.script
+#             'observerscript': observer.script
             }
 
         configs = {}
@@ -336,15 +374,16 @@ class Frame:
             configs[varName] = IC.inputs
 
         self.params = self.system.inputs
-        self.options = self.observer.inputs
+        self.options = {}
+#         self.options = self.observer.inputs
         self.configs = configs
         self.scripts = scripts
 
-        self.inputs = {
-            'params': self.params,
-            'options': self.options,
-            'configs': self.configs
-            }
+#         self.inputs = {
+#             'params': self.params,
+#             'options': self.options,
+#             'configs': self.configs
+#             }
 
         self.stamps, self.hashID = make_stamps(
             self.params,
@@ -364,14 +403,6 @@ class Frame:
 
         self.varsOfState = self.system.varsOfState
 
-#         if varsOfState is None:
-#             try: self.varsOfState = self.system.varsOfState
-#             except: raise Exception("No vars of state provided!")
-#         else:
-#             self.varsOfState = varsOfState
-#         if varScales is None:
-#             try: self.varsOfState = self.system.varsOfState
-
         message("Loading interior frames...")
         self.inFrames = []
         for IC in self.initials.values():
@@ -383,13 +414,19 @@ class Frame:
             "Loaded " + str(len(self.inFrames)) + " interior frames."
             )
 
+        # Standard observer stuff:
+        self.analysers, self.collectors, self.figs = \
+            standard_observer.attach(self.system)
+
         self.checkpointer = checkpoint.Checkpointer(
             step = self.system.step,
+            modeltime = self.system.modeltime,
             varsOfState = self.system.varsOfState,
-            figs = self.observer.figs,
-            dataCollectors = self.observer.collectors,
+            figs = self.figs,
+            dataCollectors = self.collectors,
             scripts = self.scripts,
-            inputs = self.inputs,
+            params = self.params,
+            configs = self.configs,
             stamps = self.stamps,
             inFrames = self.inFrames
             )
@@ -422,19 +459,21 @@ class Frame:
 
     def all_analyse(self):
         message("Analysing...")
-        for analyser in self.observer.analysers:
+        for analyser in self.analysers:
             analyser.analyse()
         message("Analysis complete!")
 
     def all_collect(self):
         message("Collecting...")
-        for collector in self.observer.collectors:
+        for collector in self.collectors:
             collector.collect()
         message("Collecting complete!")
 
     def all_clear(self):
-        for collector in self.observer.collectors:
+        message("Clearing all data...")
+        for collector in self.collectors:
             collector.clear()
+        message("All data cleared!")
 
     def checkpoint(self, path = None, archive_remote = False):
 
@@ -477,9 +516,9 @@ class Frame:
 
     def report(self):
         message("Reporting...")
-        for analyser in self.observer.analysers:
+        for analyser in self.analysers:
             analyser.report()
-        for fig in self.observer.figs:
+        for fig in self.figs:
             fig.show()
         message("Reporting complete!")
 
@@ -506,7 +545,7 @@ class Frame:
 
         if not type(collectConditions) is list:
             collectConditions = [collectConditions,]
-            assert len(collectConditions) == len(self.observer.collectors)
+            assert len(collectConditions) == len(self.collectors)
 
         if checkpointCondition():
             self.checkpoint()
@@ -522,7 +561,7 @@ class Frame:
                     self.checkpoint()
                 else:
                     for collector, collectCondition in zip(
-                            self.observer.collectors,
+                            self.collectors,
                             collectConditions
                             ):
                         if collectCondition():
@@ -824,7 +863,17 @@ class Frame:
             dataDict = comm.bcast({**dataDict}, root = 0)
 
             self.system.step.value = loadStep
-            self.system.modeltime.value = float(dataDict['modeltime'])
+
+            modeltime = 0.
+            if rank == 0:
+                modeltime_filepath = os.path.join(
+                    checkpointFile,
+                    'modeltime.json'
+                    )
+                with open(modeltime_filepath, 'r') as file:
+                    modeltime = json.load(file)
+            modeltime = comm.bcast(modeltime, root = 0)
+            self.system.modeltime.value = modeltime
 
             self.system.solve()
 

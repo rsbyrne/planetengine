@@ -30,8 +30,11 @@ class Checkpointer:
             scripts = None,
             figs = None,
             dataCollectors = None,
-            inputs = None,
+            params = None,
+            configs = None,
+            options = None,
             step = None,
+            modeltime = None,
             inFrames = [],
             ):
 
@@ -40,7 +43,10 @@ class Checkpointer:
         self.dataCollectors = dataCollectors
         self.varsOfState = varsOfState
         self.step = step
-        self.inputs = inputs
+        self.modeltime = modeltime
+        self.params = params
+        self.configs = configs
+        self.options = options
         self.stamps = stamps
         self.inFrames = inFrames
 
@@ -82,13 +88,21 @@ class Checkpointer:
                         newpath = os.path.join(path, "_" + scriptname + ".py")
                         shutil.copyfile(tweakedpath, newpath)
 
-                inputFilename = os.path.join(path, 'inputs.txt')
-                with open(inputFilename, 'w') as file:
-                     file.write(json.dumps(self.inputs))
+                paramsFilename = os.path.join(path, 'params.json')
+                with open(paramsFilename, 'w') as file:
+                     json.dump(self.params, file)
 
-                stampFilename = os.path.join(path, 'stamps.txt')
+                configsFilename = os.path.join(path, 'configs.json')
+                with open(configsFilename, 'w') as file:
+                     json.dump(self.configs, file)
+
+                optionsFilename = os.path.join(path, 'options.json')
+                with open(optionsFilename, 'w') as file:
+                     json.dump(self.options, file)
+
+                stampFilename = os.path.join(path, 'stamps.json')
                 with open(stampFilename, 'w') as file:
-                     file.write(json.dumps(self.stamps))
+                     json.dump(self.stamps, file)
 
             for inFrame in self.inFrames:
                 inFrame.checkpoint(
@@ -142,11 +156,22 @@ class Checkpointer:
                                     )
         message("Snapshot saved.")
 
+        message("Saving modeltime...")
+        if rank == 0:
+            modeltime_filepath = os.path.join(
+                checkpointDir,
+                'modeltime.json'
+                )
+            modeltime = self.modeltime.value
+            with open(modeltime_filepath, 'w') as file:
+                json.dump(modeltime, file)
+        message("Modeltime saved.")
+
         message("Saving stamps...")
         if rank == 0:
-            filename = os.path.join(checkpointDir, 'stamps.txt')
+            filename = os.path.join(checkpointDir, 'stamps.json')
             with open(filename, 'w') as file:
-                 file.write(json.dumps(self.stamps))
+                 json.dump(self.stamps, file)
         message("Stamps saved.")
 
         message("Saving datasets...")
@@ -170,7 +195,7 @@ class Checkpointer:
         message("Datasets saved.")
 
         if rank == 0:
-            assert os.path.isfile(os.path.join(checkpointDir, 'stamps.txt')), \
+            assert os.path.isfile(os.path.join(checkpointDir, 'stamps.json')), \
                 "The files did not get saved for some reason!"
 
         message("Checkpointed!")

@@ -12,64 +12,75 @@ from . import visualisation
 from .utilities import Grouper
 from .standards import standardise
 
-def build(obsVars, step, modeltime):
+def build():
 
     ### HOUSEKEEPING: IMPORTANT! ###
 
-#     inputs = locals().copy()
-    inputs = {'obsVars': sorted(obsVars.keys())}
+    inputs = locals().copy()
     script = __file__
+    name = 'standard'
+#     hashID = utilities.hashstamp(script, inputs)
 
-    ### MAKE STATS ###
+    def attach(system):
 
-    statsDict = {}
-    formatDict = {}
+        step = system.step
+        modeltime = system.modeltime
+        if hasattr(system, 'obsVars'):
+            obsVars = [
+                *sorted(system.varsOfState.items()),
+                *[varTuple for varTuple in sorted(system.obsVars.items()) \
+                    if not varTuple in system.varsOfState.items()]
+                ]
+        else:
+            obsVars = sorted(system.varsOfState.items())
 
-    for varName, var in sorted(obsVars.items()):
+        ### MAKE STATS ###
 
-        pevar = standardise(var)
-        var = pevar.var
+        statsDict = {}
+        formatDict = {}
 
-        standardIntegralSuite = {
-            'surface': ['volume', 'inner', 'outer'],
-            'comp': ['mag', 'ang', 'rad'],
-            'gradient': [None, 'ang', 'rad']
-            }
+        for varName, var in obsVars:
 
-        for inputDict in utilities.suite_list(standardIntegralSuite):
+            pevar = standardise(var)
+            var = pevar.var
 
-            anVar = analysis.Analyse.StandardIntegral(
-                var,
-                **inputDict
-                )
-            statsDict[varName + '_' + anVar.opTag] = anVar
+            standardIntegralSuite = {
+                'surface': ['volume', 'inner', 'outer'],
+                'comp': ['mag', 'ang', 'rad'],
+                'gradient': [None, 'ang', 'rad']
+                }
 
-            formatDict[varName + '_' + anVar.opTag] = "{:.2f}"
+            for inputDict in utilities.suite_list(standardIntegralSuite):
 
-    zerodAnalyser = analysis.Analyser(
-        'zerodData',
-        statsDict,
-        formatDict,
-        step,
-        modeltime
-        )
-    analysers = [zerodAnalyser,] # MAGIC NAME: MUST BE DEFINED
+                anVar = analysis.Analyse.StandardIntegral(
+                    var,
+                    **inputDict
+                    )
+                statsDict[varName + '_' + anVar.opTag] = anVar
 
-    maincollector = analysis.DataCollector(analysers)
-    collectors = [maincollector,] # MAGIC NAME: MUST BE DEFINED
+                formatDict[varName + '_' + anVar.opTag] = "{:.2f}"
 
-    ### FIGS ###
+        analyser = analysis.Analyser(
+            name,
+            statsDict,
+            formatDict,
+            step,
+            modeltime
+            )
+        analysers = [analyser,] # MAGIC NAME: MUST BE DEFINED
 
-    mainfig = visualisation.QuickFig(
-        *sorted(obsVars.items()),
-        figname = 'standard'
-        )
-    figs = [mainfig,] # MAGIC NAME: MUST BE DEFINED
+        maincollector = analysis.DataCollector(analysers)
+        collectors = [maincollector,] # MAGIC NAME: MUST BE DEFINED
 
-#     ### REPORT ###
+        ### FIGS ###
 
-#     reportfig = mainfig
-#     reportanalyser = zerodAnalyser
+        fig = visualisation.QuickFig(
+            *obsVars,
+            figname = name
+            )
+        figs = [fig,] # MAGIC NAME: MUST BE DEFINED
+
+        return analysers, collectors, figs
 
     ### HOUSEKEEPING: IMPORTANT! ###
 

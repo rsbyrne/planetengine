@@ -63,6 +63,16 @@ def hash_var(var):
     global_hashVal = sum(comm.allgather(hashVal))
     return global_hashVal
 
+def get_valSet(var):
+    try:
+        data = var.data
+    except:
+        data = var
+    localVals = {val for row in data for val in row}
+    allValsGathered = comm.allgather(localVals)
+    valSet = {val for localVals in allValsGathered for val in localVals}
+    return valSet
+
 class Grouper:
     def __init__(self, indict = {}):
         self.selfdict = {}

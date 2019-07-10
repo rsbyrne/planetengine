@@ -1,8 +1,5 @@
 import numpy as np
 
-from ..mapping import box
-from ..utilities import copyField
-
 class IC:
 
     def __init__(
@@ -35,21 +32,3 @@ class IC:
         outArray = np.clip(outArray, valMin, valMax)
         outArray = np.array([[item] for item in outArray])
         return outArray
-
-#     def apply(self, variable, boxDims = None):
-#         try:
-#             mesh = variable.mesh
-#             meshVar = variable
-#         except:
-#             try:
-#                 mesh = variable.swarm.mesh
-#                 meshVar = mesh.add_variable(variable.count)
-#             except:
-#                 raise Exception("Did not recognise input variable.")
-#         if boxDims is None:
-#             boxDims = self.boxDims
-#         coordArray = box(mesh, boxDims = boxDims)
-#         meshVar.data[:] = self.sinusoidal_IC(coordArray)
-#         if not meshVar is variable:
-#             copyField(meshVar, variable)
-#             del meshVar
