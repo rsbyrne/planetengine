@@ -48,8 +48,8 @@ class Analyse:
                 self,
                 inVar,
                 comp = None,
-                cutoff = None,
                 gradient = None,
+                bucket = None,
                 surface = 'volume',
                 nonDim = None,
                 ):
@@ -68,7 +68,7 @@ class Analyse:
 
             pevar = standardise(inVar)
             var = pevar.meshVar
-            self.updateFuncs.append(var.update)
+            self.updateFuncs.append(pevar.update)
 
             mesh = pevar.mesh
             pemesh = standardise(mesh)
@@ -94,7 +94,7 @@ class Analyse:
                     raise Exception
 
             ## Check 'gradient' input is correct:
-            if not pevar.disrete:
+            if not pevar.discrete:
                 if mesh.dim == 2:
                     if not gradient in {None, 'ang', 'rad'}:
                         raise Exception
@@ -105,11 +105,21 @@ class Analyse:
                 if not gradient is None:
                     raise Exception
 
-            ## Check 'cutoff' input is correct:
-            cutoffFn = uw.function.Function.convert(cutoff)
-            if not cutoff is None:
-                if not isinstance(cutoffFn, uw.function.Function):
-                    raise Exception
+#             ## Check 'cutoff' input is correct:
+#             cutoffFn = uw.function.Function.convert(cutoff)
+#             if not cutoff is None:
+#                 if not isinstance(cutoffFn, uw.function.Function):
+#                     raise Exception
+
+            ## Check 'bucket' input is correct:
+            if not bucket is None:
+                if not type(bucket) in {float, int}:
+                    if not type(bucket) is tuple:
+                        raise Exception
+                    if not all([type(var) in {float, int} for var in bucket]):
+                        raise Exception
+                    if not len(bucket) == 2:
+                        raise Exception
 
             ## Check 'surface' input is correct:
             if mesh.dim == 2:
@@ -129,12 +139,13 @@ class Analyse:
                     var = fn.math.dot(var, pemesh.comps[comp])
                     self.opTag += comp + 'Comp_'
 
-            ## Add cutoff if required:
-            if not cutoff is None:
-                var = fn.branching.conditional([
-                    (var >= cutoffFn, 1.),
-                    (True, 0.),
-                    ])
+#             ## Add cutoff if required:
+#             if not cutoff is None:
+#                 var = fn.branching.conditional([
+#                     (var >= cutoffFn - 1e-18, 1.),
+#                     (var <= cutoffFn + 1e-18, 1.),
+#                     (True, 0.),
+#                     ])
 
             ## Add gradient if required:
             if not gradient is None:
@@ -149,6 +160,21 @@ class Analyse:
                 else:
                     var = fn.math.dot(pemesh.comps[gradient], varGrad)
                 self.opTag += gradient + 'Grad_'
+
+            ## Add bucket if required:
+            if not bucket is None:
+                if type(bucket) is tuple:
+                    adjBucket = bucket
+                    bucketStr = str(bucket[0]) + ':' + str(bucket[1])
+                else:
+                    adjBucket = (bucket - 1e-18, bucket + 1e-18)
+                    bucketStr = str(bucket)
+                var = fn.branching.conditional([
+                    (var < adjBucket[0], 0.),
+                    (var > adjBucket[1], 0.), # double-open interval - is this a problem?
+                    (True, 1.),
+                    ])
+                self.opTag += 'Bucket{' + bucketStr + '}_'
 
             ## Do the integral over the desired surface:
             intMesh = pemesh.integrals[surface]
@@ -178,6 +204,8 @@ class Analyse:
 
             # Keeping house:
 
+            self.var = var
+
             ## Finalise the opTag:
             self.opTag = self.opTag[:-1]
 
@@ -189,7 +217,7 @@ class Analyse:
             message("Integral built.")
 
         def evaluate(self):
-            currenthash = utilities.hash_var(self.rawvar)
+            currenthash = utilities.hash_var(self.var)
             if currenthash == self.lasthash:
 #                 message(
 #                     "No underlying change detected: \
@@ -198,7 +226,7 @@ class Analyse:
                 return self.val
             else:
                 for updateFunc in self.updateFuncs:
-                    updateFuncs()
+                    updateFunc()
                 self.val = self.evalFn()
                 self.lasthash = currenthash
             return self.val

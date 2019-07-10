@@ -11,18 +11,18 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
-default_mesh = {
-    2: uw.mesh.FeMesh_Cartesian(
-        elementRes = [64, 64],
-        minCoord = [0., 0.],
-        maxCoord = [1., 1.]
-        ),
-    3: uw.mesh.FeMesh_Cartesian(
-        elementRes = [64, 64, 64],
-        minCoord = [0., 0., 0.],
-        maxCoord = [1., 1., 1.]
-        )
-    }
+# default_mesh = {
+#     2: uw.mesh.FeMesh_Cartesian(
+#         elementRes = [64, 64],
+#         minCoord = [0., 0.],
+#         maxCoord = [1., 1.]
+#         ),
+#     3: uw.mesh.FeMesh_Cartesian(
+#         elementRes = [64, 64, 64],
+#         minCoord = [0., 0., 0.],
+#         maxCoord = [1., 1., 1.]
+#         )
+#     }
 
 def make_pevar(var, attach = True, force = False):
 
@@ -179,7 +179,7 @@ class PeMesh:
         self.__dict__.update(self.comps)
         self.__dict__.update(self.surfaces)
 
-        self.scales = mapping.get_scales(mesh, partitioned = True)
+        self.scales = utilities.get_scales(mesh)
 
         # WEIGHTVARS:
         self.weightVar_volume = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)

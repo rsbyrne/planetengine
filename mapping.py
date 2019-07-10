@@ -60,24 +60,6 @@ def boundary_interpolate(fromData, toData, dim):
 
     toField.data[toIndexSet] = outArr
 
-def get_scales(variable, partitioned = False):
-    scales = []
-    if type(variable) == np.ndarray:
-        data = variable
-    else:
-        data = variable.data
-    if partitioned:
-        data = comm.gather(data, root = 0)
-    if rank == 0:
-        data = np.vstack(data)
-        for i in range(data.shape[1]):
-            scales.append(
-                [data[:,i].min(),
-                data[:,i].max()]
-                )
-    scales = comm.bcast(scales, root = 0)
-    return scales
-
 def recentered_coords(
         coordArray,
         origin = (0., 0.),

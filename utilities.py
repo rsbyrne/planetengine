@@ -73,6 +73,26 @@ def get_valSet(var):
     valSet = {val for localVals in allValsGathered for val in localVals}
     return valSet
 
+def get_scales(variable):
+    try:
+        array = variable.data
+    except:
+        array = variable
+    dims = array.shape[1]
+    localMins = [np.min(array[:, dim]) for dim in range(dims)]
+    allMins = comm.allgather(localMins)
+    globalMins = np.min(allMins, axis = 0)
+    localMaxs = [np.max(array[:, dim]) for dim in range(dims)]
+    allMaxs = comm.allgather(localMaxs)
+    globalMaxs = np.max(allMaxs, axis = 0)
+    scales = np.dstack([globalMins, globalMaxs])[0]
+    return scales
+
+def get_ranges(variable):
+    scales = get_scales(variable)
+    ranges = [maxVal - minVal for minVal, maxVal in scales]
+    return ranges
+
 class Grouper:
     def __init__(self, indict = {}):
         self.selfdict = {}

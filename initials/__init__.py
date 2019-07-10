@@ -6,6 +6,7 @@ from .. import mapping
 from .. import standards
 from ..utilities import unpack_var
 from ..utilities import copyField
+from ..utilities import get_scales
 from ..standards import standardise
 from ..visualisation import quickShow
 
@@ -27,7 +28,7 @@ def set_scales(variable, values):
 
     variable.data[:] = mapping.rescale_array(
         variable.data,
-        mapping.get_scales(variable),
+        get_scales(variable),
         values
         )
 
@@ -81,20 +82,20 @@ def _apply(initials, system):
     system.step.value = 0
     system.modeltime.value = 0.
 
-def preview(IC, _2D = True):
-    if hasattr(IC, 'LOADTYPE'):
-        var, varType, mesh, substrate, dType, varDim = \
-            unpack_var(IC.inVar)
-        pemesh = standards.default_mesh[mesh.dim]
-        standinVar = pemesh.autoVars[varDim]
-        copyField(var, standinVar)
-    else:
-        try:
-            pemesh = standards.default_mesh[2]
-            preview_data = IC.evaluate(pemesh.mesh.data)
-        except:
-            pemesh = standards.default_mesh[3]
-            preview_data = IC.evaluate(pemesh.mesh.data)
-        standinVar = pemesh.autoVars[preview_data.shape[1]]
-        standinVar.data[:] = preview_data
-    quickShow(standinVar)
+# def preview(IC, _2D = True):
+#     if hasattr(IC, 'LOADTYPE'):
+#         var, varType, mesh, substrate, dType, varDim = \
+#             unpack_var(IC.inVar)
+#         pemesh = standards.default_mesh[mesh.dim]
+#         standinVar = pemesh.autoVars[varDim]
+#         copyField(var, standinVar)
+#     else:
+#         try:
+#             pemesh = standards.default_mesh[2]
+#             preview_data = IC.evaluate(pemesh.mesh.data)
+#         except:
+#             pemesh = standards.default_mesh[3]
+#             preview_data = IC.evaluate(pemesh.mesh.data)
+#         standinVar = pemesh.autoVars[preview_data.shape[1]]
+#         standinVar.data[:] = preview_data
+#     quickShow(standinVar)
