@@ -52,13 +52,18 @@ def build():
 
             for inputDict in utilities.suite_list(standardIntegralSuite):
 
-                anVar = analysis.Analyse.StandardIntegral(
-                    var,
-                    **inputDict
-                    )
-                statsDict[varName + '_' + anVar.opTag] = anVar
+                try:
 
-                formatDict[varName + '_' + anVar.opTag] = "{:.2f}"
+                    anVar = analysis.Analyse.StandardIntegral(
+                        var,
+                        **inputDict
+                        )
+                    statsDict[varName + '_' + anVar.opTag] = anVar
+
+                    formatDict[varName + '_' + anVar.opTag] = "{:.2f}"
+
+                except:
+                    pass
 
         analyser = analysis.Analyser(
             name,
