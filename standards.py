@@ -182,45 +182,46 @@ class PeMesh:
         self.scales = utilities.get_scales(mesh)
 
         # WEIGHTVARS:
-        self.weightVar_volume = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
-        self.weightVar_outer = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
-        self.weightVar_inner = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
-        self.weightVars = {
-            'volume': self.weightVar_volume,
-            'outer': self.weightVar_outer,
-            'inner': self.weightVar_inner
-            }
-        weightVar_maskVar = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
-        weightVar_integral_volume = uw.utils.Integral(
-            weightVar_maskVar,
-            self.mesh
-            )
-        weightVar_integral_outer = uw.utils.Integral(
-            weightVar_maskVar,
-            self.mesh,
-            integrationType = 'surface',
-            surfaceIndexSet = self.outer
-            )
-        weightVar_integral_inner = uw.utils.Integral(
-            weightVar_maskVar,
-            self.mesh,
-            integrationType = 'surface',
-            surfaceIndexSet = self.inner
-            )
-        weightVarIntegrals = {
-            'volume': weightVar_integral_volume,
-            'outer': weightVar_integral_outer,
-            'inner': weightVar_integral_inner
-            }
-        def update_weightVars():
-            for key, weightVar in sorted(self.weightVars.items()):
-                integral = weightVarIntegrals[key]
-                for index, val in enumerate(weightVar.data):
-                    weightVar_maskVar.data[:] = 0.
-                    weightVar_maskVar.data[index] = 1.
-                    weightVar.data[index] = integral.evaluate()[0]
-        update_weightVars()
-        self.updateFuncs.append(update_weightVars)
+        ### THIS IS TOO SLOW ###
+#         self.weightVar_volume = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
+#         self.weightVar_outer = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
+#         self.weightVar_inner = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
+#         self.weightVars = {
+#             'volume': self.weightVar_volume,
+#             'outer': self.weightVar_outer,
+#             'inner': self.weightVar_inner
+#             }
+#         weightVar_maskVar = uw.mesh.MeshVariable(self.mesh, nodeDofCount = 1)
+#         weightVar_integral_volume = uw.utils.Integral(
+#             weightVar_maskVar,
+#             self.mesh
+#             )
+#         weightVar_integral_outer = uw.utils.Integral(
+#             weightVar_maskVar,
+#             self.mesh,
+#             integrationType = 'surface',
+#             surfaceIndexSet = self.outer
+#             )
+#         weightVar_integral_inner = uw.utils.Integral(
+#             weightVar_maskVar,
+#             self.mesh,
+#             integrationType = 'surface',
+#             surfaceIndexSet = self.inner
+#             )
+#         weightVarIntegrals = {
+#             'volume': weightVar_integral_volume,
+#             'outer': weightVar_integral_outer,
+#             'inner': weightVar_integral_inner
+#             }
+#         def update_weightVars():
+#             for key, weightVar in sorted(self.weightVars.items()):
+#                 integral = weightVarIntegrals[key]
+#                 for index, val in enumerate(weightVar.data):
+#                     weightVar_maskVar.data[:] = 0.
+#                     weightVar_maskVar.data[index] = 1.
+#                     weightVar.data[index] = integral.evaluate()[0]
+#         update_weightVars()
+#         self.updateFuncs.append(update_weightVars)
 
         # Is this necessary?
 #        if not self.deformable:

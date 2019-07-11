@@ -46,7 +46,7 @@ def build():
 
             standardIntegralSuite = {
                 'surface': ['volume', 'inner', 'outer'],
-                'comp': ['mag', 'ang', 'rad'],
+                'comp': [None, 'ang', 'rad'],
                 'gradient': [None, 'ang', 'rad']
                 }
 
