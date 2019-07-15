@@ -22,6 +22,7 @@ rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
 from . import standards
+from .standards import standardise
 from . import mapping
 
 root = 0
@@ -92,6 +93,28 @@ def get_ranges(variable):
     scales = get_scales(variable)
     ranges = [maxVal - minVal for minVal, maxVal in scales]
     return ranges
+
+def set_boundaries(variable, values):
+
+    try:
+        mesh = variable.mesh
+    except:
+        raise Exception("Variable does not appear to be mesh variable.")
+
+    walls = standardise(mesh).wallsList
+
+    for i, component in enumerate(values):
+        for value, wall in zip(component, walls):
+            if not value is '.':
+                variable.data[wall, i] = value
+
+def set_scales(variable, values):
+
+    variable.data[:] = mapping.rescale_array(
+        variable.data,
+        get_scales(variable),
+        values
+        )
 
 class Grouper:
     def __init__(self, indict = {}):
@@ -351,6 +374,8 @@ def copyField(field1, field2,
         freqs = None,
         mirrored = None,
         blendweight = None,
+        scales = None,
+        boundaries = None,
         ):
 
     if not boxDims is None:
@@ -458,12 +483,18 @@ def copyField(field1, field2,
 #             inDim
 #             )
 
+    if not scales is None:
+        set_scales(field2, scales)
+
+    if not boundaries is None:
+        set_boundaries(field2, boundaries)
+
     return tryTolerance
 
 def meshify(*args, return_project = False):
     var, varType, mesh, substrate, dType, varDim = \
         unpack_var(*args)
-    pemesh = standards.make_pemesh(mesh)
+    pemesh = standardise(mesh)
     rounded = dType in ('int', 'boolean')
     meshVar = pemesh.meshify(
         var,

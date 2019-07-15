@@ -81,7 +81,8 @@ def build():
 
         fig = visualisation.QuickFig(
             *obsVars,
-            figname = name
+            figname = name,
+            colourBar = False
             )
         figs = [fig,] # MAGIC NAME: MUST BE DEFINED
 

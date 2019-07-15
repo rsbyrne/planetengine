@@ -7,30 +7,10 @@ from .. import standards
 from ..utilities import unpack_var
 from ..utilities import copyField
 from ..utilities import get_scales
+from ..utilities import set_scales
+from ..utilities import set_boundaries
 from ..standards import standardise
 from ..visualisation import quickShow
-
-def set_boundaries(variable, values):
-
-    try:
-        mesh = variable.mesh
-    except:
-        raise Exception("Variable does not appear to be mesh variable.")
-
-    walls = standardise(mesh).wallsList
-
-    for i, component in enumerate(values):
-        for value, wall in zip(component, walls):
-            if not value is '.':
-                variable.data[wall, i] = value
-
-def set_scales(variable, values):
-
-    variable.data[:] = mapping.rescale_array(
-        variable.data,
-        get_scales(variable),
-        values
-        )
 
 def apply(initials, system):
 

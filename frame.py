@@ -422,7 +422,7 @@ class Frame:
             step = self.system.step,
             modeltime = self.system.modeltime,
             varsOfState = self.system.varsOfState,
-            figs = self.figs,
+            figs = [], #self.figs,
             dataCollectors = self.collectors,
             scripts = self.scripts,
             params = self.params,
