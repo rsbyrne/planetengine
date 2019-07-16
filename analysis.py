@@ -50,6 +50,7 @@ class Analyse:
                 comp = None,
                 gradient = None,
                 bucket = None,
+                quantile = None,
                 surface = 'volume',
                 nonDim = None,
                 ):
@@ -114,12 +115,22 @@ class Analyse:
             ## Check 'bucket' input is correct:
             if not bucket is None:
                 if not type(bucket) in {float, int}:
-                    if not type(bucket) is tuple:
-                        raise Exception
-                    if not all([type(var) in {float, int} for var in bucket]):
-                        raise Exception
-                    if not len(bucket) == 2:
-                        raise Exception
+                    pass
+                elif type(bucket) is tuple:
+                    if len(bucket) == 2:
+                        for var in bucket:
+                            if type(var) in {float, int}:
+                                pass
+                            elif type(var) is str:
+                                if not (var == 'max' or var == 'min'):
+                                    raise Exception
+                            else:
+                                raise Exception
+                    elif len(bucket) == 3:
+                        if not bucket[0] = 'quantile':
+                            raise Exception
+                        if not type(bucket[1]) is int and type(bucket[2]) is int:
+                            raise Exception
 
             ## Check 'surface' input is correct:
             if mesh.dim == 2:
@@ -164,7 +175,18 @@ class Analyse:
             ## Add bucket if required:
             if not bucket is None:
                 if type(bucket) is tuple:
-                    adjBucket = bucket
+                    adjBucket = []
+                    for val in bucket:
+                        if type(val) is str:
+                            if val == 'max':
+                                addVal = 1e18
+                            elif val == 'min':
+                                addVal = 1e-18
+                            else:
+                                raise Exception
+                        else:
+                            addVal = val
+                        adjBucket.append(addVal)
                     bucketStr = str(bucket[0]) + ':' + str(bucket[1])
                 else:
                     adjBucket = (bucket - 1e-18, bucket + 1e-18)
