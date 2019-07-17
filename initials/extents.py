@@ -19,9 +19,8 @@ class IC:
 
         self.polygons = [(0, fn.misc.constant(True))]
         for val, vertices in shapes:
-            array = np.array(vertices)
             self.polygons.append(
-                (val, fn.shape.Polygon(array))
+                (val, fn.shape.Polygon(vertices))
                 )
 
     def evaluate(self, coordArray):

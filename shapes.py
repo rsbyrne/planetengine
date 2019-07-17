@@ -1,3 +1,5 @@
+import numpy as np
+
 def trapezoid(
         centre = 0.5,
         longwidth = 0.3,
@@ -28,6 +30,7 @@ def trapezoid(
         else:
             raise Exception("Cannot specify both taper and ratio.")
 
+    # shape is drawn by clockwise order of vertices:
     if location == 'surface':
         shape = (
             (centre - longwidth * lengthRatio / 2. + skew * longwidth, 1. - thickness),
@@ -42,6 +45,7 @@ def trapezoid(
             (centre + longwidth * lengthRatio / 2. + skew * longwidth, thickness),
             (centre + longwidth / 2., 0.),
             )
+        shape = np.array(shape)
 
     else:
         raise Exception("Only 'surface' and 'base' locations are accepted")

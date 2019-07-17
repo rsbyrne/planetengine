@@ -21,6 +21,8 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
+
+
 class Analyse:
 
     class StandardIntegral:
@@ -127,7 +129,7 @@ class Analyse:
                             else:
                                 raise Exception
                     elif len(bucket) == 3:
-                        if not bucket[0] = 'quantile':
+                        if not bucket[0] == 'quantile':
                             raise Exception
                         if not type(bucket[1]) is int and type(bucket[2]) is int:
                             raise Exception

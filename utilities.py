@@ -65,20 +65,20 @@ def hash_var(var):
     return global_hashVal
 
 def get_valSet(var):
-    try:
+    if not type(var) is np.ndarray:
         data = var.data
-    except:
-        data = var
     localVals = {val for row in data for val in row}
     allValsGathered = comm.allgather(localVals)
     valSet = {val for localVals in allValsGathered for val in localVals}
     return valSet
 
-def get_scales(variable):
-    try:
-        array = variable.data
-    except:
-        array = variable
+def get_scales(var):
+    if not type(var) is np.ndarray:
+        try:
+            array = var.data
+        except:
+            varDict = unpack_var(var, return_dict = True)
+            array = varDict['var'].evaluate(varDict['substrate'])
     dims = array.shape[1]
     localMins = [np.min(array[:, dim]) for dim in range(dims)]
     allMins = comm.allgather(localMins)
@@ -89,9 +89,9 @@ def get_scales(variable):
     scales = np.dstack([globalMins, globalMaxs])[0]
     return scales
 
-def get_ranges(variable):
-    scales = get_scales(variable)
-    ranges = [maxVal - minVal for minVal, maxVal in scales]
+def get_ranges(var):
+    scales = get_scales(var)
+    ranges = np.array([maxVal - minVal for minVal, maxVal in scales])
     return ranges
 
 def set_boundaries(variable, values):
