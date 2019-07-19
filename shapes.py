@@ -1,5 +1,23 @@
 import numpy as np
 
+def interp_shape(shape):
+    interpShape = []
+    shape = np.array(shape)
+    for dimension in shape.T:
+        interpDimension = np.hstack([
+            *[np.linspace(dimension[index], dimension[index + 1], num = 100)[:-1] \
+                for index in range(0, len(dimension) - 1)], # all but one side
+            np.linspace(dimension[-1], dimension[0]), # the remaining side
+            ]) # !!! inelegant !!!
+        interpShape.append(interpDimension)
+    interpShape = np.dstack(interpShape)[0]
+    return(interpShape)
+
+def layer(top, bottom):
+    shape = [[0., bottom], [0., top], [1., top], [1., bottom]]
+    shape = np.array(shape)
+    return shape
+
 def trapezoid(
         centre = 0.5,
         longwidth = 0.3,
@@ -33,17 +51,17 @@ def trapezoid(
     # shape is drawn by clockwise order of vertices:
     if location == 'surface':
         shape = (
-            (centre - longwidth * lengthRatio / 2. + skew * longwidth, 1. - thickness),
-            (centre - longwidth / 2., 1.),
-            (centre + longwidth / 2., 1.),
-            (centre + longwidth * lengthRatio / 2. + skew * longwidth, 1. - thickness),
+            (centre - longwidth * lengthRatio / 2. + skew * longwidth, thickness),
+            (centre - longwidth / 2., 0.),
+            (centre + longwidth / 2., 0.),
+            (centre + longwidth * lengthRatio / 2. + skew * longwidth, thickness),
             )
     elif location == 'base':
         shape = (
-            (centre - longwidth / 2., 0.),
-            (centre - longwidth * lengthRatio / 2. + skew * longwidth, thickness),
-            (centre + longwidth * lengthRatio / 2. + skew * longwidth, thickness),
-            (centre + longwidth / 2., 0.),
+            (centre - longwidth / 2., 1.),
+            (centre - longwidth * lengthRatio / 2. + skew * longwidth, 1. - thickness),
+            (centre + longwidth * lengthRatio / 2. + skew * longwidth, 1. - thickness),
+            (centre + longwidth / 2., 1.),
             )
         shape = np.array(shape)
 

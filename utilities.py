@@ -24,6 +24,7 @@ nProcs = comm.Get_size()
 from . import standards
 from .standards import standardise
 from . import mapping
+from .standards import ignoreVal
 
 root = 0
 
@@ -64,29 +65,31 @@ def hash_var(var):
     global_hashVal = sum(comm.allgather(hashVal))
     return global_hashVal
 
-def get_valSet(var):
-    if not type(var) is np.ndarray:
-        data = var.data
-    localVals = {val for row in data for val in row}
-    allValsGathered = comm.allgather(localVals)
-    valSet = {val for localVals in allValsGathered for val in localVals}
-    return valSet
-
-def get_scales(var):
-    if not type(var) is np.ndarray:
+def get_valSets(var):
+    if type(var) is np.ndarray:
+        data = var
+    else:
         try:
-            array = var.data
+            data = var.data
         except:
             varDict = unpack_var(var, return_dict = True)
-            array = varDict['var'].evaluate(varDict['substrate'])
-    dims = array.shape[1]
-    localMins = [np.min(array[:, dim]) for dim in range(dims)]
-    allMins = comm.allgather(localMins)
-    globalMins = np.min(allMins, axis = 0)
-    localMaxs = [np.max(array[:, dim]) for dim in range(dims)]
-    allMaxs = comm.allgather(localMaxs)
-    globalMaxs = np.max(allMaxs, axis = 0)
-    scales = np.dstack([globalMins, globalMaxs])[0]
+            data = varDict['var'].evaluate(varDict['substrate'])
+    valSets = []
+    for dimension in data.T:
+        localVals = set(dimension)
+        for item in list(localVals):
+            if math.isnan(item):
+                localVals.remove(item)
+        allValsGathered = comm.allgather(localVals)
+        valSet = {val for localVals in allValsGathered for val in localVals}
+        valSets.append(valSet)
+    return valSets
+
+def get_scales(var):
+    valSets = get_valSets(var)
+    mins = [min(valSet) for valSet in valSets]
+    maxs = [max(valSet) for valSet in valSets]
+    scales = np.dstack([mins, maxs])[0]
     return scales
 
 def get_ranges(var):
@@ -629,10 +632,10 @@ def make_projector(*args):
     def project():
         currenthash = hash_var(var)
         if projection.lasthash == currenthash:
-            message(
-                "No underlying change detected: \
-                skipping projection."
-                )
+#             message(
+#                 "No underlying change detected: \
+#                 skipping projection."
+#                 )
             pass
         else:
             for inheritedProj in inherited_proj:

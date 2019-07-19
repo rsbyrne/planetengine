@@ -216,13 +216,14 @@ def box(
             radialCoords,
             inScales,
             outScales,
-            flip = [True, False]
+            flip = [True, True]
             )
     else:
         outArray = rescale_array(
             coordArray,
             list(zip(mesh.minCoord, mesh.maxCoord)),
-            boxDims
+            boxDims,
+            flip = [False, True]
             )
 
     if (not freqs is None) or (not mirrored is None):
@@ -262,7 +263,7 @@ def unbox(
             inBox,
             boxDims,
             outBoxDims,
-            flip = [True, False]
+            flip = [True, True]
             ),
         inverse = True
         )

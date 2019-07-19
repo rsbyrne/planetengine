@@ -11,6 +11,8 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
+ignoreVal = 1e18 * 0.4431257522991823 + 0.9913948956024117
+
 # default_mesh = {
 #     2: uw.mesh.FeMesh_Cartesian(
 #         elementRes = [64, 64],
@@ -64,9 +66,9 @@ def make_pemesh(
 
     return pemesh
 
-def standardise(var):
-    try: stVar = make_pevar(var)
-    except: stVar = make_pemesh(var)
+def standardise(var, attach = True):
+    try: stVar = make_pevar(var, attach)
+    except: stVar = make_pemesh(var, attach)
     return stVar
 
 class PeVar:
@@ -98,15 +100,13 @@ class PeVar:
                 self.var, self.substrate
                 )
             self.meshVar.project()
-        if self.discrete:
-            self.valSet = utilities.get_valSet(self.meshVar)
+        self.valSets = utilities.get_valSets(self.meshVar)
 
     def update(self):
         if hasattr(self.meshVar, 'project'):
             self.meshVar.project()
         self.pemesh.update()
-        if self.discrete:
-            self.valSet = utilities.get_valSet(self.meshVar)
+        self.valSets = utilities.get_valSets(self.meshVar)
 
 class PeMesh:
 

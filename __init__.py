@@ -17,3 +17,5 @@ from .visualisation import quickShow
 from .utilities import meshify
 from .utilities import unpack_var
 from .standards import standardise
+
+from .standards import ignoreVal

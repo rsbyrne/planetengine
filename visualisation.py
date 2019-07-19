@@ -86,15 +86,17 @@ class QuickFig:
             )
 
     def add_stipple(self, pevar, **kwargs):
-        assert pevar.discrete or pevar.boolean
-        assert not pevar.vector
+#         assert pevar.discrete or pevar.boolean
+        assert pevar.valSets == [{0., 1.}]
+#         assert not pevar.vector
         drawing = glucifer.objects.Drawing(
             pointsize = 3.,
             )
         allCoords = pevar.pemesh.cartesianScope
         for coord in allCoords:
             try:
-                val = pevar.meshVar.evaluate(np.array([coord]))
+#                 val = pevar.meshVar.evaluate(np.array([coord]))
+                val = pevar.var.evaluate(np.array([coord]))
                 if bool(val):
                     drawing.point(coord)
             except:
@@ -113,8 +115,9 @@ class QuickFig:
             )
 
     def add_contours(self, pevar, **kwargs):
-        assert not pevar.discrete
+#         assert not pevar.discrete
         assert not pevar.vector
+        assert not 0. in pevar.valSets[0]
         inFn = pevar.meshVar
 #         data = inFn.evaluate(pevar.mesh)
 #         inScales = planetengine.mapping.get_scales(data)[0]

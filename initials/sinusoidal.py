@@ -20,15 +20,13 @@ class IC:
         self.pert = pert
 
     def evaluate(self, coordArray):
-        boxLength = 1.
-        boxHeight = 1.
         valMin, valMax = self.valRange
         deltaVal = self.valRange[1] - self.valRange[0]
         pertArray = \
             self.pert \
             * np.cos(np.pi * (self.phase + self.freq * coordArray[:,0])) \
             * np.sin(np.pi * coordArray[:,1])
-        outArray = valMin + deltaVal * (boxHeight - coordArray[:,1]) + pertArray
+        outArray = valMin + deltaVal * (coordArray[:,1]) + pertArray
         outArray = np.clip(outArray, valMin, valMax)
         outArray = np.array([[item] for item in outArray])
         return outArray
