@@ -5,13 +5,10 @@ import numpy as np
 import math
 import os
 
-from mpi4py import MPI
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-nProcs = comm.Get_size()
-
-from . import standards
 from .utilities import message
+from .utilities import unpack_var
+from .projection import get_meshVar
+from .meshutils import get_meshUtils
 
 def quickShow(*args, **kwargs):
 
@@ -25,19 +22,22 @@ class QuickFig:
         self.fig = glucifer.Figure(**kwargs)
         self.figname = figname
         self.features = set()
-        self.pevars = []
+        self.vars = []
+        self.varDicts = {}
         self.fittedvars = []
+        self.updateFuncs = []
 
+        self.vars = []
         for arg in args:
-            if type(arg) is tuple:
-                argname, arg = arg
             if hasattr(arg, 'subMesh'):
                 self.add_grid(arg)
             elif hasattr(arg, 'particleCoordinates'):
                 self.add_swarm(arg)
             else:
-                pevar = standards.make_pevar(arg)
-                self.pevars.append(pevar)
+                varDict = unpack_var(var, detailed = True)
+                var = varDict['var']
+                self.varDicts[var] = varDict
+                self.vars.append(var)
 
         self.inventory = [
             self.add_surface,
@@ -49,20 +49,21 @@ class QuickFig:
 
         variables_fitted = 0
         functions_used = []
-        for pevar in self.pevars:
+        for var in self.vars:
+            varDict = self.varDicts[var]
             found = False
             for function in self.inventory:
                 if not function in functions_used:
                     if not found:
                         try:
-                            function(pevar, **kwargs)
+                            function(var, varDict, **kwargs)
                             found = True
                             functions_used.append(function)
                         except:
                             continue
             if found:
-                self.fittedvars.append(pevar)
-        self.notfittedvars = [var for var in self.pevars if not var in self.fittedvars]
+                self.fittedvars.append(var)
+        self.notfittedvars = [var for var in self.vars if not var in self.fittedvars]
 
         message(
             "Fitted " + str(len(self.fittedvars)) + " variables to the figure."
@@ -85,47 +86,38 @@ class QuickFig:
                 )
             )
 
-    def add_stipple(self, pevar, **kwargs):
-#         assert pevar.discrete or pevar.boolean
-        assert pevar.valSets == [{0., 1.}]
-#         assert not pevar.vector
+    def add_stipple(self, var, varDict, **kwargs):
+        if not varDict['valSets'] == [{0., 1.}]:
+            raise Exception
         drawing = glucifer.objects.Drawing(
             pointsize = 3.,
             )
-        allCoords = pevar.pemesh.cartesianScope
+        allCoords = get_meshUtils(varDict['mesh']).cartesianScope
         for coord in allCoords:
             try:
-#                 val = pevar.meshVar.evaluate(np.array([coord]))
-                val = pevar.var.evaluate(np.array([coord]))
+                val = var.evaluate(np.array([coord]))
                 if bool(val):
                     drawing.point(coord)
             except:
                 pass
         self.fig.append(drawing)
 
-    def add_surface(self, pevar, **kwargs):
-        assert not pevar.discrete
-        assert not pevar.vector
+    def add_surface(self, var, varDict, **kwargs):
         self.fig.append(
             glucifer.objects.Surface(
-                pevar.mesh,
-                pevar.meshVar,
+                varDict['mesh'],
+                var,
                 **kwargs
                 )
             )
 
-    def add_contours(self, pevar, **kwargs):
-#         assert not pevar.discrete
-        assert not pevar.vector
-        assert not 0. in pevar.valSets[0]
-        inFn = pevar.meshVar
-#         data = inFn.evaluate(pevar.mesh)
-#         inScales = planetengine.mapping.get_scales(data)[0]
-#         rescaledFn = (inFn - inScales[0]) / (inScales[1] - inScales[0])
+    def add_contours(self, var, varDict, **kwargs):
+        if 0. in varDict[valSets]:
+            raise Exception
         self.fig.append(
             glucifer.objects.Contours(
-                pevar.mesh,
-                fn.math.log10(inFn),
+                varDict['mesh'],
+                fn.math.log10(var),
 #                 fn.math.log10(rescaledFn * 1e5 + 1.),
                 colours = "red black",
                 interval = 0.5,
@@ -133,35 +125,31 @@ class QuickFig:
                 )
             )
 
-    def add_arrows(self, pevar, **kwargs):
-        assert not pevar.discrete
-        assert pevar.vector
+    def add_arrows(self, var, varDict, **kwargs):
         self.fig.append(
             glucifer.objects.VectorArrows(
-                pevar.mesh,
-                pevar.meshVar,
+                varDict['mesh'],
+                var,
                 **kwargs
                 )
             )
 
-    def add_points(self, pevar, **kwargs):
-        assert pevar.particles
-        assert not pevar.vector
+    def add_points(self, var, varDict, **kwargs):
         self.fig.append(
             glucifer.objects.Points(
                 pevar.substrate,
-                fn_colour = pevar.var,
-                fn_mask = pevar.var,
+                fn_colour = var,
+                fn_mask = var,
                 opacity = 0.5,
-                fn_size = 1e3 / float(pevar.substrate.particleGlobalCount)**0.5,
+                fn_size = 1e3 / float(varDict['substrate'].particleGlobalCount)**0.5,
                 colours = "purple green brown pink red",
                 **kwargs
                 )
             )
 
     def update(self):
-        for pevar in self.pevars:
-            pevar.update()
+        for updateFunc in self.updateFuncs:
+            updateFunc()
 
     def show(self):
         self.update()

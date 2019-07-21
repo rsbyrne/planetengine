@@ -59,15 +59,7 @@ def hash_var(var):
     global_hashVal = sum(comm.allgather(hashVal))
     return global_hashVal
 
-def get_valSets(var):
-    if type(var) is np.ndarray:
-        data = var
-    else:
-        try:
-            data = var.data
-        except:
-            varDict = unpack_var(var, return_dict = True)
-            data = varDict['var'].evaluate(varDict['substrate'])
+def get_valSets(array):
     valSets = []
     for dimension in data.T:
         localVals = set(dimension)
@@ -79,17 +71,24 @@ def get_valSets(var):
         valSets.append(valSet)
     return valSets
 
-def get_scales(var):
-    valSets = get_valSets(var)
+def get_arrayinfo(array):
+    valSets = get_valSets(array)
     mins = [min(valSet) for valSet in valSets]
     maxs = [max(valSet) for valSet in valSets]
     scales = np.dstack([mins, maxs])[0]
-    return scales
-
-def get_ranges(var):
-    scales = get_scales(var)
     ranges = np.array([maxVal - minVal for minVal, maxVal in scales])
-    return ranges
+    outDict = {
+        'valSets': valSets,
+        'scales': scales,
+        'ranges': ranges,
+        }
+    return outDict
+
+def get_scales(array):
+    return get_arrayinfo(array)['scales']
+
+def get_ranges(array):
+    return get_arrayinfo(array)['ranges']
 
 class Grouper:
     def __init__(self, indict = {}):
@@ -120,7 +119,7 @@ class Grouper:
                 outstring += key + ": " + thing
         return outstring
 
-def unpack_var(*args, return_dict = False):
+def unpack_var(*args, detailed = False):
 
     if len(args) == 1 and type(args[0]) == tuple:
         args = args[0]
@@ -218,7 +217,9 @@ def unpack_var(*args, return_dict = False):
             "Input data type not acceptable."
             )
 
-    if return_dict:
+    if detailed:
+        data = var.evaluate(substrate)
+        arrayinfo = get_arrayinfo(data)
         outDict = {
             'var': var,
             'varType': varType,
@@ -227,6 +228,7 @@ def unpack_var(*args, return_dict = False):
             'dType': dType,
             'varDim': varDim
             }
+        outDict.update(arrayinfo)
         return outDict
     else:
         return var, varType, mesh, substrate, dType, varDim
@@ -368,7 +370,7 @@ def getDefaultKwargs(function):
 def local_import(filepath):
 
     modname = os.path.basename(filepath)
-    
+
     spec = importlib.util.spec_from_file_location(
         modname,
         filepath,

@@ -115,7 +115,6 @@ def copyField(field1, field2,
     fullInField = makeLocalAnnulus(inMesh).add_variable(inDim)
     allData = comm.gather(inField.data, root = 0)
     allGID = comm.gather(inField.mesh.data_nodegId, root = 0)
-    idDict = {}
     if rank == 0:
         for proc in range(nProcs):
             for data, ID in zip(allData[proc], allGID[proc]):
@@ -191,5 +190,11 @@ def copyField(field1, field2,
 
     if not boundaries is None:
         set_boundaries(field2, boundaries)
+
+    del field1Proj
+    del field1Projector
+    del fullInField
+    del allData
+    del allGID
 
     return tryTolerance
