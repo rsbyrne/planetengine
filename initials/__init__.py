@@ -3,13 +3,11 @@ from . import extents
 from . import load
 
 from .. import mapping
-from .. import standards
 from ..utilities import unpack_var
-from ..utilities import copyField
 from ..utilities import get_scales
-from ..utilities import set_scales
-from ..utilities import set_boundaries
-from ..standards import standardise
+from ..fieldops import copyField
+from ..fieldops import set_scales
+from ..fieldops import set_boundaries
 from ..visualisation import quickShow
 
 def apply(initials, system):

@@ -1,17 +1,12 @@
 import numpy as np
 import underworld as uw
 from underworld import function as fn
-import glucifer
 import math
 import time
-import tarfile
 import os
-import shutil
-import json
 import itertools
 import inspect
 import importlib
-import csv
 import hashlib
 import random
 import io
@@ -21,10 +16,9 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
-from . import standards
-from .standards import standardise
-from . import mapping
-from .standards import ignoreVal
+# from . import standards
+# from .standards import standardise
+# from .standards import ignoreVal
 
 root = 0
 
@@ -96,28 +90,6 @@ def get_ranges(var):
     scales = get_scales(var)
     ranges = np.array([maxVal - minVal for minVal, maxVal in scales])
     return ranges
-
-def set_boundaries(variable, values):
-
-    try:
-        mesh = variable.mesh
-    except:
-        raise Exception("Variable does not appear to be mesh variable.")
-
-    walls = standardise(mesh).wallsList
-
-    for i, component in enumerate(values):
-        for value, wall in zip(component, walls):
-            if not value is '.':
-                variable.data[wall, i] = value
-
-def set_scales(variable, values):
-
-    variable.data[:] = mapping.rescale_array(
-        variable.data,
-        get_scales(variable),
-        values
-        )
 
 class Grouper:
     def __init__(self, indict = {}):
@@ -208,12 +180,13 @@ def unpack_var(*args, return_dict = False):
                         substrate = subMeshes[0]
 
     if substrate is None:
-        try:
-            substrate = standards.default_mesh[2]
-            data = var.evaluate(substrate)
-        except:
-            substrate = standards.default_mesh[3]
-            data = var.evaluate(substrate)
+#         try:
+#             substrate = standards.default_mesh[2]
+#             data = var.evaluate(substrate)
+#         except:
+#             substrate = standards.default_mesh[3]
+#             data = var.evaluate(substrate)
+        raise Exception
     else:
         data = var.evaluate(substrate)
 
@@ -323,159 +296,7 @@ def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.]):
 
 #     planetengine.log("Finished doing varsOnDisk, mode: " + mode)
 
-def weightVar(mesh, specialSets = None):
 
-    maskVar = uw.mesh.MeshVariable(mesh, nodeDofCount = 1)
-    weightVar = uw.mesh.MeshVariable(mesh, nodeDofCount = 1)
-
-    if specialSets == None:
-        localIntegral = uw.utils.Integral(maskVar, mesh)
-    else:
-        localIntegral = uw.utils.Integral(
-            maskVar,
-            mesh,
-            integrationType = 'surface',
-            surfaceIndexSet = specialSets
-            )
-
-    for index, val in enumerate(weightVar.data):
-        maskVar.data[:] = 0.
-        maskVar.data[index] = 1.
-        weightVar.data[index] = localIntegral.evaluate()[0]
-    return weightVar
-
-def makeLocalAnnulus(mesh):
-    for proc in range(nProcs):
-        if rank == proc:
-            localAnn = uw.mesh.FeMesh_Annulus(
-                elementType = mesh.elementType,
-                elementRes = mesh.elementRes,
-                radialLengths = mesh.radialLengths,
-                angularExtent = mesh.angularExtent,
-                periodic = mesh.periodic,
-                partitioned = False,
-                )
-    return localAnn
-
-def makeLocalCart(mesh):
-    for proc in range(nProcs):
-        if rank == proc:
-            localMesh = uw.mesh.FeMesh_Cartesian(
-                elementType = mesh.elementType,
-                elementRes = mesh.elementRes,
-                minCoord = mesh.minCoord,
-                maxCoord = mesh.maxCoord,
-                periodic = mesh.periodic,
-                partitioned = False,
-                )
-    return localMesh
-
-def copyField(field1, field2,
-        tolerance = 0.01,
-        rounded = False,
-        boxDims = None,
-        freqs = None,
-        mirrored = None,
-        blendweight = None,
-        scales = None,
-        boundaries = None,
-        ):
-
-    if not boxDims is None:
-        assert np.max(np.array(boxDims)) <= 1., "Max boxdim is 1."
-        assert np.min(np.array(boxDims)) >= 0., "Min boxdim is 0."
-
-    if type(field1) == uw.mesh._meshvariable.MeshVariable:
-        inField = field1
-        inMesh = field1.mesh
-        inDim = field1.nodeDofCount
-    else:
-        inMesh = field1.swarm.mesh
-        field1Proj = uw.mesh.MeshVariable(
-            inMesh,
-            field1.count,
-            )
-        field1Projector = uw.utils.MeshVariable_Projection(
-            field1Proj,
-            field1
-            )
-        field1Projector.solve()
-        inField = field1Proj
-        inDim = field1.count
-
-    fullInField = makeLocalAnnulus(inMesh).add_variable(inDim)
-    allData = comm.gather(inField.data, root = 0)
-    allGID = comm.gather(inField.mesh.data_nodegId, root = 0)
-    idDict = {}
-    if rank == 0:
-        for proc in range(nProcs):
-            for data, ID in zip(allData[proc], allGID[proc]):
-                fullInField.data[ID] = data
-    fullInField.data[:] = comm.bcast(fullInField.data, root = 0)
-
-    outField = field2
-    if type(field2) == uw.mesh._meshvariable.MeshVariable:
-        outMesh = field2.mesh
-        outCoords = outMesh.data
-        outDim = field2.nodeDofCount
-    else:
-        outMesh = field2.swarm.mesh
-        outCoords = field2.swarm.particleCoordinates.data
-        outDim = field2.count
-
-    assert outDim == inDim, \
-        "In and Out fields have different dimensions!"
-    assert outMesh.dim == inMesh.dim, \
-        "In and Out meshes have different dimensions!"
-
-    outBox = mapping.box(
-        outMesh,
-        outCoords,
-        boxDims,
-        freqs,
-        mirrored
-        )
-
-    def mapFn(tolerance):
-
-        evalCoords = mapping.unbox(
-            inMesh,
-            outBox,
-            tolerance = tolerance
-            )
-
-        newData = fullInField.evaluate(evalCoords)
-        oldData = outField.data[:]
-        if not blendweight is None:
-            newData = np.sum(
-                np.array([oldData, blendweight * newData]),
-                axis = 0
-                ) \
-                / (blendweight + 1)
-
-        outField.data[:] = newData
-
-        message("Mapping achieved at tolerance = " + str(tolerance))
-        return tolerance
-
-    tryTolerance = 0.
-
-    while True:
-        try:
-            tryTolerance = mapFn(tryTolerance)
-            break
-        except:
-            if tryTolerance > 0.:
-                tryTolerance *= 1.01
-            else:
-                tryTolerance += 0.00001
-            if tryTolerance > tolerance:
-                raise Exception("Couldn't find acceptable tolerance.")
-            else:
-                pass
-
-    if rounded:
-        field2.data[:] = np.around(field2.data)
 
 #     inPemesh = planetengine.standards.make_pemesh(inMesh)
 #     outPemesh = planetengine.standards.make_pemesh(outMesh)
@@ -486,25 +307,19 @@ def copyField(field1, field2,
 #             inDim
 #             )
 
-    if not scales is None:
-        set_scales(field2, scales)
 
-    if not boundaries is None:
-        set_boundaries(field2, boundaries)
 
-    return tryTolerance
-
-def meshify(*args, return_project = False):
-    var, varType, mesh, substrate, dType, varDim = \
-        unpack_var(*args)
-    pemesh = standardise(mesh)
-    rounded = dType in ('int', 'boolean')
-    meshVar = pemesh.meshify(
-        var,
-        return_project = return_project,
-        rounded = rounded
-        )
-    return meshVar
+# def meshify(*args, return_project = False):
+#     var, varType, mesh, substrate, dType, varDim = \
+#         unpack_var(*args)
+#     pemesh = standardise(mesh)
+#     rounded = dType in ('int', 'boolean')
+#     meshVar = pemesh.meshify(
+#         var,
+#         return_project = return_project,
+#         rounded = rounded
+#         )
+#     return meshVar
 
 def expose(source, destination):
     for key, value in source.__dict__.items():
@@ -610,45 +425,40 @@ def timestamp():
         )
     return stamp
 
-def make_projector(*args):
+# def make_projector(*args):
 
-    var, varType, mesh, substrate, dType, varDim = unpack_var(args)
-    projection = uw.mesh.MeshVariable(
-        mesh,
-        varDim,
-        )
-    projector = uw.utils.MeshVariable_Projection(
-        projection,
-        var,
-        )
+#     var, varType, mesh, substrate, dType, varDim = unpack_var(args)
 
-    inherited_proj = []
-    for subVar in var._underlyingDataItems:
-        try: inherited_proj.append(subVar.project)
-        except: pass
+#     projection = uw.mesh.MeshVariable(
+#         mesh,
+#         varDim,
+#         )
+#     projector = uw.utils.MeshVariable_Projection(
+#         projection,
+#         var,
+#         )
 
-    setattr(projection, 'lasthash', 0)
+#     inherited_proj = []
+#     for subVar in var._underlyingDataItems:
+#         try: inherited_proj.append(subVar.project)
+#         except: pass
 
-    def project():
-        currenthash = hash_var(var)
-        if projection.lasthash == currenthash:
-#             message(
-#                 "No underlying change detected: \
-#                 skipping projection."
-#                 )
-            pass
-        else:
-            for inheritedProj in inherited_proj:
-                inheritedProj()
-            projector.solve()
-            if dType in ('int', 'boolean'):
-                projection.data[:] = np.round(
-                    projection.data
-                    )
-            projection.lasthash = currenthash
+#     setattr(projection, 'lasthash', 0)
 
-    setattr(projection, 'projector', projector)
-    setattr(projection, 'project', project)
-    setattr(projection, 'inherited_proj', inherited_proj)
+#     def project():
+#         currenthash = hash_var(var)
+#         if not projection.lasthash == currenthash:
+#             for inheritedProj in inherited_proj:
+#                 inheritedProj()
+#             projector.solve()
+#             if dType in ('int', 'boolean'):
+#                 projection.data[:] = np.round(
+#                     projection.data
+#                     )
+#             projection.lasthash = currenthash
 
-    return projection
+#     setattr(projection, 'projector', projector)
+#     setattr(projection, 'project', project)
+#     setattr(projection, 'inherited_proj', inherited_proj)
+
+#     return projection
