@@ -62,13 +62,6 @@ def hash_var(var):
     global_hashVal = sum(comm.allgather(hashVal))
     return global_hashVal
 
-def get_array(var):
-    if type(var) is np.ndarray:
-        array = var
-    else:
-        array = unpack_var(var, detailed = True)['data']
-    return array
-
 def get_valSets(array):
     valSets = []
     for dimension in array.T:
@@ -98,18 +91,6 @@ def get_ranges(array, scales = None):
     ranges = np.array([maxVal - minVal for minVal, maxVal in scales])
     return ranges
 
-def get_varInfo(var):
-    array = get_array(var)
-    valSets = get_valSets(array)
-    scales = get_scales(array, valSets)
-    ranges = get_ranges(array, scales)
-    outDict = {
-        'valSets': valSets,
-        'scales': scales,
-        'ranges': ranges,
-        }
-    return outDict
-
 class Grouper:
     def __init__(self, indict = {}):
         self.selfdict = {}
@@ -138,114 +119,6 @@ class Grouper:
             else:
                 outstring += key + ": " + thing
         return outstring
-
-def unpack_var(*args, detailed = False):
-
-    if len(args) == 1 and type(args[0]) == tuple:
-        args = args[0]
-    substrate = None
-    if len(args) == 1:
-        var = args[0]
-        varName = 'anon'
-    elif len(args) == 2:
-        if type(args[0]) == str:
-            varName, var = args
-        else:
-            var, substrate = args
-    elif len(args) == 3:
-        varName, var, substrate = args
-    else:
-        raise Exception("Input not understood.")
-
-    if substrate is None:
-        try:
-            substrate = var.swarm
-        except:
-            try:
-                substrate = var.mesh
-            except:
-                subVars = []
-                for subVar in var._underlyingDataItems:
-                    try: subVars.append(unpack_var(subVar))
-                    except: pass
-                if len(subVars) == 0:
-                    message(
-                        "No substrate detected or was provided: \
-                        using default mesh."
-                        )
-                    substrate = None
-                else:
-                    subSwarms = list(set([
-                        subVar[3] for subVar in subVars \
-                            if subVar[1] in ('swarmVar', 'swarmFn')
-                        ]))
-                    if len(subSwarms) > 0:
-                        assert len(subSwarms) < 2, \
-                            "Multiple swarm dependencies detected: \
-                            try providing a substrate manually."
-                        substrate = subSwarms[0]
-                    else:
-                        subMeshes = list(set([
-                            subVar[3] for subVar in subVars \
-                                if subVar[1] in ('meshVar', 'meshFn')
-                            ]))
-                        for a, b in itertools.combinations(subMeshes, 2):
-                            if a is b.subMesh:
-                                subMeshes.pop(a)
-                            elif b is a.subMesh:
-                                subMeshes.pop(b)
-                        assert len(subMeshes) < 2, \
-                            "Multiple mesh dependencies detected: \
-                            try providing a substrate manually."
-                        substrate = subMeshes[0]
-
-    data = var.evaluate(substrate)
-
-    varDim = data.shape[1]
-
-    try:
-        mesh = substrate.mesh
-    except:
-        mesh = substrate
-
-    if type(var) == uw.swarm._swarmvariable.SwarmVariable:
-        varType = 'swarmVar'
-    elif type(var) == uw.mesh._meshvariable.MeshVariable:
-        varType = 'meshVar'
-    else:
-        if hasattr(substrate, 'particleCoordinates'):
-            varType = 'swarmFn'
-        else:
-            varType = 'meshFn'
-
-    if str(data.dtype) == 'int32':
-        dType = 'int'
-    elif str(data.dtype) == 'float64':
-        dType = 'double'
-    elif str(data.dtype) == 'bool':
-        dType = 'boolean'
-    else:
-        raise Exception(
-            "Input data type not acceptable."
-            )
-
-    if detailed:
-        data = var.evaluate(substrate)
-        outDict = {
-            'var': var,
-            'varType': varType,
-            'mesh': mesh,
-            'substrate': substrate,
-            'dType': dType,
-            'varDim': varDim,
-            'data': data,
-            'varName': varName,
-            }
-        varInfo = get_varInfo(data)
-        outDict.update(varInfo)
-        return outDict
-    else:
-        return var, varType, mesh, substrate, dType, varDim
 
 def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     substrates = []

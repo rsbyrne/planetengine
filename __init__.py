@@ -9,7 +9,7 @@ from . import wordhash
 from . import observer
 from . import fieldops
 from . import meshutils
-from . import projection
+# from . import projection
 from . import visualisation
 
 from .utilities import message
@@ -17,4 +17,4 @@ from .utilities import log
 from .fieldops import copyField
 from .visualisation import quickShow
 # from .utilities import meshify
-from .utilities import unpack_var
+# from .functions import unpack_var

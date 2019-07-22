@@ -6,8 +6,7 @@ import math
 import os
 
 from .utilities import message
-from .utilities import unpack_var
-from .projection import get_meshVar
+from .functions import unpack_var
 from .meshutils import get_meshUtils
 
 def quickShow(*args, **kwargs):
@@ -34,8 +33,7 @@ class QuickFig:
             elif hasattr(arg, 'particleCoordinates'):
                 self.add_swarm(arg)
             else:
-                varDict = unpack_var(arg, detailed = True)
-                var = varDict['var']
+                var, varDict = unpack_var(arg, detailed = True, return_var = True)
                 self.varDicts[var] = varDict
                 self.vars.append(var)
 
@@ -56,7 +54,7 @@ class QuickFig:
                 if not function in functions_used:
                     if not found:
                         try:
-                            function(varDict, **kwargs)
+                            function(var, varDict, **kwargs)
                             found = True
                             functions_used.append(function)
                         except:
@@ -86,7 +84,7 @@ class QuickFig:
                 )
             )
 
-    def add_stipple(self, varDict, **kwargs):
+    def add_stipple(self, var, varDict, **kwargs):
         if not varDict['valSets'] == [{0., 1.}]:
             raise Exception
         if not varDict['varDim'] == 1:
@@ -97,25 +95,25 @@ class QuickFig:
         allCoords = get_meshUtils(varDict['mesh']).cartesianScope
         for coord in allCoords:
             try:
-                val = varDict['var'].evaluate(np.array([coord]))
+                val = var.evaluate(np.array([coord]))
                 if bool(val):
                     drawing.point(coord)
             except:
                 pass
         self.fig.append(drawing)
 
-    def add_surface(self, varDict, **kwargs):
+    def add_surface(self, var, varDict, **kwargs):
         if not varDict['varDim'] == 1:
             raise Exception
         self.fig.append(
             glucifer.objects.Surface(
                 varDict['mesh'],
-                varDict['var'],
+                var,
                 **kwargs
                 )
             )
 
-    def add_contours(self, varDict, **kwargs):
+    def add_contours(self, var, varDict, **kwargs):
         if 0. in varDict['valSets']:
             raise Exception
         if not varDict['varDim'] == 1:
@@ -123,25 +121,25 @@ class QuickFig:
         self.fig.append(
             glucifer.objects.Contours(
                 varDict['mesh'],
-                varDict['var'],
+                var,
                 colours = "red black",
                 interval = varDict['ranges'][0] / 10.,
                 **kwargs
                 )
             )
 
-    def add_arrows(self, varDict, **kwargs):
+    def add_arrows(self, var, varDict, **kwargs):
         if not varDict['varDim'] == varDict['mesh'].dim:
             raise Exception
         self.fig.append(
             glucifer.objects.VectorArrows(
                 varDict['mesh'],
-                varDict['var'],
+                var,
                 **kwargs
                 )
             )
 
-    def add_points(self, varDict, **kwargs):
+    def add_points(self, var, varDict, **kwargs):
         if not varDict['varType'] in {'swarmVar' or 'swarmFn'}:
             raise Exception
         if not varDict['varDim'] == 1:
@@ -149,8 +147,8 @@ class QuickFig:
         self.fig.append(
             glucifer.objects.Points(
                 varDict['substrate'],
-                fn_colour = varDict['var'],
-                fn_mask = varDict['var'],
+                fn_colour = var,
+                fn_mask = var,
                 opacity = 0.5,
                 fn_size = 1e3 / float(varDict['substrate'].particleGlobalCount)**0.5,
                 colours = "purple green brown pink red",

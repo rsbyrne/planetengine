@@ -13,7 +13,6 @@ import importlib
 import csv
 
 from .meshutils import get_meshUtils
-from .utilities import unpack_var
 from .utilities import message
 
 class Analyse:

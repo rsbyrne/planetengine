@@ -3,7 +3,7 @@ from . import extents
 from . import load
 
 from .. import mapping
-from ..utilities import unpack_var
+from ..functions import unpack_var
 from ..utilities import get_scales
 from ..fieldops import copyField
 from ..fieldops import set_scales
@@ -27,7 +27,7 @@ def _apply(initials, system):
     for varName, var in sorted(varsOfState.items()):
 
         IC = initials[varName]
-        var, varType, mesh, substrate, dType, varDim = unpack_var(var)
+        var, varType, mesh, substrate, dType, varDim = unpack_var(var, return_var = True)
         try: boxDims = system.boxDims
         except: boxDims = ((0., 1.),) * system.mesh.dim
 
