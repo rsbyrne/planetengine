@@ -9,33 +9,88 @@ from .utilities import hash_var
 from .mapping import unbox
 from .shapes import interp_shape
 
-class Updater:
-    def __init__(self, inVar, updateFunc, inheritedUpdate = None):
-        if inheritedUpdate is None:
-            self.inheritedUpdate = lambda: None
-        else:
-            self.inheritedUpdate = inheritedUpdate
-        self.updateFunc = updateFunc
+def make_planetVar(var):
+    return Pass(var)
+
+def _updater(self):
+    def wrapper(updateFunc):
+        if len(self.inheritedUpdates):
+            currenthash = self.gethash()
+            if not currenthash == self.lasthash:
+                for inheritedUpdate in self.inheritedUpdates:
+                    inheritedUpdate()
+                updateFunc()
+                self.lasthash = currenthash
+    return wrapper
+
+class _PlanetVar:
+
+    def __init__(self, *args, opTag = ''):
+        self.varDicts = {}
+        self.inVars = []
+        self.inTags = []
+        self.inheritedUpdates = []
+        for arg in args:
+            if isinstance(arg, _PlanetVar):
+                inVar = arg.var
+                inTag = arg.opTag
+                varDict = unpack_var(inVar, detailed = True)
+                self.inheritedUpdates.append(arg.update)
+            else:
+                varDict = unpack_var(arg, detailed = True)
+                inVar = varDict['var']
+                inTag = varDict['name']
+            self.inVars.append(inVar)
+            self.varDicts[inVar] = varDict
+            self.inTags.append(inTag)
+        self.inVars = tuple(self.inVars)
+        if len(self.inVars) == 1:
+            self.inVar = self.inVar
+            self.varDict = self.varDicts[self.inVar]
+        self.var = None
         self.lasthash = 0.
-        self.gethash = lambda: hash_var(inVar)
+        self.gethash = lambda: hash_var(self.inVars)
+        self.opTag = opTag + '{' + ';'.join(self.inTags) + '}'
+
+    @_updater
+    def update(self):
+        pass
+
     def __call__(self):
-        currenthash = self.gethash
-        if not currenthash == self.lasthash:
-            self.inheritedUpdate()
-            self.updateFunc()
-            self.lasthash = currenthash
+        self.update()
+        return self.var
 
-def _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate):
+class Pass(_PlanetVar):
+    def __init__(self, inVar):
+        super().__init__(inVar)
+        self.var = self.inVar
+        self.opTag = self.opTag[1:-1] + '{}'
 
-    if opTags is None:
-        opTags = ''
-    opTags = opTag + '{' + opTags + '}'
+class Projection(_PlanetVar):
 
-    combinedUpdate = Updater(inVar, updateFunc, inheritedUpdate)
+    def __init__(self, inVar):
+        super().__init__(inVar, opTag = 'Projection')
+        varDim = self.varDict['varDim']
+        mesh = self.varDict['mesh']
+        self.projection = uw.mesh.MeshVariable(
+            mesh,
+            varDim,
+            )
+        self.projector = uw.utils.MeshVariable_Projection(
+            projection,
+            inVar,
+            )
 
-    return outVar, opTags, combinedUpdate
+    @_updater
+    def update(self):
+        self.projector.solve()
+        dType = self.varDict['dType']
+        if dType in ('int', 'boolean'):
+            self.projection.data[:] = np.round(
+                self.projection.data
+                )
 
-def operations(operation, var, opTags = None, inheritedUpdate = None):
+class Operations(_PlanetVar):
 
     opDict = {
         'abs': fn.math.abs,
@@ -61,223 +116,176 @@ def operations(operation, var, opTags = None, inheritedUpdate = None):
         'acos': fn.math.acos,
         'dot': fn.math.dot
         }
-    # ^^^ not all of these will work yet...
-    if not operation in opDict:
-        raise Exception
 
-    opFn = opDict[operation]
-    outinVar = opFn(inVar)
+    def __init__(self, operation, inVars):
+        if not operation in self.opDict:
+            raise Exception
+        super().__init__(*inVars, opTag = 'Operation_' + operation)
+        opFn = opDict[operation]
+        self.var = opFn(*self.inVars)
 
-    opTag = 'Operation_' + operation
-    updateFunc = lambda: None
+class Component(_PlanetVar):
 
-    return _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate)
+    def __init__(self, component, inVar):
+        super().__init__(inVar, opTag = 'Component_' + component)
+        inVar = self.inVar
+        varDict = self.varDict
+        if not varDict['varDim'] == varDict['mesh'].dim:
+            # hence is not a vector and so has no components:
+            raise Exception
+        if component == 'mag':
+            self.var = fn.math.sqrt(fn.math.dot(inVar, inVar))
+        else:
+            meshUtils = get_meshUtils(varDict['mesh'])
+            self.var = fn.math.dot(inVar, meshUtils.comps[component])
 
-def component(component, inVar, opTags = None, inheritedUpdate = None):
+class Gradient(_PlanetVar):
 
-    varDict = unpack_var(inVar, detailed = True)
-    inVar = varDict['var']
+    def __init__(self, gradient, inVar):
+        inVarType = unpack_var(inVar, detailed = True)['varType']
+        if not inVarType == 'meshVar':
+            inVar = Projection(inVar)
+        super().__init__(inVar, opTag = 'Gradient_' + gradient)
+        inVar = self.inVar
+        varDict = self.varDict
+        meshVar = inVar # Projector tracking???
+        varGrad = meshVar.fn_gradient
+        if gradient == 'mag':
+            self.var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
+        else:
+            meshUtils = get_meshUtils(varDict['mesh'])
+            self.var = fn.math.dot(varGrad, meshUtils.comps[gradient])
 
-    if not varDict['varDim'] == varDict['mesh'].dim:
-        # hence is not a vector and so has no components:
-        raise Exception
-    if component == 'mag':
-        outVar = fn.math.sqrt(fn.math.dot(inVar, inVar))
-    else:
-        meshUtils = get_meshUtils(varDict['mesh'])
-        outVar = fn.math.dot(inVar, meshUtils.comps[component])
+class Bucket(_PlanetVar):
 
-    opTag = 'Component_' + component
-    updateFunc = lambda: None
+    def __init__(self, bucket, inVar):
+        if type(bucket) is tuple:
+            adjBucket = list(bucket)
+            if bucket[0] == '.':
+                adjBucket[0] = 1e-18
+            if bucket[1] == '.':
+                adjBucket[1] = 1e18
+            bucketStr = str(bucket[0]) + ':' + str(bucket[1])
+        else:
+            adjBucket = (bucket - 1e-18, bucket + 1e-18)
+            bucketStr = str(bucket)
+        super().__init__(inVar, opTag = 'Bucket_' + bucketStr)
+        inVar = self.inVar
+        self.var = fn.branching.conditional([
+            (inVar < adjBucket[0], np.nan),
+            (inVar > adjBucket[1], np.nan), # double-open interval - is this a problem?
+            (True, inVar),
+            ])
 
-    return _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate)
+class Quantile(_PlanetVar):
 
-def gradient(gradient, inVar, opTags = None, inheritedUpdate = None):
+    def __init__(self, ntiles, nthtile, inVar):
+        super().__init__(inVar, opTag = 'Quantile_' + quantileStr)
+        inVar = self.inVar
+        self.lowerBound = fn.misc.constant(0.)
+        self.upperBound = fn.misc.constant(0.)
+        self.ntiles = ntiles
+        self.nthtile = nthtile
+        l_adj = -1e-18
+        if nthtile == ntiles:
+            u_adj = -1e-18
+        else:
+            u_adj = 1e-18
+        self.var = fn.branching.conditional([
+            (inVar < lowerBound + l_adj, np.nan),
+            (inVar > upperBound + u_adj, np.nan),
+            (True, inVar),
+            ])
 
-    varDict = unpack_var(inVar, detailed = True)
-    inVar = varDict['var']
+    @_updater
+    def update(self):
+        intervalSize = self.varDict['ranges'] / self.ntiles
+        lowerBound.value = self.varDict['scales'][:,0] \
+            + intervalSize * (self.nthtile - 1)
+        upperBound.value = self.varDict['scales'][:,0] \
+            + intervalSize * (self.nthtile)
 
-    meshUtils = get_meshUtils(varDict['mesh'])
-    meshVar, projectionFunc = get_meshVar(inVar)
-    varGrad = meshVar.fn_gradient
-    if gradient == 'mag':
-        outVar = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
-    else:
-        outVar = fn.math.dot(varGrad, meshUtils.comps[gradient])
+class Substitute(_PlanetVar):
 
-    opTag = 'Gradient_' + gradient
-    updateFunc = projectionFunc
-
-    return _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate)
-
-def bucket(bucket, inVar, opTags = None, inheritedUpdate = None):
-
-    varDict = unpack_var(inVar, detailed = True)
-    inVar = varDict['var']
-
-    if type(bucket) is tuple:
-        adjBucket = list(bucket)
-        if bucket[0] == '.':
-            adjBucket[0] = 1e-18
-        if bucket[1] == '.':
-            adjBucket[1] = 1e18
-        bucketStr = str(bucket[0]) + ':' + str(bucket[1])
-    else:
-        adjBucket = (bucket - 1e-18, bucket + 1e-18)
-        bucketStr = str(bucket)
-
-    outVar = fn.branching.conditional([
-        (inVar < adjBucket[0], np.nan),
-        (inVar > adjBucket[1], np.nan), # double-open interval - is this a problem?
-        (True, inVar),
-        ])
-
-    opTag = 'Bucket_' + bucketStr
-    updateFunc = lambda: None
-
-    return _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate)
-
-def quantile(ntiles, nthtile, inVar, opTags = None, inheritedUpdate = None):
-
-    varDict = unpack_var(inVar, detailed = True)
-    inVar = varDict['var']
-
-    if not (type(ntiles) is int and type(nthtile) is int):
-        raise Exception
-
-    lowerBound = fn.misc.constant(0.)
-    upperBound = fn.misc.constant(0.)
-
-    def update_bounds():
-        intervalSize = varDict['ranges'] / ntiles
-        lowerBound.value = varDict['scales'][:,0] + intervalSize * (nthtile - 1)
-        upperBound.value = varDict['scales'][:,0] + intervalSize * (nthtile)
-
-    l_adj = -1e-18
-    if nthtile == ntiles:
-        u_adj = -1e-18
-    else:
-        u_adj = 1e-18
-    outVar = fn.branching.conditional([
-        (inVar < lowerBound + l_adj, np.nan),
-        (inVar > upperBound + u_adj, np.nan),
-        (True, inVar),
-        ])
-
-    quantileStr = str(nthtile) + 'of' + str(ntiles)
-    opTag = 'Quantile_' + quantileStr
-    updateFunc = update_bounds
-
-    return _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate)
-
-def substitute(fromVal, toVal, inVar, opTags = None, inheritedUpdate = None):
-
-    varDict = unpack_var(inVar, detailed = True)
-    inVar = varDict['var']
-
-    outVar = fn.branching.conditional([
-        (fn.math.abs(inVar - fromVal) < 1e-18, toVal),
-        (True, inVar),
-        ])
-
-    opTag = 'Substitute_' + str(fromVal) + ':' + str(toVal)
-    updateFunc = lambda: None
-
-    return _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate)
-
-def binarise(inVar, opTags = None, inheritedUpdate = None):
-
-    varDict = unpack_var(inVar, detailed = True)
-    inVar = varDict['var']
-
-    outVar = 0. * inVar + fn.branching.conditional([
-        (fn.math.abs(inVar) < 1e-18, 0.),
-        (True, 1.),
-        ])
-
-    opTag = 'Binarise_'
-    updateFunc = lambda: None
-
-    return _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate)
-
-def booleanise(inVar, opTags = None, inheritedUpdate = None):
-
-    varDict = unpack_var(inVar, detailed = True)
-    inVar = varDict['var']
-
-    outVar = 0. * inVar + fn.branching.conditional([
-        (fn.math.abs(inVar) < 1e-18, False),
-        (True, True),
-        ])
-
-    opTag = 'Booleanise_'
-    updateFunc = lambda: None
-
-    return _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate)
-
-def handleNaN(inVar, opTags = None, inheritedUpdate = None, handleVal = 0.):
-
-    varDict = unpack_var(inVar, detailed = True)
-    inVar = varDict['var']
-
-    outVar = fn.branching.conditional([
-        (inVar < np.inf, inVar),
-        (True, handleVal),
-        ])
-
-    opTag = 'HandleNaN_' + str(handleVal)
-    updateFunc = lambda: None
-
-    return _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate)
-
-def region(region_name, inShape, inVar, opTags = None, inheritedUpdate = None):
-
-    varDict = unpack_var(inVar, detailed = True)
-    inVar = varDict['var']
-
-    inShape = interp_shape(inShape)
-    inShape = unbox(varDict['mesh'], inShape)
-
-    polygon = fn.shape.Polygon(inShape)
-    outVar = fn.branching.conditional([
-        (polygon, inVar),
-        (True, np.nan),
-        ])
-
-    opTag = 'Region_' + region_name
-    updateFunc = lambda: None
-
-    return _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate)
-
-def integrate(inVar, opTags = None, inheritedUpdate = None, surface = 'volume'):
-
-    varDict = unpack_var(inVar, detailed = True)
-    inVar = varDict['var']
-
-    meshUtils = get_meshUtils(varDict['mesh'])
-    if varDict['varType'] in {'meshVar', 'meshFn'}:
-        meshVar = inVar
-        updateProjection = lambda: None
-    else:
-        # hence projection is needed:
-        meshVar, updateProjection = get_meshVar(inVar)
-    intMesh = meshUtils.integrals[surface]
-    if surface == 'volume':
-        intField = uw.utils.Integral(meshVar, varDict['mesh'])
-    else:
-        indexSet = meshUtils.surfaces[surface]
-        intField = uw.utils.Integral(
-            meshVar,
-            varDict['mesh'],
-            integrationType = 'surface',
-            surfaceIndexSet = indexSet
+    def __init__(self, fromVal, toVal, inVar):
+        super().__init__(
+            inVar,
+            opTag = 'Substitute_' + str(fromVal) + ':' + str(toVal)
             )
-    outVar = fn.misc.constant(0.)
-    def updateVal():
-        updateProjection()
-        outVar.value = intField.evaluate()[0] / intMesh()
+        self.var = fn.branching.conditional([
+            (fn.math.abs(self.inVar - fromVal) < 1e-18, toVal),
+            (True, self.inVar),
+            ])
 
-    opTag = 'Integrate_' + surface
-    updateFunc = updateVal
+class Binarise(_PlanetVar):
 
-    return _return(outVar, inVar, opTag, opTags, updateFunc, inheritedUpdate)
+    def __init__(self, inVar):
+        super().__init__(inVar, opTag = 'Binarise_')
+        self.var = 0. * self.inVar + fn.branching.conditional([
+            (fn.math.abs(self.inVar) < 1e-18, 0.),
+            (True, 1.),
+            ])
+
+class Booleanise(_PlanetVar):
+
+    def __init__(self, inVar):
+        super().__init__(inVar, opTag = 'Booleanise_')
+        self.var = 0. * self.inVar + fn.branching.conditional([
+            (fn.math.abs(self.inVar) < 1e-18, False),
+            (True, True),
+            ])
+
+class HandleNaN(_PlanetVar):
+
+    def __init__(self, handleVal, inVar):
+        super().__init__(
+            inVar,
+            'HandleNaN_' + str(handleVal)
+            )
+        self.var = fn.branching.conditional([
+            (self.inVar < np.inf, inVar),
+            (True, handleVal),
+            ])
+
+class Region(_PlanetVar):
+
+    def __init__(self, region_name, inShape, inVar):
+        super().__init__(
+            inVar,
+            'Region_' + region_name
+            )
+        inShape = interp_shape(inShape)
+        inShape = unbox(self.varDict['mesh'], inShape)
+        polygon = fn.shape.Polygon(inShape)
+        self.var = fn.branching.conditional([
+            (polygon, inVar),
+            (True, np.nan),
+            ])
+
+class Integrate(_PlanetVar):
+
+    def __init__(self, surface, inVar):
+        inVarType = unpack_var(inVar, detailed = True)['varType']
+        if not inVarType in {'meshVar', 'meshFn'}:
+            inVar = Projection(inVar)
+        super().__init__(
+            inVar,
+            'Integrate_' + surface
+            )
+        meshUtils = get_meshUtils(self.varDict['mesh'])
+        self.intMesh = meshUtils.integrals[surface]
+        if surface == 'volume':
+            self.intField = uw.utils.Integral(self.inVar, self.varDict['mesh'])
+        else:
+            indexSet = meshUtils.surfaces[surface]
+            self.intField = uw.utils.Integral(
+                self.inVar,
+                self.varDict['mesh'],
+                integrationType = 'surface',
+                surfaceIndexSet = indexSet
+                )
+        self.var = fn.misc.constant(0.)
+
+    @_updater
+    def update(self):
+        self.var.value = self.intField.evaluate()[0] / self.intMesh()

@@ -13,11 +13,11 @@ def get_meshVar(*args):
     if varType == 'meshVar':
         return var, lambda: None
     else:
-        if var in projection.projections:
-            meshVar = projection.projections[var]
-            updateFunc = projection.projectFuncs[meshVar]
+        if var in projections:
+            meshVar = projections[var]
+            updateFunc = projectFuncs[meshVar]
         else:
-            meshVar, updateFunc = projection.make_projector(var)
+            meshVar, updateFunc = make_projector(var)
         return meshVar, updateFunc
 
 def make_projector(*args):

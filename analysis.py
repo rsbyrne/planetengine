@@ -15,7 +15,6 @@ import csv
 from .meshutils import get_meshUtils
 from .utilities import unpack_var
 from .utilities import message
-from.functions import _return
 
 class Analyse:
 

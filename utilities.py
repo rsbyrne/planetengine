@@ -50,6 +50,9 @@ def hash_var(var):
         hashVal += hash_var(var.mesh)
     if hasattr(var, 'swarm'):
         hashVal += hash_var(var.swarm)
+    if type(var) is tuple:
+        for subVar in var:
+            hashVal += hash_var(subVar)
     if hasattr(var, '_underlyingDataItems'):
         for subVar in var._underlyingDataItems:
             if not var is subVar:
@@ -143,6 +146,7 @@ def unpack_var(*args, detailed = False):
     substrate = None
     if len(args) == 1:
         var = args[0]
+        varName = 'anon'
     elif len(args) == 2:
         if type(args[0]) == str:
             varName, var = args
@@ -235,6 +239,7 @@ def unpack_var(*args, detailed = False):
             'dType': dType,
             'varDim': varDim,
             'data': data,
+            'varName': varName,
             }
         varInfo = get_varInfo(data)
         outDict.update(varInfo)
