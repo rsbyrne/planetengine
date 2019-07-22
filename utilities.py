@@ -64,6 +64,7 @@ def get_array(var):
         array = var
     else:
         array = unpack_var(var, detailed = True)['data']
+    return array
 
 def get_valSets(array):
     valSets = []
@@ -191,16 +192,7 @@ def unpack_var(*args, detailed = False):
                             try providing a substrate manually."
                         substrate = subMeshes[0]
 
-    if substrate is None:
-#         try:
-#             substrate = standards.default_mesh[2]
-#             data = var.evaluate(substrate)
-#         except:
-#             substrate = standards.default_mesh[3]
-#             data = var.evaluate(substrate)
-        raise Exception
-    else:
-        data = var.evaluate(substrate)
+    data = var.evaluate(substrate)
 
     varDim = data.shape[1]
 
