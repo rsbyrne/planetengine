@@ -16,12 +16,6 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 nProcs = comm.Get_size()
 
-# from . import standards
-# from .standards import standardise
-# from .standards import ignoreVal
-
-root = 0
-
 def message(*args):
     for arg in args:
         if rank == 0:
@@ -183,33 +177,6 @@ def varsOnDisk(varsOfState, checkpointDir, mode = 'save', blackhole = [0., 0.]):
         else:
             raise Exception("Disk mode not recognised.")
 
-#     planetengine.log("Finished doing varsOnDisk, mode: " + mode)
-
-
-
-#     inPemesh = planetengine.standards.make_pemesh(inMesh)
-#     outPemesh = planetengine.standards.make_pemesh(outMesh)
-#     for inWall, outWall in zip(inPemesh.wallsList, outPemesh.wallsList):
-#         planetengine.mapping.boundary_interpolate(
-#             (inField, inMesh, inWall),
-#             (outField, outMesh, outWall),
-#             inDim
-#             )
-
-
-
-# def meshify(*args, return_project = False):
-#     var, varType, mesh, substrate, dType, varDim = \
-#         unpack_var(*args)
-#     pemesh = standardise(mesh)
-#     rounded = dType in ('int', 'boolean')
-#     meshVar = pemesh.meshify(
-#         var,
-#         return_project = return_project,
-#         rounded = rounded
-#         )
-#     return meshVar
-
 def expose(source, destination):
     for key, value in source.__dict__.items():
         destination[key] = value
@@ -313,41 +280,3 @@ def timestamp():
         '%y%m%d%H%M%SZ', time.gmtime(time.time())
         )
     return stamp
-
-# def make_projector(*args):
-
-#     var, varType, mesh, substrate, dType, varDim = unpack_var(args)
-
-#     projection = uw.mesh.MeshVariable(
-#         mesh,
-#         varDim,
-#         )
-#     projector = uw.utils.MeshVariable_Projection(
-#         projection,
-#         var,
-#         )
-
-#     inherited_proj = []
-#     for subVar in var._underlyingDataItems:
-#         try: inherited_proj.append(subVar.project)
-#         except: pass
-
-#     setattr(projection, 'lasthash', 0)
-
-#     def project():
-#         currenthash = hash_var(var)
-#         if not projection.lasthash == currenthash:
-#             for inheritedProj in inherited_proj:
-#                 inheritedProj()
-#             projector.solve()
-#             if dType in ('int', 'boolean'):
-#                 projection.data[:] = np.round(
-#                     projection.data
-#                     )
-#             projection.lasthash = currenthash
-
-#     setattr(projection, 'projector', projector)
-#     setattr(projection, 'project', project)
-#     setattr(projection, 'inherited_proj', inherited_proj)
-
-#     return projection

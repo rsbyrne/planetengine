@@ -1,4 +1,4 @@
-import underworld as uw
+planetVar.rangesimport underworld as uw
 from underworld import function as fn
 import glucifer
 import numpy as np
@@ -7,6 +7,7 @@ import os
 
 from .utilities import message
 from .functions import unpack_var
+from .functions import get_planetVar
 from .meshutils import get_meshUtils
 
 def quickShow(*args, **kwargs):
@@ -21,8 +22,7 @@ class QuickFig:
         self.fig = glucifer.Figure(**kwargs)
         self.figname = figname
         self.features = set()
-        self.vars = []
-        self.varDicts = {}
+        self.planetVars = {}
         self.fittedvars = []
         self.updateFuncs = []
 
@@ -33,9 +33,7 @@ class QuickFig:
             elif hasattr(arg, 'particleCoordinates'):
                 self.add_swarm(arg)
             else:
-                var, varDict = unpack_var(arg, detailed = True, return_var = True)
-                self.varDicts[var] = varDict
-                self.vars.append(var)
+                self.planetVars.append(get_planetVar(var))
 
         self.inventory = [
             self.add_surface,
@@ -47,20 +45,19 @@ class QuickFig:
 
         variables_fitted = 0
         functions_used = []
-        for var in self.vars:
-            varDict = self.varDicts[var]
+        for planetVar in self.planetVars:
             found = False
             for function in self.inventory:
                 if not function in functions_used:
                     if not found:
                         try:
-                            function(var, varDict, **kwargs)
+                            function(planetVar, **kwargs)
                             found = True
                             functions_used.append(function)
                         except:
                             continue
             if found:
-                self.fittedvars.append(var)
+                self.fittedvars.append(planetVar.var)
         self.notfittedvars = [var for var in self.vars if not var in self.fittedvars]
 
         message(
@@ -84,73 +81,73 @@ class QuickFig:
                 )
             )
 
-    def add_stipple(self, var, varDict, **kwargs):
-        if not varDict['valSets'] == [{0., 1.}]:
+    def add_stipple(self, planetVar, **kwargs):
+        if not planetVar.valSets == [{0., 1.}]:
             raise Exception
-        if not varDict['varDim'] == 1:
+        if not planetVar.varDim == 1:
             raise Exception
         drawing = glucifer.objects.Drawing(
             pointsize = 3.,
             )
-        allCoords = get_meshUtils(varDict['mesh']).cartesianScope
+        allCoords = get_meshUtils(planetVar.mesh).cartesianScope
         for coord in allCoords:
             try:
-                val = var.evaluate(np.array([coord]))
+                val = planetVar.var.evaluate(np.array([coord]))
                 if bool(val):
                     drawing.point(coord)
             except:
                 pass
         self.fig.append(drawing)
 
-    def add_surface(self, var, varDict, **kwargs):
-        if not varDict['varDim'] == 1:
+    def add_surface(self, planetVar, **kwargs):
+        if not planetVar.varDim == 1:
             raise Exception
         self.fig.append(
             glucifer.objects.Surface(
-                varDict['mesh'],
-                var,
+                planetVar.mesh,
+                planetVar.var,
                 **kwargs
                 )
             )
 
-    def add_contours(self, var, varDict, **kwargs):
-        if 0. in varDict['valSets']:
+    def add_contours(self, planetVar, **kwargs):
+        if 0. in planetVar.valSets:
             raise Exception
-        if not varDict['varDim'] == 1:
+        if not planetVar.varDim == 1:
             raise Exception
         self.fig.append(
             glucifer.objects.Contours(
-                varDict['mesh'],
-                var,
+                planetVar.mesh,
+                planetVar.var,
                 colours = "red black",
-                interval = varDict['ranges'][0] / 10.,
+                interval = planetVar.ranges[0] / 10.,
                 **kwargs
                 )
             )
 
-    def add_arrows(self, var, varDict, **kwargs):
-        if not varDict['varDim'] == varDict['mesh'].dim:
+    def add_arrows(self, planetVar, **kwargs):
+        if not planetVar.varDim == planetVar.mesh.dim:
             raise Exception
         self.fig.append(
             glucifer.objects.VectorArrows(
-                varDict['mesh'],
-                var,
+                planetVar.mesh,
+                planetVar.var,
                 **kwargs
                 )
             )
 
-    def add_points(self, var, varDict, **kwargs):
-        if not varDict['varType'] in {'swarmVar' or 'swarmFn'}:
+    def add_points(self, planetVar, **kwargs):
+        if not planetVar.varType in {'swarmVar' or 'swarmFn'}:
             raise Exception
-        if not varDict['varDim'] == 1:
+        if not planetVar.varDim == 1:
             raise Exception
         self.fig.append(
             glucifer.objects.Points(
-                varDict['substrate'],
-                fn_colour = var,
-                fn_mask = var,
+                planetVar.substrate,
+                fn_colour = planetVar.var,
+                fn_mask = planetVar.var,
                 opacity = 0.5,
-                fn_size = 1e3 / float(varDict['substrate'].particleGlobalCount)**0.5,
+                fn_size = 1e3 / float(planetVar.substrate.particleGlobalCount)**0.5,
                 colours = "purple green brown pink red",
                 **kwargs
                 )
