@@ -21,14 +21,15 @@ class MeshUtils:
             mesh,
             ):
 
-        if type(self.mesh) == uw.mesh.FeMesh_Cartesian:
+        if type(mesh) == uw.mesh.FeMesh_Cartesian:
+
             self.surfaces = {
                 'inner': mesh.specialSets['Bottom_VertexSet'],
                 'outer': mesh.specialSets['Top_VertexSet'],
                 'left': mesh.specialSets['Left_VertexSet'],
                 'right': mesh.specialSets['Right_VertexSet']
                 }
-            if self.mesh.dim == 2:
+            if mesh.dim == 2:
                 self.comps = {
                     'ang': fn.misc.constant((1., 0.)),
                     'rad': fn.misc.constant((0., -1.)),
@@ -70,7 +71,7 @@ class MeshUtils:
         self.__dict__.update(self.comps)
         self.__dict__.update(self.surfaces)
 
-        self.scales = get_scales(mesh)
+        self.scales = get_scales(mesh.data)
 
         volInt = uw.utils.Integral(
             1.,
@@ -112,6 +113,6 @@ class MeshUtils:
             'volume': self.integral,
             }
 
-        xs = np.linspace(self.mesh.data[:,0].min(), self.mesh.data[:,0].max(), 100)
-        ys = np.linspace(self.mesh.data[:,1].min(), self.mesh.data[:,1].max(), 100)
+        xs = np.linspace(mesh.data[:,0].min(), mesh.data[:,0].max(), 100)
+        ys = np.linspace(mesh.data[:,1].min(), mesh.data[:,1].max(), 100)
         self.cartesianScope = np.array(np.meshgrid(xs, ys)).T.reshape([-1, 2])

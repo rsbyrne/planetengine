@@ -59,9 +59,15 @@ def hash_var(var):
     global_hashVal = sum(comm.allgather(hashVal))
     return global_hashVal
 
+def get_array(var):
+    if type(var) is np.ndarray:
+        array = var
+    else:
+        array = unpack_var(var, detailed = True)['data']
+
 def get_valSets(array):
     valSets = []
-    for dimension in data.T:
+    for dimension in array.T:
         localVals = set(dimension)
         for item in list(localVals):
             if math.isnan(item):
@@ -71,24 +77,31 @@ def get_valSets(array):
         valSets.append(valSet)
     return valSets
 
-def get_arrayinfo(array):
-    valSets = get_valSets(array)
+def get_scales(array, valSets = None):
+    if valSets is None:
+        valSets = get_valSets(array)
     mins = [min(valSet) for valSet in valSets]
     maxs = [max(valSet) for valSet in valSets]
     scales = np.dstack([mins, maxs])[0]
+    return scales
+
+def get_ranges(array, scales = None):
+    if scales is None:
+        scales = get_scales(array)
     ranges = np.array([maxVal - minVal for minVal, maxVal in scales])
+    return ranges
+
+def get_varInfo(var):
+    array = get_array(var)
+    valSets = get_valSets(array)
+    scales = get_scales(array, valSets)
+    ranges = get_ranges(array, scales)
     outDict = {
         'valSets': valSets,
         'scales': scales,
         'ranges': ranges,
         }
     return outDict
-
-def get_scales(array):
-    return get_arrayinfo(array)['scales']
-
-def get_ranges(array):
-    return get_arrayinfo(array)['ranges']
 
 class Grouper:
     def __init__(self, indict = {}):
@@ -219,16 +232,17 @@ def unpack_var(*args, detailed = False):
 
     if detailed:
         data = var.evaluate(substrate)
-        arrayinfo = get_arrayinfo(data)
         outDict = {
             'var': var,
             'varType': varType,
             'mesh': mesh,
             'substrate': substrate,
             'dType': dType,
-            'varDim': varDim
+            'varDim': varDim,
+            'data': data,
             }
-        outDict.update(arrayinfo)
+        varInfo = get_varInfo(data)
+        outDict.update(varInfo)
         return outDict
     else:
         return var, varType, mesh, substrate, dType, varDim

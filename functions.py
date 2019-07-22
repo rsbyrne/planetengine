@@ -126,14 +126,12 @@ def quantile(ntiles, nthtile, var, opTags = None, updateFuncs = None):
     lowerBound = fn.misc.constant(0.)
     upperBound = fn.misc.constant(0.)
 
+    varDict = unpack_var(var)
+
     def update_bounds():
-        var_scales = utilities.get_scales(var)
-        var_ranges = np.array(
-            [maxVal - minVal for minVal, maxVal in var_scales]
-            )
-        intervalSize = var_ranges / ntiles
-        lowerBound.value = var_scales[:,0] + intervalSize * (nthtile - 1)
-        upperBound.value = var_scales[:,0] + intervalSize * (nthtile)
+        intervalSize = varDict['ranges'] / ntiles
+        lowerBound.value = varDict['scales'][:,0] + intervalSize * (nthtile - 1)
+        upperBound.value = varDict['scales'][:,0] + intervalSize * (nthtile)
 
     update_bounds()
 

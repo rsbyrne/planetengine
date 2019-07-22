@@ -1,5 +1,6 @@
 from .meshutils import get_meshUtils
 from . import mapping
+from .utilities import get_scales
 
 import underworld as uw
 from underworld import function as fn
@@ -28,7 +29,7 @@ def set_scales(variable, values):
 
     variable.data[:] = mapping.rescale_array(
         variable.data,
-        get_scales(variable),
+        get_scales(variable.data),
         values
         )
 
