@@ -81,8 +81,11 @@ def get_valSets(array):
 def get_scales(array, valSets = None):
     if valSets is None:
         valSets = get_valSets(array)
-    mins = [min(valSet) for valSet in valSets]
-    maxs = [max(valSet) for valSet in valSets]
+    if all([len(subset) for subset in valSets]):
+        mins = [min(valSet) for valSet in valSets]
+        maxs = [max(valSet) for valSet in valSets]
+    else:
+        mins = maxs = [np.nan for valSet in valSets]
     scales = np.dstack([mins, maxs])[0]
     return scales
 

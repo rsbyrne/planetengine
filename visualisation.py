@@ -89,6 +89,8 @@ class QuickFig:
     def add_stipple(self, varDict, **kwargs):
         if not varDict['valSets'] == [{0., 1.}]:
             raise Exception
+        if not varDict['varDim'] == 1:
+            raise Exception
         drawing = glucifer.objects.Drawing(
             pointsize = 3.,
             )
@@ -103,6 +105,8 @@ class QuickFig:
         self.fig.append(drawing)
 
     def add_surface(self, varDict, **kwargs):
+        if not varDict['varDim'] == 1:
+            raise Exception
         self.fig.append(
             glucifer.objects.Surface(
                 varDict['mesh'],
@@ -112,20 +116,23 @@ class QuickFig:
             )
 
     def add_contours(self, varDict, **kwargs):
-        if 0. in varDict[valSets]:
+        if 0. in varDict['valSets']:
+            raise Exception
+        if not varDict['varDim'] == 1:
             raise Exception
         self.fig.append(
             glucifer.objects.Contours(
                 varDict['mesh'],
-                fn.math.log10(varDict['var']),
-#                 fn.math.log10(rescaledFn * 1e5 + 1.),
+                varDict['var'],
                 colours = "red black",
-                interval = 0.5,
+                interval = varDict['ranges'][0] / 10.,
                 **kwargs
                 )
             )
 
     def add_arrows(self, varDict, **kwargs):
+        if not varDict['varDim'] == varDict['mesh'].dim:
+            raise Exception
         self.fig.append(
             glucifer.objects.VectorArrows(
                 varDict['mesh'],
@@ -136,6 +143,8 @@ class QuickFig:
 
     def add_points(self, varDict, **kwargs):
         if not varDict['varType'] in {'swarmVar' or 'swarmFn'}:
+            raise Exception
+        if not varDict['varDim'] == 1:
             raise Exception
         self.fig.append(
             glucifer.objects.Points(
