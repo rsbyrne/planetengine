@@ -1,12 +1,8 @@
-planetVar.rangesimport underworld as uw
-from underworld import function as fn
 import glucifer
 import numpy as np
-import math
 import os
 
 from .utilities import message
-from .functions import unpack_var
 from .functions import get_planetVar
 from .meshutils import get_meshUtils
 
@@ -22,7 +18,7 @@ class QuickFig:
         self.fig = glucifer.Figure(**kwargs)
         self.figname = figname
         self.features = set()
-        self.planetVars = {}
+        self.planetVars = []
         self.fittedvars = []
         self.updateFuncs = []
 
@@ -33,7 +29,7 @@ class QuickFig:
             elif hasattr(arg, 'particleCoordinates'):
                 self.add_swarm(arg)
             else:
-                self.planetVars.append(get_planetVar(var))
+                self.planetVars.append(get_planetVar(arg))
 
         self.inventory = [
             self.add_surface,

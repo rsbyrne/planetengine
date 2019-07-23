@@ -133,16 +133,15 @@ def unpack_var(*args, detailed = False, return_var = False):
 def _updater(updateFunc):
     @functools.wraps(updateFunc)
     def wrapper(self):
-        self.data = self.var.evaluate(self.substrate)
-        self.valSets = get_valSets(self.data)
-        self.scales = get_scales(self.data, self.valSets)
-        self.ranges = get_ranges(self.data, self.scales)
-        currenthash = hash_var(self.var)
-        if not currenthash == self.lasthash:
-            for inheritedUpdate in self.inheritedUpdates:
-                inheritedUpdate()
+        data = self.var.evaluate(self.substrate)
+        valSets = get_valSets(data)
+        if not valSets == self.valSets:
+            self.valSets = valSets
+            self.scales = get_scales(data, self.valSets)
+            self.ranges = get_ranges(data, self.scales)
+            for inVar in self.inVars:
+                inVar.update()
             updateFunc(self)
-            self.lasthash = currenthash
     return wrapper
 
 class _PlanetVar:
@@ -150,11 +149,9 @@ class _PlanetVar:
     def __init__(self, *args, opTag = ''):
         self.inVars = []
         self.inTags = []
-        self.inheritedUpdates = []
         for arg in args:
             inVar = get_planetVar(arg)
             self.inVars.append(inVar)
-            self.inheritedUpdates.append(inVar.update)
             self.inTags.append(inVar.opTag)
         self.inVars = tuple(self.inVars)
         if len(self.inVars) == 1:
@@ -162,6 +159,9 @@ class _PlanetVar:
         self.hashFuncs = tuple([inVar.hashFuncs for inVar in self.inVars])
         self.lasthash = 0.
         self.opTag = opTag + '{' + ';'.join(self.inTags) + '}'
+        self.valSets = None
+        self.scales = None
+        self.ranges = None
 
     def _finalise(self, var):
         var, varDict = unpack_var(
@@ -170,6 +170,7 @@ class _PlanetVar:
             return_var = True
             )
         self.var = var
+        self.meshUtils = get_meshUtils(varDict['mesh'])
         if type(self.var) == fn.misc.constant:
             for inVar in self.inVars:
                 self.var._underlyingDataItems.add(inVar.var)
@@ -249,15 +250,15 @@ class Operations(_PlanetVar):
         'dot': fn.math.dot
         }
 
-    def __init__(self, operation, inVars):
+    def __init__(self, operation, *args):
         if not operation in self.opDict:
             raise Exception
         super().__init__(
-            *inVars,
+            *args,
             opTag = 'Operation_' + operation
             )
-        opFn = opDict[operation]
-        var = opFn(*self.inVars)
+        opFn = self.opDict[operation]
+        var = opFn(*[inVar.var for inVar in self.inVars])
         super()._finalise(var)
 
 class Component(_PlanetVar):
@@ -278,10 +279,9 @@ class Component(_PlanetVar):
                     )
                 )
         else:
-            meshUtils = get_meshUtils(self.inVar.mesh)
             var = fn.math.dot(
                 self.inVar.var,
-                meshUtils.comps[component]
+                self.inVar.meshUtils.comps[component]
                 )
         super()._finalise(var)
 
@@ -299,8 +299,7 @@ class Gradient(_PlanetVar):
         if gradient == 'mag':
             var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
         else:
-            meshUtils = get_meshUtils(self.inVar.mesh)
-            var = fn.math.dot(varGrad, meshUtils.comps[gradient])
+            var = fn.math.dot(varGrad, self.inVar.meshUtils.comps[gradient])
         super()._finalise(var)
 
 class Bucket(_PlanetVar):
@@ -437,15 +436,14 @@ class Integrate(_PlanetVar):
             inVar,
             opTag = 'Integrate_' + surface
             )
-        meshUtils = get_meshUtils(self.inVar.mesh)
-        self.intMesh = meshUtils.integrals[surface]
+        self.intMesh = self.inVar.meshUtils.integrals[surface]
         if surface == 'volume':
             self.intField = uw.utils.Integral(
                 self.inVar.var,
                 self.inVar.mesh
                 )
         else:
-            indexSet = meshUtils.surfaces[surface]
+            indexSet = self.inVar.meshUtils.surfaces[surface]
             self.intField = uw.utils.Integral(
                 self.inVar.var,
                 self.inVar.mesh,

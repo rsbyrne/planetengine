@@ -1,9 +1,12 @@
-from .meshutils import get_meshUtils
-from . import mapping
-from .utilities import get_scales
+import numpy as np
 
 import underworld as uw
 from underworld import function as fn
+
+from .meshutils import get_meshUtils
+from . import mapping
+from .utilities import get_scales
+from .utilities import message
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -192,10 +195,10 @@ def copyField(field1, field2,
     if not boundaries is None:
         set_boundaries(field2, boundaries)
 
-    del field1Proj
-    del field1Projector
-    del fullInField
-    del allData
-    del allGID
+    # del field1Proj
+    # del field1Projector
+    # del fullInField
+    # del allData
+    # del allGID
 
     return tryTolerance
