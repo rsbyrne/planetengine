@@ -10,6 +10,7 @@ from .utilities import hash_var
 from .utilities import get_valSets
 from .utilities import get_scales
 from .utilities import get_ranges
+from .utilities import message
 from .mapping import unbox
 from .shapes import interp_shape
 
@@ -23,7 +24,7 @@ def unpack_var(*args, detailed = False, return_var = False):
 
     if len(args) == 1 and type(args[0]) == tuple:
         args = args[0]
-    substrate = None
+    substrate = 'notprovided'
     if len(args) == 1:
         var = args[0]
         varName = 'anon'
@@ -32,12 +33,20 @@ def unpack_var(*args, detailed = False, return_var = False):
             varName, var = args
         else:
             var, substrate = args
+            varName = 'anon'
     elif len(args) == 3:
         varName, var, substrate = args
     else:
         raise Exception("Input not understood.")
 
-    if substrate is None and not(type(var) is fn.misc.constant):
+    constantTypes = {int, float, bool, np.ndarray}
+    if type(var) in constantTypes:
+        var = fn.misc.constant(var)
+        substrate = None
+    if type(var) == fn.misc.constant:
+        substrate = None
+
+    if substrate == 'notprovided':
         try:
             substrate = var.swarm
         except:
@@ -49,10 +58,6 @@ def unpack_var(*args, detailed = False, return_var = False):
                     try: subVars.append(unpack_var(subVar, return_var = True))
                     except: pass
                 if len(subVars) == 0:
-                    message(
-                        "No substrate detected or was provided: \
-                        using default mesh."
-                        )
                     substrate = None
                 else:
                     subSwarms = list(set([
@@ -88,17 +93,19 @@ def unpack_var(*args, detailed = False, return_var = False):
     except:
         mesh = substrate
 
+    # This is shocking and needs to be fixed:
     if type(var) == fn.misc.constant:
         varType = 'constant'
-    if type(var) == uw.swarm._swarmvariable.SwarmVariable:
+    elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
         varType = 'swarmVar'
     elif type(var) == uw.mesh._meshvariable.MeshVariable:
         varType = 'meshVar'
+    elif hasattr(substrate, 'particleCoordinates'):
+        varType = 'swarmFn'
+    elif hasattr(var, 'evaluate_global'):
+        varType = 'meshFn'
     else:
-        if hasattr(substrate, 'particleCoordinates'):
-            varType = 'swarmFn'
-        else:
-            varType = 'meshFn'
+        raise Exception
 
     if str(data.dtype) == 'int32':
         dType = 'int'
@@ -133,15 +140,16 @@ def unpack_var(*args, detailed = False, return_var = False):
 def _updater(updateFunc):
     @functools.wraps(updateFunc)
     def wrapper(self):
-        data = self.var.evaluate(self.substrate)
-        valSets = get_valSets(data)
-        if not valSets == self.valSets:
-            self.valSets = valSets
-            self.scales = get_scales(data, self.valSets)
-            self.ranges = get_ranges(data, self.scales)
+        if not self.hashFunc() == self.lasthash:
             for inVar in self.inVars:
                 inVar.update()
             updateFunc(self)
+            data = self.var.evaluate(self.substrate)
+            self.valSets = get_valSets(data)
+            if self.dType == 'double':
+                self.scales = get_scales(data, self.valSets)
+                self.ranges = get_ranges(data, self.scales)
+            self.lasthash = self.hashFunc()
     return wrapper
 
 class _PlanetVar:
@@ -156,7 +164,6 @@ class _PlanetVar:
         self.inVars = tuple(self.inVars)
         if len(self.inVars) == 1:
             self.inVar = self.inVars[0]
-        self.hashFuncs = tuple([inVar.hashFuncs for inVar in self.inVars])
         self.lasthash = 0.
         self.opTag = opTag + '{' + ';'.join(self.inTags) + '}'
         self.valSets = None
@@ -164,16 +171,27 @@ class _PlanetVar:
         self.ranges = None
 
     def _finalise(self, var):
+        substrate = 'notprovided'
+        if len(self.inVars) > 0:
+            inSubstrates = [inVar.substrate for inVar in self.inVars]
+            if all([substrate == None for substrate in inSubstrates]):
+                substrate = None
         var, varDict = unpack_var(
             var,
+            substrate,
             detailed = True,
             return_var = True
             )
         self.var = var
-        self.meshUtils = get_meshUtils(varDict['mesh'])
-        if type(self.var) == fn.misc.constant:
-            for inVar in self.inVars:
-                self.var._underlyingDataItems.add(inVar.var)
+        if not varDict['mesh'] == None:
+            self.meshUtils = get_meshUtils(varDict['mesh'])
+        for inVar in self.inVars:
+            for underlyingVar in list(inVar.var._underlyingDataItems):
+                self.var._underlyingDataItems.add(underlyingVar)
+            if inVar.varType == 'constant':
+                if len(list(inVar.var._underlyingDataItems)) == 0:
+                    self.var._underlyingDataItems.add(inVar.var)
+        self.hashFunc = lambda: hash_var(self.var)
         self.__dict__.update(varDict)
         self.update()
 
@@ -181,20 +199,67 @@ class _PlanetVar:
     def update(self):
         pass
 
+    def evaluate(self, evalInput = None):
+        self.update()
+        if evalInput == None:
+            evalInput = self.substrate
+        return self.var.evaluate(evalInput)
+
     def __call__(self):
         self.update()
         return self.var
 
+    def __add__(self, other):
+        return Operations('add', self, other)
+
+    def __sub__(self, other):
+        return Operations('subtract', self, other)
+
+    def __mul__(self, other):
+        return Operations('multiply', self, other)
+
+    def __truediv__(self, other):
+        return Operations('divide', self, other)
+
+    def __gt__(self, other):
+        return Operations('greater', self, other)
+
+    def __ge__(self, other):
+        return Operations('greater_equal', self, other)
+
+    def __lt__(self, other):
+        return Operations('less', self, other)
+
+    def __le__(self, other):
+        return Operations('less_equal', self, other)
+
+    def __and__(self, other):
+        return Operations('logical_and', self, other)
+
+    def __or__(self, other):
+        return Operations('logical_or', self, other)
+
+    def __xor__(self, other):
+        return Operations('logical_xor', self, other)
+
+    def __pow__(self, other):
+        return Operations('pow', self, other)
+
+    def __eq__(self, other):
+        return Comparison('equals', self, other)
+
+    def __ne__(self, other):
+        return Comparison('notequals', self, other)
+
 class Pass(_PlanetVar):
-    def __init__(self, inVar):
+    def __init__(self, inVar, name = 'anon'):
         super().__init__()
         var, varDict = unpack_var(
             inVar,
             detailed = True,
             return_var = True
             )
-        self.opTag = self.opTag[1:-1] + '{}'
-        var = (varDict['varName'], var)
+        self.opTag = name + '{}'
         super()._finalise(var)
 
 class Projection(_PlanetVar):
@@ -226,6 +291,7 @@ class Projection(_PlanetVar):
 class Operations(_PlanetVar):
 
     opDict = {
+        'pow': fn.math.pow,
         'abs': fn.math.abs,
         'cosh': fn.math.cosh,
         'acosh': fn.math.acosh,
@@ -247,7 +313,19 @@ class Operations(_PlanetVar):
         'erfc': fn.math.erfc,
         'exp': fn.math.exp,
         'acos': fn.math.acos,
-        'dot': fn.math.dot
+        'dot': fn.math.dot,
+        'add': fn._function.add,
+        'subtract': fn._function.subtract,
+        'multiply': fn._function.multiply,
+        'divide': fn._function.divide,
+        'greater': fn._function.greater,
+        'greater_equal': fn._function.greater_equal,
+        'less': fn._function.less,
+        'less_equal': fn._function.less_equal,
+        'logical_and': fn._function.logical_and,
+        'logical_or': fn._function.logical_or,
+        'logical_xor': fn._function.logical_xor,
+        'input': fn._function.input,
         }
 
     def __init__(self, operation, *args):
@@ -302,6 +380,25 @@ class Gradient(_PlanetVar):
             var = fn.math.dot(varGrad, self.inVar.meshUtils.comps[gradient])
         super()._finalise(var)
 
+class Comparison(_PlanetVar):
+
+    def __init__(self, operation, inVar0, inVar1):
+        if not operation in {'equals', 'notequals'}:
+            raise Exception
+        super().__init__(
+            inVar0,
+            inVar1,
+            opTag = 'Comparison_' + operation
+            )
+        boolOut = operation == 'equals'
+        inVar0, inVar1 = self.inVars
+        var = fn.branching.conditional([
+            (inVar0.var < inVar1.var - 1e-18, not boolOut),
+            (inVar0.var > inVar1.var + 1e-18, not boolOut),
+            (True, boolOut),
+            ])
+        super()._finalise(var)
+
 class Bucket(_PlanetVar):
 
     def __init__(self, bucket, inVar):
@@ -325,6 +422,34 @@ class Bucket(_PlanetVar):
             (True, self.inVar.var),
             ])
         super()._finalise(var)
+
+class Range(_PlanetVar):
+    def __init__(self, operation, inVar0, inVar1):
+        if not operation in {'in', 'out'}:
+            raise Exception
+        super().__init__(
+            inVar0,
+            inVar1,
+            opTag = 'Range_' + operation
+            )
+        if operation == 'in':
+            inVal = self.inVars[0].var
+            outVal = np.nan
+        else:
+            inVal = np.nan
+            outVal = self.inVars[0].var
+        self.lowerBounds = fn.misc.constant(0.)
+        self.upperBounds = fn.misc.constant(0.)
+        var = fn.branching.conditional([
+            (self.inVars[0].var < self.lowerBounds, outVal),
+            (self.inVars[0].var > self.upperBounds, outVal),
+            (True, inVal),
+            ])
+        super()._finalise(var)
+    @_updater
+    def update(self):
+        self.lowerBound.value = self.inVars[1].scales[:,0]
+        self.upperBound.value = self.inVars[1].scales[:,1]
 
 class Quantile(_PlanetVar):
 
@@ -378,10 +503,21 @@ class Binarise(_PlanetVar):
             inVar,
             opTag = 'Binarise'
             )
-        var = 0. * self.inVar.var + fn.branching.conditional([
-            (fn.math.abs(self.inVar.var) < 1e-18, 0.),
-            (True, 1.),
-            ])
+        if inVar.dType == 'double':
+            var = 0. * self.inVar.var + fn.branching.conditional([
+                (fn.math.abs(self.inVar.var) > 1e-18, 1.),
+                (True, 0.),
+                ])
+        elif invar.dType == 'boolean':
+            var = 0. * self.inVar.var + fn.branching.conditional([
+                (self.inVar.var, 1.),
+                (True, 0.),
+                ])
+        elif invar.dType == 'int':
+            var = 0 * self.inVar.var + fn.branching.conditional([
+                (self.inVar.var, 1),
+                (True, 0),
+                ])
         super()._finalise(var)
 
 class Booleanise(_PlanetVar):
@@ -391,7 +527,7 @@ class Booleanise(_PlanetVar):
             inVar,
             opTag = 'Booleanise'
             )
-        var = 0. * self.inVar.var + fn.branching.conditional([
+        var = fn.branching.conditional([
             (fn.math.abs(self.inVar.var) < 1e-18, False),
             (True, True),
             ])

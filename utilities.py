@@ -36,6 +36,9 @@ def log(text, outputPath = '', outputName = 'diaglog.txt'):
 
 def hash_var(var):
     hashVal = 0
+    if type(var) == tuple:
+        for subVar in var:
+            hashVal += hash_var(subVar)
     if hasattr(var, 'value'):
         hashVal += hash(str(var.value))
     if hasattr(var, 'data'):
@@ -44,9 +47,6 @@ def hash_var(var):
         hashVal += hash_var(var.mesh)
     if hasattr(var, 'swarm'):
         hashVal += hash_var(var.swarm)
-    if type(var) is tuple:
-        for subVar in var:
-            hashVal += hash_var(subVar)
     if hasattr(var, '_underlyingDataItems'):
         for subVar in var._underlyingDataItems:
             if not var is subVar:

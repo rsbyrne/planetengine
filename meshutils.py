@@ -5,13 +5,8 @@ from underworld import function as fn
 
 import numpy as np
 
-meshUtilsDict = {}
-
 def get_meshUtils(mesh):
-    if mesh in meshUtilsDict:
-        meshUtils = meshUtilsDict[mesh]
-    else:
-        meshUtils = MeshUtils(mesh)
+    meshUtils = MeshUtils(mesh)
     return meshUtils
 
 class MeshUtils:
