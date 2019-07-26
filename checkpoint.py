@@ -59,9 +59,9 @@ class Checkpointer:
 
         if rank == 0:
 
-            if os.path.isfile(os.path.join(path, 'stamps.txt')):
+            if os.path.isfile(os.path.join(path, 'stamps.json')):
 
-                with open(os.path.join(path, 'stamps.txt')) as json_file:
+                with open(os.path.join(path, 'stamps.json')) as json_file:
                     loadstamps = json.load(json_file)
                 if not loadstamps == self.stamps:
                     raise Exception("You are trying to save a model in a different model's directory!")
