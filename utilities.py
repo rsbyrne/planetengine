@@ -34,6 +34,12 @@ def log(text, outputPath = '', outputName = 'diaglog.txt'):
         file.write('\n')
         file.close()
 
+def splitter(filename):
+    name, ext = os.path.splitext(filename)
+    while not ext == '':
+        name, ext = os.path.splitext(name)
+    return name
+
 def hash_var(var):
     hashVal = 0
     if type(var) == tuple:
