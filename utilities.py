@@ -11,18 +11,13 @@ import hashlib
 import random
 import io
 
-from mpi4py import MPI
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-nProcs = comm.Get_size()
-
 def message(*args):
     for arg in args:
-        if rank == 0:
+        if uw.mpi.rank == 0:
             print(arg)
 
 def log(text, outputPath = '', outputName = 'diaglog.txt'):
-    if rank == 0:
+    if uw.mpi.rank == 0:
         filename = os.path.join(outputPath, outputName)
         if not os.path.exists(outputPath):
             os.mkdir(outputPath)
@@ -59,7 +54,7 @@ def hash_var(var):
                 hashVal += hash_var(subVar)
     assert not hashVal == 0, \
         "Not a valid var for hashing!"
-    global_hashVal = sum(comm.allgather(hashVal))
+    global_hashVal = sum(uw.mpi.comm.allgather(hashVal))
     return global_hashVal
 
 def get_valSets(array):
@@ -69,7 +64,7 @@ def get_valSets(array):
         for item in list(localVals):
             if math.isnan(item):
                 localVals.remove(item)
-        allValsGathered = comm.allgather(localVals)
+        allValsGathered = uw.mpi.comm.allgather(localVals)
         valSet = {val for localVals in allValsGathered for val in localVals}
         valSets.append(valSet)
     return valSets

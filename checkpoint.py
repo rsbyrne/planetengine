@@ -13,11 +13,6 @@ import importlib
 import csv
 import tar
 
-from mpi4py import MPI
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-nProcs = comm.Get_size()
-
 from . import utilities
 from .utilities import message
 
@@ -57,7 +52,7 @@ class Checkpointer:
 
         coldstart = True
 
-        if rank == 0:
+        if uw.mpi.rank == 0:
 
             if os.path.isfile(os.path.join(path, 'stamps.json')):
 
@@ -70,11 +65,11 @@ class Checkpointer:
 
                 coldstart = False
 
-        coldstart = comm.bcast(coldstart, root = 0)
+        coldstart = uw.mpi.comm.bcast(coldstart, root = 0)
 
         if coldstart:
 
-            if rank == 0:
+            if uw.mpi.rank == 0:
 
                 message("No pre-existing directory for this model found. Making a new one...")
 
@@ -120,7 +115,7 @@ class Checkpointer:
 
         checkpointDir = os.path.join(path, stepStr)
 
-        if rank == 0:
+        if uw.mpi.rank == 0:
             if os.path.isdir(checkpointDir):
                 message('Checkpoint directory found: removing')
                 shutil.rmtree(checkpointDir)
@@ -140,7 +135,7 @@ class Checkpointer:
         message("Saved.")
 
         message("Saving snapshot...")
-        if rank == 0:
+        if uw.mpi.rank == 0:
             if not self.dataCollectors is None:
                 for dataCollector in self.dataCollectors:
                     for analyser in dataCollector.analysers:
@@ -157,7 +152,7 @@ class Checkpointer:
         message("Snapshot saved.")
 
         message("Saving modeltime...")
-        if rank == 0:
+        if uw.mpi.rank == 0:
             modeltime_filepath = os.path.join(
                 checkpointDir,
                 'modeltime.json'
@@ -168,7 +163,7 @@ class Checkpointer:
         message("Modeltime saved.")
 
         message("Saving stamps...")
-        if rank == 0:
+        if uw.mpi.rank == 0:
             filename = os.path.join(checkpointDir, 'stamps.json')
             with open(filename, 'w') as file:
                  json.dump(self.stamps, file)
@@ -178,7 +173,7 @@ class Checkpointer:
         if not self.dataCollectors is None:
             for dataCollector in self.dataCollectors:
                 for row in dataCollector.out():
-                    if rank == 0:
+                    if uw.mpi.rank == 0:
                         name, headerStr, dataArray = row
                         filename = os.path.join(path, name + '.csv')
                         if not type(dataArray) == type(None):
@@ -194,7 +189,7 @@ class Checkpointer:
                                     )
         message("Datasets saved.")
 
-        if rank == 0:
+        if uw.mpi.rank == 0:
             assert os.path.isfile(os.path.join(checkpointDir, 'stamps.json')), \
                 "The files did not get saved for some reason!"
 

@@ -8,11 +8,6 @@ from . import mapping
 from .utilities import get_scales
 from .utilities import message
 
-from mpi4py import MPI
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-nProcs = comm.Get_size()
-
 def set_boundaries(variable, values):
 
     try:
@@ -58,8 +53,8 @@ def weightVar(mesh, specialSets = None):
     return weightVar
 
 def makeLocalAnnulus(mesh):
-    for proc in range(nProcs):
-        if rank == proc:
+    for proc in range(uw.mpi.size):
+        if uw.mpi.rank == proc:
             localAnn = uw.mesh.FeMesh_Annulus(
                 elementType = mesh.elementType,
                 elementRes = mesh.elementRes,
@@ -71,8 +66,8 @@ def makeLocalAnnulus(mesh):
     return localAnn
 
 def makeLocalCart(mesh):
-    for proc in range(nProcs):
-        if rank == proc:
+    for proc in range(uw.mpi.size):
+        if uw.mpi.rank == proc:
             localMesh = uw.mesh.FeMesh_Cartesian(
                 elementType = mesh.elementType,
                 elementRes = mesh.elementRes,
@@ -117,13 +112,13 @@ def copyField(field1, field2,
         inDim = field1.count
 
     fullInField = makeLocalAnnulus(inMesh).add_variable(inDim)
-    allData = comm.gather(inField.data, root = 0)
-    allGID = comm.gather(inField.mesh.data_nodegId, root = 0)
-    if rank == 0:
-        for proc in range(nProcs):
+    allData = uw.mpi.comm.gather(inField.data, root = 0)
+    allGID = uw.mpi.comm.gather(inField.mesh.data_nodegId, root = 0)
+    if uw.mpi.rank == 0:
+        for proc in range(uw.mpi.size):
             for data, ID in zip(allData[proc], allGID[proc]):
                 fullInField.data[ID] = data
-    fullInField.data[:] = comm.bcast(fullInField.data, root = 0)
+    fullInField.data[:] = uw.mpi.comm.bcast(fullInField.data, root = 0)
 
     outField = field2
     if type(field2) == uw.mesh._meshvariable.MeshVariable:

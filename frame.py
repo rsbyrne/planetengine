@@ -14,10 +14,6 @@ import csv
 import copy
 from glob import glob
 
-from mpi4py import MPI
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-
 from . import utilities
 from .wordhash import wordhash as wordhashFn
 from . import checkpoint
@@ -44,7 +40,7 @@ def load_frame(
     # another planetengine directory:
 
     if not _is_child:
-        if rank == 0:
+        if uw.mpi.rank == 0:
             assert not os.path.isfile(os.path.join(outputPath, 'stamps.json')), \
                 "Loading a child model as an independent frame \
                 not currently supported."
@@ -52,11 +48,11 @@ def load_frame(
     path = os.path.join(outputPath, instanceID)
     tarpath = path + '.tar.gz'
 
-    if rank == 0:
+    if uw.mpi.rank == 0:
         assert os.path.isdir(path) or os.path.isfile(tarpath), \
             "No model found at that directory!"
 
-    if rank == 0:
+    if uw.mpi.rank == 0:
         if os.path.isfile(tarpath):
             assert not os.path.isdir(path), \
                 "Conflicting archive and directory found."
@@ -69,22 +65,22 @@ def load_frame(
             os.remove(tarpath)
 
     params = {}
-    if rank == 0:
-        with open(os.path.join(path, 'params.json')) as json_file:  
+    if uw.mpi.rank == 0:
+        with open(os.path.join(path, 'params.json')) as json_file:
             params = json.load(json_file)
-    params = comm.bcast(params, root = 0)
+    params = uw.mpi.comm.bcast(params, root = 0)
 
     configs = {}
-    if rank == 0:
-        with open(os.path.join(path, 'configs.json')) as json_file:  
+    if uw.mpi.rank == 0:
+        with open(os.path.join(path, 'configs.json')) as json_file:
             configs = json.load(json_file)
-    configs = comm.bcast(configs, root = 0)
+    configs = uw.mpi.comm.bcast(configs, root = 0)
 
     options = {}
-    if rank == 0:
-        with open(os.path.join(path, 'options.json')) as json_file:  
+    if uw.mpi.rank == 0:
+        with open(os.path.join(path, 'options.json')) as json_file:
             options = json.load(json_file)
-    options = comm.bcast(options, root = 0)
+    options = uw.mpi.comm.bcast(options, root = 0)
 
     systemscript = utilities.local_import(os.path.join(path, '_systemscript.py'))
     system = systemscript.build(**params)
@@ -114,11 +110,11 @@ def load_frame(
     # !!! NEEDS TO BE FIXED !!! #
 
 #     observerscripts = []
-#     if rank == 0:
+#     if uw.mpi.rank == 0:
 #         for file in os.listdir(path):
 #             if '_observerscript.py' in file:
 #                 observerscripts.append(file)
-#     observerscripts = comm.bcast(observerscripts, root = 0)
+#     observerscripts = uw.mpi.comm.bcast(observerscripts, root = 0)
 
 #     observers = []
 #     for filename in observerscripts:
@@ -166,7 +162,7 @@ def load_frame(
 
 def find_checkpoints(path, stamps):
     checkpoints_found = []
-    if rank == 0:
+    if uw.mpi.rank == 0:
         for directory in glob(path + '/*/'):
             basename = os.path.basename(directory[:-1])
             if (basename.isdigit() and len(basename) == 8):
@@ -179,7 +175,7 @@ def find_checkpoints(path, stamps):
                 message("Found checkpoint: " + basename)
                 checkpoints_found.append(int(basename))
         checkpoints_found = sorted(list(set(checkpoints_found)))
-    checkpoints_found = comm.bcast(checkpoints_found, root = 0)
+    checkpoints_found = uw.mpi.comm.bcast(checkpoints_found, root = 0)
     return checkpoints_found
 
 def make_stamps(
@@ -193,7 +189,7 @@ def make_stamps(
     message("Making stamps...")
 
     stamps = {}
-    if rank == 0:
+    if uw.mpi.rank == 0:
         openScripts = {name: open(script) for name, script in sorted(scripts.items())}
         stamps = {
             'params': utilities.hashstamp(params),
@@ -202,7 +198,7 @@ def make_stamps(
             'scripts': utilities.hashstamp(openScripts)
             }
         stamps['allstamp'] = utilities.hashstamp(stamps)
-    stamps = comm.bcast(stamps, root = 0)
+    stamps = uw.mpi.comm.bcast(stamps, root = 0)
 
     wordhash = wordhashFn(stamps['allstamp'])
     if _use_wordhash:
@@ -279,7 +275,7 @@ def make_frame(
 
     directory_state = ''
 
-    if rank == 0:
+    if uw.mpi.rank == 0:
 
         if os.path.isdir(path):
             if os.path.isfile(tarpath):
@@ -293,10 +289,10 @@ def make_frame(
         else:
             directory_state = 'clean'
 
-    directory_state = comm.bcast(directory_state, root = 0)
+    directory_state = uw.mpi.comm.bcast(directory_state, root = 0)
 
     if directory_state == 'tar':
-        if rank == 0:
+        if uw.mpi.rank == 0:
             with tarfile.open(tarpath) as tar:
                 tar.extract('stamps.json', path)
             with open(os.path.join(path, 'stamps.json')) as json_file:
@@ -445,7 +441,7 @@ class Frame:
     def initialise(self):
         message("Initialising...")
         apply(
-            self.initials, 
+            self.initials,
             self.system,
             )
         self.system.solve()
@@ -587,7 +583,7 @@ class Frame:
 
         message("Forking model to new directory...")
 
-        if rank == 0:
+        if uw.mpi.rank == 0:
 
             os.makedirs(extPath, exist_ok = True)
 
@@ -659,7 +655,7 @@ class Frame:
 
         backup_archived = False
 
-        if rank == 0:
+        if uw.mpi.rank == 0:
 
             assert os.path.exists(self.backuppath) or os.path.exists(self.backuptarpath), \
                 "No backup found!"
@@ -677,7 +673,7 @@ class Frame:
             else:
                 shutil.copytree(self.backuppath, self.path)
 
-        backup_archived = comm.bcast(backup_archived, root = 0)
+        backup_archived = uw.mpi.comm.bcast(backup_archived, root = 0)
 
         was_archived = self.archived
         if backup_archived:
@@ -731,7 +727,7 @@ class Frame:
                 localArchive = False
                 message("Making a remote archive...")
 
-            if rank == 0:
+            if uw.mpi.rank == 0:
 
                 assert os.path.isdir(path), \
                     "Nothing to archive yet!"
@@ -782,7 +778,7 @@ class Frame:
                 localArchive = False
                 message("Unarchiving a remote archive...")
 
-            if rank == 0:
+            if uw.mpi.rank == 0:
                 assert not os.path.isdir(path), \
                     "Destination directory already exists!"
                 assert os.path.isfile(tarpath), \
@@ -847,7 +843,7 @@ class Frame:
                 )
 
             dataDict = {}
-            if rank == 0:
+            if uw.mpi.rank == 0:
                 filelist = sorted(os.listdir(checkpointFile))
                 for file in filelist:
                     if '_snapshot.txt' in file:
@@ -860,19 +856,19 @@ class Frame:
                 for dataName, dataItem in zip(header, data):
                     key = dataName[1:].lstrip()
                     dataDict[key] = dataItem
-            dataDict = comm.bcast({**dataDict}, root = 0)
+            dataDict = uw.mpi.comm.bcast({**dataDict}, root = 0)
 
             self.system.step.value = loadStep
 
             modeltime = 0.
-            if rank == 0:
+            if uw.mpi.rank == 0:
                 modeltime_filepath = os.path.join(
                     checkpointFile,
                     'modeltime.json'
                     )
                 with open(modeltime_filepath, 'r') as file:
                     modeltime = json.load(file)
-            modeltime = comm.bcast(modeltime, root = 0)
+            modeltime = uw.mpi.comm.bcast(modeltime, root = 0)
             self.system.modeltime.value = modeltime
 
             self.system.solve()

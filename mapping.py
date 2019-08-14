@@ -2,11 +2,6 @@ import numpy as np
 import math
 import underworld as uw
 
-from mpi4py import MPI
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-nProcs = comm.Get_size()
-
 def get_pureBoxDims(coordArray):
     pureBoxDims = ((0., 1.),) * coordArray.shape[1]
     return pureBoxDims
@@ -18,7 +13,7 @@ def get_pureFreqs(coordArray):
 def boundary_interpolate(fromData, toData, dim):
     # NOT PARALLEL SAFE
 
-    assert nProcs == 1
+    assert uw.mpi.size == 1
 
     fromField, fromMesh, fromIndexSet = fromData
     comp = 0

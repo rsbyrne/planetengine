@@ -1,3 +1,4 @@
+import underworld as uw
 import glucifer
 import numpy as np
 import os
@@ -161,7 +162,7 @@ class QuickFig:
         self.update()
         if name is None:
             name = self.figname
-        if rank == 0:
+        if uw.mpi.rank == 0:
             if not os.path.isdir(path):
                 os.mkdir(path)
         self.fig.save(os.path.join(path, name))

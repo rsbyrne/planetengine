@@ -11,10 +11,10 @@ from underworld import function as fn
 # from planetengine.utilities import Grouper
 # from planetengine.observer import ObsVar
 
-from mpi4py import MPI
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-nProcs = comm.Get_size()
+
+
+
+
 
 from planetengine.newstats import ScalarIntegral
 

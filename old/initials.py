@@ -12,10 +12,10 @@ import inspect
 import importlib
 import csv
 
-from mpi4py import MPI
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-nProcs = comm.Get_size()
+
+
+
+
 
 class Group():
 
@@ -69,8 +69,8 @@ class OLDLoadField:
             mapper = None,
             ):
         self.field = field
-        for proc in range(nProcs):
-            if rank == proc:
+        for proc in range(uw.mpi.size):
+            if uw.mpi.rank == proc:
                 inputMesh = uw.mesh.FeMesh_Cartesian(
                     elementRes = inputRes,
                     minCoord = inputCoords[0],
@@ -98,8 +98,8 @@ class LoadField:
             mapper = None,
             ):
         self.field = field
-        for proc in range(nProcs):
-            if rank == proc:
+        for proc in range(uw.mpi.size):
+            if uw.mpi.rank == proc:
                 inputMesh = uw.mesh.FeMesh_Cartesian(
                     elementRes = inputRes,
                     minCoord = inputCoords[0],
