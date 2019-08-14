@@ -236,7 +236,7 @@ def local_import(filepath):
     return module
 
 def stringify(*args):
-    outStr = '('
+    outStr = '{'
     if len(args) > 1:
         for inputObject in args:
             outStr += stringify(inputObject)
@@ -245,30 +245,39 @@ def stringify(*args):
         objType = type(inputObject)
         if objType == str:
             outStr += inputObject
+            typeStr = 'str'
         elif objType == bool:
             outStr += str(inputObject)
+            typeStr = 'boo'
         elif objType == int:
             outStr += str(float(inputObject))
+            typeStr = 'int'
         elif objType == float:
             outStr += str(inputObject)
+            typeStr = 'flt'
         elif objType in [list, tuple]:
             for item in inputObject:
                 outStr += stringify(item)
+            typeStr = 'tup'
         elif objType == set:
             for item in sorted(inputObject):
                 outStr += stringify(item)
+            typeStr = 'set'
         elif objType == dict:
             for key, val in sorted(inputObject.items()):
                 outStr += (stringify(key))
                 outStr += (stringify(val))
+                typeStr = 'dct'
         elif objType == io.TextIOWrapper:
             file = inputObject.read()
             outStr += file
             inputObject.close()
+            typeStr = 'str'
         else:
             errormsg = "Type: " + str(type(inputObject)) + " not accepted."
             raise Exception(errormsg)
-    outStr += ')'
+    outStr += '}'
+    outStr = typeStr + outStr
     return outStr
 
 def hashstamp(inputObj):
