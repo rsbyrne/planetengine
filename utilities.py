@@ -250,7 +250,7 @@ def stringify(*args):
             outStr += str(inputObject)
             typeStr = 'boo'
         elif objType == int:
-            outStr += str(float(inputObject))
+            outStr += str(inputObject)
             typeStr = 'int'
         elif objType == float:
             outStr += str(inputObject)
