@@ -196,8 +196,8 @@ class PlanetVar:
         self.__dict__.update(varDict)
         self.update()
         # Ties stuff into underworld:
-        # self._fncself = self.var._fncself
-        # super(PlanetVar, self).__init__(self.inVars, **kwargs)
+        self._argument_fns = [inVar.var for inVar in self.inVars]
+        self._fncself = self.var._fncself
 
     @_updater
     def update(self):
@@ -255,7 +255,7 @@ class PlanetVar:
     def __ne__(self, other):
         return Comparison('notequals', self, other)
 
-class Pass(PlanetVar):
+class Pass(PlanetVar, UWFn):
     def __init__(self, inVar, name = 'anon'):
         super().__init__()
         var, varDict = unpack_var(
@@ -266,7 +266,7 @@ class Pass(PlanetVar):
         self.opTag = name + '{}'
         super()._finalise(var)
 
-class Projection(PlanetVar):
+class Projection(PlanetVar, UWFn):
 
     def __init__(self, inVar):
         super().__init__(
@@ -292,7 +292,7 @@ class Projection(PlanetVar):
                 self.var.data
                 )
 
-class Operations(PlanetVar):
+class Operations(PlanetVar, UWFn):
 
     opDict = {
         'pow': fn.math.pow,
@@ -343,7 +343,7 @@ class Operations(PlanetVar):
         var = opFn(*[inVar.var for inVar in self.inVars])
         super()._finalise(var)
 
-class Component(PlanetVar):
+class Component(PlanetVar, UWFn):
 
     def __init__(self, component, inVar):
         super().__init__(
@@ -367,7 +367,7 @@ class Component(PlanetVar):
                 )
         super()._finalise(var)
 
-class Gradient(PlanetVar):
+class Gradient(PlanetVar, UWFn):
 
     def __init__(self, gradient, inVar):
         inVar = get_planetVar(inVar)
@@ -384,7 +384,7 @@ class Gradient(PlanetVar):
             var = fn.math.dot(varGrad, self.inVar.meshUtils.comps[gradient])
         super()._finalise(var)
 
-class Comparison(PlanetVar):
+class Comparison(PlanetVar, UWFn):
 
     def __init__(self, operation, inVar0, inVar1):
         if not operation in {'equals', 'notequals'}:
@@ -403,7 +403,7 @@ class Comparison(PlanetVar):
             ])
         super()._finalise(var)
 
-class Bucket(PlanetVar):
+class Bucket(PlanetVar, UWFn):
 
     def __init__(self, bucket, inVar):
         if type(bucket) is tuple:
@@ -427,7 +427,7 @@ class Bucket(PlanetVar):
             ])
         super()._finalise(var)
 
-class Range(PlanetVar):
+class Range(PlanetVar, UWFn):
     def __init__(self, operation, inVar0, inVar1):
         if not operation in {'in', 'out'}:
             raise Exception
@@ -455,7 +455,7 @@ class Range(PlanetVar):
         self.lowerBound.value = self.inVars[1].scales[:,0]
         self.upperBound.value = self.inVars[1].scales[:,1]
 
-class Quantile(PlanetVar):
+class Quantile(PlanetVar, UWFn):
 
     def __init__(self, ntiles, nthtile, inVar):
         quantileStr = str(nthtile) + "of" + str(ntiles)
@@ -487,7 +487,7 @@ class Quantile(PlanetVar):
         self.upperBound.value = self.inVar.scales[:,0] \
             + intervalSize * (self.nthtile)
 
-class Substitute(PlanetVar):
+class Substitute(PlanetVar, UWFn):
 
     def __init__(self, fromVal, toVal, inVar):
         super().__init__(
@@ -500,7 +500,7 @@ class Substitute(PlanetVar):
             ])
         super()._finalise(var)
 
-class Binarise(PlanetVar):
+class Binarise(PlanetVar, UWFn):
 
     def __init__(self, inVar):
         super().__init__(
@@ -524,7 +524,7 @@ class Binarise(PlanetVar):
                 ])
         super()._finalise(var)
 
-class Booleanise(PlanetVar):
+class Booleanise(PlanetVar, UWFn):
 
     def __init__(self, inVar):
         super().__init__(
@@ -537,7 +537,7 @@ class Booleanise(PlanetVar):
             ])
         super()._finalise(var)
 
-class HandleNaN(PlanetVar):
+class HandleNaN(PlanetVar, UWFn):
 
     def __init__(self, handleVal, inVar):
         super().__init__(
@@ -550,7 +550,7 @@ class HandleNaN(PlanetVar):
             ])
         super()._finalise(var)
 
-class Region(PlanetVar):
+class Region(PlanetVar, UWFn):
 
     def __init__(self, region_name, inShape, inVar):
         super().__init__(
@@ -566,7 +566,7 @@ class Region(PlanetVar):
             ])
         super()._finalise(var)
 
-class Integrate(PlanetVar):
+class Integrate(PlanetVar, UWFn):
 
     def __init__(self, surface, inVar):
         inVar = get_planetVar(inVar)
