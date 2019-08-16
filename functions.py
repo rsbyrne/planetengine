@@ -4,7 +4,7 @@ import itertools
 import numpy as np
 import underworld as uw
 from underworld import function as fn
-import underworld.function._function as _Function
+import underworld.function._function as UWFn
 
 from .meshutils import get_meshUtils
 from .utilities import hash_var
