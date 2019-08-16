@@ -16,7 +16,7 @@ from .mapping import unbox
 from .shapes import interp_shape
 
 def get_planetVar(var):
-    if isinstance(var, _Master):
+    if isinstance(var, PlanetVar):
         return var
     else:
         return Pass(var)
@@ -153,7 +153,7 @@ def _updater(updateFunc):
             self.lasthash = self.hashFunc()
     return wrapper
 
-class _Master:
+class PlanetVar:
 
     def __init__(self, *args, opTag = ''):
         self.inVars = []
@@ -197,7 +197,7 @@ class _Master:
         self.update()
         # Ties stuff into underworld:
         # self._fncself = self.var._fncself
-        # super(_Master, self).__init__(self.inVars, **kwargs)
+        # super(PlanetVar, self).__init__(self.inVars, **kwargs)
 
     @_updater
     def update(self):
@@ -255,23 +255,21 @@ class _Master:
     def __ne__(self, other):
         return Comparison('notequals', self, other)
 
-class Pass(_Master):
+class Pass(PlanetVar):
     def __init__(self, inVar, name = 'anon'):
-        parent = super()
-        parent.__init__()
+        super().__init__()
         var, varDict = unpack_var(
             inVar,
             detailed = True,
             return_var = True
             )
         self.opTag = name + '{}'
-        parent._finalise(var)
+        super()._finalise(var)
 
-class Projection(_Master):
+class Projection(PlanetVar):
 
     def __init__(self, inVar):
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar,
             opTag = 'Projection'
             )
@@ -284,7 +282,7 @@ class Projection(_Master):
             self.inVar.var,
             )
         var = self.projection
-        parent._finalise(var)
+        super()._finalise(var)
 
     @_updater
     def update(self):
@@ -294,7 +292,7 @@ class Projection(_Master):
                 self.var.data
                 )
 
-class Operations(_Master):
+class Operations(PlanetVar):
 
     opDict = {
         'pow': fn.math.pow,
@@ -337,20 +335,18 @@ class Operations(_Master):
     def __init__(self, operation, *args):
         if not operation in self.opDict:
             raise Exception
-        parent = super()
-        parent.__init__(
+        super().__init__(
             *args,
             opTag = 'Operation_' + operation
             )
         opFn = self.opDict[operation]
         var = opFn(*[inVar.var for inVar in self.inVars])
-        parent._finalise(var)
+        super()._finalise(var)
 
-class Component(_Master):
+class Component(PlanetVar):
 
     def __init__(self, component, inVar):
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar,
             opTag = 'Component_' + component
             )
@@ -369,15 +365,15 @@ class Component(_Master):
                 self.inVar.var,
                 self.inVar.meshUtils.comps[component]
                 )
-        parent._finalise(var)
+        super()._finalise(var)
 
-class Gradient(_Master):
+class Gradient(PlanetVar):
 
     def __init__(self, gradient, inVar):
         inVar = get_planetVar(inVar)
         if not inVar.varType == 'meshVar':
             inVar = Projection(inVar)
-        parent.__init__(
+        super().__init__(
             inVar,
             opTag = 'Gradient_' + gradient
             )
@@ -386,15 +382,14 @@ class Gradient(_Master):
             var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
         else:
             var = fn.math.dot(varGrad, self.inVar.meshUtils.comps[gradient])
-        parent._finalise(var)
+        super()._finalise(var)
 
-class Comparison(_Master):
+class Comparison(PlanetVar):
 
     def __init__(self, operation, inVar0, inVar1):
         if not operation in {'equals', 'notequals'}:
             raise Exception
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar0,
             inVar1,
             opTag = 'Comparison_' + operation
@@ -406,9 +401,9 @@ class Comparison(_Master):
             (inVar0.var > inVar1.var + 1e-18, not boolOut),
             (True, boolOut),
             ])
-        parent._finalise(var)
+        super()._finalise(var)
 
-class Bucket(_Master):
+class Bucket(PlanetVar):
 
     def __init__(self, bucket, inVar):
         if type(bucket) is tuple:
@@ -421,8 +416,7 @@ class Bucket(_Master):
         else:
             adjBucket = (bucket - 1e-18, bucket + 1e-18)
             bucketStr = str(bucket)
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar,
             opTag = 'Bucket_' + bucketStr
             )
@@ -431,14 +425,13 @@ class Bucket(_Master):
             (self.inVar.var > adjBucket[1], np.nan),
             (True, self.inVar.var),
             ])
-        parent._finalise(var)
+        super()._finalise(var)
 
-class Range(_Master):
+class Range(PlanetVar):
     def __init__(self, operation, inVar0, inVar1):
         if not operation in {'in', 'out'}:
             raise Exception
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar0,
             inVar1,
             opTag = 'Range_' + operation
@@ -456,18 +449,17 @@ class Range(_Master):
             (self.inVars[0].var > self.upperBounds, outVal),
             (True, inVal),
             ])
-        parent._finalise(var)
+        super()._finalise(var)
     @_updater
     def update(self):
         self.lowerBound.value = self.inVars[1].scales[:,0]
         self.upperBound.value = self.inVars[1].scales[:,1]
 
-class Quantile(_Master):
+class Quantile(PlanetVar):
 
     def __init__(self, ntiles, nthtile, inVar):
         quantileStr = str(nthtile) + "of" + str(ntiles)
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar,
             opTag = 'Quantile_' + quantileStr
             )
@@ -485,7 +477,7 @@ class Quantile(_Master):
             (self.inVar.var > self.upperBound + u_adj, np.nan),
             (True, self.inVar.var),
             ])
-        parent._finalise(var)
+        super()._finalise(var)
 
     @_updater
     def update(self):
@@ -495,11 +487,10 @@ class Quantile(_Master):
         self.upperBound.value = self.inVar.scales[:,0] \
             + intervalSize * (self.nthtile)
 
-class Substitute(_Master):
+class Substitute(PlanetVar):
 
     def __init__(self, fromVal, toVal, inVar):
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar,
             opTag = 'Substitute_' + str(fromVal) + ':' + str(toVal)
             )
@@ -507,13 +498,12 @@ class Substitute(_Master):
             (fn.math.abs(self.inVar.var - fromVal) < 1e-18, toVal),
             (True, self.inVar.var),
             ])
-        parent._finalise(var)
+        super()._finalise(var)
 
-class Binarise(_Master):
+class Binarise(PlanetVar):
 
     def __init__(self, inVar):
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar,
             opTag = 'Binarise'
             )
@@ -532,13 +522,12 @@ class Binarise(_Master):
                 (self.inVar.var, 1),
                 (True, 0),
                 ])
-        parent._finalise(var)
+        super()._finalise(var)
 
-class Booleanise(_Master):
+class Booleanise(PlanetVar):
 
     def __init__(self, inVar):
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar,
             opTag = 'Booleanise'
             )
@@ -546,13 +535,12 @@ class Booleanise(_Master):
             (fn.math.abs(self.inVar.var) < 1e-18, False),
             (True, True),
             ])
-        parent._finalise(var)
+        super()._finalise(var)
 
-class HandleNaN(_Master):
+class HandleNaN(PlanetVar):
 
     def __init__(self, handleVal, inVar):
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar,
             opTag = 'HandleNaN_' + str(handleVal)
             )
@@ -560,13 +548,12 @@ class HandleNaN(_Master):
             (self.inVar.var < np.inf, inVar.var),
             (True, handleVal),
             ])
-        parent._finalise(var)
+        super()._finalise(var)
 
-class Region(_Master):
+class Region(PlanetVar):
 
     def __init__(self, region_name, inShape, inVar):
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar,
             opTag = 'Region_' + region_name
             )
@@ -577,16 +564,15 @@ class Region(_Master):
             (polygon, self.inVar.var),
             (True, np.nan),
             ])
-        parent._finalise(var)
+        super()._finalise(var)
 
-class Integrate(_Master):
+class Integrate(PlanetVar):
 
     def __init__(self, surface, inVar):
         inVar = get_planetVar(inVar)
         if not inVar.varType in {'meshVar', 'meshFn'}:
             inVar = Projection(inVar)
-        parent = super()
-        parent.__init__(
+        super().__init__(
             inVar,
             opTag = 'Integrate_' + surface
             )
@@ -605,7 +591,7 @@ class Integrate(_Master):
                 surfaceIndexSet = indexSet
                 )
         var = fn.misc.constant(0.)
-        parent._finalise(var)
+        super()._finalise(var)
 
     @_updater
     def update(self):
