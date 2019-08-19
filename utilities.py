@@ -1,6 +1,7 @@
 import numpy as np
 import underworld as uw
 from underworld import function as fn
+from underworld.function._function import Function as UWFn
 import math
 import time
 import os
@@ -28,6 +29,136 @@ def log(text, outputPath = '', outputName = 'diaglog.txt'):
         file.write(text)
         file.write('\n')
         file.close()
+
+def unpack_var(*args):
+
+    if len(args) == 1 and type(args[0]) == tuple:
+        args = args[0]
+    substrate = 'notprovided'
+    if len(args) == 1:
+        var = args[0]
+        varName = 'anon'
+    elif len(args) == 2:
+        if type(args[0]) == str:
+            varName, var = args
+        else:
+            var, substrate = args
+            varName = 'anon'
+    elif len(args) == 3:
+        varName, var, substrate = args
+    else:
+        raise Exception("Input not understood.")
+
+    return var, varName, substrate
+
+def get_substrate(var):
+    try:
+        substrate = var.swarm
+    except:
+        try:
+            substrate = var.mesh
+        except:
+            subVars = []
+            for subVar in var._underlyingDataItems:
+                try: subVars.append(get_varInfo(subVar, return_var = True))
+                except: pass
+            if len(subVars) == 0:
+                substrate = None
+            else:
+                subSwarms = list(set([
+                    subVar[3] for subVar in subVars \
+                        if subVar[1] in ('swarmVar', 'swarmFn')
+                    ]))
+                if len(subSwarms) > 0:
+                    assert len(subSwarms) < 2, \
+                        "Multiple swarm dependencies detected: \
+                        try providing a substrate manually."
+                    substrate = subSwarms[0]
+                else:
+                    subMeshes = list(set([
+                        subVar[3] for subVar in subVars \
+                            if subVar[1] in ('meshVar', 'meshFn')
+                        ]))
+                    for a, b in itertools.combinations(subMeshes, 2):
+                        if a is b.subMesh:
+                            subMeshes.pop(a)
+                        elif b is a.subMesh:
+                            subMeshes.pop(b)
+                    assert len(subMeshes) < 2, \
+                        "Multiple mesh dependencies detected: \
+                        try providing a substrate manually."
+                    substrate = subMeshes[0]
+    return substrate
+
+def get_mesh(var):
+    substrate = get_substrate(var)
+    try:
+        mesh = substrate.mesh
+    except:
+        mesh = substrate
+    return mesh
+
+def get_varInfo(*args, detailed = False, return_var = False):
+
+    var, varName, substrate = unpack_var(*args)
+
+    var = UWFn.convert(var)
+    if var is None:
+        raise Exception
+
+    if substrate == 'notprovided':
+        substrate = get_substrate(var)
+
+    data = var.evaluate(substrate)
+
+    varDim = data.shape[1]
+
+    try:
+        mesh = substrate.mesh
+    except:
+        mesh = substrate
+
+    if type(var) == fn.misc.constant:
+        varType = 'constant'
+    elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
+        varType = 'swarmVar'
+    elif type(var) == uw.mesh._meshvariable.MeshVariable:
+        varType = 'meshVar'
+    else:
+        if substrate is mesh:
+            varType = 'meshFn'
+        else:
+            varType = 'swarmFn'
+
+    if str(data.dtype) == 'int32':
+        dType = 'int'
+    elif str(data.dtype) == 'float64':
+        dType = 'double'
+    elif str(data.dtype) == 'bool':
+        dType = 'boolean'
+    else:
+        raise Exception(
+            "Input data type not acceptable."
+            )
+
+    if detailed:
+        outDict = {
+            'varType': varType,
+            'mesh': mesh,
+            'substrate': substrate,
+            'dType': dType,
+            'varDim': varDim,
+            'varName': varName,
+            }
+        if return_var:
+            return var, outDict
+        else:
+            return outDict
+    else:
+        if return_var:
+            return var, varType, mesh, substrate, dType, varDim
+        else:
+            return varType, mesh, substrate, dType, varDim
 
 def splitter(filename):
     name, ext = os.path.splitext(filename)

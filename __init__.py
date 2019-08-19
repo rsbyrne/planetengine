@@ -17,4 +17,4 @@ from .utilities import log
 from .fieldops import copyField
 from .visualisation import quickShow
 # from .utilities import meshify
-# from .functions import unpack_var
+# from .functions import get_varInfo

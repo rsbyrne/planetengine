@@ -1,13 +1,21 @@
 from .utilities import get_scales
+from .utilities import get_mesh
 
 import underworld as uw
 from underworld import function as fn
 
 import numpy as np
 
-def get_meshUtils(mesh):
-    meshUtils = MeshUtils(mesh)
-    return meshUtils
+def get_meshUtils(var):
+    try:
+        mesh = var
+        if not hasattr(mesh, 'meshUtils'):
+            # POTENTIAL CIRCULAR REFERENCE
+            mesh.meshUtils = MeshUtils(mesh)
+        return mesh.meshUtils
+    except:
+        mesh = get_mesh(var)
+        return get_meshUtils(mesh)
 
 class MeshUtils:
 

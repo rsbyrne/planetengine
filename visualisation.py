@@ -30,7 +30,10 @@ class QuickFig:
             elif hasattr(arg, 'particleCoordinates'):
                 self.add_swarm(arg)
             else:
-                self.planetVars.append(get_planetVar(arg))
+                self.planetVars.append(get_planetVar(arg, 'default'))
+
+        for planetVar in self.planetVars:
+            planetVar.update()
 
         self.inventory = [
             self.add_surface,
@@ -86,7 +89,7 @@ class QuickFig:
         drawing = glucifer.objects.Drawing(
             pointsize = 3.,
             )
-        allCoords = get_meshUtils(planetVar.mesh).cartesianScope
+        allCoords = planetVar.meshUtils.cartesianScope
         for coord in allCoords:
             try:
                 val = planetVar.var.evaluate(np.array([coord]))

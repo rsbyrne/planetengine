@@ -3,7 +3,7 @@ from . import extents
 from . import load
 
 from .. import mapping
-from ..functions import unpack_var
+from ..utilities import get_varInfo
 from ..utilities import get_scales
 from ..fieldops import copyField
 from ..fieldops import set_scales
@@ -27,7 +27,7 @@ def _apply(initials, system):
     for varName, var in sorted(varsOfState.items()):
 
         IC = initials[varName]
-        var, varType, mesh, substrate, dType, varDim = unpack_var(var, return_var = True)
+        var, varType, mesh, substrate, dType, varDim = get_varInfo(var, return_var = True)
         try: boxDims = system.boxDims
         except: boxDims = ((0., 1.),) * system.mesh.dim
 
@@ -63,7 +63,7 @@ def _apply(initials, system):
 # def preview(IC, _2D = True):
 #     if hasattr(IC, 'LOADTYPE'):
 #         var, varType, mesh, substrate, dType, varDim = \
-#             unpack_var(IC.inVar)
+#             get_varInfo(IC.inVar)
 #         pemesh = standards.default_mesh[mesh.dim]
 #         standinVar = pemesh.autoVars[varDim]
 #         copyField(var, standinVar)
