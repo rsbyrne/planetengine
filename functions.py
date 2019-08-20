@@ -1,19 +1,15 @@
 import functools
 import itertools
+import weakref
 
 import numpy as np
 import underworld as uw
 from underworld import function as fn
 from underworld.function._function import Function as UWFn
 
+from . import utilities
+
 from .meshutils import get_meshUtils
-from .utilities import hash_var
-from .utilities import get_valSets
-from .utilities import get_scales
-from .utilities import get_ranges
-from .utilities import message
-from .utilities import stringify
-from .utilities import get_varInfo
 from .mapping import unbox
 from .shapes import interp_shape
 
@@ -71,21 +67,6 @@ uwDataObjToNames = {
     for key, val in uwNamesToDataObj.items()
     }
 
-# def _updater(updateFunc):
-#     @functools.wraps(updateFunc)
-#     def wrapper(self):
-#         if not self.hashFunc() == self.lasthash:
-#             for inVar in self.inVars:
-#                 inVar.update()
-#             updateFunc(self)
-#             data = self.var.evaluate(self.substrate)
-#             self.valSets = get_valSets(data)
-#             if self.dType == 'double':
-#                 self.scales = get_scales(data, self.valSets)
-#                 self.ranges = get_ranges(data, self.scales)
-#             self.lasthash = self.hashFunc()
-#     return wrapper
-
 def convert(var, varName = None):
     if isinstance(var, PlanetVar):
         return var
@@ -121,56 +102,152 @@ class PlanetVar(UWFn):
 
     def __init__(self):
 
-        inTags = [inVar.varName for inVar in self.inVars]
-        self.varName = self.opTag + '{' + ';'.join(inTags) + '}'
+        if type(self) in {Constant, Variable}:
+            _argument_fns = [self.var]
+        else:
+            inTags = [inVar.varName for inVar in self.inVars]
+            self.varName = self.opTag + '{' + ';'.join(inTags) + '}'
+            _argument_fns = [*self.inVars]
+        self._fncself = self.var._fncself
+        super().__init__(_argument_fns)
+
+        # if not hasattr(self, '_underlyingDataItems'):
+        #     self.var._underlyingDataItems = weakref.WeakSet()
 
         if len(self.inVars) == 1:
             self.inVar = self.inVars[0]
 
-        # POTENTIALLY SLOW:
-        self.varType, self.mesh, self.substrate, \
-            self.dType, self.varDim = get_varInfo(self.var)
-        self.meshUtils = get_meshUtils(self.mesh)
+        # self._set_underlyingDataItems()
 
-        for inVar in self.inVars:
-            for underlyingVar in list(inVar.var._underlyingDataItems):
-                self.var._underlyingDataItems.add(underlyingVar)
-            if type(inVar.var) == fn.misc.constant:
-                if len(list(inVar.var._underlyingDataItems)) == 0:
-                    self.var._underlyingDataItems.add(inVar.var)
+        self._set_attributes()
 
-        self.lasthash = 0.
-        self.hashFunc = lambda: hash_var(self.var)
-
-        self.update()
-        self.get_summary_stats()
+        self._get_summary_stats()
 
         # CIRCULAR REFERENCE
         self.var.planetVar = self
 
-        # Stuff to make UW functionality work
-        self._fncself = self.var._fncself
-        _argument_fns = [inVar.var for inVar in self.inVars]
-        super().__init__(_argument_fns)
-
     def update(self):
         pass
 
-    def full_update(self):
-        currenthash = self.hashFunc()
-        if not currenthash == self.lasthash:
+    def full_update(self, *args, **kwargs):
+        bool_check, checked = self._check_hash(
+            *args,
+            **kwargs
+            )
+        if not bool_check:
             for inVar in self.inVars:
-                inVar.full_update()
+                inVar.full_update(
+                    checked = checked,
+                    *args,
+                    **kwargs
+                    )
             self.update()
-            self.get_summary_stats()
-            self.lasthash = currenthash
+            self._get_summary_stats()
 
-    def get_summary_stats(self):
-        self.data = self.var.evaluate(self.substrate)
-        self.valSets = get_valSets(self.data)
+    def _check_hash(
+            self,
+            checked = {},
+            *args,
+            **kwargs
+            ):
+        if not hasattr(self, 'lasthash'):
+            self.lasthash = 0
+        currenthash, checked = utilities.hash_var(
+            self,
+            checked = checked,
+            global_eval = False,
+            return_checked = True,
+            *args,
+            **kwargs
+            )
+        boolcheck = bool(
+            uw.mpi.comm.allreduce(
+                self.lasthash - currenthash
+                )
+            )
+        self.lasthash = currenthash
+        return boolcheck, checked
+
+    # def _set_underlyingDataItems(self):
+    #
+    #     var = self.var
+    #     inVars = self.inVars
+    #
+    #     if not hasattr(self, '_underlyingDataItems'):
+    #         var._underlyingDataItems = weakref.WeakSet()
+    #
+    #     for inVar in inVars:
+    #         var._underlyingDataItems.union(
+    #             inVar._underlyingDataItems
+    #             )
+    #
+    #     self._underlyingDataItems = \
+    #         var._underlyingDataItems
+
+    def _set_attributes(self):
+
+        var = self.var
+
+        mesh, substrate = utilities.get_substrates(
+            self
+            )
+
+        if type(var) == fn.misc.constant:
+            varType = 'constant'
+        else:
+            if type(var) == uw.swarm._swarmvariable.SwarmVariable:
+                varType = 'swarmVar'
+            elif type(var) == uw.mesh._meshvariable.MeshVariable:
+                varType = 'meshVar'
+            else:
+                if substrate is mesh:
+                    varType = 'meshFn'
+                else:
+                    varType = 'swarmFn'
+
+        # POTENTIALLY SLOW
+        data = var.evaluate(substrate)
+        varDim = data.shape[1]
+
+        if str(data.dtype) == 'int32':
+            dType = 'int'
+        elif str(data.dtype) == 'float64':
+            dType = 'double'
+        elif str(data.dtype) == 'bool':
+            dType = 'boolean'
+        else:
+            raise Exception(
+                "Input data type not acceptable."
+                )
+
+        if not mesh is None:
+            meshUtils = get_meshUtils(mesh)
+        else:
+            meshUtils = None
+
+        self.mesh = mesh
+        self.substrate = substrate
+        self.varType = varType
+        self.varDim = varDim
+        self.dType = dType
+        self.meshUtils = meshUtils
+
+    def _get_summary_stats(self):
+        data = self.evaluate(self.substrate)
+        valSets = utilities.get_valSets(data)
         if self.dType == 'double':
-            self.scales = get_scales(self.data, self.valSets)
-            self.ranges = get_ranges(self.data, self.scales)
+            scales = utilities.get_scales(
+                data,
+                valSets
+                )
+            ranges = utilities.get_ranges(
+                data,
+                scales
+                )
+            self.scales = scales
+            self.ranges = ranges
+        self.data = data
+        self.valSets = valSets
 
     def evaluate(self, evalInput = None):
         self.full_update()
@@ -179,8 +256,17 @@ class PlanetVar(UWFn):
         return self.var.evaluate(evalInput)
 
     def __call__(self):
-        self.update()
+        self.full_update()
         return self.var
+
+    def __hash__(self):
+        if len(self.inVars) > 0:
+            selfhash = sum(
+                [inVar.__hash__() for inVar in self.inVars]
+                )
+        else:
+            selfhash = self.var.__hash__() + hash(self.varName)
+        return selfhash
 
     def __add__(self, other):
         return Operations('add', self, other)
@@ -226,34 +312,40 @@ class PlanetVar(UWFn):
 
 class Constant(PlanetVar):
 
+    opTag = 'Constant'
+
     def __init__(self, inVar):
 
         var = UWFn.convert(inVar)
         if not type(var) == fn.misc.constant:
             raise Exception
 
+        valString = utilities.stringify(
+            var.value
+            )
+        self.varName = self.opTag + '{' + valString + '}'
+
         self.opTag += ''
         self.inVars = []
         self.var = var
 
         super().__init__()
 
-        varName = stringify(var.value)
-        self.opTag = 'Constant{' + varName + '}'
-
 class Variable(PlanetVar):
+
+    opTag = 'Variable'
 
     def __init__(self, inVar, varName):
 
         var = UWFn.convert(inVar)
 
+        self.varName = self.opTag + '{' + varName + '}'
+
         self.opTag += ''
         self.inVars = []
         self.var = var
 
         super().__init__()
-
-        self.opTag = 'Variable{' + varName + '}'
 
 class Projection(PlanetVar):
 

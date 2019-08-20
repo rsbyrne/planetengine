@@ -98,6 +98,14 @@ def get_mesh(var):
         mesh = substrate
     return mesh
 
+def get_substrates(var):
+    substrate = get_substrate(var)
+    try:
+        mesh = substrate.mesh
+    except:
+        mesh = substrate
+    return mesh, substrate
+
 def get_varInfo(*args, detailed = False, return_var = False):
 
     var, varName, substrate = unpack_var(*args)
@@ -166,27 +174,86 @@ def splitter(filename):
         name, ext = os.path.splitext(name)
     return name
 
-def hash_var(var):
+def get_toCheck(var, checked = {}):
+    to_check = {}
+    try:
+        to_check[var] = stringify(var)
+    except:
+        if hasattr(var, 'mesh'):
+            to_check[var.mesh] = var.mesh.data
+        if hasattr(var, 'swarm'):
+            to_check[var.swarm] = var.swarm.data
+        if hasattr(var, 'data'):
+            to_check[var] = var.data
+        if hasattr(var, '_underlyingDataItems'):
+            for subVar in list(var._underlyingDataItems):
+                if not subVar is var:
+                    sub_toCheck = get_toCheck(
+                        subVar,
+                        checked
+                        )
+                    to_check.update(sub_toCheck)
+    return to_check
+
+def hash_var(
+        var,
+        checked = {},
+        global_eval = True,
+        return_checked = False
+        ):
+    to_check = get_toCheck(var, checked)
     hashVal = 0
-    if type(var) == tuple:
-        for subVar in var:
-            hashVal += hash_var(subVar)
-    if hasattr(var, 'value'):
-        hashVal += hash(str(var.value))
-    if hasattr(var, 'data'):
-        hashVal += hash(str(var.data))
-    if hasattr(var, 'mesh'):
-        hashVal += hash_var(var.mesh)
-    if hasattr(var, 'swarm'):
-        hashVal += hash_var(var.swarm)
-    if hasattr(var, '_underlyingDataItems'):
-        for subVar in var._underlyingDataItems:
-            if not var is subVar:
-                hashVal += hash_var(subVar)
+    for key, val in to_check.items():
+        if key in checked:
+            hashVal += checked[key]
+        else:
+            hashVal += hash(stringify(val))
+            checked[key] = hashVal
     assert not hashVal == 0, \
         "Not a valid var for hashing!"
-    global_hashVal = sum(uw.mpi.comm.allgather(hashVal))
-    return global_hashVal
+    if global_eval:
+        hashVal = sum(uw.mpi.comm.allgather(hashVal))
+    if return_checked:
+        return hashVal, checked
+    else:
+        return hashVal
+
+    # hashVal = 0
+    # checked = [var]
+    # print(type(var))
+    # def hash_obj(obj):
+    #     if not obj in checked:
+    #         addVal, _checked = hash_var(
+    #             obj,
+    #             _check_redundancy = True
+    #             )
+    #         hashVal += addVal
+    #         checked.append(_checked)
+    # if type(var) == tuple:
+    #     for subVar in var:
+    #         hash_obj(subVar)
+    # if hasattr(var, 'value'):
+    #     hashVal += hash(str(var.value))
+    # if hasattr(var, 'data'):
+    #     hashVal += hash(str(var.data))
+    # if hasattr(var, 'mesh'):
+    #     hashVal += hash_var(var.mesh)
+    #     hash_obj(var.mesh)
+    # if hasattr(var, 'swarm'):
+    #     hashVal += hash_var(var.swarm)
+    #     hash_obj(var.swarm)
+    # if hasattr(var, '_underlyingDataItems'):
+    #     for subVar in var._underlyingDataItems:
+    #         if not var is subVar:
+    #             hashVal += hash_var(subVar)
+    #             hash_obj(subVar)
+    # assert not hashVal == 0, \
+    #     "Not a valid var for hashing!"
+    # global_hashVal = sum(uw.mpi.comm.allgather(hashVal))
+    # if _check_redundancy:
+    #     return global_hashVal, checked
+    # else:
+    #     return global_hashVal
 
 def get_valSets(array):
     valSets = []
@@ -404,6 +471,9 @@ def stringify(*args):
             outStr += file
             inputObject.close()
             typeStr = 'str'
+        elif objType == np.ndarray:
+            outStr += str(inputObject)
+            typeStr = 'arr'
         else:
             errormsg = "Type: " + str(type(inputObject)) + " not accepted."
             raise Exception(errormsg)
