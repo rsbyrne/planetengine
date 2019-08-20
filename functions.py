@@ -129,44 +129,53 @@ class PlanetVar(UWFn):
     def update(self):
         pass
 
-    def full_update(self, *args, **kwargs):
-        bool_check, checked = self._check_hash(
-            *args,
-            **kwargs
-            )
-        if not bool_check:
+    def full_update(self):
+        has_changed = self._check_hash()
+        if has_changed:
             for inVar in self.inVars:
-                inVar.full_update(
-                    checked = checked,
-                    *args,
-                    **kwargs
-                    )
+                inVar.full_update()
             self.update()
             self._get_summary_stats()
 
-    def _check_hash(
-            self,
-            checked = {},
-            *args,
-            **kwargs
-            ):
+    def _check_hash(self):
         if not hasattr(self, 'lasthash'):
             self.lasthash = 0
-        currenthash, checked = utilities.hash_var(
-            self,
-            checked = checked,
-            global_eval = False,
-            return_checked = True,
-            *args,
-            **kwargs
-            )
-        boolcheck = bool(
-            uw.mpi.comm.allreduce(
-                self.lasthash - currenthash
-                )
-            )
+        currenthash = utilities.hash_var(self)
+        has_changed = not currenthash == self.lasthash
         self.lasthash = currenthash
-        return boolcheck, checked
+        return has_changed
+
+    # def full_update(self, checked = {}):
+    #     has_changed, checked = self._check_hash(
+    #         checked = checked
+    #         )
+    #     if has_changed:
+    #         for inVar in self.inVars:
+    #             inVar.full_update(
+    #                 checked = checked
+    #                 )
+    #         self.update()
+    #         self._get_summary_stats()
+    #
+    # def _check_hash(
+    #         self,
+    #         checked = {}
+    #         ):
+    #     if not hasattr(self, 'lasthash'):
+    #         self.lasthash = 0
+    #     currenthash, checked = utilities.hash_var(
+    #         self,
+    #         checked = checked,
+    #         global_eval = False,
+    #         return_checked = True
+    #         )
+    #     has_changed = bool(
+    #         uw.mpi.comm.allreduce(
+    #             self.lasthash - currenthash
+    #             )
+    #         )
+    #     self.lasthash = currenthash
+    #     return has_changed, checked
 
     # def _set_underlyingDataItems(self):
     #
@@ -188,25 +197,35 @@ class PlanetVar(UWFn):
 
         var = self.var
 
-        mesh, substrate = utilities.get_substrates(
-            self
-            )
+        if not hasattr(self, 'substrate'):
+            substrates = set()
+            for inVar in self.inVars:
+                substrates.add(inVar.mesh)
+            if len(list(substrates)) > 1:
+                raise Exception
+            substrate = list(substrates)[0]
+            self.substrate = substrate
+        if not hasattr(self, 'mesh'):
+            try:
+                mesh = self.substrate.mesh
+            except:
+                mesh = self.substrate
+            self.mesh = mesh
 
         if type(var) == fn.misc.constant:
             varType = 'constant'
+        elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
+            varType = 'swarmVar'
+        elif type(var) == uw.mesh._meshvariable.MeshVariable:
+            varType = 'meshVar'
         else:
-            if type(var) == uw.swarm._swarmvariable.SwarmVariable:
-                varType = 'swarmVar'
-            elif type(var) == uw.mesh._meshvariable.MeshVariable:
-                varType = 'meshVar'
+            if self.substrate is self.mesh:
+                varType = 'meshFn'
             else:
-                if substrate is mesh:
-                    varType = 'meshFn'
-                else:
-                    varType = 'swarmFn'
+                varType = 'swarmFn'
 
         # POTENTIALLY SLOW
-        data = var.evaluate(substrate)
+        data = var.evaluate(self.substrate)
         varDim = data.shape[1]
 
         if str(data.dtype) == 'int32':
@@ -220,13 +239,11 @@ class PlanetVar(UWFn):
                 "Input data type not acceptable."
                 )
 
-        if not mesh is None:
-            meshUtils = get_meshUtils(mesh)
+        if not self.mesh is None:
+            meshUtils = get_meshUtils(self.mesh)
         else:
             meshUtils = None
 
-        self.mesh = mesh
-        self.substrate = substrate
         self.varType = varType
         self.varDim = varDim
         self.dType = dType
@@ -328,6 +345,7 @@ class Constant(PlanetVar):
         self.opTag += ''
         self.inVars = []
         self.var = var
+        self.mesh = self.substrate = None
 
         super().__init__()
 
@@ -344,6 +362,16 @@ class Variable(PlanetVar):
         self.opTag += ''
         self.inVars = []
         self.var = var
+        try:
+            self.mesh = var.mesh
+            self.substrate = self.mesh
+        except:
+            try:
+                self.substrate = var.swarm
+                self.mesh = self.substrate.mesh
+            except:
+                self.mesh, self.substrate = \
+                    utilities.get_substrates(var)
 
         super().__init__()
 
@@ -742,6 +770,7 @@ class Integrate(PlanetVar):
         self.opTag += '_' + surface
         self.inVars = [inVar]
         self.var = var
+        self.mesh = self.substrate = None
 
         super().__init__()
 

@@ -52,6 +52,7 @@ def unpack_var(*args):
     return var, varName, substrate
 
 def get_substrate(var):
+    # CLUNKY AND SLOW - SHOULD BE FIXED
     try:
         substrate = var.swarm
     except:
@@ -177,14 +178,15 @@ def splitter(filename):
 def get_toCheck(var, checked = {}):
     to_check = {}
     try:
-        to_check[var] = stringify(var)
+        to_check[var.__hash__()] = stringify(var)
     except:
         if hasattr(var, 'mesh'):
-            to_check[var.mesh] = var.mesh.data
+            if not var.mesh is None:
+                to_check[var.mesh.__hash__()] = var.mesh.data
         if hasattr(var, 'swarm'):
-            to_check[var.swarm] = var.swarm.data
+            to_check[var.swarm.__hash__()] = var.swarm.data
         if hasattr(var, 'data'):
-            to_check[var] = var.data
+            to_check[var.__hash__()] = var.data
         if hasattr(var, '_underlyingDataItems'):
             for subVar in list(var._underlyingDataItems):
                 if not subVar is var:
@@ -197,10 +199,14 @@ def get_toCheck(var, checked = {}):
 
 def hash_var(
         var,
-        checked = {},
         global_eval = True,
-        return_checked = False
+        return_checked = False,
+        **kwargs
         ):
+    if 'checked' in kwargs:
+        checked = kwargs['checked']
+    else:
+        checked = {}
     to_check = get_toCheck(var, checked)
     hashVal = 0
     for key, val in to_check.items():
