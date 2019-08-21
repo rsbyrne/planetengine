@@ -67,7 +67,7 @@ uwDataObjToNames = {
     for key, val in uwNamesToDataObj.items()
     }
 
-def convert(var, varName = None):
+def convert(var, varName = 'anon'):
     if isinstance(var, PlanetVar):
         return var
     elif hasattr(var, 'planetVar'):
@@ -76,7 +76,7 @@ def convert(var, varName = None):
         var = UWFn.convert(var)
         if var is None:
             raise Exception
-        if varName is None:
+        if len(list(var._underlyingDataItems)) == 0:
             var = Constant(var)
         else:
             var = Variable(var, varName)
@@ -111,147 +111,132 @@ class PlanetVar(UWFn):
         self._fncself = self.var._fncself
         super().__init__(_argument_fns)
 
-        # if not hasattr(self, '_underlyingDataItems'):
-        #     self.var._underlyingDataItems = weakref.WeakSet()
-
         if len(self.inVars) == 1:
             self.inVar = self.inVars[0]
 
-        # self._set_underlyingDataItems()
+        self.lasthash = 0
+
+        self._set_rootVars()
 
         self._set_attributes()
 
-        self._get_summary_stats()
+        self._set_summary_stats()
 
-        # CIRCULAR REFERENCE
-        self.var.planetVar = self
+    def _set_rootVars(self):
+        rootVars = set()
+        if isinstance(self, BaseTypes):
+            pass
+        else:
+            assert len(self.inVars) > 0
+            for inVar in self.inVars:
+                if isinstance(inVar, BaseTypes):
+                    rootVars.add(inVar)
+                else:
+                    for rootVar in inVar.rootVars:
+                        rootVars.add(rootVar)
+        assert all(
+            [isinstance(rootVar, BaseTypes) \
+            for rootVar in list(rootVars)]
+            )
+        self.rootVars = rootVars
 
-    def update(self):
+    def _partial_update(self):
         pass
 
-    def full_update(self):
-        has_changed = self._check_hash()
-        if has_changed:
+    def update(self):
+        if self._has_changed():
             for inVar in self.inVars:
-                inVar.full_update()
-            self.update()
-            self._get_summary_stats()
+                inVar.update()
+            self._partial_update()
+            self.data = self.var.evaluate(self.substrate)
+            self._set_summary_stats()
 
     def _check_hash(self):
-        if not hasattr(self, 'lasthash'):
-            self.lasthash = 0
-        currenthash = utilities.hash_var(self)
-        has_changed = not currenthash == self.lasthash
+        currenthash = 0
+        for inVar in self.inVars:
+            currenthash += inVar._check_hash()
+        return currenthash
+
+    def _has_changed(self):
+        currenthash = self._check_hash()
+        has_changed = bool(
+            uw.mpi.comm.allreduce(
+                currenthash - self.lasthash
+                )
+            )
         self.lasthash = currenthash
         return has_changed
-
-    # def full_update(self, checked = {}):
-    #     has_changed, checked = self._check_hash(
-    #         checked = checked
-    #         )
-    #     if has_changed:
-    #         for inVar in self.inVars:
-    #             inVar.full_update(
-    #                 checked = checked
-    #                 )
-    #         self.update()
-    #         self._get_summary_stats()
-    #
-    # def _check_hash(
-    #         self,
-    #         checked = {}
-    #         ):
-    #     if not hasattr(self, 'lasthash'):
-    #         self.lasthash = 0
-    #     currenthash, checked = utilities.hash_var(
-    #         self,
-    #         checked = checked,
-    #         global_eval = False,
-    #         return_checked = True
-    #         )
-    #     has_changed = bool(
-    #         uw.mpi.comm.allreduce(
-    #             self.lasthash - currenthash
-    #             )
-    #         )
-    #     self.lasthash = currenthash
-    #     return has_changed, checked
-
-    # def _set_underlyingDataItems(self):
-    #
-    #     var = self.var
-    #     inVars = self.inVars
-    #
-    #     if not hasattr(self, '_underlyingDataItems'):
-    #         var._underlyingDataItems = weakref.WeakSet()
-    #
-    #     for inVar in inVars:
-    #         var._underlyingDataItems.union(
-    #             inVar._underlyingDataItems
-    #             )
-    #
-    #     self._underlyingDataItems = \
-    #         var._underlyingDataItems
 
     def _set_attributes(self):
 
         var = self.var
 
-        if not hasattr(self, 'substrate'):
-            substrates = set()
-            for inVar in self.inVars:
-                substrates.add(inVar.mesh)
-            if len(list(substrates)) > 1:
-                raise Exception
-            substrate = list(substrates)[0]
-            self.substrate = substrate
-        if not hasattr(self, 'mesh'):
-            try:
-                mesh = self.substrate.mesh
-            except:
-                mesh = self.substrate
-            self.mesh = mesh
-
-        if type(var) == fn.misc.constant:
-            varType = 'constant'
-        elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
-            varType = 'swarmVar'
-        elif type(var) == uw.mesh._meshvariable.MeshVariable:
-            varType = 'meshVar'
+        if hasattr(self, 'substrate'):
+            substrate = self.substrate
         else:
-            if self.substrate is self.mesh:
-                varType = 'meshFn'
+            substrates = set(
+                [rootVar.substrate \
+                for rootVar in self.rootVars \
+                if not rootVar.substrate is None]
+                )
+            if len(substrates) == 0:
+                substrate = None
+            elif len(substrates) == 1:
+                substrate = list(substrates)[0]
             else:
-                varType = 'swarmFn'
+                raise Exception
 
-        # POTENTIALLY SLOW
-        data = var.evaluate(self.substrate)
-        varDim = data.shape[1]
+        if hasattr(self, 'mesh'):
+            mesh = self.mesh
+        else:
+            meshes = set(
+                [rootVar.mesh \
+                for rootVar in self.rootVars \
+                if not rootVar.mesh is None]
+                )
+            if len(meshes) == 0:
+                mesh = None
+            elif len(meshes) == 1:
+                mesh = list(meshes)[0]
+            else:
+                raise Exception
 
-        if str(data.dtype) == 'int32':
+        if mesh is None:
+            sample_data = var.evaluate()
+        else:
+            sample_data = var.evaluate(mesh.data[0:1])
+        varDim = sample_data.shape[1]
+
+        if str(sample_data.dtype) == 'int32':
             dType = 'int'
-        elif str(data.dtype) == 'float64':
+        elif str(sample_data.dtype) == 'float64':
             dType = 'double'
-        elif str(data.dtype) == 'bool':
+        elif str(sample_data.dtype) == 'bool':
             dType = 'boolean'
         else:
             raise Exception(
                 "Input data type not acceptable."
                 )
 
-        if not self.mesh is None:
-            meshUtils = get_meshUtils(self.mesh)
+        if not mesh is None:
+            meshUtils = get_meshUtils(mesh)
         else:
             meshUtils = None
 
-        self.varType = varType
+        self.mesh = mesh
+        self.substrate = substrate
+        self.meshbased = substrate is mesh
         self.varDim = varDim
         self.dType = dType
         self.meshUtils = meshUtils
 
-    def _get_summary_stats(self):
-        data = self.evaluate(self.substrate)
-        valSets = utilities.get_valSets(data)
+    def _set_summary_stats(self):
+        if hasattr(self, 'data'):
+            data = self.data
+            valSets = utilities.get_valSets(data)
+        else:
+            data = None
+            valSets = [[0] for dim in range(self.varDim)]
         if self.dType == 'double':
             scales = utilities.get_scales(
                 data,
@@ -263,26 +248,23 @@ class PlanetVar(UWFn):
                 )
             self.scales = scales
             self.ranges = ranges
-        self.data = data
         self.valSets = valSets
 
     def evaluate(self, evalInput = None):
-        self.full_update()
-        if evalInput == None:
+        self.update()
+        if evalInput is None:
             evalInput = self.substrate
         return self.var.evaluate(evalInput)
 
     def __call__(self):
-        self.full_update()
+        self.update()
         return self.var
 
     def __hash__(self):
-        if len(self.inVars) > 0:
-            selfhash = sum(
-                [inVar.__hash__() for inVar in self.inVars]
-                )
-        else:
-            selfhash = self.var.__hash__() + hash(self.varName)
+        selfhash = sum(
+            [inVar.__hash__() for inVar in self.inVars]
+            )
+        selfhash += hash(self.opTag)
         return selfhash
 
     def __add__(self, other):
@@ -327,18 +309,49 @@ class PlanetVar(UWFn):
     def __ne__(self, other):
         return Comparison('notequals', self, other)
 
-class Constant(PlanetVar):
+class BaseTypes(PlanetVar):
+
+    def __init__(self):
+        # CIRCULAR REFERENCE
+        self.var.planetVar = self
+        super().__init__()
+
+    def evaluate(self, evalInput = None):
+        if evalInput == None:
+            evalInput = self.substrate
+        return self.var.evaluate(evalInput)
+
+    def update(self):
+        if type(self) == Constant:
+            self.data = self.value
+        elif hasattr(self.var, 'data'):
+            self.data = self.var.data
+        else:
+            self.data = self.var.evaluate(self.substrate)
+
+    def __call__(self):
+        return self.var
+
+    def __hash__(self):
+        selfhash = self.var.__hash__()
+        selfhash += hash(self.opTag)
+        return selfhash
+
+class Constant(BaseTypes):
 
     opTag = 'Constant'
 
     def __init__(self, inVar):
 
         var = UWFn.convert(inVar)
-        if not type(var) == fn.misc.constant:
+        if var is None:
+            raise Exception
+        if len(list(var._underlyingDataItems)) > 0:
             raise Exception
 
+        self.value = var.evaluate()[0]
         valString = utilities.stringify(
-            var.value
+            self.value
             )
         self.varName = self.opTag + '{' + valString + '}'
 
@@ -349,19 +362,31 @@ class Constant(PlanetVar):
 
         super().__init__()
 
-class Variable(PlanetVar):
+    def _check_hash(self):
+        currenthash = hash(self.value)
+        return currenthash
+        # has_changed = False
+        # return has_changed
+
+class Variable(BaseTypes):
 
     opTag = 'Variable'
 
-    def __init__(self, inVar, varName):
+    def __init__(self, inVar, varName = 'anon'):
 
         var = UWFn.convert(inVar)
+        if var is None:
+            raise Exception
+        if len(list(var._underlyingDataItems)) == 0:
+            raise Exception
 
         self.varName = self.opTag + '{' + varName + '}'
 
         self.opTag += ''
         self.inVars = []
         self.var = var
+        if hasattr(var, 'fn_gradient'):
+            self.fn_gradient = var.fn_gradient
         try:
             self.mesh = var.mesh
             self.substrate = self.mesh
@@ -374,6 +399,15 @@ class Variable(PlanetVar):
                     utilities.get_substrates(var)
 
         super().__init__()
+
+    def _check_hash(self):
+        self.update() # resets self.data
+        currenthash = hash(utilities.stringify(self.data))
+        return currenthash
+        # allhash = currenthash - self.lasthash
+        # has_changed = sum(uw.mpi.comm.allreduce(allhash))
+        # self.lasthash = currenthash
+        # return has_changed
 
 class Projection(PlanetVar):
 
@@ -389,16 +423,18 @@ class Projection(PlanetVar):
             )
         self._projector = uw.utils.MeshVariable_Projection(
             var,
-            inVar.var,
+            inVar,
             )
 
         self.opTag += ''
         self.inVars = [inVar]
         self.var = var
 
+        self.fn_gradient = var.fn_gradient
+
         super().__init__()
 
-    def update(self):
+    def _partial_update(self):
         self._projector.solve()
         if self.inVar.dType in ('int', 'boolean'):
             self.var.data[:] = np.round(
@@ -463,14 +499,14 @@ class Component(PlanetVar):
         if component == 'mag':
             var = fn.math.sqrt(
                 fn.math.dot(
-                    inVar.var,
-                    inVar.var
+                    inVar,
+                    inVar
                     )
                 )
         else:
             compVec = inVar.meshUtils.comps[component]
             var = fn.math.dot(
-                inVar.var,
+                inVar,
                 compVec
                 )
 
@@ -486,9 +522,9 @@ class Gradient(PlanetVar):
 
     def __init__(self, gradient, inVar):
         inVar = convert(inVar)
-        if not inVar.varType == 'meshVar':
+        if not hasattr(inVar, 'fn_gradient'):
             inVar = Projection(inVar)
-        varGrad = inVar.var.fn_gradient
+        varGrad = inVar.fn_gradient
         if gradient == 'mag':
             var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
         else:
@@ -546,9 +582,9 @@ class Bucket(PlanetVar):
 
         inVar = convert(inVar)
         var = fn.branching.conditional([
-            (inVar.var < adjBucket[0], np.nan),
-            (inVar.var > adjBucket[1], np.nan),
-            (True, inVar.var),
+            (inVar < adjBucket[0], np.nan),
+            (inVar > adjBucket[1], np.nan),
+            (True, inVar),
             ])
 
         self.opTag += '_' + bucketStr
@@ -587,7 +623,7 @@ class Range(PlanetVar):
 
         super().__init__()
 
-    def update(self):
+    def _partial_update(self):
         self._lowerBound.value = self.inVars[1].scales[:,0]
         self._upperBound.value = self.inVars[1].scales[:,1]
 
@@ -611,9 +647,9 @@ class Quantile(PlanetVar):
         else:
             u_adj = 1e-18
         var = fn.branching.conditional([
-            (inVar.var < self._lowerBound + l_adj, np.nan),
-            (inVar.var > self._upperBound + u_adj, np.nan),
-            (True, inVar.var),
+            (inVar < self._lowerBound + l_adj, np.nan),
+            (inVar > self._upperBound + u_adj, np.nan),
+            (True, inVar),
             ])
 
         self.opTag += '_' + quantileStr
@@ -622,7 +658,7 @@ class Quantile(PlanetVar):
 
         super().__init__()
 
-    def update(self):
+    def _partial_update(self):
         intervalSize = self.inVar.ranges / self._ntiles
         self._lowerBound.value = self.inVar.scales[:,0] \
             + intervalSize * (self._nthtile - 1)
@@ -638,8 +674,8 @@ class Substitute(PlanetVar):
         inVar = convert(inVar)
 
         var = fn.branching.conditional([
-            (fn.math.abs(inVar.var - fromVal) < 1e-18, toVal),
-            (True, inVar.var),
+            (fn.math.abs(inVar - fromVal) < 1e-18, toVal),
+            (True, inVar),
             ])
 
         self.opTag += '_' + str(fromVal) + ':' + str(toVal)
@@ -657,18 +693,18 @@ class Binarise(PlanetVar):
         inVar = convert(inVar)
 
         if inVar.dType == 'double':
-            var = 0. * inVar.var + fn.branching.conditional([
-                (fn.math.abs(inVar.var) > 1e-18, 1.),
+            var = 0. * inVar + fn.branching.conditional([
+                (fn.math.abs(inVar) > 1e-18, 1.),
                 (True, 0.),
                 ])
         elif invar.dType == 'boolean':
-            var = 0. * inVar.var + fn.branching.conditional([
-                (inVar.var, 1.),
+            var = 0. * inVar + fn.branching.conditional([
+                (inVar, 1.),
                 (True, 0.),
                 ])
         elif invar.dType == 'int':
-            var = 0 * inVar.var + fn.branching.conditional([
-                (inVar.var, 1),
+            var = 0 * inVar + fn.branching.conditional([
+                (inVar, 1),
                 (True, 0),
                 ])
 
@@ -687,7 +723,7 @@ class Booleanise(PlanetVar):
         inVar = convert(inVar)
 
         var = fn.branching.conditional([
-            (fn.math.abs(inVar.var) < 1e-18, False),
+            (fn.math.abs(inVar) < 1e-18, False),
             (True, True),
             ])
 
@@ -706,7 +742,7 @@ class HandleNaN(PlanetVar):
         inVar = convert(inVar)
 
         var = fn.branching.conditional([
-            (inVar.var < np.inf, inVar.var),
+            (inVar < np.inf, inVar),
             (True, handleVal),
             ])
 
@@ -728,7 +764,7 @@ class Region(PlanetVar):
         inShape = unbox(inVar.mesh, inShape)
         polygon = fn.shape.Polygon(inShape)
         var = fn.branching.conditional([
-            (polygon, inVar.var),
+            (polygon, inVar),
             (True, np.nan),
             ])
 
@@ -746,18 +782,18 @@ class Integrate(PlanetVar):
 
         inVar = convert(inVar)
 
-        if not inVar.varType in {'meshVar', 'meshFn'}:
+        if not inVar.substrate is inVar.mesh:
             inVar = Projection(inVar)
         intMesh = inVar.meshUtils.integrals[surface]
         if surface == 'volume':
             intField = uw.utils.Integral(
-                inVar.var,
+                inVar,
                 inVar.mesh
                 )
         else:
             indexSet = inVar.meshUtils.surfaces[surface]
             intField = uw.utils.Integral(
-                inVar.var,
+                inVar,
                 inVar.mesh,
                 integrationType = 'surface',
                 surfaceIndexSet = indexSet
@@ -774,7 +810,7 @@ class Integrate(PlanetVar):
 
         super().__init__()
 
-    def update(self):
+    def _partial_update(self):
         self.var.value = \
             self._intField.evaluate()[0] \
             / self._intMesh()

@@ -175,26 +175,32 @@ def splitter(filename):
         name, ext = os.path.splitext(name)
     return name
 
-def get_toCheck(var, checked = {}):
+def get_toCheck(var):
     to_check = {}
-    try:
-        to_check[var.__hash__()] = stringify(var)
-    except:
-        if hasattr(var, 'mesh'):
-            if not var.mesh is None:
-                to_check[var.mesh.__hash__()] = var.mesh.data
-        if hasattr(var, 'swarm'):
-            to_check[var.swarm.__hash__()] = var.swarm.data
+    # try:
+    #     to_check[var.__hash__()] = stringify(var)
+    if hasattr(var, '_underlyingDataItems'):
+        for subVar in list(var._underlyingDataItems):
+            if not subVar is var:
+                sub_toCheck = get_toCheck(
+                    subVar
+                    )
+                to_check.update(sub_toCheck)
+    if len(to_check) == 0:
         if hasattr(var, 'data'):
             to_check[var.__hash__()] = var.data
-        if hasattr(var, '_underlyingDataItems'):
-            for subVar in list(var._underlyingDataItems):
-                if not subVar is var:
-                    sub_toCheck = get_toCheck(
-                        subVar,
-                        checked
-                        )
-                    to_check.update(sub_toCheck)
+        elif hasattr(var, 'value'):
+            to_check[var.__hash__()] = var.value
+        elif hasattr(var, 'evaluate'):
+            to_check[var.__hash__()] = var.evaluate()
+        else:
+            raise Exception
+    if hasattr(var, 'mesh'):
+        if not var.mesh is None:
+            to_check[var.mesh.__hash__()] = var.mesh.data
+    if hasattr(var, 'swarm'):
+        to_check[var.swarm.__hash__()] = var.swarm.data
+
     return to_check
 
 def hash_var(
@@ -207,7 +213,7 @@ def hash_var(
         checked = kwargs['checked']
     else:
         checked = {}
-    to_check = get_toCheck(var, checked)
+    to_check = get_toCheck(var)
     hashVal = 0
     for key, val in to_check.items():
         if key in checked:
