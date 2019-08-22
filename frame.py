@@ -20,8 +20,7 @@ from . import checkpoint
 from .initials import apply
 from .utilities import message
 from . import observer
-
-standard_observer = observer.build()
+from .visualisation import QuickFig
 
 def load_frame(
         outputPath = '',
@@ -202,9 +201,9 @@ def make_stamps(
 
     wordhash = wordhashFn(stamps['allstamp'])
     if _use_wordhash:
-        hashID = 'pemod_' + wordhash
+        hashID = 'mod_' + wordhash
     else:
-        hashID = 'pemod_' + stamps['allstamp']
+        hashID = 'mod_' + stamps['allstamp']
 
     message("Stamps made.")
 
@@ -410,15 +409,26 @@ class Frame:
             "Loaded " + str(len(self.inFrames)) + " interior frames."
             )
 
+        imgprefs = {
+            'colourBar': False,
+            'facecolour': 'black',
+            'quality': 2,
+            'figsize': (500, 500)
+            }
+        self.fig = QuickFig(system.varsOfState, **imgprefs)
+
         # Standard observer stuff:
-        self.analysers, self.collectors, self.figs = \
-            standard_observer.attach(self.system)
+        # self.analysers, self.collectors, self.figs = \
+        #     standard_observer.attach(self.system)
+        self.analysers = []
+        self.collectors = []
+        self.figs = []
 
         self.checkpointer = checkpoint.Checkpointer(
             step = self.system.step,
             modeltime = self.system.modeltime,
             varsOfState = self.system.varsOfState,
-            figs = [], #self.figs,
+            figs = [self.fig], #self.figs,
             dataCollectors = self.collectors,
             scripts = self.scripts,
             params = self.params,
@@ -511,16 +521,23 @@ class Frame:
         self.modeltime = self.system.modeltime.value
 
     def report(self):
-        message("Reporting...")
-        for analyser in self.analysers:
-            analyser.report()
-        for fig in self.figs:
-            fig.show()
-        message("Reporting complete!")
+        message(
+            '\n' \
+            + 'Step: ' + str(self.step) \
+            + ', modeltime: ' + '%.3g' % self.modeltime
+            )
+        self.fig.show()
+        # message("Reporting...")
+        # for analyser in self.analysers:
+        #     analyser.report()
+        #
+        # # for fig in self.figs:
+        # #     fig.show()
+        # message("Reporting complete!")
 
     def iterate(self):
         assert not self._is_child, \
-            "Cannot iterate child models indendently."
+            "Cannot iterate child models independently."
         message("Iterating step " + str(self.step) + " ...")
         self.system.iterate()
         self.update()

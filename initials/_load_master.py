@@ -2,8 +2,8 @@ import underworld as uw
 import numpy as np
 import os
 
-from planetengine import mapping
-from planetengine import frame
+from .. import mapping
+from .. import frame
 
 class IC:
 

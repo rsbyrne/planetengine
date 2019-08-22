@@ -67,7 +67,37 @@ uwDataObjToNames = {
     for key, val in uwNamesToDataObj.items()
     }
 
-def convert(var, varName = 'anon'):
+def convert(*args, return_tuple = False):
+    if len(args) == 1:
+        arg = args[0]
+        if type(arg) == tuple:
+            converted = _tuple_convert(arg)
+        elif type(arg) == list:
+            converted = _multi_convert(*arg)
+        elif type(arg) == dict:
+            converted = _dict_convert(arg)
+        else:
+            converted = _convert(arg)
+    elif len(args) == 2:
+        if type(args[0]) == str:
+            converted = _convert(args[1], args[0])
+        elif type(args[1]) == str:
+            converted = _convert(args[0], args[1])
+        else:
+            converted = _multi_convert(args)
+    else:
+        converted = _multi_convert(args)
+    if type(converted) == tuple:
+        return converted
+    else:
+        if return_tuple:
+            return (converted,)
+        else:
+            return converted
+
+get_planetVar = convert
+
+def _convert(var, varName = 'anon'):
     if isinstance(var, PlanetVar):
         return var
     elif hasattr(var, 'planetVar'):
@@ -82,18 +112,25 @@ def convert(var, varName = 'anon'):
             var = Variable(var, varName)
         return var
 
-get_planetVar = convert
-
-def multi_convert(*args):
+def _multi_convert(*args):
     all_converted = []
     for arg in args:
-        if type(arg) == tuple:
-            var, varName = arg
-        else:
-            var = arg, varName = None
-        converted = convert(var, varName)
-        all_converted.append(converted)
-    return all_converted
+        all_converted.append(convert(arg))
+    return tuple(all_converted)
+
+def _tuple_convert(inTuple):
+    var, varName = inTuple
+    return _convert(var, varName)
+
+def _dict_convert(inDict):
+    all_converted = []
+    for varName, var in sorted(inDict.items()):
+        newVar = _convert(var, varName)
+        all_converted.append(newVar)
+    if len(all_converted) == 1:
+        return all_converted[0]
+    else:
+        return tuple(all_converted)
 
 class PlanetVar(UWFn):
 

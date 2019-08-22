@@ -450,6 +450,7 @@ def stringify(*args):
     if len(args) > 1:
         for inputObject in args:
             outStr += stringify(inputObject)
+        typeStr = 'tup'
     else:
         inputObject = args[0]
         objType = type(inputObject)
@@ -477,7 +478,7 @@ def stringify(*args):
             for key, val in sorted(inputObject.items()):
                 outStr += (stringify(key))
                 outStr += (stringify(val))
-                typeStr = 'dct'
+            typeStr = 'dct'
         elif objType == io.TextIOWrapper:
             file = inputObject.read()
             outStr += file
@@ -490,6 +491,8 @@ def stringify(*args):
             errormsg = "Type: " + str(type(inputObject)) + " not accepted."
             raise Exception(errormsg)
     outStr += '}'
+    # print(args)
+    # print(outStr)
     outStr = typeStr + outStr
     return outStr
 
