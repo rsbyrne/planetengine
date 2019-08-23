@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 from .utilities import message
-from .planetvar import get_planetVar
+from .functions import get_planetVar
 from .meshutils import get_meshUtils
 
 def quickShow(*args, **kwargs):
@@ -12,37 +12,36 @@ def quickShow(*args, **kwargs):
     quickFig = QuickFig(*args, **kwargs)
     quickFig.show()
 
+styles = {
+    'smallblack': {
+        'colourBar': False,
+        'facecolour': 'black',
+        'quality': 2,
+        'figsize': (300, 300)
+        }
+    }
+
 class QuickFig:
 
-    def __init__(self, *args, figname = 'default', **kwargs):
+    def __init__(self, *args, figname = 'default', style = {}):
 
-        self.fig = glucifer.Figure(**kwargs)
+        if type(style) == str:
+            style = styles[style]
+        elif not type(style) == dict:
+            raise Exception
+
+        if not style == {}:
+            self.fig = glucifer.Figure(**style)
+        else:
+            self.fig = glucifer.Figure()
+
         self.figname = figname
         self.features = set()
         self.fittedvars = []
         self.updateFuncs = []
 
         self.vars = []
-        args = list(args)
-        for arg in args:
-            if hasattr(arg, 'subMesh'):
-                args.remove(arg)
-                self.add_grid(arg)
-            elif hasattr(arg, 'particleCoordinates'):
-                args.remove(arg)
-                self.add_swarm(arg)
-        if len(args) > 0:
-            self.planetVars = list(
-                get_planetVar(
-                    *args,
-                    return_tuple = True
-                    )
-                )
-        else:
-            self.planetVars = []
-
-        for planetVar in self.planetVars:
-            planetVar.update()
+        self.planetVars = []
 
         self.inventory = [
             self.add_surface,
@@ -52,17 +51,37 @@ class QuickFig:
             self.add_stipple
             ]
 
-        variables_fitted = 0
-        functions_used = []
+        self.functions_used = []
+
+        self.add_vars(*args)
+
+    def add_vars(self, *args):
+
+        args = list(args)
+        for arg in args:
+            if hasattr(arg, 'subMesh'):
+                args.remove(arg)
+                self.add_grid(arg)
+            elif hasattr(arg, 'particleCoordinates'):
+                args.remove(arg)
+                self.add_swarm(arg)
+        if len(args) > 0:
+            for arg in args:
+                planetVar = get_planetVar(arg)
+                self.planetVars.append(planetVar)
+                self.updateFuncs.append(planetVar.update)
+        else:
+            self.planetVars = []
+
         for planetVar in self.planetVars:
             found = False
             for function in self.inventory:
-                if not function in functions_used:
+                if not function in self.functions_used:
                     if not found:
                         try:
-                            function(planetVar, **kwargs)
+                            function(planetVar)
                             found = True
-                            functions_used.append(function)
+                            self.functions_used.append(function)
                         except:
                             continue
             if found:
@@ -90,7 +109,8 @@ class QuickFig:
                 )
             )
 
-    def add_stipple(self, planetVar, **kwargs):
+    def add_stipple(self, arg, **kwargs):
+        planetVar = get_planetVar(arg)
         if not planetVar.valSets == [{0., 1.}]:
             raise Exception
         if not planetVar.varDim == 1:
@@ -108,7 +128,8 @@ class QuickFig:
                 pass
         self.fig.append(drawing)
 
-    def add_surface(self, planetVar, **kwargs):
+    def add_surface(self, arg, **kwargs):
+        planetVar = get_planetVar(arg)
         if not planetVar.varDim == 1:
             raise Exception
         self.fig.append(
@@ -119,7 +140,8 @@ class QuickFig:
                 )
             )
 
-    def add_contours(self, planetVar, **kwargs):
+    def add_contours(self, arg, **kwargs):
+        planetVar = get_planetVar(arg)
         if 0. in planetVar.valSets:
             raise Exception
         if not planetVar.varDim == 1:
@@ -134,7 +156,8 @@ class QuickFig:
                 )
             )
 
-    def add_arrows(self, planetVar, **kwargs):
+    def add_arrows(self, arg, **kwargs):
+        planetVar = get_planetVar(arg)
         if not planetVar.varDim == planetVar.mesh.dim:
             raise Exception
         self.fig.append(
@@ -145,7 +168,8 @@ class QuickFig:
                 )
             )
 
-    def add_points(self, planetVar, **kwargs):
+    def add_points(self, arg, **kwargs):
+        planetVar = get_planetVar(arg)
         # if not planetVar.varType in {'swarmVar' or 'swarmFn'}:
         #     raise Exception
         if not planetVar.varDim == 1:
@@ -166,17 +190,17 @@ class QuickFig:
         for updateFunc in self.updateFuncs:
             updateFunc()
 
-    def show(self, **kwargs):
+    def show(self):
         self.update()
         for var in self.fittedvars:
             print(var.varName, var.ranges)
-        self.fig.show(**kwargs)
+        self.fig.show()
 
-    def save(self, path = '', name = None, **kwargs):
+    def save(self, path = '', name = None):
         self.update()
         if name is None:
             name = self.figname
         if uw.mpi.rank == 0:
             if not os.path.isdir(path):
                 os.mkdir(path)
-        self.fig.save(os.path.join(path, name), **kwargs)
+        self.fig.save(os.path.join(path, name))

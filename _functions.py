@@ -84,9 +84,9 @@ def convert(*args, return_tuple = False):
         elif type(args[1]) == str:
             converted = _convert(args[0], args[1])
         else:
-            converted = _multi_convert(args)
+            converted = _multi_convert(*args)
     else:
-        converted = _multi_convert(args)
+        converted = _multi_convert(*args)
     if type(converted) == tuple:
         return converted
     else:
@@ -112,7 +112,7 @@ def _convert(var, varName = 'anon'):
             var = Variable(var, varName)
         return var
 
-def _multi_convert(*args):
+def _multi_convert(*args, **kwargs):
     all_converted = []
     for arg in args:
         all_converted.append(convert(arg))
@@ -139,6 +139,7 @@ class PlanetVar(UWFn):
 
     def __init__(self):
 
+        self.inVars = list(self.inVars)
         if type(self) in {Constant, Variable}:
             _argument_fns = [self.var]
         else:
@@ -305,46 +306,46 @@ class PlanetVar(UWFn):
         return selfhash
 
     def __add__(self, other):
-        return Operations('add', self, other)
+        return Operations(self, other, variant = 'less')
 
     def __sub__(self, other):
-        return Operations('subtract', self, other)
+        return Operations(self, other, variant = 'subtract')
 
     def __mul__(self, other):
-        return Operations('multiply', self, other)
+        return Operations(self, other, variant = 'multiply')
 
     def __truediv__(self, other):
-        return Operations('divide', self, other)
+        return Operations(self, other, variant = 'divide')
 
     def __gt__(self, other):
-        return Operations('greater', self, other)
+        return Operations(self, other, variant = 'greater')
 
     def __ge__(self, other):
-        return Operations('greater_equal', self, other)
+        return Operations(self, other, variant = 'greater_equal')
 
     def __lt__(self, other):
-        return Operations('less', self, other)
+        return Operations(self, other, variant = 'less')
 
     def __le__(self, other):
-        return Operations('less_equal', self, other)
+        return Operations(self, other, variant = 'less_equal')
 
     def __and__(self, other):
-        return Operations('logical_and', self, other)
+        return Operations(self, other, variant = 'logical_and')
 
     def __or__(self, other):
-        return Operations('logical_or', self, other)
+        return Operations(self, other, variant = 'logical_or')
 
     def __xor__(self, other):
-        return Operations('logical_xor', self, other)
+        return Operations(self, other, variant = 'logical_xor')
 
     def __pow__(self, other):
-        return Operations('pow', self, other)
+        return Operations(self, other, variant = 'pow')
 
     def __eq__(self, other):
-        return Comparison('equals', self, other)
+        return Comparison(self, other, variant = 'equals')
 
     def __ne__(self, other):
-        return Comparison('notequals', self, other)
+        return Comparison(self, other, variant = 'notequals')
 
 class BaseTypes(PlanetVar):
 
@@ -400,10 +401,8 @@ class Constant(BaseTypes):
         super().__init__()
 
     def _check_hash(self):
-        currenthash = hash(self.value)
+        currenthash = hash(utilities.stringify(self.value))
         return currenthash
-        # has_changed = False
-        # return has_changed
 
 class Variable(BaseTypes):
 
@@ -441,12 +440,14 @@ class Variable(BaseTypes):
         self.update() # resets self.data
         currenthash = hash(utilities.stringify(self.data))
         return currenthash
-        # allhash = currenthash - self.lasthash
-        # has_changed = sum(uw.mpi.comm.allreduce(allhash))
-        # self.lasthash = currenthash
-        # return has_changed
 
-class Projection(PlanetVar):
+class Utils(PlanetVar):
+
+    def __init__(self):
+
+        super().__init__()
+
+class Projection(Utils):
 
     opTag = 'Projection'
 
@@ -478,25 +479,102 @@ class Projection(PlanetVar):
                 self.var.data
                 )
 
-class Operations(PlanetVar):
+class Substitute(Utils):
 
-    opTag = 'Operation'
+    opTag = 'Substitute'
 
-    def __init__(self, operation, *args):
+    def __init__(self, inVar, fromVal, toVal):
 
-        if not operation in uwNamesToFns:
-            raise Exception
-        opFn = uwNamesToFns[operation]
+        inVar, fromVal, toVal = inVars = convert(
+            inVar, fromVal, toVal
+            )
 
-        var = opFn(*args)
+        var = fn.branching.conditional([
+            (fn.math.abs(inVar - fromVal) < 1e-18, toVal),
+            (True, inVar),
+            ])
 
-        self.opTag += '_' + operation
-        self.inVars = [convert(arg) for arg in args]
+        self.opTag += ''#'_' + str(fromVal) + ':' + str(toVal)
+        self.inVars = inVars
         self.var = var
 
         super().__init__()
 
-class Clip(PlanetVar):
+class Binarise(Utils):
+
+    opTag = 'Binarise'
+
+    def __init__(self, inVar):
+
+        inVar = convert(inVar)
+
+        if inVar.dType == 'double':
+            var = 0. * inVar + fn.branching.conditional([
+                (fn.math.abs(inVar) > 1e-18, 1.),
+                (True, 0.),
+                ])
+        elif invar.dType == 'boolean':
+            var = 0. * inVar + fn.branching.conditional([
+                (inVar, 1.),
+                (True, 0.),
+                ])
+        elif invar.dType == 'int':
+            var = 0 * inVar + fn.branching.conditional([
+                (inVar, 1),
+                (True, 0),
+                ])
+
+        self.opTag += ''
+        self.inVars = [inVar]
+        self.var = var
+
+        super().__init__()
+
+class Booleanise(Utils):
+
+    opTag = 'Booleanise'
+
+    def __init__(self, inVar):
+
+        inVar = convert(inVar)
+
+        var = fn.branching.conditional([
+            (fn.math.abs(inVar) < 1e-18, False),
+            (True, True),
+            ])
+
+        self.opTag += ''
+        self.inVars = [inVar]
+        self.var = var
+
+        super().__init__()
+
+class HandleNaN(Utils):
+
+    opTag = 'HandleNaN'
+
+    def __init__(self, inVar, handleVal):
+
+        inVar, handleVal = inVars = convert(inVar, handleVal)
+
+        var = fn.branching.conditional([
+            (inVar < np.inf, inVar),
+            (True, handleVal),
+            ])
+
+        self.opTag += '' #'_' + str(handleVal)
+        self.inVars = inVars
+        self.var = var
+
+        super().__init__()
+
+class Functions(PlanetVar):
+
+    def __init__(self):
+
+        super().__init__()
+
+class Clip(Functions):
 
     opTag = 'Clip'
 
@@ -518,15 +596,54 @@ class Clip(PlanetVar):
 
         super().__init__()
 
-# class Normalise(PlanetVar):
-#
-#     def __init__(self, inVar, lBnd = 0., uBnd = 1.
+class Interval(Functions):
 
-class Component(PlanetVar):
+    opTag = 'Interval'
+
+    def __init__(self, inVar, lBnd, uBnd):
+
+        inVar, lBnd, uBnd = inVars = convert(inVar, lBnd, uBnd)
+
+        inVar = convert(inVar)
+        var = fn.branching.conditional([
+            (inVar <= lBnd, np.nan),
+            (inVar >= uBnd, np.nan),
+            (True, inVar),
+            ])
+
+        self.opTag += ''
+        self.inVars = [inVar, lBnd, uBnd]
+        self.var = var
+
+        super().__init__()
+
+class Operations(Functions):
+
+    opTag = 'Operation'
+
+    def __init__(self, *args, variant = None):
+
+        operation = variant
+
+        if not operation in uwNamesToFns:
+            raise Exception
+        opFn = uwNamesToFns[operation]
+
+        var = opFn(*args)
+
+        self.opTag += '_' + operation
+        self.inVars = [convert(arg) for arg in args]
+        self.var = var
+
+        super().__init__()
+
+class Component(Functions):
 
     opTag = 'Component'
 
-    def __init__(self, component, inVar):
+    def __init__(self, inVar, variant = None):
+
+        component = variant
 
         inVar = convert(inVar)
 
@@ -547,17 +664,18 @@ class Component(PlanetVar):
                 compVec
                 )
 
-        self.opTag += ''
+        self.opTag += '_' + component
         self.inVars = [inVar]
         self.var = var
 
         super().__init__()
 
-class Gradient(PlanetVar):
+class Gradient(Functions):
 
     opTag = 'Gradient'
 
-    def __init__(self, gradient, inVar):
+    def __init__(self, inVar, variant = None):
+        gradient = variant
         inVar = convert(inVar)
         if not hasattr(inVar, 'fn_gradient'):
             inVar = Projection(inVar)
@@ -577,11 +695,13 @@ class Gradient(PlanetVar):
 
         super().__init__()
 
-class Comparison(PlanetVar):
+class Comparison(Functions):
 
     opTag = 'Comparison'
 
-    def __init__(self, operation, inVar0, inVar1):
+    def __init__(self, inVar0, inVar1, variant = None):
+
+        operation = variant
 
         if not operation in {'equals', 'notequals'}:
             raise Exception
@@ -600,41 +720,13 @@ class Comparison(PlanetVar):
 
         super().__init__()
 
-class Bucket(PlanetVar):
-
-    opTag = 'Bucket'
-
-    def __init__(self, bucket, inVar):
-
-        if type(bucket) is tuple:
-            adjBucket = list(bucket)
-            if bucket[0] == '.':
-                adjBucket[0] = 1e-18
-            if bucket[1] == '.':
-                adjBucket[1] = 1e18
-            bucketStr = str(bucket[0]) + ':' + str(bucket[1])
-        else:
-            adjBucket = (bucket - 1e-18, bucket + 1e-18)
-            bucketStr = str(bucket)
-
-        inVar = convert(inVar)
-        var = fn.branching.conditional([
-            (inVar < adjBucket[0], np.nan),
-            (inVar > adjBucket[1], np.nan),
-            (True, inVar),
-            ])
-
-        self.opTag += '_' + bucketStr
-        self.inVars = [inVar]
-        self.var = var
-
-        super().__init__()
-
-class Range(PlanetVar):
+class Range(Functions):
 
     opTag = 'Range'
 
-    def __init__(self, operation, inVar0, inVar1):
+    def __init__(self, inVar0, inVar1, variant = None):
+
+        operation = variant
 
         if not operation in {'in', 'out'}:
             raise Exception
@@ -664,7 +756,50 @@ class Range(PlanetVar):
         self._lowerBound.value = self.inVars[1].scales[:,0]
         self._upperBound.value = self.inVars[1].scales[:,1]
 
-class Quantile(PlanetVar):
+class Integral(Functions):
+
+    opTag = 'Integral'
+
+    def __init__(self, inVar, variant = None):
+
+        inVar = convert(inVar)
+
+        surface = variant
+
+        if not inVar.substrate is inVar.mesh:
+            inVar = Projection(inVar)
+        intMesh = inVar.meshUtils.integrals[surface]
+        if surface == 'volume':
+            intField = uw.utils.Integral(
+                inVar,
+                inVar.mesh
+                )
+        else:
+            indexSet = inVar.meshUtils.surfaces[surface]
+            intField = uw.utils.Integral(
+                inVar,
+                inVar.mesh,
+                integrationType = 'surface',
+                surfaceIndexSet = indexSet
+                )
+
+        var = fn.misc.constant(0.)
+        self._intField = intField
+        self._intMesh = intMesh
+
+        self.opTag += '_' + surface
+        self.inVars = [inVar]
+        self.var = var
+        self.mesh = self.substrate = None
+
+        super().__init__()
+
+    def _partial_update(self):
+        self.var.value = \
+            self._intField.evaluate()[0] \
+            / self._intMesh()
+
+class Quantile(Functions):
 
     opTag = 'Quantile'
 
@@ -702,94 +837,7 @@ class Quantile(PlanetVar):
         self._upperBound.value = self.inVar.scales[:,0] \
             + intervalSize * (self._nthtile)
 
-class Substitute(PlanetVar):
-
-    opTag = 'Substitute'
-
-    def __init__(self, fromVal, toVal, inVar):
-
-        inVar = convert(inVar)
-
-        var = fn.branching.conditional([
-            (fn.math.abs(inVar - fromVal) < 1e-18, toVal),
-            (True, inVar),
-            ])
-
-        self.opTag += '_' + str(fromVal) + ':' + str(toVal)
-        self.inVars = [inVar]
-        self.var = var
-
-        super().__init__()
-
-class Binarise(PlanetVar):
-
-    opTag = 'Binarise'
-
-    def __init__(self, inVar):
-
-        inVar = convert(inVar)
-
-        if inVar.dType == 'double':
-            var = 0. * inVar + fn.branching.conditional([
-                (fn.math.abs(inVar) > 1e-18, 1.),
-                (True, 0.),
-                ])
-        elif invar.dType == 'boolean':
-            var = 0. * inVar + fn.branching.conditional([
-                (inVar, 1.),
-                (True, 0.),
-                ])
-        elif invar.dType == 'int':
-            var = 0 * inVar + fn.branching.conditional([
-                (inVar, 1),
-                (True, 0),
-                ])
-
-        self.opTag += ''
-        self.inVars = [inVar]
-        self.var = var
-
-        super().__init__()
-
-class Booleanise(PlanetVar):
-
-    opTag = 'Booleanise'
-
-    def __init__(self, inVar):
-
-        inVar = convert(inVar)
-
-        var = fn.branching.conditional([
-            (fn.math.abs(inVar) < 1e-18, False),
-            (True, True),
-            ])
-
-        self.opTag += ''
-        self.inVars = [inVar]
-        self.var = var
-
-        super().__init__()
-
-class HandleNaN(PlanetVar):
-
-    opTag = 'HandleNaN'
-
-    def __init__(self, handleVal, inVar):
-
-        inVar = convert(inVar)
-
-        var = fn.branching.conditional([
-            (inVar < np.inf, inVar),
-            (True, handleVal),
-            ])
-
-        self.opTag += '_' + str(handleVal)
-        self.inVars = [inVar]
-        self.var = var
-
-        super().__init__()
-
-class Region(PlanetVar):
+class Region(Functions):
 
     opTag = 'Region'
 
@@ -810,44 +858,3 @@ class Region(PlanetVar):
         self.var = var
 
         super().__init__()
-
-class Integrate(PlanetVar):
-
-    opTag = 'Integrate'
-
-    def __init__(self, surface, inVar):
-
-        inVar = convert(inVar)
-
-        if not inVar.substrate is inVar.mesh:
-            inVar = Projection(inVar)
-        intMesh = inVar.meshUtils.integrals[surface]
-        if surface == 'volume':
-            intField = uw.utils.Integral(
-                inVar,
-                inVar.mesh
-                )
-        else:
-            indexSet = inVar.meshUtils.surfaces[surface]
-            intField = uw.utils.Integral(
-                inVar,
-                inVar.mesh,
-                integrationType = 'surface',
-                surfaceIndexSet = indexSet
-                )
-
-        var = fn.misc.constant(0.)
-        self._intField = intField
-        self._intMesh = intMesh
-
-        self.opTag += '_' + surface
-        self.inVars = [inVar]
-        self.var = var
-        self.mesh = self.substrate = None
-
-        super().__init__()
-
-    def _partial_update(self):
-        self.var.value = \
-            self._intField.evaluate()[0] \
-            / self._intMesh()

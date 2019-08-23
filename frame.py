@@ -409,13 +409,10 @@ class Frame:
             "Loaded " + str(len(self.inFrames)) + " interior frames."
             )
 
-        imgprefs = {
-            'colourBar': False,
-            'facecolour': 'black',
-            'quality': 2,
-            'figsize': (500, 500)
-            }
-        self.fig = QuickFig(system.varsOfState, **imgprefs)
+        self.fig = QuickFig(
+            system.varsOfState,
+            style = 'smallblack',
+            )
 
         # Standard observer stuff:
         # self.analysers, self.collectors, self.figs = \

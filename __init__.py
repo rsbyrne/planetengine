@@ -8,7 +8,7 @@ from . import shapes
 from . import wordhash
 from . import fieldops
 from . import meshutils
-from . import planetvar
+from . import functions
 from . import visualisation
 
 from .utilities import message
