@@ -103,13 +103,19 @@ def _convert(var, varName = 'anon'):
     elif hasattr(var, 'planetVar'):
         return var.planetVar
     else:
-        var = UWFn.convert(var)
-        if var is None:
-            raise Exception
-        if len(list(var._underlyingDataItems)) == 0:
-            var = Constant(var)
-        else:
-            var = Variable(var, varName)
+        try:
+            var = UWFn.convert(var)
+            if var is None:
+                raise Exception
+            if len(list(var._underlyingDataItems)) == 0:
+                var = Constant(var)
+            else:
+                var = Variable(var, varName)
+        except:
+            try:
+                var = Shape(var, varName)
+            except:
+                raise Exception
         return var
 
 def _multi_convert(*args, **kwargs):
@@ -140,7 +146,7 @@ class PlanetVar(UWFn):
     def __init__(self):
 
         self.inVars = list(self.inVars)
-        if type(self) in {Constant, Variable}:
+        if type(self) in {Constant, Variable, Shape}:
             _argument_fns = [self.var]
         else:
             inTags = [inVar.varName for inVar in self.inVars]
@@ -239,7 +245,11 @@ class PlanetVar(UWFn):
             else:
                 raise Exception
 
-        if mesh is None:
+        if type(self) == Constant:
+            sample_data = np.array([[self.value]])
+        elif type(self) == Shape:
+            sample_data = self.vertices
+        elif mesh is None:
             sample_data = var.evaluate()
         else:
             sample_data = var.evaluate(mesh.data[0:1])
@@ -355,16 +365,19 @@ class BaseTypes(PlanetVar):
         super().__init__()
 
     def evaluate(self, evalInput = None):
-        if evalInput == None:
+        if evalInput is None:
             evalInput = self.substrate
         return self.var.evaluate(evalInput)
 
     def update(self):
         if type(self) == Constant:
-            self.data = self.value
+            self.data = np.array([[self.value,]])
+        elif type(self) == Shape:
+            self.data = self.vertices
         elif hasattr(self.var, 'data'):
             self.data = self.var.data
         else:
+            # i.e. is a function
             self.data = self.var.evaluate(self.substrate)
 
     def __call__(self):
@@ -393,7 +406,6 @@ class Constant(BaseTypes):
             )
         self.varName = self.opTag + '{' + valString + '}'
 
-        self.opTag += ''
         self.inVars = []
         self.var = var
         self.mesh = self.substrate = None
@@ -418,7 +430,6 @@ class Variable(BaseTypes):
 
         self.varName = self.opTag + '{' + varName + '}'
 
-        self.opTag += ''
         self.inVars = []
         self.var = var
         if hasattr(var, 'fn_gradient'):
@@ -440,6 +451,38 @@ class Variable(BaseTypes):
         self.update() # resets self.data
         currenthash = hash(utilities.stringify(self.data))
         return currenthash
+
+class Shape(BaseTypes):
+
+    opTag = 'Shape'
+
+    def __init__(self, vertices, varName = 'anon'):
+
+        shape = fn.shape.Polygon(vertices)
+        self.vertices = vertices
+        self.richvertices = interp_shape(self.vertices)
+        self.morphs = {}
+
+        self.varName = self.opTag + '{' + varName + '}'
+
+        self.inVars = []
+        self.var = shape
+        self.mesh = self.substrate = None
+
+        super().__init__()
+
+    def _check_hash(self):
+        currenthash = hash(utilities.stringify(self.vertices))
+        return currenthash
+
+    def morph(self, mesh):
+        try:
+            morphpoly = self.morphs[mesh]
+        except:
+            morphverts = unbox(mesh, self.richvertices)
+            morphpoly = fn.shape.Polygon(morphverts)
+            self.morphs[mesh] = morphpoly
+        return morphpoly
 
 class Utils(PlanetVar):
 
@@ -464,7 +507,6 @@ class Projection(Utils):
             inVar,
             )
 
-        self.opTag += ''
         self.inVars = [inVar]
         self.var = var
 
@@ -494,7 +536,6 @@ class Substitute(Utils):
             (True, inVar),
             ])
 
-        self.opTag += ''#'_' + str(fromVal) + ':' + str(toVal)
         self.inVars = inVars
         self.var = var
 
@@ -524,7 +565,6 @@ class Binarise(Utils):
                 (True, 0),
                 ])
 
-        self.opTag += ''
         self.inVars = [inVar]
         self.var = var
 
@@ -543,7 +583,6 @@ class Booleanise(Utils):
             (True, True),
             ])
 
-        self.opTag += ''
         self.inVars = [inVar]
         self.var = var
 
@@ -553,7 +592,7 @@ class HandleNaN(Utils):
 
     opTag = 'HandleNaN'
 
-    def __init__(self, inVar, handleVal):
+    def __init__(self, handleVal, inVar):
 
         inVar, handleVal = inVars = convert(inVar, handleVal)
 
@@ -562,8 +601,25 @@ class HandleNaN(Utils):
             (True, handleVal),
             ])
 
-        self.opTag += '' #'_' + str(handleVal)
         self.inVars = inVars
+        self.var = var
+
+        super().__init__()
+
+class ZeroNaN(Utils):
+
+    opTag = 'ZeroNaN'
+
+    def __init__(self, inVar):
+
+        inVar = convert(inVar)
+
+        var = fn.branching.conditional([
+            (inVar < np.inf, inVar),
+            (True, 0.),
+            ])
+
+        self.inVars = [inVar]
         self.var = var
 
         super().__init__()
@@ -590,7 +646,6 @@ class Clip(Functions):
             (True, inFn)
             ])
 
-        self.opTag += ''
         self.inVars = inVars
         self.var = var
 
@@ -611,7 +666,6 @@ class Interval(Functions):
             (True, inVar),
             ])
 
-        self.opTag += ''
         self.inVars = [inVar, lBnd, uBnd]
         self.var = var
 
@@ -803,7 +857,9 @@ class Quantile(Functions):
 
     opTag = 'Quantile'
 
-    def __init__(self, ntiles, nthtile, inVar):
+    def __init__(self, nthtile, inVar, variant = None):
+
+        ntiles = variant
 
         quantileStr = str(nthtile) + "of" + str(ntiles)
 
@@ -841,20 +897,17 @@ class Region(Functions):
 
     opTag = 'Region'
 
-    def __init__(self, region_name, inShape, inVar):
+    def __init__(self, inShape, inVar):
 
-        inVar = convert(inVar)
+        inVar, inShape = inVars = convert(inVar, inShape)
 
-        inShape = interp_shape(inShape)
-        inShape = unbox(inVar.mesh, inShape)
-        polygon = fn.shape.Polygon(inShape)
+        polygon = inShape.morph(inVar.mesh)
         var = fn.branching.conditional([
             (polygon, inVar),
             (True, np.nan),
             ])
 
-        self.opTag += '_' + region_name
-        self.inVars = [inVar]
+        self.inVars = inVars
         self.var = var
 
         super().__init__()

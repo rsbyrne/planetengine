@@ -7,12 +7,16 @@ convert = get_planetVar
 raw = _functions
 
 def _aliasmaker(outclassobj, inclassobj, argset):
-    for variant in argset:
+    if type(argset) == set:
+        argset = {key: key for key in argset}
+    elif not type(argset) == dict:
+        raise Exception
+    for variantName, variant in argset.items():
         partialfn = partial(
             inclassobj,
             variant = variant,
             )
-        setattr(outclassobj, variant, partialfn)
+        setattr(outclassobj, variantName, partialfn)
 
 class tidy:
 
@@ -20,6 +24,7 @@ class tidy:
 
         constant = _functions.Constant
         variable = _functions.Variable
+        shape = _functions.Shape
 
     class utils:
 
@@ -27,12 +32,14 @@ class tidy:
         substitute = _functions.Substitute
         binarise = _functions.Binarise
         booleanies = _functions.Booleanise
-        handleNaN = _functions.HandleNaN
+        handlenan = _functions.HandleNaN
+        zeronan = _functions.ZeroNaN
 
     class simple:
 
         clip = _functions.Clip
         interval = _functions.Interval
+        region = _functions.Region
 
         class operations:
             pass
@@ -72,7 +79,25 @@ class tidy:
             }
         _aliasmaker(integral, _functions.Integral, argset)
 
+        class quantile:
+            pass
+        argset = {
+            'median': 2,
+            'tercile': 3,
+            'quartile': 4,
+            'quintile': 5,
+            'sextile': 6,
+            'septile': 7,
+            'octile': 8,
+            'nonile': 9,
+            'decile': 10,
+            'duodecile': 12,
+            'hexadecile': 16,
+            'vigintile': 20,
+            'percentile': 100,
+            }
+        _aliasmaker(quantile, _functions.Quantile, argset)
+
     class advanced:
 
         quantile = _functions.Quantile
-        region = _functions.Region
