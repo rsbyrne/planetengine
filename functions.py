@@ -6,7 +6,12 @@ convert = get_planetVar
 
 raw = _functions
 
-def _aliasmaker(outclassobj, inclassobj, argset):
+def _aliasmaker(
+        outclassobj,
+        inclassobj,
+        argset,
+        kwargname = 'variant'
+        ):
     if type(argset) == set:
         argset = {key: key for key in argset}
     elif not type(argset) == dict:
@@ -14,7 +19,7 @@ def _aliasmaker(outclassobj, inclassobj, argset):
     for variantName, variant in argset.items():
         partialfn = partial(
             inclassobj,
-            variant = variant,
+            **{kwargname: variant}
             )
         setattr(outclassobj, variantName, partialfn)
 
@@ -44,27 +49,27 @@ class tidy:
         class operations:
             pass
         argset = set(_functions.uwNamesToFns.keys())
-        _aliasmaker(operations, _functions.Operations, argset)
+        _aliasmaker(operations, _functions.Operations, argset, 'uwop')
 
         class component:
             pass
         argset = {'mag', 'rad', 'ang', 'ang1', 'ang2'}
-        _aliasmaker(component, _functions.Component, argset)
+        _aliasmaker(component, _functions.Component, argset, 'component')
 
         class gradient:
             pass
         argset = {'mag', 'rad', 'ang', 'ang1', 'ang2'}
-        _aliasmaker(gradient, _functions.Gradient, argset)
+        _aliasmaker(gradient, _functions.Gradient, argset, 'gradient')
 
         class comparison:
             pass
         argset = {'equals', 'notequals'}
-        _aliasmaker(comparison, _functions.Comparison, argset)
+        _aliasmaker(comparison, _functions.Comparison, argset, 'operation')
 
         class range:
             pass
         argset = {'in', 'out'}
-        _aliasmaker(range, _functions.Range, argset)
+        _aliasmaker(range, _functions.Range, argset, 'operation')
 
         class integral:
             pass
@@ -77,7 +82,7 @@ class tidy:
             'front',
             'back'
             }
-        _aliasmaker(integral, _functions.Integral, argset)
+        _aliasmaker(integral, _functions.Integral, argset, 'surface')
 
         class quantile:
             pass
@@ -96,7 +101,7 @@ class tidy:
             'vigintile': 20,
             'percentile': 100,
             }
-        _aliasmaker(quantile, _functions.Quantile, argset)
+        _aliasmaker(quantile, _functions.Quantile, argset, 'ntiles')
 
     class advanced:
 
