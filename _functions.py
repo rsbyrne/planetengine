@@ -13,6 +13,8 @@ from .meshutils import get_meshUtils
 from .mapping import unbox
 from .shapes import interp_shape
 
+_premade_fns = {}
+
 # Some important universal attributes:
 
 uwNamesToFns = {
@@ -67,6 +69,132 @@ uwDataObjToNames = {
     for key, val in uwNamesToDataObj.items()
     }
 
+def update_opTag(opTag, stringVariants):
+    for key, val in sorted(stringVariants.items()):
+        opTag += '_' + str(key) + '=' + str(val)
+    return opTag
+
+# def get_opHash(varClass, *inVars, stringVariants = {}):
+#     hashVal = 0
+#     if varClass is Shape:
+#         assert len(inVars) == 1
+#         vertices = inVars[0]
+#         hashVal += hash(
+#             utilities.stringify(
+#                 vertices
+#                 )
+#             )
+#     elif varClass is Constant:
+#         assert len(inVars) == 1
+#         var = UWFn.convert(inVars[0])
+#         if var is None:
+#             raise Exception
+#         if len(list(var._underlyingDataItems)) > 0:
+#             raise Exception
+#         value = var.evaluate()[0]
+#         valString = utilities.stringify(
+#             value
+#             )
+#         stringVariants = {'val': valString}
+#     elif varClass is Variable:
+#         assert len(inVars) == 1
+#         var = UWFn.convert(inVars[0])
+#         hashVal += var.__hash__()
+#     else:
+#         for inVar in inVars:
+#             assert isinstance(inVar, PlanetVar)
+#             hashVal += inVar.__hash__()
+#     fulltag = update_opTag(varClass.opTag, stringVariants)
+#     hashVal += hash(fulltag)
+#     return hashVal
+
+# def _construct(
+#         *inVars,
+#         varClass = None,
+#         stringVariants = {},
+#         **kwargs
+#         ):
+#
+#     if not varClass in {Constant, Variable, Shape}:
+#         inVars = [convert(inVar) for inVar in inVars]
+#     opHash = get_opHash(
+#         varClass,
+#         *inVars,
+#         stringVariants = stringVariants
+#         )
+#     if opHash in _premade_fns:
+#         print("Found preexisting!")
+#         outObj = _premade_fns[opHash]() # is weakref
+#     else:
+#         print("Constructing anew:")
+#         outObj = varClass(
+#             *inVars,
+#             **stringVariants,
+#             **kwargs
+#             )
+#
+#     return outObj
+
+def _construct(
+        *inVars,
+        varClass = None,
+        stringVariants = {},
+        **kwargs
+        ):
+
+    outObj = varClass(
+        *inVars,
+        **stringVariants,
+        **kwargs
+        )
+
+    return outObj
+
+def _convert(var, *args, varName = 'anon', **kwargs):
+    if isinstance(var, PlanetVar):
+        return var
+    # elif hasattr(var, 'planetVar'):
+    #     return var.planetVar
+    else:
+        try:
+            var = UWFn.convert(var, *args, **kwargs)
+            if var is None:
+                raise Exception
+            if len(list(var._underlyingDataItems)) == 0:
+                valString = utilities.stringify(
+                    var.evaluate()[0]
+                    )
+                stringVariants = {'val': valString}
+                var = _construct(
+                    var,
+                    *args,
+                    varClass = Constant,
+                    stringVariants = stringVariants,
+                    **kwargs
+                    )
+            else:
+                stringVariants = {'varName': varName}
+                var = _construct(
+                    var,
+                    *args,
+                    varClass = Variable,
+                    stringVariants = stringVariants,
+                    **kwargs
+                    )
+        except:
+            try:
+                stringVariants = {'varName': varName}
+                var = _construct(
+                    var,
+                    *args,
+                    varClass = Shape,
+                    stringVariants = stringVariants,
+                    **kwargs
+                    )
+            except:
+                raise Exception
+        return var
+
 def convert(*args, return_tuple = False, **kwargs):
     if len(args) == 1:
         arg = args[0]
@@ -96,27 +224,6 @@ def convert(*args, return_tuple = False, **kwargs):
             return converted
 
 get_planetVar = convert
-
-def _convert(var, *args, varName = 'anon', **kwargs):
-    if isinstance(var, PlanetVar):
-        return var
-    elif hasattr(var, 'planetVar'):
-        return var.planetVar
-    else:
-        try:
-            var = UWFn.convert(var, *args, **kwargs)
-            if var is None:
-                raise Exception
-            if len(list(var._underlyingDataItems)) == 0:
-                var = Constant(var, *args, **kwargs)
-            else:
-                var = Variable(var, varName, *args, **kwargs)
-        except:
-            try:
-                var = Shape(var, varName, *args, **kwargs)
-            except:
-                raise Exception
-        return var
 
 def _multi_convert(*args, **kwargs):
     all_converted = []
@@ -204,14 +311,14 @@ class PlanetVar(UWFn):
 
         # Naming the variable:
 
-        if not type(self) in {Constant, Variable, Shape}:
-            if hide:
-                if len(self.inVars) > 1:
-                    raise Exception
-                self.varName = self.inVar.varName
-            else:
-                inTags = [inVar.varName for inVar in self.inVars]
-                self.varName = self.opTag + '{' + ';'.join(inTags) + '}'
+        self.opTag = update_opTag(self.opTag, self.stringVariants)
+        if hide:
+            if len(self.inVars) > 1:
+                raise Exception
+            self.varName = self.inVar.varName
+        else:
+            inTags = [inVar.varName for inVar in self.inVars]
+            self.varName = self.opTag + '{' + ';'.join(inTags) + '}'
 
         # Stuff to make Underworld happy:
 
@@ -233,6 +340,8 @@ class PlanetVar(UWFn):
         self._set_attributes()
 
         self._set_summary_stats()
+
+        self._set_weakref(self) # is static
 
     def _set_rootVars(self):
         rootVars = set()
@@ -376,6 +485,12 @@ class PlanetVar(UWFn):
             self.ranges = ranges
         self.valSets = valSets
 
+    @staticmethod
+    def _set_weakref(self):
+        weak_reference = weakref.ref(self)
+        hashKey = self.__hash__()
+        _premade_fns[hashKey] = weak_reference
+
     def evaluate(self, evalInput = None):
         self.update()
         if evalInput is None:
@@ -439,7 +554,11 @@ class BaseTypes(PlanetVar):
 
     def __init__(self, *args, **kwargs):
         # CIRCULAR REFERENCE
-        self.var.planetVar = self
+        # self.var.planetVar = self
+        # self.opTag = update_opTag(
+        #     self.opTag,
+        #     self.stringVariants
+        #     )
         super().__init__(*args, **kwargs)
 
     def evaluate(self, evalInput = None):
@@ -461,11 +580,6 @@ class BaseTypes(PlanetVar):
     def __call__(self):
         return self.var
 
-    def __hash__(self):
-        selfhash = self.var.__hash__()
-        selfhash += hash(self.opTag)
-        return selfhash
-
 class Constant(BaseTypes):
 
     opTag = 'Constant'
@@ -482,8 +596,8 @@ class Constant(BaseTypes):
         valString = utilities.stringify(
             self.value
             )
-        self.varName = self.opTag + '{' + valString + '}'
 
+        self.stringVariants = {'val': valString}
         self.inVars = []
         self.var = var
         self.mesh = self.substrate = None
@@ -493,6 +607,15 @@ class Constant(BaseTypes):
     def _check_hash(self):
         currenthash = hash(utilities.stringify(self.value))
         return currenthash
+
+    def __hash__(self):
+        selfhash = 0
+        fulltag = update_opTag(
+            self.opTag,
+            self.stringVariants
+            )
+        selfhash += hash(fulltag)
+        return selfhash
 
 class Variable(BaseTypes):
 
@@ -506,8 +629,7 @@ class Variable(BaseTypes):
         if len(list(var._underlyingDataItems)) == 0:
             raise Exception
 
-        self.varName = self.opTag + '{' + varName + '}'
-
+        self.stringVariants = {'varName': varName}
         self.inVars = []
         self.var = var
         if hasattr(var, 'fn_gradient'):
@@ -530,6 +652,15 @@ class Variable(BaseTypes):
         currenthash = hash(utilities.stringify(self.data))
         return currenthash
 
+    def __hash__(self):
+        selfhash = self.var.__hash__()
+        fulltag = update_opTag(
+            self.opTag,
+            self.stringVariants
+            )
+        selfhash += hash(fulltag)
+        return selfhash
+
 class Shape(BaseTypes):
 
     opTag = 'Shape'
@@ -541,8 +672,7 @@ class Shape(BaseTypes):
         self.richvertices = interp_shape(self.vertices)
         self.morphs = {}
 
-        self.varName = self.opTag + '{' + varName + '}'
-
+        self.stringVariants = {'varName': varName}
         self.inVars = []
         self.var = shape
         self.mesh = self.substrate = None
@@ -561,6 +691,15 @@ class Shape(BaseTypes):
             morphpoly = fn.shape.Polygon(morphverts)
             self.morphs[mesh] = morphpoly
         return morphpoly
+
+    def __hash__(self):
+        selfhash = hash(utilities.stringify(self.vertices))
+        fulltag = update_opTag(
+            self.opTag,
+            self.stringVariants
+            )
+        selfhash += hash(fulltag)
+        return selfhash
 
 class Utils(PlanetVar):
 
@@ -585,6 +724,7 @@ class Projection(Utils):
             inVar,
             )
 
+        self.stringVariants = {}
         self.inVars = [inVar]
         self.var = var
 
@@ -614,6 +754,7 @@ class Substitute(Utils):
             (True, inVar),
             ])
 
+        self.stringVariants = {}
         self.inVars = inVars
         self.var = var
 
@@ -643,6 +784,7 @@ class Binarise(Utils):
                 (True, 0),
                 ])
 
+        self.stringVariants = {}
         self.inVars = [inVar]
         self.var = var
 
@@ -661,6 +803,7 @@ class Booleanise(Utils):
             (True, True),
             ])
 
+        self.stringVariants = {}
         self.inVars = [inVar]
         self.var = var
 
@@ -679,6 +822,7 @@ class HandleNaN(Utils):
             (True, handleVal),
             ])
 
+        self.stringVariants = {}
         self.inVars = inVars
         self.var = var
 
@@ -697,6 +841,7 @@ class ZeroNaN(Utils):
             (True, 0.),
             ])
 
+        self.stringVariants = {}
         self.inVars = [inVar]
         self.var = var
 
@@ -724,6 +869,7 @@ class Clip(Functions):
             (True, inFn)
             ])
 
+        self.stringVariants = {}
         self.inVars = inVars
         self.var = var
 
@@ -744,6 +890,7 @@ class Interval(Functions):
             (True, inVar),
             ])
 
+        self.stringVariants = {}
         self.inVars = [inVar, lBnd, uBnd]
         self.var = var
 
@@ -761,7 +908,7 @@ class Operations(Functions):
 
         var = opFn(*args)
 
-        self.opTag += '_' + uwop
+        self.stringVariants = {'uwop': uwop}
         self.inVars = [convert(arg) for arg in args]
         self.var = var
 
@@ -792,7 +939,7 @@ class Component(Functions):
                 compVec
                 )
 
-        self.opTag += '_' + component
+        self.stringVariants = {'component': component}
         self.inVars = [inVar]
         self.var = var
 
@@ -821,7 +968,7 @@ class Gradient(Functions):
                 compVec
                 )
 
-        self.opTag += '_' + gradient
+        self.stringVariants = {'gradient': gradient}
         self.inVars = [inVar]
         self.var = var
 
@@ -844,7 +991,7 @@ class Comparison(Functions):
             (True, boolOut),
             ])
 
-        self.opTag += '_' + operation
+        self.stringVariants = {'operation': operation}
         self.inVars = inVars
         self.var = var
 
@@ -874,7 +1021,7 @@ class Range(Functions):
             (True, inVal),
             ])
 
-        self.opTag += '_' + operation
+        self.stringVariants = {'operation': operation}
         self.inVars = inVars
         self.var = var
 
@@ -917,7 +1064,7 @@ class Integral(Functions):
         self._intField = intField
         self._intMesh = intMesh
 
-        self.opTag += '_' + surface
+        self.stringVariants = {'surface': surface}
         self.inVars = [inVar]
         self.var = var
         self.mesh = self.substrate = None
@@ -933,9 +1080,9 @@ class Quantile(Functions):
 
     opTag = 'Quantile'
 
-    def __init__(self, nthtile, inVar, *args, ntiles = 2, **kwargs):
+    def __init__(self, inVar, *args, ntiles = 2, nthtile = 0, **kwargs):
 
-        quantileStr = str(nthtile) + "of" + str(ntiles)
+        nthtile, ntiles = int(nthtile), int(ntiles)
 
         inVar = convert(inVar)
 
@@ -954,7 +1101,10 @@ class Quantile(Functions):
             (True, inVar),
             ])
 
-        self.opTag += '_' + quantileStr
+        self.stringVariants = {
+            'nthtile': str(nthtile),
+            'ntiles': str(ntiles)
+            }
         self.inVars = [inVar]
         self.var = var
 
@@ -981,6 +1131,7 @@ class Region(Functions):
             (True, np.nan),
             ])
 
+        self.stringVariants = {}
         self.inVars = inVars
         self.var = var
 

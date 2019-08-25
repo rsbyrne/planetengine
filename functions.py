@@ -1,5 +1,6 @@
 from . import _functions
 from ._functions import get_planetVar
+from ._functions import _construct
 from functools import partial
 
 convert = get_planetVar
@@ -9,42 +10,56 @@ raw = _functions
 def _aliasmaker(
         outclassobj,
         inclassobj,
-        argset,
-        kwargname = 'variant'
+        argset = None,
+        kwargname = None,
         ):
     if type(argset) == set:
         argset = {key: key for key in argset}
-    elif not type(argset) == dict:
+    if type(argset) == dict:
+        for variantName, variant in argset.items():
+            partialFn = partial(
+                _construct,
+                varClass = inclassobj,
+                stringVariants = {
+                    kwargname: variant
+                    }
+                )
+            setattr(outclassobj, variantName, partialFn)
+    else:
         raise Exception
-    for variantName, variant in argset.items():
-        partialfn = partial(
-            inclassobj,
-            **{kwargname: variant}
+
+def _multi_aliasmaker(outclassobj, mappingdict):
+    for key, val in mappingdict.items():
+        partialFn = partial(
+            _construct,
+            varClass = val,
             )
-        setattr(outclassobj, variantName, partialfn)
+        setattr(outclassobj, key, partialFn)
 
 class tidy:
 
     class basetypes:
-
-        constant = _functions.Constant
-        variable = _functions.Variable
-        shape = _functions.Shape
+        pass
+    fns = {
+        'constant': _functions.Constant,
+        'variable': _functions.Variable,
+        'shape': _functions.Shape,
+        }
+    _multi_aliasmaker(basetypes, fns)
 
     class utils:
-
-        projection = _functions.Projection
-        substitute = _functions.Substitute
-        binarise = _functions.Binarise
-        booleanies = _functions.Booleanise
-        handlenan = _functions.HandleNaN
-        zeronan = _functions.ZeroNaN
+        pass
+    fns = {
+        'projection': _functions.Projection,
+        'substitute': _functions.Substitute,
+        'binarise': _functions.Binarise,
+        'booleanies': _functions.Booleanise,
+        'handlenan': _functions.HandleNaN,
+        'zeronan': _functions.ZeroNaN,
+        }
+    _multi_aliasmaker(utils, fns)
 
     class simple:
-
-        clip = _functions.Clip
-        interval = _functions.Interval
-        region = _functions.Region
 
         class operations:
             pass
@@ -101,8 +116,31 @@ class tidy:
             'vigintile': 20,
             'percentile': 100,
             }
-        _aliasmaker(quantile, _functions.Quantile, argset, 'ntiles')
+        _aliasmaker(
+            quantile,
+            _functions.Quantile,
+            argset,
+            'ntiles'
+            )
+        # for alias in argset:
+        #     aliasobj = getattr(quantile, alias)
+        #     subargset = {
+        #         key: val for key, val \
+        #         in zip(
+        #             [str(i) for i in range(argset[alias])],
+        #             [i for i in range(argset[alias])]
+        #             )
+        #         }
+        #     _aliasmaker(
+        #         aliasobj,
+        #         _functions.Quantile,
+        #         subargset,
+        #         'nthtile'
+        #         )
 
-    class advanced:
-
-        quantile = _functions.Quantile
+    fns = {
+        'clip': _functions.Clip,
+        'interval': _functions.Interval,
+        'region': _functions.Region,
+        }
+    _multi_aliasmaker(simple, fns)
