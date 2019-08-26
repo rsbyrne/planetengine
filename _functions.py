@@ -74,39 +74,45 @@ def update_opTag(opTag, stringVariants):
         opTag += '_' + str(key) + '=' + str(val)
     return opTag
 
-# def get_opHash(varClass, *inVars, stringVariants = {}):
-#     hashVal = 0
-#     if varClass is Shape:
-#         assert len(inVars) == 1
-#         vertices = inVars[0]
-#         hashVal += hash(
-#             utilities.stringify(
-#                 vertices
-#                 )
-#             )
-#     elif varClass is Constant:
-#         assert len(inVars) == 1
-#         var = UWFn.convert(inVars[0])
-#         if var is None:
-#             raise Exception
-#         if len(list(var._underlyingDataItems)) > 0:
-#             raise Exception
-#         value = var.evaluate()[0]
-#         valString = utilities.stringify(
-#             value
-#             )
-#         stringVariants = {'val': valString}
-#     elif varClass is Variable:
-#         assert len(inVars) == 1
-#         var = UWFn.convert(inVars[0])
-#         hashVal += var.__hash__()
-#     else:
-#         for inVar in inVars:
-#             assert isinstance(inVar, PlanetVar)
-#             hashVal += inVar.__hash__()
-#     fulltag = update_opTag(varClass.opTag, stringVariants)
-#     hashVal += hash(fulltag)
-#     return hashVal
+def get_opHash(varClass, *inVars, stringVariants = {}):
+    hashVal = 0
+    if varClass is Shape:
+        assert len(inVars) == 1
+        vertices = inVars[0]
+        hashVal += hash(
+            utilities.stringify(
+                vertices
+                )
+            )
+    elif varClass is Constant:
+        assert len(inVars) == 1
+        var = UWFn.convert(inVars[0])
+        if var is None:
+            raise Exception
+        if len(list(var._underlyingDataItems)) > 0:
+            raise Exception
+        value = var.evaluate()[0]
+        valString = utilities.stringify(
+            value
+            )
+        stringVariants = {'val': valString}
+    elif varClass is Variable:
+        assert len(inVars) == 1
+        var = UWFn.convert(inVars[0])
+        hashVal += var.__hash__()
+    else:
+        rootVars = set()
+        for inVar in inVars:
+            assert isinstance(inVar, PlanetVar)
+            rootVars = rootVars.union(
+                rootVars,
+                inVar.rootVars
+                )
+        for rootVar in rootVars:
+            hashVal += rootVar.__hash__()
+    fulltag = update_opTag(varClass.opTag, stringVariants)
+    hashVal += hash(fulltag)
+    return hashVal
 
 # def _construct(
 #         *inVars,
@@ -117,21 +123,30 @@ def update_opTag(opTag, stringVariants):
 #
 #     if not varClass in {Constant, Variable, Shape}:
 #         inVars = [convert(inVar) for inVar in inVars]
-#     opHash = get_opHash(
-#         varClass,
-#         *inVars,
-#         stringVariants = stringVariants
-#         )
-#     if opHash in _premade_fns:
-#         print("Found preexisting!")
-#         outObj = _premade_fns[opHash]() # is weakref
-#     else:
-#         print("Constructing anew:")
+#
+#     if varClass is Constant:
+#         # constants don't get saved!!!
 #         outObj = varClass(
 #             *inVars,
 #             **stringVariants,
 #             **kwargs
 #             )
+#     else:
+#         opHash = get_opHash(
+#             varClass,
+#             *inVars,
+#             stringVariants = stringVariants
+#             )
+#         if opHash in _premade_fns:
+#             print("Returning premade!")
+#             outObj = _premade_fns[opHash]() # is weakref
+#         else:
+#             print("Making a new one!")
+#             outObj = varClass(
+#                 *inVars,
+#                 **stringVariants,
+#                 **kwargs
+#                 )
 #
 #     return outObj
 
@@ -341,13 +356,12 @@ class PlanetVar(UWFn):
 
         self._set_summary_stats()
 
-        self._set_weakref(self) # is static
+        if not self.__class__ is Constant:
+            self._set_weakref(self) # is static
 
     def _set_rootVars(self):
         rootVars = set()
-        if isinstance(self, BaseTypes):
-            pass
-        else:
+        if not type(self) in {Constant, Variable, Shape}:
             assert len(self.inVars) > 0
             for inVar in self.inVars:
                 if isinstance(inVar, BaseTypes):
@@ -356,7 +370,7 @@ class PlanetVar(UWFn):
                     for rootVar in inVar.rootVars:
                         rootVars.add(rootVar)
         assert all(
-            [isinstance(rootVar, BaseTypes) \
+            [type(rootVar) in {Constant, Variable, Shape} \
             for rootVar in list(rootVars)]
             )
         self.rootVars = rootVars
@@ -468,6 +482,7 @@ class PlanetVar(UWFn):
     def _set_summary_stats(self):
         if hasattr(self, 'data'):
             data = self.data
+            assert not len(data.shape) > 2
             valSets = utilities.get_valSets(data)
         else:
             data = None
@@ -499,17 +514,33 @@ class PlanetVar(UWFn):
 
     def __call__(self):
         self.update()
-        return self.var
+        return self
 
     def __hash__(self):
-        selfhash = sum(
-            [inVar.__hash__() for inVar in self.inVars]
+        if self.__class__ is Variable:
+            inVars = [self.var]
+        elif self.__class__ is Constant:
+            inVars = [self.var]
+        elif self.__class__ is Shape:
+            inVars = [self.vertices]
+        else:
+            inVars = self.inVars
+        hashVal = get_opHash(
+            self.__class__,
+            *inVars,
+            stringVariants = self.stringVariants
             )
-        selfhash += hash(self.opTag)
-        return selfhash
+        return hashVal
+
+    # def __hash__(self):
+    #     selfhash = sum(
+    #         [inVar.__hash__() for inVar in self.inVars]
+    #         )
+    #     selfhash += hash(self.opTag)
+    #     return selfhash
 
     def __add__(self, other):
-        return Operations(self, other, uwop = 'less')
+        return Operations(self, other, uwop = 'add')
 
     def __sub__(self, other):
         return Operations(self, other, uwop = 'subtract')
@@ -544,11 +575,11 @@ class PlanetVar(UWFn):
     def __pow__(self, other):
         return Operations(self, other, uwop = 'pow')
 
-    def __eq__(self, other):
-        return Comparison(self, other, uwop = 'equals')
-
-    def __ne__(self, other):
-        return Comparison(self, other, uwop = 'notequals')
+    # def __eq__(self, other):
+    #     return Comparison(self, other, uwop = 'equals')
+    #
+    # def __ne__(self, other):
+    #     return Comparison(self, other, uwop = 'notequals')
 
 class BaseTypes(PlanetVar):
 
@@ -568,7 +599,7 @@ class BaseTypes(PlanetVar):
 
     def update(self):
         if type(self) == Constant:
-            self.data = np.array([[self.value,]])
+            self.data = np.array([self.value,])
         elif type(self) == Shape:
             self.data = self.vertices
         elif hasattr(self.var, 'data'):
@@ -576,6 +607,7 @@ class BaseTypes(PlanetVar):
         else:
             # i.e. is a function
             self.data = self.var.evaluate(self.substrate)
+        self._set_summary_stats()
 
     def __call__(self):
         return self.var
@@ -607,15 +639,6 @@ class Constant(BaseTypes):
     def _check_hash(self):
         currenthash = hash(utilities.stringify(self.value))
         return currenthash
-
-    def __hash__(self):
-        selfhash = 0
-        fulltag = update_opTag(
-            self.opTag,
-            self.stringVariants
-            )
-        selfhash += hash(fulltag)
-        return selfhash
 
 class Variable(BaseTypes):
 
@@ -652,15 +675,6 @@ class Variable(BaseTypes):
         currenthash = hash(utilities.stringify(self.data))
         return currenthash
 
-    def __hash__(self):
-        selfhash = self.var.__hash__()
-        fulltag = update_opTag(
-            self.opTag,
-            self.stringVariants
-            )
-        selfhash += hash(fulltag)
-        return selfhash
-
 class Shape(BaseTypes):
 
     opTag = 'Shape'
@@ -691,15 +705,6 @@ class Shape(BaseTypes):
             morphpoly = fn.shape.Polygon(morphverts)
             self.morphs[mesh] = morphpoly
         return morphpoly
-
-    def __hash__(self):
-        selfhash = hash(utilities.stringify(self.vertices))
-        fulltag = update_opTag(
-            self.opTag,
-            self.stringVariants
-            )
-        selfhash += hash(fulltag)
-        return selfhash
 
 class Utils(PlanetVar):
 
@@ -983,11 +988,11 @@ class Comparison(Functions):
         if not operation in {'equals', 'notequals'}:
             raise Exception
 
-        inVar0, inVar1 = inVars = convert(inVar0), convert(inVar1)
+        inVar0, inVar1 = inVars = convert(inVar0, inVar1)
         boolOut = operation == 'equals'
         var = fn.branching.conditional([
-            (inVar0.var < inVar1.var - 1e-18, not boolOut),
-            (inVar0.var > inVar1.var + 1e-18, not boolOut),
+            (inVar0 < inVar1 - 1e-18, not boolOut),
+            (inVar0 > inVar1 + 1e-18, not boolOut),
             (True, boolOut),
             ])
 
@@ -1008,16 +1013,16 @@ class Range(Functions):
 
         inVar0, inVar1 = inVars = convert(inVar0), convert(inVar1)
         if operation == 'in':
-            inVal = inVar0.var
+            inVal = inVar0
             outVal = np.nan
         else:
             inVal = np.nan
-            outVal = inVar0.var
-        self._lowerBounds = fn.misc.constant(0.)
-        self._upperBounds = fn.misc.constant(0.)
+            outVal = inVar0
+        self._lowerBounds = fn.misc.constant(1.)
+        self._upperBounds = fn.misc.constant(1.)
         var = fn.branching.conditional([
-            (inVar0.var < self._lowerBounds, outVal),
-            (inVar0.var > self._upperBounds, outVal),
+            (inVar0 < self._lowerBounds, outVal),
+            (inVar0 > self._upperBounds, outVal),
             (True, inVal),
             ])
 
@@ -1060,7 +1065,7 @@ class Integral(Functions):
                 surfaceIndexSet = indexSet
                 )
 
-        var = fn.misc.constant(0.)
+        var = fn.misc.constant(1.)
         self._intField = intField
         self._intMesh = intMesh
 
@@ -1083,11 +1088,13 @@ class Quantile(Functions):
     def __init__(self, inVar, *args, ntiles = 2, nthtile = 0, **kwargs):
 
         nthtile, ntiles = int(nthtile), int(ntiles)
+        if not 0 < nthtile <= ntiles:
+            raise Exception
 
         inVar = convert(inVar)
 
-        self._lowerBound = fn.misc.constant(0.)
-        self._upperBound = fn.misc.constant(0.)
+        self._lowerBound = fn.misc.constant(1.)
+        self._upperBound = fn.misc.constant(1.)
         self._ntiles = ntiles
         self._nthtile = nthtile
         l_adj = -1e-18
@@ -1136,3 +1143,82 @@ class Region(Functions):
         self.var = var
 
         super().__init__(*args, **kwargs)
+
+class Normalise(Functions):
+
+    opTag = 'Normalise'
+
+    def __init__(self, baseVar, normVar, *args, **kwargs):
+
+        baseVar, normVar = inVars = convert(baseVar, normVar)
+
+        inMins = fn.misc.constant(
+            [1. for dim in range(baseVar.varDim)]
+            )
+        inRanges = fn.misc.constant(
+            [1. for dim in range(baseVar.varDim)]
+            )
+        normMins = fn.misc.constant(
+            [1. for dim in range(normVar.varDim)]
+            )
+        normRanges = fn.misc.constant(
+            [1. for dim in range(normVar.varDim)]
+            )
+
+        var = (baseVar - inMins) / inRanges * normRanges + normMins
+
+        self.inMins = inMins
+        self.inRanges = inRanges
+        self.normMins = normMins
+        self.normRanges = normRanges
+        self.baseVar = baseVar
+        self.normVar = normVar
+
+        self.stringVariants = {}
+        self.inVars = inVars
+        self.var = var
+
+        super().__init__(*args, **kwargs)
+
+    def _partial_update(self):
+
+        self.inMins.value = \
+            [scale[0] for scale in self.baseVar.scales]
+        self.inRanges.value = self.baseVar.ranges
+        self.normMins.value = \
+            [scale[0] for scale in self.normVar.scales]
+        self.normRanges.value = self.normVar.ranges
+
+class GetStat(Functions):
+
+    opTag = 'GetStat'
+
+    def __init__(self, inVar, *args, stat = 'mins', **kwargs):
+
+        if not stat in {'mins', 'maxs', 'ranges'}:
+            raise Exception
+
+        inVar = convert(inVar)
+        var = fn.misc.constant(
+            [1. for dim in range(inVar.varDim)]
+            )
+
+        self.stat = stat
+
+        self.stringVariants = {'stat': stat}
+        self.inVars = [inVar]
+        self.var = var
+        self.mesh = self.substrate = None
+
+        super().__init__(*args, **kwargs)
+
+    def _partial_update(self):
+
+        if self.stat == 'mins':
+            self.var.value = [scale[0] for scale in self.inVar.scales]
+        elif self.stat == 'maxs':
+            self.var.value = [scale[1] for scale in self.inVar.scales]
+        elif self.stat == 'ranges':
+            self.var.value = self.inVar.ranges
+        else:
+            raise Exception

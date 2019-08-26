@@ -269,6 +269,7 @@ def hash_var(
 
 def get_valSets(array):
     valSets = []
+    assert len(array.shape) == 2
     for dimension in array.T:
         localVals = set(dimension)
         for item in list(localVals):

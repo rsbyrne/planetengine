@@ -138,9 +138,20 @@ class tidy:
         #         'nthtile'
         #         )
 
+        class getstat:
+            pass
+        argset = {'mins', 'maxs', 'ranges'}
+        _aliasmaker(
+            getstat,
+            _functions.GetStat,
+            argset,
+            'stat'
+            )
+
     fns = {
         'clip': _functions.Clip,
         'interval': _functions.Interval,
         'region': _functions.Region,
+        'normalise': _functions.Normalise
         }
     _multi_aliasmaker(simple, fns)
