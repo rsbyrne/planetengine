@@ -276,7 +276,7 @@ def get_valSets(array):
             if math.isnan(item):
                 localVals.remove(item)
         allValsGathered = uw.mpi.comm.allgather(localVals)
-        valSet = {val for localVals in allValsGathered for val in localVals}
+        valSet = {val.item() for localVals in allValsGathered for val in localVals}
         valSets.append(valSet)
     return valSets
 

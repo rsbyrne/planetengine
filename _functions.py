@@ -205,11 +205,11 @@ def _convert(var, varName = 'anon'):
 def convert(*args, return_tuple = False):
     if len(args) == 1:
         arg = args[0]
-        if type(arg) == tuple:
-            converted = _tuple_convert(arg)
-        elif type(arg) == list:
-            converted = _multi_convert(*arg)
-        elif type(arg) == dict:
+        # if type(arg) == tuple:
+        #     converted = _tuple_convert(arg)
+        # elif type(arg) == list:
+        #     converted = _multi_convert(*arg)
+        if type(arg) == dict:
             converted = _dict_convert(arg)
         else:
             converted = _convert(arg)
@@ -580,7 +580,7 @@ class BaseTypes(PlanetVar):
         #     self.opTag,
         #     self.stringVariants
         #     )
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def evaluate(self, evalInput = None):
         if evalInput is None:
@@ -589,7 +589,7 @@ class BaseTypes(PlanetVar):
 
     def update(self):
         if type(self) == Constant:
-            self.data = np.array([self.value,])
+            self.data = np.array([[val,] for val in self.value])
         elif type(self) == Shape:
             self.data = self.vertices
         elif hasattr(self.var, 'data'):
@@ -624,7 +624,7 @@ class Constant(BaseTypes):
         self.var = var
         self.mesh = self.substrate = None
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def _check_hash(self):
         currenthash = hash(utilities.stringify(self.value))
@@ -658,7 +658,7 @@ class Variable(BaseTypes):
                 self.mesh, self.substrate = \
                     utilities.get_substrates(var)
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def _check_hash(self):
         self.update() # resets self.data
@@ -681,7 +681,7 @@ class Shape(BaseTypes):
         self.var = shape
         self.mesh = self.substrate = None
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def _check_hash(self):
         currenthash = hash(utilities.stringify(self.vertices))
@@ -700,7 +700,7 @@ class Utils(PlanetVar):
 
     def __init__(self, *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class Projection(Utils):
 
@@ -725,7 +725,7 @@ class Projection(Utils):
 
         self.fn_gradient = var.fn_gradient
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def _partial_update(self):
         self._projector.solve()
@@ -753,7 +753,7 @@ class Substitute(Utils):
         self.inVars = inVars
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class Binarise(Utils):
 
@@ -783,7 +783,7 @@ class Binarise(Utils):
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class Booleanise(Utils):
 
@@ -802,7 +802,7 @@ class Booleanise(Utils):
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class HandleNaN(Utils):
 
@@ -821,7 +821,7 @@ class HandleNaN(Utils):
         self.inVars = inVars
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class ZeroNaN(Utils):
 
@@ -840,13 +840,13 @@ class ZeroNaN(Utils):
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class Functions(PlanetVar):
 
     def __init__(self, *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class Clip(Functions):
 
@@ -868,7 +868,7 @@ class Clip(Functions):
         self.inVars = inVars
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class Interval(Functions):
 
@@ -889,7 +889,7 @@ class Interval(Functions):
         self.inVars = [inVar, lBnd, uBnd]
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class Operations(Functions):
 
@@ -907,7 +907,7 @@ class Operations(Functions):
         self.inVars = [convert(arg) for arg in args]
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class Component(Functions):
 
@@ -938,7 +938,61 @@ class Component(Functions):
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
+
+class Merge(Functions):
+
+    opTag = 'Merge'
+
+    def __init__(self, *args, **kwargs):
+
+        inVars = convert(*args)
+
+        meshType = True
+
+        for inVar in inVars:
+            if not inVar.varDim == 1:
+                raise Exception
+
+        dTypes = set([inVar.dType for inVar in inVars])
+        if not len(dTypes) == 1:
+            raise Exception
+        dType = list(dTypes)[0]
+
+        substrates = set([inVar.substrate for inVar in inVars])
+        if not len(substrates) == 1:
+            raise Exception
+
+        substrate = list(substrates)[0]
+        if substrate is None:
+            raise Exception
+
+        meshbased = all(
+            [inVar.meshbased for inVar in inVars]
+            )
+        dimension = len(inVars)
+        if meshbased:
+            var = substrate.add_variable(dimension, dType)
+        else:
+            var = substrate.add_variable(dType, dimension)
+
+        self.stringVariants = {}
+        self.inVars = inVars
+        self.var = var
+
+        super().__init__(**kwargs)
+
+    def _partial_update(self):
+        for index, inVar in enumerate(self.inVars):
+            self.var.data[:, index] = inVar.data[:, 0]
+
+    @staticmethod
+    def AnnularVectors(inVar):
+        inVar = convert(inVar)
+        angVar = Component(inVar, component = 'ang')
+        radVar = Component(inVar, component = 'rad')
+        var = Merge(angVar, radVar)
+        return var
 
 class Gradient(Functions):
 
@@ -967,7 +1021,7 @@ class Gradient(Functions):
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class Comparison(Functions):
 
@@ -990,7 +1044,7 @@ class Comparison(Functions):
         self.inVars = inVars
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class Range(Functions):
 
@@ -1020,7 +1074,7 @@ class Range(Functions):
         self.inVars = inVars
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def _partial_update(self):
         self._lowerBound.value = self.inVars[1].scales[:,0]
@@ -1064,7 +1118,7 @@ class Integral(Functions):
         self.var = var
         self.mesh = self.substrate = None
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def _partial_update(self):
         self.var.value = \
@@ -1105,7 +1159,7 @@ class Quantile(Functions):
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def _partial_update(self):
         intervalSize = self.inVar.ranges / self._ntiles
@@ -1132,7 +1186,7 @@ class Region(Functions):
         self.inVars = inVars
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
 class Normalise(Functions):
 
@@ -1142,17 +1196,30 @@ class Normalise(Functions):
 
         baseVar, normVar = inVars = convert(baseVar, normVar)
 
+        # inMins = fn.misc.constant(
+        #     [1. for dim in range(baseVar.varDim)]
+        #     )
+        # inRanges = fn.misc.constant(
+        #     [1. for dim in range(baseVar.varDim)]
+        #     )
+        # normMins = fn.misc.constant(
+        #     [1. for dim in range(normVar.varDim)]
+        #     )
+        # normRanges = fn.misc.constant(
+        #     [1. for dim in range(normVar.varDim)]
+        #     )
+
         inMins = fn.misc.constant(
-            [1. for dim in range(baseVar.varDim)]
+            [float(scale[0]) for scale in baseVar.scales]
             )
         inRanges = fn.misc.constant(
-            [1. for dim in range(baseVar.varDim)]
+            [float(val) for val in baseVar.ranges]
             )
         normMins = fn.misc.constant(
-            [1. for dim in range(normVar.varDim)]
+            [float(scale[0]) for scale in normVar.scales]
             )
         normRanges = fn.misc.constant(
-            [1. for dim in range(normVar.varDim)]
+            [float(val) for val in normVar.ranges]
             )
 
         var = (baseVar - inMins) / inRanges * normRanges + normMins
@@ -1168,16 +1235,18 @@ class Normalise(Functions):
         self.inVars = inVars
         self.var = var
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def _partial_update(self):
 
         self.inMins.value = \
-            [scale[0] for scale in self.baseVar.scales]
-        self.inRanges.value = self.baseVar.ranges
+            [float(scale[0]) for scale in self.baseVar.scales]
+        self.inRanges.value = \
+            [float(val) for val in self.baseVar.ranges]
         self.normMins.value = \
-            [scale[0] for scale in self.normVar.scales]
-        self.normRanges.value = self.normVar.ranges
+            [float(scale[0]) for scale in self.normVar.scales]
+        self.normRanges.value = \
+            [float(val) for val in self.normVar.ranges]
 
 class GetStat(Functions):
 
@@ -1200,7 +1269,7 @@ class GetStat(Functions):
         self.var = var
         self.mesh = self.substrate = None
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def _partial_update(self):
 

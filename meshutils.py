@@ -47,7 +47,7 @@ class MeshUtils:
                 self.surfaces['back'] = mesh.specialSets['MaxK_VertexSet']
         elif type(mesh) == uw.mesh.FeMesh_Annulus:
             self.comps = {
-                'ang': mesh.unitvec_theta_Fn,
+                'ang': -mesh.unitvec_theta_Fn,
                 'rad': -mesh.unitvec_r_Fn,
                 }
             self.surfaces = {

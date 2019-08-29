@@ -1,8 +1,10 @@
 import underworld as uw
+from underworld import function as fn
 import glucifer
 import numpy as np
 import os
 
+from . import functions
 from .utilities import message
 from .functions import get_planetVar
 from .meshutils import get_meshUtils
@@ -142,6 +144,10 @@ class QuickFig:
 
     def add_contours(self, arg, **kwargs):
         planetVar = get_planetVar(arg)
+        normed = functions.tidy.simple.normalise(
+            planetVar, [2., 1024.]
+            )
+        self.updateFuncs.append(normed.update)
         if 0. in planetVar.valSets:
             raise Exception
         if not planetVar.varDim == 1:
@@ -149,9 +155,9 @@ class QuickFig:
         self.fig.append(
             glucifer.objects.Contours(
                 planetVar.mesh,
-                planetVar,
+                fn.math.log2(normed),
                 colours = "red black",
-                interval = planetVar.ranges[0] / 10.,
+                interval = 1.,
                 **kwargs
                 )
             )
@@ -193,7 +199,7 @@ class QuickFig:
     def show(self):
         self.update()
         for var in self.fittedvars:
-            print(var.varName, var.ranges)
+            print(var.varName, var.scales)
         self.fig.show()
 
     def save(self, path = '', name = None):
