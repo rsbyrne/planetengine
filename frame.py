@@ -179,31 +179,45 @@ def find_checkpoints(path, stamps):
 
 def make_stamps(
         params,
+        systemscripts,
         options,
         configs,
-        scripts,
+        initialscripts,
         _use_wordhash = True,
+        prefix = 'pemod_'
         ):
 
     message("Making stamps...")
 
     stamps = {}
     if uw.mpi.rank == 0:
-        openScripts = {name: open(script) for name, script in sorted(scripts.items())}
         stamps = {
             'params': utilities.hashstamp(params),
+            'systemscripts': utilities.hashstamp(
+                [open(script) for script in systemscripts]
+                ),
             'options': utilities.hashstamp(options),
             'configs': utilities.hashstamp(configs),
-            'scripts': utilities.hashstamp(openScripts)
+            'initialscripts': utilities.hashstamp(
+                [open(script) for script in initialscripts]
+                )
             }
-        stamps['allstamp'] = utilities.hashstamp(stamps)
+        stamps['allstamp'] = utilities.hashstamp(
+            [val for key, val in sorted(stamps.items())]
+            )
+        stamps['system'] = utilities.hashstamp(
+            (stamps['params'], stamps['systemscripts'])
+            )
+        stamps['initials'] = utilities.hashstamp(
+            (stamps['configs'], stamps['initialscripts'])
+            )
     stamps = uw.mpi.comm.bcast(stamps, root = 0)
 
     wordhash = wordhashFn(stamps['allstamp'])
     if _use_wordhash:
-        hashID = 'mod_' + wordhash
+        hashID = prefix + wordhash
     else:
-        hashID = 'mod_' + stamps['allstamp']
+        hashID = prefix + stamps['allstamp']
 
     message("Stamps made.")
 
@@ -211,7 +225,6 @@ def make_stamps(
 
 def make_frame(
         system,
-#         observers,
         initials,
         outputPath = '',
         instanceID = None,
@@ -229,41 +242,25 @@ def make_frame(
 
     message("Making a new frame...")
 
-#     if not type(observer) is list:
-#         observers = [observers,]
-
-    scripts = {}
-    scripts['systemscript'] = system.script
-
-#     observerDict = {observer.hashID: observer for observer in observers}
-
-#     for obsKey, observer in sorted(observers.items()):
-#         name_n = 0
-#         nameFound = False
-#         while not nameFound:
-#             observerScriptName = observer.name + str(name_n) + '_observerscript'
-#             if observerScriptName in scripts:
-#                 name_n += 1
-#             else:
-#                 nameFound = True
-#                 scripts[observerScriptName] = observer.script
-
-    params = system.inputs
+    scripts = {
+        'systemscript': system.script
+        }
 
     configs = {}
     for varName, IC in sorted(initials.items()):
         scripts[varName + '_initials'] = IC.script
         configs[varName] = IC.inputs
 
+    params = system.inputs
     options = {}
-#     for observer in observers:
-#         options[observer.hashID] = observer.inputs
+    configs = configs
 
     stamps, hashID = make_stamps(
         params,
-        configs,
+        [system.script,],
         options,
-        scripts
+        configs,
+        [IC.script for varName, IC in sorted(initials.items())]
         )
 
     if instanceID == None:
@@ -297,12 +294,13 @@ def make_frame(
             with open(os.path.join(path, 'stamps.json')) as json_file:
                 loadstamps = json.load(json_file)
             shutil.rmtree(path)
+            print(stamps)
+            print(loadstamps)
             assert loadstamps == stamps
 
     if directory_state == 'clean':
         frame = Frame(
             system,
-#             observers,
             initials,
             outputPath,
             instanceID
@@ -359,8 +357,7 @@ class Frame:
         self._autobackup = _autobackup
 
         scripts = {
-            'systemscript': system.script,
-#             'observerscript': observer.script
+            'systemscript': system.script
             }
 
         configs = {}
@@ -368,24 +365,24 @@ class Frame:
             scripts[varName + '_initials'] = IC.script
             configs[varName] = IC.inputs
 
-        self.params = self.system.inputs
-        self.options = {}
-#         self.options = self.observer.inputs
-        self.configs = configs
-        self.scripts = scripts
+        params = system.inputs
+        options = {}
+        configs = configs
 
-#         self.inputs = {
-#             'params': self.params,
-#             'options': self.options,
-#             'configs': self.configs
-#             }
-
-        self.stamps, self.hashID = make_stamps(
-            self.params,
-            self.options,
-            self.configs,
-            self.scripts
+        stamps, hashID = make_stamps(
+            params,
+            [system.script,],
+            options,
+            configs,
+            [IC.script for varName, IC in sorted(initials.items())]
             )
+
+        self.params = params
+        self.options = options
+        self.configs = configs
+        self.stamps = stamps
+        self.hashID = hashID
+        self.scripts = scripts
 
         self.path = os.path.join(self.outputPath, self.instanceID)
         self.tarname = self.instanceID + '.tar.gz'
@@ -611,7 +608,7 @@ class Frame:
                     newpath
                     )
                 message(
-                    "Model forked to directory: " + extPath + self.tarname
+                    "Model forked to directory: " + extPath
                     )
                 hardFork = True
             else:

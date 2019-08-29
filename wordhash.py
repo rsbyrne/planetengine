@@ -41,9 +41,10 @@ with open(os.path.join(path, 'wordsalpha.txt'), 'r') as file:
 
 wordlist = sorted(list(set([*englishwords, *placenames, *babynames])))
 
-def wordhash(hashID, shortening = 10):
+def wordhash(hashID, nWords = 2):
     random.seed(hashID)
-    nWords = math.ceil(len(hashID) * math.log(260, len(wordlist)) / shortening)
+    # nWords = math.ceil(len(hashID) * math.log(260, len(wordlist)) / shortening)
+    # nWords = math.ceil(math.log10(hashID) * math.log(260, len(wordlist)) / shortening)
     wordhashlist = []
     for n in range(nWords):
         randindex = random.randint(0, (len(wordlist) - 1))

@@ -153,26 +153,24 @@ def get_opHash(varClass, *inVars, stringVariants = {}):
 def _construct(
         *inVars,
         varClass = None,
-        stringVariants = {},
-        **kwargs
+        stringVariants = {}
         ):
 
     outObj = varClass(
         *inVars,
-        **stringVariants,
-        **kwargs
+        **stringVariants
         )
 
     return outObj
 
-def _convert(var, *args, varName = 'anon', **kwargs):
+def _convert(var, varName = 'anon'):
     if isinstance(var, PlanetVar):
         return var
     # elif hasattr(var, 'planetVar'):
     #     return var.planetVar
     else:
         try:
-            var = UWFn.convert(var, *args, **kwargs)
+            var = UWFn.convert(var)
             if var is None:
                 raise Exception
             if len(list(var._underlyingDataItems)) == 0:
@@ -182,54 +180,48 @@ def _convert(var, *args, varName = 'anon', **kwargs):
                 stringVariants = {'val': valString}
                 var = _construct(
                     var,
-                    *args,
                     varClass = Constant,
-                    stringVariants = stringVariants,
-                    **kwargs
+                    stringVariants = stringVariants
                     )
             else:
                 stringVariants = {'varName': varName}
                 var = _construct(
                     var,
-                    *args,
                     varClass = Variable,
-                    stringVariants = stringVariants,
-                    **kwargs
+                    stringVariants = stringVariants
                     )
         except:
             try:
                 stringVariants = {'varName': varName}
                 var = _construct(
                     var,
-                    *args,
                     varClass = Shape,
-                    stringVariants = stringVariants,
-                    **kwargs
+                    stringVariants = stringVariants
                     )
             except:
                 raise Exception
         return var
 
-def convert(*args, return_tuple = False, **kwargs):
+def convert(*args, return_tuple = False):
     if len(args) == 1:
         arg = args[0]
         if type(arg) == tuple:
-            converted = _tuple_convert(arg, **kwargs)
+            converted = _tuple_convert(arg)
         elif type(arg) == list:
-            converted = _multi_convert(*arg, **kwargs)
+            converted = _multi_convert(*arg)
         elif type(arg) == dict:
-            converted = _dict_convert(arg, **kwargs)
+            converted = _dict_convert(arg)
         else:
-            converted = _convert(arg, **kwargs)
+            converted = _convert(arg)
     elif len(args) == 2:
         if type(args[0]) == str:
-            converted = _convert(args[1], args[0], **kwargs)
+            converted = _convert(args[1], args[0])
         elif type(args[1]) == str:
-            converted = _convert(args[0], args[1], **kwargs)
+            converted = _convert(args[0], args[1])
         else:
-            converted = _multi_convert(*args, **kwargs)
+            converted = _multi_convert(*args)
     else:
-        converted = _multi_convert(*args, **kwargs)
+        converted = _multi_convert(*args)
     if type(converted) == tuple:
         return converted
     else:
@@ -240,10 +232,10 @@ def convert(*args, return_tuple = False, **kwargs):
 
 get_planetVar = convert
 
-def _multi_convert(*args, **kwargs):
+def _multi_convert(*args):
     all_converted = []
     for arg in args:
-        all_converted.append(convert(arg, **kwargs))
+        all_converted.append(convert(arg))
     return tuple(all_converted)
 
 def _tuple_convert(inTuple):
@@ -253,7 +245,7 @@ def _tuple_convert(inTuple):
 def _dict_convert(inDict):
     all_converted = []
     for varName, var in sorted(inDict.items()):
-        newVar = _convert(var, varName, **kwargs)
+        newVar = _convert(var, varName)
         all_converted.append(newVar)
     if len(all_converted) == 1:
         return all_converted[0]
@@ -262,12 +254,10 @@ def _dict_convert(inDict):
 
 def get_projection(
         inVar,
-        *args,
         hide = False,
         attach = False,
-        **kwargs
         ):
-    inVar = convert(inVar, *args, **kwargs)
+    inVar = convert(inVar)
     if Projection.opTag in inVar.attached:
         outVar = inVar.attached[Projection.opTag]
     else:
@@ -287,7 +277,7 @@ def get_meshVar(
         attach = False,
         **kwargs
         ):
-    inVar = convert(inVar, *args, **kwargs)
+    inVar = convert(inVar, **kwargs)
     if inVar.varType == 'meshVar':
         outVar = inVar
     else:
