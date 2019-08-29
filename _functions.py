@@ -13,6 +13,8 @@ from .meshutils import get_meshUtils
 from .mapping import unbox
 from .shapes import interp_shape
 
+_premade_fns = {}
+
 # Some important universal attributes:
 
 uwNamesToFns = {
@@ -67,26 +69,167 @@ uwDataObjToNames = {
     for key, val in uwNamesToDataObj.items()
     }
 
-def convert(*args, return_tuple = False):
+def update_opTag(opTag, stringVariants):
+    for key, val in sorted(stringVariants.items()):
+        opTag += '_' + str(key) + '=' + str(val)
+    return opTag
+
+def get_opHash(varClass, *inVars, stringVariants = {}):
+    hashVal = 0
+    if varClass is Shape:
+        assert len(inVars) == 1
+        vertices = inVars[0]
+        hashVal += hash(
+            utilities.stringify(
+                vertices
+                )
+            )
+    elif varClass is Constant:
+        assert len(inVars) == 1
+        var = UWFn.convert(inVars[0])
+        if var is None:
+            raise Exception
+        if len(list(var._underlyingDataItems)) > 0:
+            raise Exception
+        value = var.evaluate()[0]
+        valString = utilities.stringify(
+            value
+            )
+        stringVariants = {'val': valString}
+    elif varClass is Variable:
+        assert len(inVars) == 1
+        var = UWFn.convert(inVars[0])
+        hashVal += var.__hash__()
+    else:
+        rootVars = set()
+        for inVar in inVars:
+            assert isinstance(inVar, PlanetVar)
+            rootVars = rootVars.union(
+                rootVars,
+                inVar.rootVars
+                )
+        for rootVar in rootVars:
+            hashVal += rootVar.__hash__()
+    fulltag = update_opTag(varClass.opTag, stringVariants)
+    hashVal += hash(fulltag)
+    return hashVal
+
+# def _construct(
+#         *inVars,
+#         varClass = None,
+#         stringVariants = {},
+#         **kwargs
+#         ):
+#
+#     if not varClass in {Constant, Variable, Shape}:
+#         inVars = [convert(inVar) for inVar in inVars]
+#
+#     if varClass is Constant:
+#         # constants don't get saved!!!
+#         outObj = varClass(
+#             *inVars,
+#             **stringVariants,
+#             **kwargs
+#             )
+#     else:
+#         opHash = get_opHash(
+#             varClass,
+#             *inVars,
+#             stringVariants = stringVariants
+#             )
+#         if opHash in _premade_fns:
+#             print("Returning premade!")
+#             outObj = _premade_fns[opHash]() # is weakref
+#         else:
+#             print("Making a new one!")
+#             outObj = varClass(
+#                 *inVars,
+#                 **stringVariants,
+#                 **kwargs
+#                 )
+#
+#     return outObj
+
+def _construct(
+        *inVars,
+        varClass = None,
+        stringVariants = {},
+        **kwargs
+        ):
+
+    outObj = varClass(
+        *inVars,
+        **stringVariants,
+        **kwargs
+        )
+
+    return outObj
+
+def _convert(var, *args, varName = 'anon', **kwargs):
+    if isinstance(var, PlanetVar):
+        return var
+    # elif hasattr(var, 'planetVar'):
+    #     return var.planetVar
+    else:
+        try:
+            var = UWFn.convert(var, *args, **kwargs)
+            if var is None:
+                raise Exception
+            if len(list(var._underlyingDataItems)) == 0:
+                valString = utilities.stringify(
+                    var.evaluate()[0]
+                    )
+                stringVariants = {'val': valString}
+                var = _construct(
+                    var,
+                    *args,
+                    varClass = Constant,
+                    stringVariants = stringVariants,
+                    **kwargs
+                    )
+            else:
+                stringVariants = {'varName': varName}
+                var = _construct(
+                    var,
+                    *args,
+                    varClass = Variable,
+                    stringVariants = stringVariants,
+                    **kwargs
+                    )
+        except:
+            try:
+                stringVariants = {'varName': varName}
+                var = _construct(
+                    var,
+                    *args,
+                    varClass = Shape,
+                    stringVariants = stringVariants,
+                    **kwargs
+                    )
+            except:
+                raise Exception
+        return var
+
+def convert(*args, return_tuple = False, **kwargs):
     if len(args) == 1:
         arg = args[0]
         if type(arg) == tuple:
-            converted = _tuple_convert(arg)
+            converted = _tuple_convert(arg, **kwargs)
         elif type(arg) == list:
-            converted = _multi_convert(*arg)
+            converted = _multi_convert(*arg, **kwargs)
         elif type(arg) == dict:
-            converted = _dict_convert(arg)
+            converted = _dict_convert(arg, **kwargs)
         else:
-            converted = _convert(arg)
+            converted = _convert(arg, **kwargs)
     elif len(args) == 2:
         if type(args[0]) == str:
-            converted = _convert(args[1], args[0])
+            converted = _convert(args[1], args[0], **kwargs)
         elif type(args[1]) == str:
-            converted = _convert(args[0], args[1])
+            converted = _convert(args[0], args[1], **kwargs)
         else:
-            converted = _multi_convert(*args)
+            converted = _multi_convert(*args, **kwargs)
     else:
-        converted = _multi_convert(*args)
+        converted = _multi_convert(*args, **kwargs)
     if type(converted) == tuple:
         return converted
     else:
@@ -97,31 +240,10 @@ def convert(*args, return_tuple = False):
 
 get_planetVar = convert
 
-def _convert(var, varName = 'anon'):
-    if isinstance(var, PlanetVar):
-        return var
-    elif hasattr(var, 'planetVar'):
-        return var.planetVar
-    else:
-        try:
-            var = UWFn.convert(var)
-            if var is None:
-                raise Exception
-            if len(list(var._underlyingDataItems)) == 0:
-                var = Constant(var)
-            else:
-                var = Variable(var, varName)
-        except:
-            try:
-                var = Shape(var, varName)
-            except:
-                raise Exception
-        return var
-
 def _multi_convert(*args, **kwargs):
     all_converted = []
     for arg in args:
-        all_converted.append(convert(arg))
+        all_converted.append(convert(arg, **kwargs))
     return tuple(all_converted)
 
 def _tuple_convert(inTuple):
@@ -131,32 +253,100 @@ def _tuple_convert(inTuple):
 def _dict_convert(inDict):
     all_converted = []
     for varName, var in sorted(inDict.items()):
-        newVar = _convert(var, varName)
+        newVar = _convert(var, varName, **kwargs)
         all_converted.append(newVar)
     if len(all_converted) == 1:
         return all_converted[0]
     else:
         return tuple(all_converted)
 
+def get_projection(
+        inVar,
+        *args,
+        hide = False,
+        attach = False,
+        **kwargs
+        ):
+    inVar = convert(inVar, *args, **kwargs)
+    if Projection.opTag in inVar.attached:
+        outVar = inVar.attached[Projection.opTag]
+    else:
+        outVar = Projection(
+            inVar,
+            *args,
+            hide = hide,
+            attach = attach,
+            **kwargs
+            )
+    return outVar
+
+def get_meshVar(
+        inVar,
+        *args,
+        hide = False,
+        attach = False,
+        **kwargs
+        ):
+    inVar = convert(inVar, *args, **kwargs)
+    if inVar.varType == 'meshVar':
+        outVar = inVar
+    else:
+        outVar = get_projection(
+            inVar,
+            *args,
+            hide = hide,
+            attach = attach,
+            **kwargs
+            )
+    return outVar
+
 class PlanetVar(UWFn):
 
     inVars = []
     opTag = 'None'
 
-    def __init__(self):
+    def __init__(self, *args, hide = False, attach = False, **kwargs):
+
+        # Determing inVars:
 
         self.inVars = list(self.inVars)
-        if type(self) in {Constant, Variable, Shape}:
-            _argument_fns = [self.var]
+        if len(self.inVars) == 1:
+            self.inVar = self.inVars[0]
+
+        # Attaching, if necessary:
+
+        self.attached = {}
+        if attach:
+            if len(self.inVars) > 1:
+                raise Exception
+            if self.opTag in self.inVar.attached:
+                raise Exception
+            # POSSIBLE CIRCULAR DEPENDENCY!!!
+            self.inVar.attached[self.opTag] = self
+
+        # Naming the variable:
+
+        self.opTag = update_opTag(self.opTag, self.stringVariants)
+        if hide:
+            if len(self.inVars) > 1:
+                raise Exception
+            self.varName = self.inVar.varName
         else:
             inTags = [inVar.varName for inVar in self.inVars]
             self.varName = self.opTag + '{' + ';'.join(inTags) + '}'
+
+        # Stuff to make Underworld happy:
+
+        if type(self) in {Constant, Variable, Shape}:
+            _argument_fns = [self.var]
+        else:
             _argument_fns = [*self.inVars]
+
         self._fncself = self.var._fncself
+
         super().__init__(_argument_fns)
 
-        if len(self.inVars) == 1:
-            self.inVar = self.inVars[0]
+        # Other necessary business:
 
         self.lasthash = 0
 
@@ -166,11 +356,12 @@ class PlanetVar(UWFn):
 
         self._set_summary_stats()
 
+        if not self.__class__ is Constant:
+            self._set_weakref(self) # is static
+
     def _set_rootVars(self):
         rootVars = set()
-        if isinstance(self, BaseTypes):
-            pass
-        else:
+        if not type(self) in {Constant, Variable, Shape}:
             assert len(self.inVars) > 0
             for inVar in self.inVars:
                 if isinstance(inVar, BaseTypes):
@@ -179,7 +370,7 @@ class PlanetVar(UWFn):
                     for rootVar in inVar.rootVars:
                         rootVars.add(rootVar)
         assert all(
-            [isinstance(rootVar, BaseTypes) \
+            [type(rootVar) in {Constant, Variable, Shape} \
             for rootVar in list(rootVars)]
             )
         self.rootVars = rootVars
@@ -214,6 +405,15 @@ class PlanetVar(UWFn):
     def _set_attributes(self):
 
         var = self.var
+
+        if type(var) == uw.mesh._meshvariable.MeshVariable:
+            varType = 'meshVar'
+        elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
+            varType = 'swarmVar'
+        elif isinstance(var, UWFn):
+            varType = 'fn'
+        else:
+            raise Exception
 
         if hasattr(self, 'substrate'):
             substrate = self.substrate
@@ -277,10 +477,12 @@ class PlanetVar(UWFn):
         self.varDim = varDim
         self.dType = dType
         self.meshUtils = meshUtils
+        self.varType = varType
 
     def _set_summary_stats(self):
         if hasattr(self, 'data'):
             data = self.data
+            assert not len(data.shape) > 2
             valSets = utilities.get_valSets(data)
         else:
             data = None
@@ -298,6 +500,12 @@ class PlanetVar(UWFn):
             self.ranges = ranges
         self.valSets = valSets
 
+    @staticmethod
+    def _set_weakref(self):
+        weak_reference = weakref.ref(self)
+        hashKey = self.__hash__()
+        _premade_fns[hashKey] = weak_reference
+
     def evaluate(self, evalInput = None):
         self.update()
         if evalInput is None:
@@ -306,63 +514,83 @@ class PlanetVar(UWFn):
 
     def __call__(self):
         self.update()
-        return self.var
+        return self
 
     def __hash__(self):
-        selfhash = sum(
-            [inVar.__hash__() for inVar in self.inVars]
+        if self.__class__ is Variable:
+            inVars = [self.var]
+        elif self.__class__ is Constant:
+            inVars = [self.var]
+        elif self.__class__ is Shape:
+            inVars = [self.vertices]
+        else:
+            inVars = self.inVars
+        hashVal = get_opHash(
+            self.__class__,
+            *inVars,
+            stringVariants = self.stringVariants
             )
-        selfhash += hash(self.opTag)
-        return selfhash
+        return hashVal
+
+    # def __hash__(self):
+    #     selfhash = sum(
+    #         [inVar.__hash__() for inVar in self.inVars]
+    #         )
+    #     selfhash += hash(self.opTag)
+    #     return selfhash
 
     def __add__(self, other):
-        return Operations(self, other, variant = 'less')
+        return Operations(self, other, uwop = 'add')
 
     def __sub__(self, other):
-        return Operations(self, other, variant = 'subtract')
+        return Operations(self, other, uwop = 'subtract')
 
     def __mul__(self, other):
-        return Operations(self, other, variant = 'multiply')
+        return Operations(self, other, uwop = 'multiply')
 
     def __truediv__(self, other):
-        return Operations(self, other, variant = 'divide')
+        return Operations(self, other, uwop = 'divide')
 
     def __gt__(self, other):
-        return Operations(self, other, variant = 'greater')
+        return Operations(self, other, uwop = 'greater')
 
     def __ge__(self, other):
-        return Operations(self, other, variant = 'greater_equal')
+        return Operations(self, other, uwop = 'greater_equal')
 
     def __lt__(self, other):
-        return Operations(self, other, variant = 'less')
+        return Operations(self, other, uwop = 'less')
 
     def __le__(self, other):
-        return Operations(self, other, variant = 'less_equal')
+        return Operations(self, other, uwop = 'less_equal')
 
     def __and__(self, other):
-        return Operations(self, other, variant = 'logical_and')
+        return Operations(self, other, uwop = 'logical_and')
 
     def __or__(self, other):
-        return Operations(self, other, variant = 'logical_or')
+        return Operations(self, other, uwop = 'logical_or')
 
     def __xor__(self, other):
-        return Operations(self, other, variant = 'logical_xor')
+        return Operations(self, other, uwop = 'logical_xor')
 
     def __pow__(self, other):
-        return Operations(self, other, variant = 'pow')
+        return Operations(self, other, uwop = 'pow')
 
-    def __eq__(self, other):
-        return Comparison(self, other, variant = 'equals')
-
-    def __ne__(self, other):
-        return Comparison(self, other, variant = 'notequals')
+    # def __eq__(self, other):
+    #     return Comparison(self, other, uwop = 'equals')
+    #
+    # def __ne__(self, other):
+    #     return Comparison(self, other, uwop = 'notequals')
 
 class BaseTypes(PlanetVar):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         # CIRCULAR REFERENCE
-        self.var.planetVar = self
-        super().__init__()
+        # self.var.planetVar = self
+        # self.opTag = update_opTag(
+        #     self.opTag,
+        #     self.stringVariants
+        #     )
+        super().__init__(*args, **kwargs)
 
     def evaluate(self, evalInput = None):
         if evalInput is None:
@@ -371,7 +599,7 @@ class BaseTypes(PlanetVar):
 
     def update(self):
         if type(self) == Constant:
-            self.data = np.array([[self.value,]])
+            self.data = np.array([self.value,])
         elif type(self) == Shape:
             self.data = self.vertices
         elif hasattr(self.var, 'data'):
@@ -379,20 +607,16 @@ class BaseTypes(PlanetVar):
         else:
             # i.e. is a function
             self.data = self.var.evaluate(self.substrate)
+        self._set_summary_stats()
 
     def __call__(self):
         return self.var
-
-    def __hash__(self):
-        selfhash = self.var.__hash__()
-        selfhash += hash(self.opTag)
-        return selfhash
 
 class Constant(BaseTypes):
 
     opTag = 'Constant'
 
-    def __init__(self, inVar):
+    def __init__(self, inVar, *args, **kwargs):
 
         var = UWFn.convert(inVar)
         if var is None:
@@ -404,13 +628,13 @@ class Constant(BaseTypes):
         valString = utilities.stringify(
             self.value
             )
-        self.varName = self.opTag + '{' + valString + '}'
 
+        self.stringVariants = {'val': valString}
         self.inVars = []
         self.var = var
         self.mesh = self.substrate = None
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def _check_hash(self):
         currenthash = hash(utilities.stringify(self.value))
@@ -420,7 +644,7 @@ class Variable(BaseTypes):
 
     opTag = 'Variable'
 
-    def __init__(self, inVar, varName = 'anon'):
+    def __init__(self, inVar, varName = 'anon', *args, **kwargs):
 
         var = UWFn.convert(inVar)
         if var is None:
@@ -428,8 +652,7 @@ class Variable(BaseTypes):
         if len(list(var._underlyingDataItems)) == 0:
             raise Exception
 
-        self.varName = self.opTag + '{' + varName + '}'
-
+        self.stringVariants = {'varName': varName}
         self.inVars = []
         self.var = var
         if hasattr(var, 'fn_gradient'):
@@ -445,7 +668,7 @@ class Variable(BaseTypes):
                 self.mesh, self.substrate = \
                     utilities.get_substrates(var)
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def _check_hash(self):
         self.update() # resets self.data
@@ -456,20 +679,19 @@ class Shape(BaseTypes):
 
     opTag = 'Shape'
 
-    def __init__(self, vertices, varName = 'anon'):
+    def __init__(self, vertices, varName = 'anon', *args, **kwargs):
 
         shape = fn.shape.Polygon(vertices)
         self.vertices = vertices
         self.richvertices = interp_shape(self.vertices)
         self.morphs = {}
 
-        self.varName = self.opTag + '{' + varName + '}'
-
+        self.stringVariants = {'varName': varName}
         self.inVars = []
         self.var = shape
         self.mesh = self.substrate = None
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def _check_hash(self):
         currenthash = hash(utilities.stringify(self.vertices))
@@ -486,15 +708,15 @@ class Shape(BaseTypes):
 
 class Utils(PlanetVar):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class Projection(Utils):
 
     opTag = 'Projection'
 
-    def __init__(self, inVar):
+    def __init__(self, inVar, *args, **kwargs):
 
         inVar = convert(inVar)
 
@@ -507,12 +729,13 @@ class Projection(Utils):
             inVar,
             )
 
+        self.stringVariants = {}
         self.inVars = [inVar]
         self.var = var
 
         self.fn_gradient = var.fn_gradient
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def _partial_update(self):
         self._projector.solve()
@@ -525,7 +748,7 @@ class Substitute(Utils):
 
     opTag = 'Substitute'
 
-    def __init__(self, inVar, fromVal, toVal):
+    def __init__(self, inVar, fromVal, toVal, *args, **kwargs):
 
         inVar, fromVal, toVal = inVars = convert(
             inVar, fromVal, toVal
@@ -536,16 +759,17 @@ class Substitute(Utils):
             (True, inVar),
             ])
 
+        self.stringVariants = {}
         self.inVars = inVars
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class Binarise(Utils):
 
     opTag = 'Binarise'
 
-    def __init__(self, inVar):
+    def __init__(self, inVar, *args, **kwargs):
 
         inVar = convert(inVar)
 
@@ -565,16 +789,17 @@ class Binarise(Utils):
                 (True, 0),
                 ])
 
+        self.stringVariants = {}
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class Booleanise(Utils):
 
     opTag = 'Booleanise'
 
-    def __init__(self, inVar):
+    def __init__(self, inVar, *args, **kwargs):
 
         inVar = convert(inVar)
 
@@ -583,16 +808,17 @@ class Booleanise(Utils):
             (True, True),
             ])
 
+        self.stringVariants = {}
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class HandleNaN(Utils):
 
     opTag = 'HandleNaN'
 
-    def __init__(self, handleVal, inVar):
+    def __init__(self, handleVal, inVar, *args, **kwargs):
 
         inVar, handleVal = inVars = convert(inVar, handleVal)
 
@@ -601,16 +827,17 @@ class HandleNaN(Utils):
             (True, handleVal),
             ])
 
+        self.stringVariants = {}
         self.inVars = inVars
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class ZeroNaN(Utils):
 
     opTag = 'ZeroNaN'
 
-    def __init__(self, inVar):
+    def __init__(self, inVar, *args, **kwargs):
 
         inVar = convert(inVar)
 
@@ -619,22 +846,23 @@ class ZeroNaN(Utils):
             (True, 0.),
             ])
 
+        self.stringVariants = {}
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class Functions(PlanetVar):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class Clip(Functions):
 
     opTag = 'Clip'
 
-    def __init__(self, inVar, lBnd, uBnd):
+    def __init__(self, inVar, lBnd, uBnd, *args, **kwargs):
 
         inVar, lBnd, uBnd = inVars = [
             convert(arg) for arg in (inVar, lBnd, uBnd)
@@ -646,16 +874,17 @@ class Clip(Functions):
             (True, inFn)
             ])
 
+        self.stringVariants = {}
         self.inVars = inVars
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class Interval(Functions):
 
     opTag = 'Interval'
 
-    def __init__(self, inVar, lBnd, uBnd):
+    def __init__(self, inVar, lBnd, uBnd, *args, **kwargs):
 
         inVar, lBnd, uBnd = inVars = convert(inVar, lBnd, uBnd)
 
@@ -666,38 +895,35 @@ class Interval(Functions):
             (True, inVar),
             ])
 
+        self.stringVariants = {}
         self.inVars = [inVar, lBnd, uBnd]
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class Operations(Functions):
 
     opTag = 'Operation'
 
-    def __init__(self, *args, variant = None):
+    def __init__(self, *args, uwop = None, **kwargs):
 
-        operation = variant
-
-        if not operation in uwNamesToFns:
+        if not uwop in uwNamesToFns:
             raise Exception
-        opFn = uwNamesToFns[operation]
+        opFn = uwNamesToFns[uwop]
 
         var = opFn(*args)
 
-        self.opTag += '_' + operation
+        self.stringVariants = {'uwop': uwop}
         self.inVars = [convert(arg) for arg in args]
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class Component(Functions):
 
     opTag = 'Component'
 
-    def __init__(self, inVar, variant = None):
-
-        component = variant
+    def __init__(self, inVar, *args, component = 'mag', **kwargs):
 
         inVar = convert(inVar)
 
@@ -718,21 +944,25 @@ class Component(Functions):
                 compVec
                 )
 
-        self.opTag += '_' + component
+        self.stringVariants = {'component': component}
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class Gradient(Functions):
 
     opTag = 'Gradient'
 
-    def __init__(self, inVar, variant = None):
-        gradient = variant
-        inVar = convert(inVar)
-        if not hasattr(inVar, 'fn_gradient'):
-            inVar = Projection(inVar)
+    def __init__(self, inVar, *args, gradient = 'mag', **kwargs):
+
+        inVar = get_meshVar(
+            inVar,
+            *args,
+            hide = True,
+            attach = True,
+            **kwargs
+            )
         varGrad = inVar.fn_gradient
         if gradient == 'mag':
             var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
@@ -743,68 +973,64 @@ class Gradient(Functions):
                 compVec
                 )
 
-        self.opTag += '_' + gradient
+        self.stringVariants = {'gradient': gradient}
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class Comparison(Functions):
 
     opTag = 'Comparison'
 
-    def __init__(self, inVar0, inVar1, variant = None):
-
-        operation = variant
+    def __init__(self, inVar0, inVar1, *args, operation = 'equals', **kwargs):
 
         if not operation in {'equals', 'notequals'}:
             raise Exception
 
-        inVar0, inVar1 = inVars = convert(inVar0), convert(inVar1)
+        inVar0, inVar1 = inVars = convert(inVar0, inVar1)
         boolOut = operation == 'equals'
         var = fn.branching.conditional([
-            (inVar0.var < inVar1.var - 1e-18, not boolOut),
-            (inVar0.var > inVar1.var + 1e-18, not boolOut),
+            (inVar0 < inVar1 - 1e-18, not boolOut),
+            (inVar0 > inVar1 + 1e-18, not boolOut),
             (True, boolOut),
             ])
 
-        self.opTag += '_' + operation
+        self.stringVariants = {'operation': operation}
         self.inVars = inVars
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 class Range(Functions):
 
     opTag = 'Range'
 
-    def __init__(self, inVar0, inVar1, variant = None):
-
-        operation = variant
+    def __init__(self, inVar0, inVar1, *args, operation = None, **kwargs):
 
         if not operation in {'in', 'out'}:
             raise Exception
 
         inVar0, inVar1 = inVars = convert(inVar0), convert(inVar1)
         if operation == 'in':
-            inVal = inVar0.var
+            inVal = inVar0
             outVal = np.nan
         else:
             inVal = np.nan
-            outVal = inVar0.var
-        self._lowerBounds = fn.misc.constant(0.)
-        self._upperBounds = fn.misc.constant(0.)
+            outVal = inVar0
+        self._lowerBounds = fn.misc.constant(1.)
+        self._upperBounds = fn.misc.constant(1.)
         var = fn.branching.conditional([
-            (inVar0.var < self._lowerBounds, outVal),
-            (inVar0.var > self._upperBounds, outVal),
+            (inVar0 < self._lowerBounds, outVal),
+            (inVar0 > self._upperBounds, outVal),
             (True, inVal),
             ])
 
-        self.opTag += '_' + operation
+        self.stringVariants = {'operation': operation}
         self.inVars = inVars
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def _partial_update(self):
         self._lowerBound.value = self.inVars[1].scales[:,0]
@@ -814,14 +1040,16 @@ class Integral(Functions):
 
     opTag = 'Integral'
 
-    def __init__(self, inVar, variant = None):
+    def __init__(self, inVar, *args, surface = 'volume', **kwargs):
 
-        inVar = convert(inVar)
+        inVar = get_meshVar(
+            inVar,
+            *args,
+            hide = True,
+            attach = True,
+            **kwargs
+            )
 
-        surface = variant
-
-        if not inVar.substrate is inVar.mesh:
-            inVar = Projection(inVar)
         intMesh = inVar.meshUtils.integrals[surface]
         if surface == 'volume':
             intField = uw.utils.Integral(
@@ -837,16 +1065,16 @@ class Integral(Functions):
                 surfaceIndexSet = indexSet
                 )
 
-        var = fn.misc.constant(0.)
+        var = fn.misc.constant(1.)
         self._intField = intField
         self._intMesh = intMesh
 
-        self.opTag += '_' + surface
+        self.stringVariants = {'surface': surface}
         self.inVars = [inVar]
         self.var = var
         self.mesh = self.substrate = None
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def _partial_update(self):
         self.var.value = \
@@ -857,16 +1085,16 @@ class Quantile(Functions):
 
     opTag = 'Quantile'
 
-    def __init__(self, nthtile, inVar, variant = None):
+    def __init__(self, inVar, *args, ntiles = 2, nthtile = 0, **kwargs):
 
-        ntiles = variant
-
-        quantileStr = str(nthtile) + "of" + str(ntiles)
+        nthtile, ntiles = int(nthtile), int(ntiles)
+        if not 0 < nthtile <= ntiles:
+            raise Exception
 
         inVar = convert(inVar)
 
-        self._lowerBound = fn.misc.constant(0.)
-        self._upperBound = fn.misc.constant(0.)
+        self._lowerBound = fn.misc.constant(1.)
+        self._upperBound = fn.misc.constant(1.)
         self._ntiles = ntiles
         self._nthtile = nthtile
         l_adj = -1e-18
@@ -880,11 +1108,14 @@ class Quantile(Functions):
             (True, inVar),
             ])
 
-        self.opTag += '_' + quantileStr
+        self.stringVariants = {
+            'nthtile': str(nthtile),
+            'ntiles': str(ntiles)
+            }
         self.inVars = [inVar]
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def _partial_update(self):
         intervalSize = self.inVar.ranges / self._ntiles
@@ -897,7 +1128,7 @@ class Region(Functions):
 
     opTag = 'Region'
 
-    def __init__(self, inShape, inVar):
+    def __init__(self, inShape, inVar, *args, **kwargs):
 
         inVar, inShape = inVars = convert(inVar, inShape)
 
@@ -907,7 +1138,87 @@ class Region(Functions):
             (True, np.nan),
             ])
 
+        self.stringVariants = {}
         self.inVars = inVars
         self.var = var
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
+
+class Normalise(Functions):
+
+    opTag = 'Normalise'
+
+    def __init__(self, baseVar, normVar, *args, **kwargs):
+
+        baseVar, normVar = inVars = convert(baseVar, normVar)
+
+        inMins = fn.misc.constant(
+            [1. for dim in range(baseVar.varDim)]
+            )
+        inRanges = fn.misc.constant(
+            [1. for dim in range(baseVar.varDim)]
+            )
+        normMins = fn.misc.constant(
+            [1. for dim in range(normVar.varDim)]
+            )
+        normRanges = fn.misc.constant(
+            [1. for dim in range(normVar.varDim)]
+            )
+
+        var = (baseVar - inMins) / inRanges * normRanges + normMins
+
+        self.inMins = inMins
+        self.inRanges = inRanges
+        self.normMins = normMins
+        self.normRanges = normRanges
+        self.baseVar = baseVar
+        self.normVar = normVar
+
+        self.stringVariants = {}
+        self.inVars = inVars
+        self.var = var
+
+        super().__init__(*args, **kwargs)
+
+    def _partial_update(self):
+
+        self.inMins.value = \
+            [scale[0] for scale in self.baseVar.scales]
+        self.inRanges.value = self.baseVar.ranges
+        self.normMins.value = \
+            [scale[0] for scale in self.normVar.scales]
+        self.normRanges.value = self.normVar.ranges
+
+class GetStat(Functions):
+
+    opTag = 'GetStat'
+
+    def __init__(self, inVar, *args, stat = 'mins', **kwargs):
+
+        if not stat in {'mins', 'maxs', 'ranges'}:
+            raise Exception
+
+        inVar = convert(inVar)
+        var = fn.misc.constant(
+            [1. for dim in range(inVar.varDim)]
+            )
+
+        self.stat = stat
+
+        self.stringVariants = {'stat': stat}
+        self.inVars = [inVar]
+        self.var = var
+        self.mesh = self.substrate = None
+
+        super().__init__(*args, **kwargs)
+
+    def _partial_update(self):
+
+        if self.stat == 'mins':
+            self.var.value = [scale[0] for scale in self.inVar.scales]
+        elif self.stat == 'maxs':
+            self.var.value = [scale[1] for scale in self.inVar.scales]
+        elif self.stat == 'ranges':
+            self.var.value = self.inVar.ranges
+        else:
+            raise Exception
