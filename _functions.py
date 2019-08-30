@@ -1125,6 +1125,100 @@ class Integral(Functions):
             self._intField.evaluate()[0] \
             / self._intMesh()
 
+class Filter(Functions):
+
+    opTag = 'Filter'
+
+    def __init__(self, inVar, filterVal, outVar, *args, **kwargs):
+
+        inVar, filterVal, outVar = inVars = convert(
+            inVar, filterVal, outVar
+            )
+
+        var = fn.branching.conditional([
+            (fn.math.abs(inVar - filterVal) < 1e-18, outVar),
+            (True, np.nan)
+            ])
+
+        self.stringVariants = {}
+        self.inVars = inVars
+        self.var = var
+
+        super().__init__(**kwargs)
+
+class Quantiles(Functions):
+
+    opTag = 'Quantiles'
+
+    def __init__(self, inVar, *args, ntiles = 5, **kwargs):
+
+        inVar = convert(inVar)
+
+        # if not inVar.varDim == 1:
+        #     raise Exception
+
+        interval = fn.misc.constant(
+            [0. for ignoreMe in range(inVar.varDim)]
+            )
+        minVal = fn.misc.constant(
+            [0. for ignoreMe in range(inVar.varDim)]
+            )
+
+        clauses = []
+        for ntile in range(1, ntiles):
+            clause = (
+                inVar <= minVal + interval * float(ntile),
+                float(ntile)
+                )
+            clauses.append(clause)
+        clauses.append(
+            (True, float(ntiles))
+            )
+        var = fn.branching.conditional(clauses)
+
+        self._inVar = inVar
+        self._ntiles = ntiles
+        self._interval = interval
+        self._minVal = minVal
+
+        self.stringVariants = {
+            'ntiles': str(ntiles)
+            }
+        self.inVars = [inVar]
+        self.var = var
+
+        super().__init__(**kwargs)
+
+    def _partial_update(self):
+        self._interval.value = \
+            self.inVar.ranges / self._ntiles
+        self._minVal.value = \
+            self.inVar.scales[:,0]
+
+    @staticmethod
+    def Median(*args, **kwargs):
+        return Quantiles(*args, ntiles = 2, **kwargs)
+
+    @staticmethod
+    def Terciles(*args, **kwargs):
+        return Quantiles(*args, ntiles = 3, **kwargs)
+
+    @staticmethod
+    def Quartiles(*args, **kwargs):
+        return Quantiles(*args, ntiles = 4, **kwargs)
+
+    @staticmethod
+    def Quintiles(*args, **kwargs):
+        return Quantiles(*args, ntiles = 5, **kwargs)
+
+    @staticmethod
+    def Deciles(*args, **kwargs):
+        return Quantiles(*args, ntiles = 10, **kwargs)
+
+    @staticmethod
+    def Percentiles(*args, **kwargs):
+        return Quantiles(*args, ntiles = 100, **kwargs)
+
 class Quantile(Functions):
 
     opTag = 'Quantile'
@@ -1195,19 +1289,6 @@ class Normalise(Functions):
     def __init__(self, baseVar, normVar, *args, **kwargs):
 
         baseVar, normVar = inVars = convert(baseVar, normVar)
-
-        # inMins = fn.misc.constant(
-        #     [1. for dim in range(baseVar.varDim)]
-        #     )
-        # inRanges = fn.misc.constant(
-        #     [1. for dim in range(baseVar.varDim)]
-        #     )
-        # normMins = fn.misc.constant(
-        #     [1. for dim in range(normVar.varDim)]
-        #     )
-        # normRanges = fn.misc.constant(
-        #     [1. for dim in range(normVar.varDim)]
-        #     )
 
         inMins = fn.misc.constant(
             [float(scale[0]) for scale in baseVar.scales]
