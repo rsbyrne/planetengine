@@ -1,6 +1,9 @@
 import functools
 import itertools
 import weakref
+import hashlib
+
+# hashlib.md5(inputStr).hexdigest()
 
 import numpy as np
 import underworld as uw
@@ -114,54 +117,54 @@ def get_opHash(varClass, *inVars, stringVariants = {}):
     hashVal += hash(fulltag)
     return hashVal
 
-# def _construct(
-#         *inVars,
-#         varClass = None,
-#         stringVariants = {},
-#         **kwargs
-#         ):
-#
-#     if not varClass in {Constant, Variable, Shape}:
-#         inVars = [convert(inVar) for inVar in inVars]
-#
-#     if varClass is Constant:
-#         # constants don't get saved!!!
-#         outObj = varClass(
-#             *inVars,
-#             **stringVariants,
-#             **kwargs
-#             )
-#     else:
-#         opHash = get_opHash(
-#             varClass,
-#             *inVars,
-#             stringVariants = stringVariants
-#             )
-#         if opHash in _premade_fns:
-#             print("Returning premade!")
-#             outObj = _premade_fns[opHash]() # is weakref
-#         else:
-#             print("Making a new one!")
-#             outObj = varClass(
-#                 *inVars,
-#                 **stringVariants,
-#                 **kwargs
-#                 )
-#
-#     return outObj
-
 def _construct(
         *inVars,
         varClass = None,
-        stringVariants = {}
+        stringVariants = {},
+        **kwargs
         ):
 
-    outObj = varClass(
+    if not varClass in {Constant, Variable, Shape}:
+        inVars = [convert(inVar) for inVar in inVars]
+
+    # if varClass is Constant:
+    #     # constants don't get saved!!!
+    #     outObj = varClass(
+    #         *inVars,
+    #         **kwargs
+    #         )
+    # else:
+    opHash = get_opHash(
+        varClass,
         *inVars,
-        **stringVariants
+        stringVariants = stringVariants
         )
+    print(opHash)
+    if opHash in _premade_fns:
+        print("Returning premade!")
+        outObj = _premade_fns[opHash]() # is weakref
+    else:
+        print("Making a new one!")
+        outObj = varClass(
+            *inVars,
+            **stringVariants,
+            **kwargs
+            )
 
     return outObj
+
+# def _construct(
+#         *inVars,
+#         varClass = None,
+#         stringVariants = {}
+#         ):
+#
+#     outObj = varClass(
+#         *inVars,
+#         **stringVariants
+#         )
+#
+#     return outObj
 
 def _convert(var, varName = 'anon'):
     if isinstance(var, PlanetVar):
