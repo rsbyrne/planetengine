@@ -1571,7 +1571,7 @@ class Integral(Reduction):
 
         inVar = convert(inVar)
 
-        if not isinstance(inVar, Function):
+        if isinstance(inVar, Reduction):
             raise Exception
 
         intMesh = inVar.meshUtils.integrals[surface]
