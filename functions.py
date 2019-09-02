@@ -1189,26 +1189,20 @@ class Gradient(Function):
 
     opTag = 'Gradient'
 
-    def __init__(self, inVar, *args, gradient = 'mag', **kwargs):
+    def __init__(self, inVar, *args, **kwargs):
+
+        inVar = convert(inVar)
 
         inVar = get_meshVar(
             inVar,
             *args,
-            hide = True,
+            hide = False,
             attach = True,
             **kwargs
             )
-        varGrad = inVar.fn_gradient
-        if gradient == 'mag':
-            var = fn.math.sqrt(fn.math.dot(varGrad, varGrad))
-        else:
-            compVec = inVar.meshUtils.comps[gradient]
-            var = fn.math.dot(
-                varGrad,
-                compVec
-                )
+        var = inVar.fn_gradient
 
-        self.stringVariants = {'gradient': gradient}
+        self.stringVariants = {}
         self.inVars = [inVar]
         self.parameters = []
         self.var = var
@@ -1217,19 +1211,23 @@ class Gradient(Function):
 
     @staticmethod
     def mag(*args, **kwargs):
-        return Gradient(*args, gradient = 'mag', **kwargs)
+        gradVar = Gradient(*args, **kwargs)
+        return Component(gradVar, component = 'mag', **kwargs)
 
     @staticmethod
     def rad(*args, **kwargs):
-        return Gradient(*args, gradient = 'rad', **kwargs)
+        gradVar = Gradient(*args, **kwargs)
+        return Component(gradVar, component = 'rad', **kwargs)
 
     @staticmethod
     def ang(*args, **kwargs):
-        return Gradient(*args, gradient = 'ang', **kwargs)
+        gradVar = Gradient(*args, **kwargs)
+        return Component(gradVar, component = 'ang', **kwargs)
 
     @staticmethod
     def coang(*args, **kwargs):
-        return Gradient(*args, gradient = 'coang', **kwargs)
+        gradVar = Gradient(*args, **kwargs)
+        return Component(gradVar, component = 'coang', **kwargs)
 
 class Comparison(Function):
 
