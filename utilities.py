@@ -502,6 +502,13 @@ def hashstamp(inputObj):
     stamp = hashlib.md5(inputStr).hexdigest()
     return stamp
 
+def hashToInt(inputObj):
+    stamp = hashstamp(inputObj)
+    hashVal = 0
+    for char in stamp:
+        hashVal += ord(char)
+    return hashVal
+
 def timestamp():
     stamp = time.strftime(
         '%y%m%d%H%M%SZ', time.gmtime(time.time())

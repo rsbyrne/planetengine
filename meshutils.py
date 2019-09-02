@@ -39,8 +39,8 @@ class MeshUtils:
                     }
             elif mesh.dim == 3:
                 self.comps = {
-                    'ang1': fn.misc.constant((1., 0., 0.)),
-                    'ang2': fn.misc.constant((0., 1., 0.)),
+                    'ang': fn.misc.constant((1., 0., 0.)),
+                    'coang': fn.misc.constant((0., 1., 0.)),
                     'rad': fn.misc.constant((0., 0., -1.)),
                     }
                 self.surfaces['front'] = mesh.specialSets['MinK_VertexSet']
