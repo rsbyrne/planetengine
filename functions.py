@@ -201,7 +201,7 @@ def _dict_convert(inDict):
     for varName, var in sorted(inDict.items()):
         newVar = _convert(var, varName)
         all_converted[varName] = newVar
-    return tuple(all_converted)
+    return all_converted
 
 def get_projection(
         inVar,
