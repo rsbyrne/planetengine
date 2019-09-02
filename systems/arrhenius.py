@@ -66,7 +66,7 @@ def build(
     velocityField = uw.mesh.MeshVariable(mesh, 2)
 
     ### BOUNDARIES ###
-    
+
     inner = mesh.specialSets["inner"]
     outer = mesh.specialSets["outer"]
     sides = mesh.specialSets["MaxJ_VertexSet"] + mesh.specialSets["MinJ_VertexSet"]
@@ -145,7 +145,7 @@ def build(
             )
         # remove null space - the solid body rotation velocity contribution
         uw.libUnderworld.StgFEM.SolutionVector_RemoveVectorSpace(
-            stokes._velocitySol._cself, 
+            stokes._velocitySol._cself,
             stokes._vnsVec._cself
             )
 
@@ -183,7 +183,11 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     varsOfState = {'temperatureField': temperatureField}
-    obsVars = {'velocityField': velocityField}
+    obsVars = {
+        'temperature': temperatureField,
+        'velocity': velocityField,
+        'stress': velocityField * viscosityFn
+        }
     varScales = {'temperatureField': [[0., 1.]]}
     varBounds = {'temperatureField': [[0., 1., '.', '.']]}
 

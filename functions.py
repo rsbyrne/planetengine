@@ -197,14 +197,11 @@ def _tuple_convert(inTuple):
     return _convert(var, varName)
 
 def _dict_convert(inDict):
-    all_converted = []
+    all_converted = {}
     for varName, var in sorted(inDict.items()):
         newVar = _convert(var, varName)
-        all_converted.append(newVar)
-    if len(all_converted) == 1:
-        return all_converted[0]
-    else:
-        return tuple(all_converted)
+        all_converted[varName] = newVar
+    return tuple(all_converted)
 
 def get_projection(
         inVar,
