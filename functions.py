@@ -735,9 +735,13 @@ class Projection(Function):
     def _partial_update(self):
         self._projector.solve()
         if self.inVar.dType in ('int', 'boolean'):
-            self.var.data[:] = np.round(
-                self.var.data
-                )
+            rounding = 1
+        else:
+            rounding = 6
+        self.var.data[:] = np.round(
+            self.var.data,
+            rounding
+            )
 
 class Substitute(Function):
 
@@ -1118,6 +1122,15 @@ class Component(Function):
     def mag(*args, **kwargs):
         return Component(*args, component = 'mag', **kwargs)
 
+    def x(*args, **kwargs):
+        return Component(*args, component = 'x', **kwargs)
+
+    def y(*args, **kwargs):
+        return Component(*args, component = 'y', **kwargs)
+
+    def z(*args, **kwargs):
+        return Component(*args, component = 'z', **kwargs)
+
     @staticmethod
     def rad(*args, **kwargs):
         return Component(*args, component = 'rad', **kwargs)
@@ -1137,8 +1150,6 @@ class Merge(Function):
     def __init__(self, *args, **kwargs):
 
         inVars = convert(*args)
-
-        meshType = True
 
         for inVar in inVars:
             if not inVar.varDim == 1:
@@ -1178,12 +1189,70 @@ class Merge(Function):
             self.var.data[:, index] = inVar.data[:, 0]
 
     @staticmethod
-    def AnnularVectors(inVar):
+    def annulise(inVar):
         inVar = convert(inVar)
-        angVar = Component(inVar, component = 'ang')
-        radVar = Component(inVar, component = 'rad')
-        var = Merge(angVar, radVar)
+        comps = []
+        comps.append(Component(inVar, component = 'ang'))
+        comps.append(Component(inVar, component = 'rad'))
+        if inVar.mesh.dim == 3:
+            comps.append(Component(inVar, component = 'coang'))
+        var = Merge(*comps)
         return var
+
+    @staticmethod
+    def cartesianise(inVar):
+        inVar = convert(inVar)
+        comps = []
+        comps.append(Component(inVar, component = 'x'))
+        comps.append(Component(inVar, component = 'y'))
+        if inVar.mesh.dim == 3:
+            comps.append(Component(inVar, component = 'z'))
+        var = Merge(*comps)
+        return var
+
+class Split(Function):
+
+    opTag = 'Split'
+
+    def __init__(self, inVar, *args, column = 0, **kwargs):
+
+        inVar = convert(inVar)
+
+        if not inVar.varDim > 1:
+            raise Exception
+        if inVar.substrate is None:
+            raise Exception
+
+        if inVar.meshbased:
+            var = inVar.substrate.add_variable(
+                1,
+                inVar.dType
+                )
+        else:
+            var = inVar.substrate.add_variable(
+                inVar.dType,
+                1
+                )
+
+        self.column = column
+
+        self.stringVariants = {'column': str(column)}
+        self.inVars = [inVar]
+        self.parameters = []
+        self.var = var
+
+        super().__init__(**kwargs)
+
+    def _partial_update(self):
+        self.var.data[:, 0] = self.inVar.data[:, self.column]
+
+    @staticmethod
+    def getall(inVar):
+        inVar = convert(inVar)
+        returnVars = []
+        for dim in range(inVar.varDim):
+            returnVars.append(Split(inVar, column = dim))
+        return tuple(returnVars)
 
 class Gradient(Function):
 
@@ -1464,6 +1533,46 @@ class Region(Function):
         self.var = var
 
         super().__init__(**kwargs)
+
+class Surface(Function):
+
+    opTag = 'Surface'
+
+    def __init__(self, inVar, *args, surface = 'inner', **kwargs):
+
+        inVar = convert(inVar)
+
+        if inVar.substrate is None:
+            raise Exception
+
+        self._surface = \
+            inVar.mesh.meshUtils.surfaces[surface]
+
+        if not inVar.meshbased:
+            inVar = get_meshVar(inVar)
+
+        var = inVar.mesh.add_variable(
+            inVar.varDim,
+            inVar.dType
+            )
+        var.data[:] = \
+            [np.nan for dim in range(inVar.varDim)]
+
+        self.stringVariants = {'surface': surface}
+        self.inVars = [inVar]
+        self.parameters = []
+        self.var = var
+
+        super().__init__(**kwargs)
+
+    def _partial_update(self):
+        self.var.data[self._surface] = \
+            np.round(
+                self.inVars[0].evaluate(
+                    self.inVars[0].mesh.data[self._surface]
+                    ),
+                6
+                )
 
 class Normalise(Function):
 

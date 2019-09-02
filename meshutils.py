@@ -34,11 +34,16 @@ class MeshUtils:
                 }
             if mesh.dim == 2:
                 self.comps = {
+                    'x': fn.misc.constant((1., 0.)),
+                    'y': fn.misc.constant((0., 1.)),
                     'ang': fn.misc.constant((1., 0.)),
                     'rad': fn.misc.constant((0., -1.)),
                     }
             elif mesh.dim == 3:
                 self.comps = {
+                    'x': fn.misc.constant((1., 0., 0.)),
+                    'y': fn.misc.constant((0., 1., 0.)),
+                    'z': fn.misc.constant((0., 0., 1.)),
                     'ang': fn.misc.constant((1., 0., 0.)),
                     'coang': fn.misc.constant((0., 1., 0.)),
                     'rad': fn.misc.constant((0., 0., -1.)),
@@ -47,8 +52,10 @@ class MeshUtils:
                 self.surfaces['back'] = mesh.specialSets['MaxK_VertexSet']
         elif type(mesh) == uw.mesh.FeMesh_Annulus:
             self.comps = {
-                'ang': -mesh.unitvec_theta_Fn,
-                'rad': -mesh.unitvec_r_Fn,
+                'x': fn.misc.constant((1., 0.)),
+                'y': fn.misc.constant((0., 1.)),
+                'ang': -mesh.unitvec_theta_Fn, # left to right
+                'rad': -mesh.unitvec_r_Fn, # top to bottom
                 }
             self.surfaces = {
                 'inner': mesh.specialSets['inner'],
