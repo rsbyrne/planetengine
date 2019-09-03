@@ -49,8 +49,9 @@ def get_opHash(varClass, *hashVars, stringVariants = {}):
         hashList.append(var.__hash__())
     elif varClass is Parameter:
         assert len(hashVars) == 0
-        random_hash = random.randint(0, 1e18)
-        hashList.append(random_hash)
+        pass
+        # random_hash = random.randint(0, 1e18)
+        # hashList.append(random_hash)
     else:
         rootVars = set()
         for hashVar in hashVars:
@@ -252,7 +253,11 @@ class PlanetVar(UWFn):
 
         # Determing inVars:
 
-        self.inVars = list(self.inVars)
+        # self.inVars = list(self.inVars)
+        for index, inVar in enumerate(self.inVars):
+            if type(inVar) == Parameter:
+                self.parameters.append(self.inVars.pop(index))
+
         if len(self.inVars) == 1:
             self.inVar = self.inVars[0]
 
@@ -325,27 +330,29 @@ class PlanetVar(UWFn):
     def _partial_update(self):
         pass
 
-    def update(self):
-        if self._has_changed():
+    def update(self, lazy = False):
+        has_changed = self._has_changed(lazy = lazy)
+        if has_changed:
             self._update()
 
-    def _update(self):
+    def _update(self, _DEBUG = False):
         for inVar in self.inVars:
-            inVar.update()
+            inVar.update(lazy = True)
         for parameter in self.parameters:
             parameter.update()
         self._partial_update()
-        self.data = self.var.evaluate(self.substrate)
+        self.data = self.evaluate(lazy = True)
         self._set_summary_stats()
 
-    def _check_hash(self):
+    def _check_hash(self, lazy = False):
         currenthash = 0
-        for inVar in self.inVars:
-            currenthash += inVar._check_hash()
+        for rootVar in self.rootVars:
+            hashVal = rootVar._check_hash(lazy = lazy)
+            currenthash += hashVal
         return currenthash
 
-    def _has_changed(self):
-        currenthash = self._check_hash()
+    def _has_changed(self, lazy = False):
+        currenthash = self._check_hash(lazy = lazy)
         has_changed = bool(
             uw.mpi.comm.allreduce(
                 currenthash - self.lasthash
@@ -458,8 +465,9 @@ class PlanetVar(UWFn):
         hashKey = self.__hash__()
         _premade_fns[hashKey] = weak_reference
 
-    def evaluate(self, evalInput = None):
-        self.update()
+    def evaluate(self, evalInput = None, lazy = False):
+        if not lazy:
+            self.update()
         if evalInput is None:
             evalInput = self.substrate
         return self.var.evaluate(evalInput)
@@ -523,12 +531,12 @@ class BaseTypes(PlanetVar):
     def __init__(self, *args, **kwargs):
         super().__init__(**kwargs)
 
-    def evaluate(self, evalInput = None):
+    def evaluate(self, evalInput = None, **kwargs):
         if evalInput is None:
             evalInput = self.substrate
         return self.var.evaluate(evalInput)
 
-    def _update(self):
+    def _update(self, **kwargs):
         self._partial_update()
         self._set_summary_stats()
 
@@ -563,7 +571,7 @@ class Constant(BaseTypes):
 
         super().__init__(**kwargs)
 
-    def _check_hash(self):
+    def _check_hash(self, **kwargs):
         return self._currenthash
 
 class Parameter(BaseTypes):
@@ -596,12 +604,13 @@ class Parameter(BaseTypes):
         self.mesh = self.substrate = None
 
         self._paramfunc = inFn
+        self._hashval = random.randint(1, 1e18)
 
         self._update_attributes()
 
         super().__init__(**kwargs)
 
-    def _check_hash(self):
+    def _check_hash(self, **kwargs):
         return random.randint(0, 1e18)
 
     def _update_attributes(self):
@@ -611,6 +620,9 @@ class Parameter(BaseTypes):
     def _partial_update(self):
         self.var.value = self._paramfunc()
         self._update_attributes()
+
+    def __hash__(self):
+        return self._hashval
 
 class Variable(BaseTypes):
 
@@ -651,9 +663,13 @@ class Variable(BaseTypes):
 
         super().__init__(**kwargs)
 
-    def _check_hash(self):
-        self._update() # resets self.data
-        currenthash = hasher(self.data)
+    def _check_hash(self, lazy = False):
+        if lazy and hasattr(self, '_currenthash'):
+            return self._currenthash
+        else:
+            self._update() # resets self.data
+            currenthash = hasher(self.data)
+            self._currenthash = currenthash
         return currenthash
 
     def _partial_update(self):
@@ -688,7 +704,7 @@ class Shape(BaseTypes):
 
         super().__init__(**kwargs)
 
-    def _check_hash(self):
+    def _check_hash(self, **kwargs):
         return self._currenthash
 
     def morph(self, mesh):
