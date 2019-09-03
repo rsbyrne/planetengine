@@ -199,7 +199,7 @@ class QuickFig:
     def show(self):
         self.update()
         for var in self.fittedvars:
-            print(var.varName, var.scales)
+            print(var.varName)
         self.fig.show()
 
     def save(self, path = '', name = None):

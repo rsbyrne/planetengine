@@ -335,14 +335,20 @@ class PlanetVar(UWFn):
         if has_changed:
             self._update()
 
-    def _update(self, _DEBUG = False):
+    def _update(self):
         for inVar in self.inVars:
             inVar.update(lazy = True)
         for parameter in self.parameters:
             parameter.update()
         self._partial_update()
-        self.data = self.evaluate(lazy = True)
-        self._set_summary_stats()
+        # self.data = self.evaluate(lazy = True)
+        # self._set_summary_stats()
+        if hasattr(self, 'data'):
+            self._get_data(setAsAtt = True)
+        if hasattr(self, 'scales'):
+            self._get_scales(setAsAtt = True)
+        if hasattr(self, 'ranges'):
+            self._get_ranges(setAsAtt = True)
 
     def _check_hash(self, lazy = False):
         currenthash = 0
@@ -438,26 +444,38 @@ class PlanetVar(UWFn):
         self.meshUtils = meshUtils
         self.varType = varType
 
-    def _set_summary_stats(self):
+    def _get_data(self, setAsAtt = False):
         if hasattr(self, 'data'):
             data = self.data
-            assert not len(data.shape) > 2
-            valSets = utilities.get_valSets(data)
         else:
-            data = None
-            valSets = [[0] for dim in range(self.varDim)]
-        if self.dType == 'double':
-            scales = utilities.get_scales(
-                data,
-                valSets
+            data = self.evaluate(
+                lazy = True
                 )
-            ranges = utilities.get_ranges(
-                data,
-                scales
-                )
+        if setAsAtt:
+            self.data = data
+        return data
+
+    def _get_scales(self, setAsAtt = False):
+        if hasattr(self, 'scales'):
+            scales = self.scales
+        else:
+            data = self._get_data(setAsAtt = setAsAtt)
+            scales = utilities.get_scales(data)
+        if setAsAtt:
             self.scales = scales
+        return scales
+
+    def _get_ranges(self, setAsAtt = False):
+        if hasattr(self, 'ranges'):
+            ranges = self.ranges
+        else:
+            scales = self._get_scales(setAsAtt = setAsAtt)
+            ranges = np.array(
+                [maxVal - minVal for minVal, maxVal in scales]
+                )
+        if setAsAtt:
             self.ranges = ranges
-        self.valSets = valSets
+        return ranges
 
     @staticmethod
     def _set_weakref(self):
@@ -538,7 +556,7 @@ class BaseTypes(PlanetVar):
 
     def _update(self, **kwargs):
         self._partial_update()
-        self._set_summary_stats()
+        # self._set_summary_stats()
 
     def __call__(self):
         return self.var
@@ -1202,7 +1220,7 @@ class Merge(Function):
 
     def _partial_update(self):
         for index, inVar in enumerate(self.inVars):
-            self.var.data[:, index] = inVar.data[:, 0]
+            self.var.data[:, index] = inVar._get_data(True)[:, 0]
 
     @staticmethod
     def annulise(inVar):
@@ -1260,7 +1278,7 @@ class Split(Function):
         super().__init__(**kwargs)
 
     def _partial_update(self):
-        self.var.data[:, 0] = self.inVar.data[:, self.column]
+        self.var.data[:, 0] = self.inVar._get_data(True)[:, self.column]
 
     @staticmethod
     def getall(inVar):
@@ -1364,12 +1382,12 @@ class Range(Function):
             inVal = nullVal
             outVal = inVar0
         lowerBounds = Parameter(
-            lambda: inVars[1].scales[:,0],
+            lambda: inVars[1]._get_scales(True)[:,0],
             len = 1,
             dType = 'double'
             )
         upperBounds = Parameter(
-            lambda: inVars[1].scales[:,1],
+            lambda: inVars[1]._get_scales(True)[:,1],
             len = 1,
             dType = 'double'
             )
@@ -1429,12 +1447,12 @@ class Quantiles(Function):
         #     raise Exception
 
         interval = Parameter(
-            lambda: inVar.ranges / ntiles,
+            lambda: inVar._get_ranges(True) / ntiles,
             inVar.varDim,
             'double'
             )
         minVal = Parameter(
-            lambda: inVar.scales[:,0],
+            lambda: inVar._get_scales(True)[:,0],
             inVar.varDim,
             'double'
             )
@@ -1500,8 +1518,8 @@ class Quantile(Function):
 
         inVar = convert(inVar)
 
-        minVal = Parameter(lambda: inVar.scales[:,0])
-        intervalSize = Parameter(lambda: inVar.ranges / ntiles)
+        minVal = Parameter(lambda: inVar._get_scales(True)[:,0])
+        intervalSize = Parameter(lambda: inVar._get_ranges(True) / ntiles)
         lowerBound = Parameter(lambda: minVal + intervalSize * (nthtile - 1))
         upperBound = Parameter(lambda: minVal + intervalSize * nthtile)
 
@@ -1599,19 +1617,19 @@ class Normalise(Function):
         baseVar, normVar = inVars = convert(baseVar, normVar)
 
         inMins = Parameter(
-            lambda: [float(scale[0]) for scale in baseVar.scales],
+            lambda: [float(scale[0]) for scale in baseVar._get_scales(True)],
             baseVar.varDim
             )
         inRanges = Parameter(
-            lambda: [float(val) for val in baseVar.ranges],
+            lambda: [float(val) for val in baseVar._get_ranges(True)],
             baseVar.varDim
             )
         normMins = Parameter(
-            lambda: [float(scale[0]) for scale in normVar.scales],
+            lambda: [float(scale[0]) for scale in normVar._get_scales(True)],
             normVar.varDim
             )
         normRanges = Parameter(
-            lambda: [float(val) for val in normVar.ranges],
+            lambda: [float(val) for val in normVar._get_ranges(True)],
             normVar.varDim
             )
 
@@ -1645,17 +1663,17 @@ class GetStat(Reduction):
 
         if stat == 'mins':
             var = Parameter(
-                lambda: [scale[0] for scale in inVar.scales],
+                lambda: [scale[0] for scale in inVar._get_scales(True)],
                 inVar.varDim
                 )
         elif stat == 'maxs':
             var = Parameter(
-                lambda: [scale[1] for scale in inVar.scales],
+                lambda: [scale[1] for scale in inVar._get_scales(True)],
                 inVar.varDim
                 )
         elif stat == 'ranges':
             var = Parameter(
-                lambda: inVar.ranges,
+                lambda: inVar._get_ranges(True),
                 inVar.varDim
                 )
 

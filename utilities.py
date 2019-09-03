@@ -282,14 +282,26 @@ def get_valSets(array):
 
 def get_scales(array, valSets = None):
     if valSets is None:
-        valSets = get_valSets(array)
-    if all([len(subset) for subset in valSets]):
-        mins = [min(valSet) for valSet in valSets]
-        maxs = [max(valSet) for valSet in valSets]
+        array = np.array(array)
+        array = array.T
+        array = np.array(
+            [np.min(array, 1), np.max(array, 1)]
+            )
+        array = np.array(uw.mpi.comm.allgather(array))
+        array = array.T
+        array = np.vstack(
+            [np.amin(array[:, 0], 1), np.amax(array[:, 1], 1)]
+            )
+        array = array.T
+        return array
     else:
-        mins = maxs = [np.nan for valSet in valSets]
-    scales = np.dstack([mins, maxs])[0]
-    return scales
+        if all([len(subset) for subset in valSets]):
+            mins = [min(valSet) for valSet in valSets]
+            maxs = [max(valSet) for valSet in valSets]
+        else:
+            mins = maxs = [np.nan for valSet in valSets]
+        scales = np.dstack([mins, maxs])[0]
+        return scales
 
 def get_ranges(array, scales = None):
     if scales is None:
