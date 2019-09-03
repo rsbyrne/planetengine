@@ -346,9 +346,9 @@ class PlanetVar(UWFn):
         if hasattr(self, 'data'):
             self._get_data(setAsAtt = True)
         if hasattr(self, 'scales'):
-            self._get_scales(setAsAtt = True)
+            self._get_scales(setAsAtt = True, refresh = True)
         if hasattr(self, 'ranges'):
-            self._get_ranges(setAsAtt = True)
+            self._get_ranges(setAsAtt = True, refresh = True)
 
     def _check_hash(self, lazy = False):
         currenthash = 0
@@ -444,8 +444,8 @@ class PlanetVar(UWFn):
         self.meshUtils = meshUtils
         self.varType = varType
 
-    def _get_data(self, setAsAtt = False):
-        if hasattr(self, 'data'):
+    def _get_data(self, setAsAtt = False, refresh = False):
+        if hasattr(self, 'data') and not refresh:
             data = self.data
         else:
             data = self.evaluate(
@@ -455,8 +455,8 @@ class PlanetVar(UWFn):
             self.data = data
         return data
 
-    def _get_scales(self, setAsAtt = False):
-        if hasattr(self, 'scales'):
+    def _get_scales(self, setAsAtt = False, refresh = False):
+        if hasattr(self, 'scales') and not refresh:
             scales = self.scales
         else:
             data = self._get_data(setAsAtt = setAsAtt)
@@ -465,8 +465,8 @@ class PlanetVar(UWFn):
             self.scales = scales
         return scales
 
-    def _get_ranges(self, setAsAtt = False):
-        if hasattr(self, 'ranges'):
+    def _get_ranges(self, setAsAtt = False, refresh = False):
+        if hasattr(self, 'ranges') and not refresh:
             ranges = self.ranges
         else:
             scales = self._get_scales(setAsAtt = setAsAtt)
@@ -698,6 +698,10 @@ class Variable(BaseTypes):
         else:
             # i.e. is a function
             self.data = self.var.evaluate(self.substrate)
+        if hasattr(self, 'scales'):
+            self._get_scales(setAsAtt = True, refresh = True)
+        if hasattr(self, 'ranges'):
+            self._get_ranges(setAsAtt = True, refresh = True)
 
 class Shape(BaseTypes):
 

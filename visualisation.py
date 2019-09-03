@@ -4,7 +4,7 @@ import glucifer
 import numpy as np
 import os
 
-from . import functions
+from . import functions as pfn
 from .utilities import message
 from .functions import get_planetVar
 from .meshutils import get_meshUtils
@@ -144,7 +144,7 @@ class QuickFig:
 
     def add_contours(self, arg, **kwargs):
         planetVar = get_planetVar(arg)
-        normed = functions.tidy.simple.normalise(
+        normed = pfn.Normalise(
             planetVar, [2., 1024.]
             )
         self.updateFuncs.append(normed.update)

@@ -284,16 +284,17 @@ def get_scales(array, valSets = None):
     if valSets is None:
         array = np.array(array)
         array = array.T
-        array = np.array(
-            [np.min(array, 1), np.max(array, 1)]
-            )
-        array = np.array(uw.mpi.comm.allgather(array))
-        array = array.T
-        array = np.vstack(
-            [np.amin(array[:, 0], 1), np.amax(array[:, 1], 1)]
-            )
-        array = array.T
-        return array
+        outList = []
+        for component in array:
+            minVal = np.nanmin(component)
+            maxVal = np.nanmax(component)
+            minVals = uw.mpi.comm.allgather(minVal)
+            allmin = min(minVals)
+            maxVals = uw.mpi.comm.allgather(maxVal)
+            allmax = max(maxVals)
+            outList.append([allmin, allmax])
+        outArr = np.array(outList)
+        return outArr
     else:
         if all([len(subset) for subset in valSets]):
             mins = [min(valSet) for valSet in valSets]
