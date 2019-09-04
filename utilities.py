@@ -289,8 +289,12 @@ def get_scales(array, valSets = None):
             minVal = np.nanmin(component)
             maxVal = np.nanmax(component)
             minVals = uw.mpi.comm.allgather(minVal)
-            allmin = min(minVals)
             maxVals = uw.mpi.comm.allgather(maxVal)
+            minVals = [val for val in minVals if val < np.inf]
+            maxVals = [val for val in maxVals if val < np.inf]
+            assert len(minVals) > 0
+            assert len(maxVals) > 0
+            allmin = min(minVals)
             allmax = max(maxVals)
             outList.append([allmin, allmax])
         outArr = np.array(outList)

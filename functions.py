@@ -12,6 +12,7 @@ from underworld.function._function import Function as UWFn
 from . import utilities
 
 from .utilities import hashToInt as hasher
+from .utilities import message
 
 from .meshutils import get_meshUtils
 from .mapping import unbox
@@ -52,6 +53,10 @@ def get_opHash(varClass, *hashVars, stringVariants = {}):
         pass
         # random_hash = random.randint(0, 1e18)
         # hashList.append(random_hash)
+    elif varClass is Vanilla:
+        assert len(hashVars) == 1
+        var = UWFn.convert(hashVars[0])
+        hashList.append(var.__hash__())
     else:
         rootVars = set()
         for hashVar in hashVars:
@@ -119,43 +124,56 @@ def _construct(
 
 def _convert(var, varName = 'anon'):
     if isinstance(var, PlanetVar):
+        # message("Already a PlanetVar! Returning.")
         return var
-    # elif hasattr(var, 'planetVar'):
-    #     return var.planetVar
-    else:
+    if hasattr(var, '_planetVar'):
+        outVar = var._planetVar()
+        if isinstance(outVar, PlanetVar):
+            # message("Premade PlanetVar found! Returning.")
+            return outVar
+    try:
+        var = UWFn.convert(var)
+        if var is None:
+            raise Exception
+        if len(list(var._underlyingDataItems)) == 0:
+            # hence is a constant!
+            valString = utilities.stringify(
+                var.evaluate()[0]
+                )
+            stringVariants = {'val': valString}
+            var = _construct(
+                var,
+                varClass = Constant,
+                stringVariants = stringVariants
+                )
+        elif type(var) in Variable.convertTypes:
+            stringVariants = {'varName': varName}
+            var = _construct(
+                var,
+                varClass = Variable,
+                stringVariants = stringVariants
+                )
+        elif isinstance(var, UWFn):
+            stringVariants = {'varName': varName}
+            var = _construct(
+                var,
+                varClass = Vanilla,
+                stringVariants = stringVariants
+                )
+        else:
+            raise Exception
+    except:
         try:
-            var = UWFn.convert(var)
-            if var is None:
-                raise Exception
-            if len(list(var._underlyingDataItems)) == 0:
-                # hence is a constant!
-                valString = utilities.stringify(
-                    var.evaluate()[0]
-                    )
-                stringVariants = {'val': valString}
-                var = _construct(
-                    var,
-                    varClass = Constant,
-                    stringVariants = stringVariants
-                    )
-            else:
-                stringVariants = {'varName': varName}
-                var = _construct(
-                    var,
-                    varClass = Variable,
-                    stringVariants = stringVariants
-                    )
+            stringVariants = {'varName': varName}
+            var = _construct(
+                var,
+                varClass = Shape,
+                stringVariants = stringVariants
+                )
         except:
-            try:
-                stringVariants = {'varName': varName}
-                var = _construct(
-                    var,
-                    varClass = Shape,
-                    stringVariants = stringVariants
-                    )
-            except:
-                raise Exception
-        return var
+            raise Exception
+    # message("New PlanetVar made! Returning.")
+    return var
 
 def convert(*args, return_tuple = False):
     if len(args) == 1:
@@ -646,6 +664,11 @@ class Variable(BaseTypes):
 
     opTag = 'Variable'
 
+    convertTypes = {
+        uw.mesh._meshvariable.MeshVariable,
+        uw.swarm._swarmvariable.SwarmVariable
+        }
+
     def __init__(self, inVar, varName = 'anon', *args, **kwargs):
 
         var = UWFn.convert(inVar)
@@ -679,6 +702,8 @@ class Variable(BaseTypes):
                     self.mesh, self.substrate = \
                         utilities.get_substrates(var)
 
+        var._planetVar = weakref.ref(self)
+
         super().__init__(**kwargs)
 
     def _check_hash(self, lazy = False):
@@ -711,7 +736,8 @@ class Shape(BaseTypes):
 
         shape = fn.shape.Polygon(vertices)
         self.vertices = vertices
-        self.richvertices = interp_shape(self.vertices)
+        self.richvertices = vertices
+        self.richvertices = interp_shape(self.vertices, num = 1000)
         self.morphs = {}
         self._currenthash = hasher(self.vertices)
 
@@ -741,6 +767,30 @@ class Shape(BaseTypes):
 class Function(PlanetVar):
 
     def __init__(self, *args, **kwargs):
+
+        super().__init__(**kwargs)
+
+class Vanilla(Function):
+
+    opTag = 'Vanilla'
+
+    def __init__(self, inVar, *args, varName = 'anon', **kwargs):
+
+        var = UWFn.convert(inVar)
+
+        if not hasattr(var, '_underlyingDataItems'):
+            raise Exception
+        if not len(var._underlyingDataItems) > 0:
+            raise Exception
+
+        inVars = []
+        for underlying in sorted(var._underlyingDataItems):
+            inVars.append(convert(underlying))
+
+        self.stringVariants = {'varName': varName}
+        self.inVars = inVars
+        self.parameters = []
+        self.var = var
 
         super().__init__(**kwargs)
 
@@ -811,6 +861,9 @@ class Binarise(Function):
 
         inVar = convert(inVar)
 
+        if not inVar.varDim == 1:
+            raise Exception
+
         if inVar.dType == 'double':
             var = 0. * inVar + fn.branching.conditional([
                 (fn.math.abs(inVar) > 1e-18, 1.),
@@ -842,6 +895,9 @@ class Booleanise(Function):
 
         inVar = convert(inVar)
 
+        if not inVar.varDim == 1:
+            raise Exception
+
         var = fn.branching.conditional([
             (fn.math.abs(inVar) < 1e-18, False),
             (True, True),
@@ -862,8 +918,11 @@ class HandleNaN(Function):
 
         inVar, handleVal = inVars = convert(inVar, handleVal)
 
+        compareVal = [
+            np.inf for dim in range(inVar.varDim)
+            ]
         var = fn.branching.conditional([
-            (inVar < np.inf, inVar),
+            (inVar < compareVal, inVar),
             (True, handleVal),
             ])
 
@@ -875,12 +934,26 @@ class HandleNaN(Function):
         super().__init__(**kwargs)
 
     @staticmethod
-    def zero(*args, **kwargs):
-        return HandleNaN(*args, handleVal = 0., **kwargs)
+    def _NaNFloat(inVar, handleFloat, **kwargs):
+        inVar = convert(inVar)
+        handleVal = [
+            handleFloat for dim in range(inVar.varDim)
+            ]
+        return HandleNaN(inVar, handleVal = handleVal, **kwargs)
 
     @staticmethod
-    def one(*args, **kwargs):
-        return HandleNaN(*args, handleVal = 1., **kwargs)
+    def zero(inVar, **kwargs):
+        return HandleNaN._NaNFloat(inVar, 0., **kwargs)
+
+    @staticmethod
+    def unit(inVar, **kwargs):
+        return HandleNaN._NaNFloat(inVar, 1., **kwargs)
+
+    # @staticmethod
+    # def min()
+    #
+    # @staticmethod
+    # def max()
 
 class Clip(Function):
 
@@ -1378,6 +1451,7 @@ class Range(Function):
             raise Exception
 
         inVar0, inVar1 = inVars = convert(inVar0), convert(inVar1)
+
         nullVal = [np.nan for dim in range(inVar0.varDim)]
         if operation == 'in':
             inVal = inVar0
@@ -1387,13 +1461,13 @@ class Range(Function):
             outVal = inVar0
         lowerBounds = Parameter(
             lambda: inVars[1]._get_scales(True)[:,0],
-            len = 1,
-            dType = 'double'
+            varLen = inVar0.varDim,
+            dType = inVar0.dType
             )
         upperBounds = Parameter(
             lambda: inVars[1]._get_scales(True)[:,1],
-            len = 1,
-            dType = 'double'
+            varLen = inVar0.varDim,
+            dType = inVar0.dType
             )
         var = fn.branching.conditional([
             (inVar0 < lowerBounds, outVal),
@@ -1420,12 +1494,17 @@ class Filter(Function):
 
     opTag = 'Filter'
 
-    def __init__(self, inVar, filterVal, outVar, *args, **kwargs):
+    def __init__(self, inVar, filterVal, outVar = None, **kwargs):
 
-        inVar, filterVal, outVar = inVars = convert(
-            inVar, filterVal, outVar
+        inVar, filterVal = inVars = convert(
+            inVar, filterVal
             )
 
+        if outVar is None:
+            outVar = inVar
+        else:
+            outVar = convert(outVar)
+            inVars.append(outVar)
         nullVal = [np.nan for dim in range(inVar.varDim)]
         var = fn.branching.conditional([
             (fn.math.abs(inVar - filterVal) < 1e-18, outVar),
@@ -1558,10 +1637,17 @@ class Region(Function):
 
         inVar, inShape = inVars = convert(inVar, inShape)
 
+        regionVar = inVar.mesh.add_variable(1)
         polygon = inShape.morph(inVar.mesh)
+        boolFn = fn.branching.conditional([
+            (polygon, 1),
+            (True, 0),
+            ])
+        regionVar.data[:] = boolFn.evaluate(inVar.mesh)
+
         nullVal = [np.nan for dim in range(inVar.varDim)]
         var = fn.branching.conditional([
-            (polygon, inVar),
+            (regionVar > 0., inVar),
             (True, nullVal),
             ])
 

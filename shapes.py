@@ -1,11 +1,11 @@
 import numpy as np
 
-def interp_shape(shape):
+def interp_shape(shape, num = 100):
     interpShape = []
     shape = np.array(shape)
     for dimension in shape.T:
         interpDimension = np.hstack([
-            *[np.linspace(dimension[index], dimension[index + 1], num = 100)[:-1] \
+            *[np.linspace(dimension[index], dimension[index + 1], num = num)[:-1] \
                 for index in range(0, len(dimension) - 1)], # all but one side
             np.linspace(dimension[-1], dimension[0]), # the remaining side
             ]) # !!! inelegant !!!
