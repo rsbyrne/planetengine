@@ -1376,7 +1376,7 @@ class Gradient(Function):
             inVar,
             *args,
             hide = False,
-            attach = True,
+            attach = False,
             **kwargs
             )
         var = inVar.fn_gradient
