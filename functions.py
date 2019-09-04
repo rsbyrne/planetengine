@@ -324,6 +324,8 @@ class PlanetVar(UWFn):
 
         self._set_attributes()
 
+        self._set_summary_stats()
+
         self._update()
 
         if not self.__class__ is Constant:
@@ -359,14 +361,7 @@ class PlanetVar(UWFn):
         for parameter in self.parameters:
             parameter.update()
         self._partial_update()
-        # self.data = self.evaluate(lazy = True)
-        # self._set_summary_stats()
-        if hasattr(self, 'data'):
-            self._get_data(setAsAtt = True)
-        if hasattr(self, 'scales'):
-            self._get_scales(setAsAtt = True, refresh = True)
-        if hasattr(self, 'ranges'):
-            self._get_ranges(setAsAtt = True, refresh = True)
+        self._update_summary_stats()
 
     def _check_hash(self, lazy = False):
         currenthash = 0
@@ -384,6 +379,56 @@ class PlanetVar(UWFn):
             )
         self.lasthash = currenthash
         return has_changed
+
+    def _set_summary_stats(self):
+        if isinstance(self, Function) \
+                or type(self) == Variable:
+            if self.varDim == 1:
+                minmax = fn.view.min_max(self)
+            else:
+                fn_norm = fn.math.sqrt(
+                    fn.math.dot(
+                        self,
+                        self
+                        )
+                    )
+                minmax = fn.view.min_max(
+                    self,
+                    fn_norm = fn_norm
+                    )
+            minFn = minmax.min_global
+            maxFn = minmax.max_global
+            rangeFn = lambda: abs(minFn() - maxFn())
+            self._minmax = minmax
+        elif isinstance(self, Reduction) \
+                or type(self) == Constant:
+            if not hasattr(self, 'value'):
+                self.value = self.evaluate(lazy = True)[0]
+                self.data = np.array(
+                    [[val,] for val in self.value]
+                    )
+            minFn = lambda: min(self.value)
+            maxFn = lambda: max(self.value)
+            rangeFn = lambda: maxFn() - minFn()
+        elif type(self) in {Parameter, Shape}:
+            minFn = maxFn = rangeFn = lambda: None
+        else:
+            raise Exception
+
+        self.minFn = minFn
+        self.maxFn = maxFn
+        self.rangeFn = rangeFn
+
+    def _update_summary_stats(self):
+        if isinstance(self, Function) \
+                or type(self) == Variable:
+            self._minmax.evaluate(self.substrate)
+        elif isinstance(self, Reduction) \
+                or type(self) == Constant:
+            self.value = self.evaluate(lazy = True)[0]
+            self.data = np.array(
+                [[val,] for val in self.value]
+                )
 
     def _set_attributes(self):
 
@@ -429,7 +474,7 @@ class PlanetVar(UWFn):
                 raise Exception
 
         if type(self) == Constant:
-            sample_data = np.array([[self.value]])
+            sample_data = self.data
         elif type(self) == Shape:
             sample_data = self.vertices
         elif mesh is None:
@@ -461,39 +506,6 @@ class PlanetVar(UWFn):
         self.dType = dType
         self.meshUtils = meshUtils
         self.varType = varType
-
-    def _get_data(self, setAsAtt = False, refresh = False):
-        if hasattr(self, 'data') and not refresh:
-            data = self.data
-        else:
-            data = self.evaluate(
-                lazy = True
-                )
-        if setAsAtt:
-            self.data = data
-        return data
-
-    def _get_scales(self, setAsAtt = False, refresh = False):
-        if hasattr(self, 'scales') and not refresh:
-            scales = self.scales
-        else:
-            data = self._get_data(setAsAtt = setAsAtt)
-            scales = utilities.get_scales(data)
-        if setAsAtt:
-            self.scales = scales
-        return scales
-
-    def _get_ranges(self, setAsAtt = False, refresh = False):
-        if hasattr(self, 'ranges') and not refresh:
-            ranges = self.ranges
-        else:
-            scales = self._get_scales(setAsAtt = setAsAtt)
-            ranges = np.array(
-                [maxVal - minVal for minVal, maxVal in scales]
-                )
-        if setAsAtt:
-            self.ranges = ranges
-        return ranges
 
     @staticmethod
     def _set_weakref(self):
@@ -572,9 +584,9 @@ class BaseTypes(PlanetVar):
             evalInput = self.substrate
         return self.var.evaluate(evalInput)
 
-    def _update(self, **kwargs):
-        self._partial_update()
-        # self._set_summary_stats()
+    # def _update(self, **kwargs):
+    #     self._partial_update()
+    #     # self._set_summary_stats()
 
     def __call__(self):
         return self.var
@@ -614,20 +626,9 @@ class Parameter(BaseTypes):
 
     opTag = 'Parameter'
 
-    def __init__(self, inFn, *args, varLen = 1, dType = 'double', **kwargs):
+    def __init__(self, inFn, **kwargs):
 
-        defaults = {
-            'int': 1,
-            'double': 1.,
-            'boolean': True,
-            }
-        if not dType in defaults:
-            raise Exception
-        if not varLen > 0:
-            raise Exception
-        initialVal = [
-            defaults[dType] for i in range(varLen)
-            ]
+        initialVal = inFn()
         var = fn.misc.constant(initialVal)
         if not len(list(var._underlyingDataItems)) == 0:
             raise Exception
@@ -723,10 +724,6 @@ class Variable(BaseTypes):
         else:
             # i.e. is a function
             self.data = self.var.evaluate(self.substrate)
-        if hasattr(self, 'scales'):
-            self._get_scales(setAsAtt = True, refresh = True)
-        if hasattr(self, 'ranges'):
-            self._get_ranges(setAsAtt = True, refresh = True)
 
 class Shape(BaseTypes):
 
@@ -1297,7 +1294,8 @@ class Merge(Function):
 
     def _partial_update(self):
         for index, inVar in enumerate(self.inVars):
-            self.var.data[:, index] = inVar._get_data(True)[:, 0]
+            self.var.data[:, index] = \
+                inVar.evaluate()[:, 0]
 
     @staticmethod
     def annulise(inVar):
@@ -1355,7 +1353,8 @@ class Split(Function):
         super().__init__(**kwargs)
 
     def _partial_update(self):
-        self.var.data[:, 0] = self.inVar._get_data(True)[:, self.column]
+        self.var.data[:, 0] = \
+            self.inVar.evaluate()[:, self.column]
 
     @staticmethod
     def getall(inVar):
@@ -1459,16 +1458,8 @@ class Range(Function):
         else:
             inVal = nullVal
             outVal = inVar0
-        lowerBounds = Parameter(
-            lambda: inVars[1]._get_scales(True)[:,0],
-            varLen = inVar0.varDim,
-            dType = inVar0.dType
-            )
-        upperBounds = Parameter(
-            lambda: inVars[1]._get_scales(True)[:,1],
-            varLen = inVar0.varDim,
-            dType = inVar0.dType
-            )
+        lowerBounds = Parameter(inVars[1].minFn)
+        upperBounds = Parameter(inVars[1].maxFn)
         var = fn.branching.conditional([
             (inVar0 < lowerBounds, outVal),
             (inVar0 > upperBounds, outVal),
@@ -1530,14 +1521,10 @@ class Quantiles(Function):
         #     raise Exception
 
         interval = Parameter(
-            lambda: inVar._get_ranges(True) / ntiles,
-            inVar.varDim,
-            'double'
+            lambda: inVar.rangeFn() / ntiles
             )
         minVal = Parameter(
-            lambda: inVar._get_scales(True)[:,0],
-            inVar.varDim,
-            'double'
+            inVar.minFn
             )
 
         clauses = []
@@ -1601,8 +1588,8 @@ class Quantile(Function):
 
         inVar = convert(inVar)
 
-        minVal = Parameter(lambda: inVar._get_scales(True)[:,0])
-        intervalSize = Parameter(lambda: inVar._get_ranges(True) / ntiles)
+        minVal = Parameter(inVar.minFn)
+        intervalSize = Parameter(lambda: inVar.rangeFn() / ntiles)
         lowerBound = Parameter(lambda: minVal + intervalSize * (nthtile - 1))
         upperBound = Parameter(lambda: minVal + intervalSize * nthtile)
 
@@ -1706,22 +1693,10 @@ class Normalise(Function):
 
         baseVar, normVar = inVars = convert(baseVar, normVar)
 
-        inMins = Parameter(
-            lambda: [float(scale[0]) for scale in baseVar._get_scales(True)],
-            baseVar.varDim
-            )
-        inRanges = Parameter(
-            lambda: [float(val) for val in baseVar._get_ranges(True)],
-            baseVar.varDim
-            )
-        normMins = Parameter(
-            lambda: [float(scale[0]) for scale in normVar._get_scales(True)],
-            normVar.varDim
-            )
-        normRanges = Parameter(
-            lambda: [float(val) for val in normVar._get_ranges(True)],
-            normVar.varDim
-            )
+        inMins = Parameter(baseVar.minFn)
+        inRanges = Parameter(baseVar.rangeFn)
+        normMins = Parameter(normVar.minFn)
+        normRanges = Parameter(normVar.rangeFn)
 
         var = (baseVar - inMins) / inRanges * normRanges + normMins
 
@@ -1752,20 +1727,11 @@ class GetStat(Reduction):
         inVar = convert(inVar)
 
         if stat == 'mins':
-            var = Parameter(
-                lambda: [scale[0] for scale in inVar._get_scales(True)],
-                inVar.varDim
-                )
+            var = Parameter(inVar.minFn)
         elif stat == 'maxs':
-            var = Parameter(
-                lambda: [scale[1] for scale in inVar._get_scales(True)],
-                inVar.varDim
-                )
+            var = Parameter(inVar.maxFn)
         elif stat == 'ranges':
-            var = Parameter(
-                lambda: inVar._get_ranges(True),
-                inVar.varDim
-                )
+            var = Parameter(inVar.rangeFn)
 
         self.stringVariants = {'stat': stat}
         self.inVars = [inVar]
