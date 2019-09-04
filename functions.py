@@ -262,6 +262,19 @@ def get_meshVar(
             )
     return outVar
 
+def get_dType(sample_data):
+    if str(sample_data.dtype) == 'int32':
+        dType = 'int'
+    elif str(sample_data.dtype) == 'float64':
+        dType = 'double'
+    elif str(sample_data.dtype) == 'bool':
+        dType = 'boolean'
+    else:
+        raise Exception(
+            "Input data type not acceptable."
+            )
+    return dType
+
 class PlanetVar(UWFn):
 
     inVars = []
@@ -321,8 +334,6 @@ class PlanetVar(UWFn):
         self.lasthash = 0
 
         self._set_rootVars()
-
-        self._set_attributes()
 
         self._set_summary_stats()
 
@@ -402,11 +413,6 @@ class PlanetVar(UWFn):
             self._minmax = minmax
         elif isinstance(self, Reduction) \
                 or type(self) == Constant:
-            if not hasattr(self, 'value'):
-                self.value = self.evaluate(lazy = True)[0]
-                self.data = np.array(
-                    [[val,] for val in self.value]
-                    )
             minFn = lambda: min(self.value)
             maxFn = lambda: max(self.value)
             rangeFn = lambda: maxFn() - minFn()
@@ -423,89 +429,21 @@ class PlanetVar(UWFn):
         if isinstance(self, Function) \
                 or type(self) == Variable:
             self._minmax.evaluate(self.substrate)
+            if isinstance(self, Function):
+                self.data = self.evaluate(lazy = True)
+            if self.substrate is self.mesh:
+                self.meshdata = self.data
+            else:
+                self.meshdata = self.evaluate(
+                    self.mesh,
+                    lazy = True
+                    )
         elif isinstance(self, Reduction) \
                 or type(self) == Constant:
             self.value = self.evaluate(lazy = True)[0]
             self.data = np.array(
                 [[val,] for val in self.value]
                 )
-
-    def _set_attributes(self):
-
-        var = self.var
-
-        if type(var) == uw.mesh._meshvariable.MeshVariable:
-            varType = 'meshVar'
-        elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
-            varType = 'swarmVar'
-        elif isinstance(var, UWFn):
-            varType = 'fn'
-        else:
-            raise Exception
-
-        if hasattr(self, 'substrate'):
-            substrate = self.substrate
-        else:
-            substrates = set(
-                [rootVar.substrate \
-                for rootVar in self.rootVars \
-                if not rootVar.substrate is None]
-                )
-            if len(substrates) == 0:
-                substrate = None
-            elif len(substrates) == 1:
-                substrate = list(substrates)[0]
-            else:
-                raise Exception
-
-        if hasattr(self, 'mesh'):
-            mesh = self.mesh
-        else:
-            meshes = set(
-                [rootVar.mesh \
-                for rootVar in self.rootVars \
-                if not rootVar.mesh is None]
-                )
-            if len(meshes) == 0:
-                mesh = None
-            elif len(meshes) == 1:
-                mesh = list(meshes)[0]
-            else:
-                raise Exception
-
-        if type(self) == Constant:
-            sample_data = self.data
-        elif type(self) == Shape:
-            sample_data = self.vertices
-        elif mesh is None:
-            sample_data = var.evaluate()
-        else:
-            sample_data = var.evaluate(mesh.data[0:1])
-        varDim = sample_data.shape[1]
-
-        if str(sample_data.dtype) == 'int32':
-            dType = 'int'
-        elif str(sample_data.dtype) == 'float64':
-            dType = 'double'
-        elif str(sample_data.dtype) == 'bool':
-            dType = 'boolean'
-        else:
-            raise Exception(
-                "Input data type not acceptable."
-                )
-
-        if not mesh is None:
-            meshUtils = get_meshUtils(mesh)
-        else:
-            meshUtils = None
-
-        self.mesh = mesh
-        self.substrate = substrate
-        self.meshbased = substrate is mesh
-        self.varDim = varDim
-        self.dType = dType
-        self.meshUtils = meshUtils
-        self.varType = varType
 
     @staticmethod
     def _set_weakref(self):
@@ -611,11 +549,17 @@ class Constant(BaseTypes):
         self._hashVars = [var]
         self.data = np.array([[val,] for val in self.value])
 
+        sample_data = self.data
+        self.dType = get_dType(sample_data)
+        self.varType = 'const'
+
         self.stringVariants = {'val': valString}
         self.inVars = []
         self.parameters = []
         self.var = var
         self.mesh = self.substrate = None
+        self.meshUtils = None
+        self.meshbased = False
 
         super().__init__(**kwargs)
 
@@ -673,7 +617,28 @@ class Variable(BaseTypes):
     def __init__(self, inVar, varName = 'anon', *args, **kwargs):
 
         var = UWFn.convert(inVar)
+
         if var is None:
+            raise Exception
+        if len(list(var._underlyingDataItems)) == 0:
+            raise Exception
+
+        if hasattr(var, 'fn_gradient'):
+            self.fn_gradient = var.fn_gradient
+
+        self.data = var.data
+
+        if type(var) == uw.mesh._meshvariable.MeshVariable:
+            self.substrate = self.mesh = var.mesh
+            self.meshdata = self.data
+            self.meshbased = True
+            self.varType = 'meshVar'
+        elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
+            self.substrate = var.swarm
+            self.mesh = var.swarm.mesh
+            self.meshbased = False
+            self.varType = 'swarmVar'
+        else:
             raise Exception
 
         self._hashVars = [var]
@@ -682,28 +647,14 @@ class Variable(BaseTypes):
         self.inVars = []
         self.parameters = []
         self.var = var
-        if type(var) == fn.misc.constant:
-            if not len(list(var._underlyingDataItems)) == 0:
-                raise Exception
-            self.mesh = self.substrate = None
-            self.value = var.evaluate()[0]
-        else:
-            if len(list(var._underlyingDataItems)) == 0:
-                raise Exception
-            if hasattr(var, 'fn_gradient'):
-                self.fn_gradient = var.fn_gradient
-            try:
-                self.mesh = var.mesh
-                self.substrate = self.mesh
-            except:
-                try:
-                    self.substrate = var.swarm
-                    self.mesh = self.substrate.mesh
-                except:
-                    self.mesh, self.substrate = \
-                        utilities.get_substrates(var)
 
         var._planetVar = weakref.ref(self)
+        self._set_meshdata
+
+        sample_data = self.data[0:1]
+        self.dType = get_dType(sample_data)
+        self.varDim = self.data.shape[1]
+        self.meshUtils = get_meshUtils(self.mesh)
 
         super().__init__(**kwargs)
 
@@ -711,19 +662,16 @@ class Variable(BaseTypes):
         if lazy and hasattr(self, '_currenthash'):
             return self._currenthash
         else:
-            self._update() # resets self.data
             currenthash = hasher(self.data)
             self._currenthash = currenthash
         return currenthash
 
+    def _set_meshdata(self):
+        self.meshdata = self.var.evaluate(self.mesh)
+
     def _partial_update(self):
-        if hasattr(self.var, 'data'):
-            self.data = self.var.data
-        elif hasattr(self.var, 'value'):
-            self.data = np.array([[val,] for val in self.value])
-        else:
-            # i.e. is a function
-            self.data = self.var.evaluate(self.substrate)
+        if not type(self.var) == uw.mesh._meshvariable.MeshVariable:
+            self._set_meshdata()
 
 class Shape(BaseTypes):
 
@@ -764,6 +712,45 @@ class Shape(BaseTypes):
 class Function(PlanetVar):
 
     def __init__(self, *args, **kwargs):
+
+        meshes = set()
+        substrates = set()
+
+        for inVar in self.inVars:
+            if hasattr(inVar, 'mesh'):
+                if not inVar.mesh is None:
+                    meshes.add(inVar.mesh)
+            if hasattr(inVar, 'substrate'):
+                if not inVar.substrate is None:
+                    substrates.add(inVar.substrate)
+        if len(meshes) == 1:
+            self.mesh = list(meshes)[0]
+            self.meshUtils = get_meshUtils(self.mesh)
+        elif len(meshes) == 0:
+            self.mesh = None
+        else:
+            raise Exception
+        if len(substrates) == 1:
+            self.substrate = list(substrates)[0]
+        elif len(substrates) == 0:
+            self.substrate = None
+        else:
+            raise Exception
+
+        if not self.mesh is None and self.substrate is self.mesh:
+            self.meshbased = True
+            self.varType = 'meshFn'
+            sample_data = self.var.evaluate(self.mesh.data[0:1])
+        else:
+            self.meshbased = False
+            if self.substrate is None:
+                self.varType = 'constFn'
+                sample_data = self.var.evaluate()
+            else:
+                self.varType = 'swarmFn'
+                sample_data = self.var.evaluate(self.substrate.data[0:1])
+        self.dType = get_dType(sample_data)
+        self.varDim = sample_data.shape[1]
 
         super().__init__(**kwargs)
 
@@ -1372,14 +1359,26 @@ class Gradient(Function):
 
         inVar = convert(inVar)
 
-        inVar = get_meshVar(
-            inVar,
-            *args,
-            hide = False,
-            attach = False,
-            **kwargs
-            )
-        var = inVar.fn_gradient
+        if not hasattr(inVar, 'mesh'):
+            raise Exception
+
+        if hasattr(inVar, 'fn_gradient'):
+            var = inVar.fn_gradient
+        else:
+            meshVar = inVar.mesh.add_variable(
+                inVar.varDim
+                )
+            var = meshVar.fn_gradient
+            self._meshVar = meshVar
+
+        # inVar = get_meshVar(
+        #     inVar,
+        #     *args,
+        #     hide = False,
+        #     attach = False,
+        #     **kwargs
+        #     )
+        # var = inVar.fn_gradient
 
         self.stringVariants = {}
         self.inVars = [inVar]
@@ -1387,6 +1386,11 @@ class Gradient(Function):
         self.var = var
 
         super().__init__(**kwargs)
+
+    def _partial_update(self):
+        if hasattr(self, '_meshVar'):
+            if hasattr(self.inVar, 'data'):
+                self._meshVar.data[:] = self.inVar.meshdata
 
     @staticmethod
     def mag(*args, **kwargs):
@@ -1655,19 +1659,16 @@ class Surface(Function):
 
         if inVar.substrate is None:
             raise Exception
+        if not hasattr(inVar, 'mesh'):
+            raise Exception
 
         self._surface = \
             inVar.mesh.meshUtils.surfaces[surface]
-
-        if not inVar.meshbased:
-            inVar = get_meshVar(inVar)
 
         var = inVar.mesh.add_variable(
             inVar.varDim,
             inVar.dType
             )
-        var.data[:] = \
-            [np.nan for dim in range(inVar.varDim)]
 
         self.stringVariants = {'surface': surface}
         self.inVars = [inVar]
@@ -1677,10 +1678,13 @@ class Surface(Function):
         super().__init__(**kwargs)
 
     def _partial_update(self):
+        self.var.data[:] = \
+            [np.nan for dim in range(inVar.varDim)]
         self.var.data[self._surface] = \
             np.round(
-                self.inVars[0].evaluate(
-                    self.inVars[0].mesh.data[self._surface]
+                self.inVar.evaluate(
+                    self.inVar.mesh.data[self._surface],
+                    lazy = True
                     ),
                 6
                 )
@@ -1712,6 +1716,12 @@ class Reduction(PlanetVar):
     def __init__(self, *args, **kwargs):
 
         self.mesh = self.substrate = None
+
+        sample_data = self.var.evaluate()
+        self.dType = get_dType(sample_data)
+        self.varType = 'red'
+        self.meshUtils = None
+        self.meshbased = False
 
         super().__init__(**kwargs)
 
@@ -1757,14 +1767,6 @@ class Integral(Reduction):
     opTag = 'Integral'
 
     def __init__(self, inVar, *args, surface = 'volume', **kwargs):
-
-        # inVar = get_meshVar(
-        #     inVar,
-        #     *args,
-        #     hide = True,
-        #     attach = True,
-        #     **kwargs
-        #     )
 
         inVar = convert(inVar)
 
