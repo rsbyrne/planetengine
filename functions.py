@@ -224,10 +224,6 @@ def _dict_convert(inDict):
 
 def get_projection(
         inVar,
-        *args,
-        hide = False,
-        attach = False,
-        **kwargs
         ):
     inVar = convert(inVar)
     if Projection.opTag in inVar.attached:
@@ -235,30 +231,18 @@ def get_projection(
     else:
         outVar = Projection(
             inVar,
-            *args,
-            hide = hide,
-            attach = attach,
-            **kwargs
             )
     return outVar
 
 def get_meshVar(
-        inVar,
-        *args,
-        hide = False,
-        attach = False,
-        **kwargs
+        inVar
         ):
-    inVar = convert(inVar, **kwargs)
+    inVar = convert(inVar)
     if inVar.varType == 'meshVar':
         outVar = inVar
     else:
         outVar = get_projection(
-            inVar,
-            *args,
-            hide = hide,
-            attach = attach,
-            **kwargs
+            inVar
             )
     return outVar
 
@@ -429,21 +413,8 @@ class PlanetVar(UWFn):
         if isinstance(self, Function) \
                 or type(self) == Variable:
             self._minmax.evaluate(self.substrate)
-            if isinstance(self, Function):
-                self.data = self.evaluate(lazy = True)
-            if self.substrate is self.mesh:
-                self.meshdata = self.data
-            else:
-                self.meshdata = self.evaluate(
-                    self.mesh,
-                    lazy = True
-                    )
-        elif isinstance(self, Reduction) \
-                or type(self) == Constant:
+        elif isinstance(self, Reduction):
             self.value = self.evaluate(lazy = True)[0]
-            self.data = np.array(
-                [[val,] for val in self.value]
-                )
 
     @staticmethod
     def _set_weakref(self):
@@ -547,9 +518,9 @@ class Constant(BaseTypes):
             )
         self._currenthash = hasher(self.value)
         self._hashVars = [var]
-        self.data = np.array([[val,] for val in self.value])
+        # self.data = np.array([[val,] for val in self.value])
 
-        sample_data = self.data
+        sample_data = np.array([[val,] for val in self.value])
         self.dType = get_dType(sample_data)
         self.varType = 'const'
 
@@ -588,6 +559,8 @@ class Parameter(BaseTypes):
         self._hashval = random.randint(1, 1e18)
 
         self._update_attributes()
+        sample_data = np.array([[val,] for val in self.value])
+        self.dType = get_dType(sample_data)
 
         super().__init__(**kwargs)
 
@@ -596,7 +569,7 @@ class Parameter(BaseTypes):
 
     def _update_attributes(self):
         self.value = self.var.evaluate()[0]
-        self.data = np.array([[val,] for val in self.value])
+        # self.data = np.array([[val,] for val in self.value])
 
     def _partial_update(self):
         self.var.value = self._paramfunc()
@@ -687,7 +660,7 @@ class Shape(BaseTypes):
         self._currenthash = hasher(self.vertices)
 
         self._hashVars = [self.vertices,]
-        self.data = self.vertices
+        # self.data = self.vertices
 
         self.stringVariants = {'varName': varName}
         self.inVars = []
@@ -1362,23 +1335,8 @@ class Gradient(Function):
         if not hasattr(inVar, 'mesh'):
             raise Exception
 
-        if hasattr(inVar, 'fn_gradient'):
-            var = inVar.fn_gradient
-        else:
-            meshVar = inVar.mesh.add_variable(
-                inVar.varDim
-                )
-            var = meshVar.fn_gradient
-            self._meshVar = meshVar
-
-        # inVar = get_meshVar(
-        #     inVar,
-        #     *args,
-        #     hide = False,
-        #     attach = False,
-        #     **kwargs
-        #     )
-        # var = inVar.fn_gradient
+        inVar = get_meshVar(inVar)
+        var = inVar.fn_gradient
 
         self.stringVariants = {}
         self.inVars = [inVar]
@@ -1386,11 +1344,6 @@ class Gradient(Function):
         self.var = var
 
         super().__init__(**kwargs)
-
-    def _partial_update(self):
-        if hasattr(self, '_meshVar'):
-            if hasattr(self.inVar, 'data'):
-                self._meshVar.data[:] = self.inVar.meshdata
 
     @staticmethod
     def mag(*args, **kwargs):
@@ -1665,10 +1618,12 @@ class Surface(Function):
         self._surface = \
             inVar.mesh.meshUtils.surfaces[surface]
 
-        var = inVar.mesh.add_variable(
-            inVar.varDim,
-            inVar.dType
-            )
+        inVar = get_meshVar(inVar)
+
+        # var = inVar.mesh.add_variable(
+        #     inVar.varDim,
+        #     inVar.dType
+        #     )
 
         self.stringVariants = {'surface': surface}
         self.inVars = [inVar]
