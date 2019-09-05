@@ -53,10 +53,6 @@ def get_opHash(varClass, *hashVars, stringVariants = {}):
         pass
         # random_hash = random.randint(0, 1e18)
         # hashList.append(random_hash)
-    elif varClass is Vanilla:
-        assert len(hashVars) == 1
-        var = UWFn.convert(hashVars[0])
-        hashList.append(var.__hash__())
     else:
         rootVars = set()
         for hashVar in hashVars:
@@ -276,9 +272,9 @@ class PlanetVar(UWFn):
         if len(self.inVars) == 1:
             self.inVar = self.inVars[0]
 
-        if not hasattr(self, '_hashVars'):
-            assert not isinstance(self, BaseTypes)
-            self._hashVars = self.inVars
+        # if not hasattr(self, '_hashVars'):
+        #     assert not isinstance(self, BaseTypes)
+        #     self._hashVars = self.inVars
 
         # Attaching, if necessary:
 
@@ -724,6 +720,8 @@ class Function(PlanetVar):
                 sample_data = self.var.evaluate(self.substrate.data[0:1])
         self.dType = get_dType(sample_data)
         self.varDim = sample_data.shape[1]
+
+        self._hashVars = self.inVars
 
         super().__init__(**kwargs)
 
@@ -1686,12 +1684,12 @@ class Surface(Function):
         self._surface = \
             inVar.mesh.meshUtils.surfaces[surface]
 
-        inVar = get_meshVar(inVar)
+        # var = get_meshVar(inVar)
 
-        # var = inVar.mesh.add_variable(
-        #     inVar.varDim,
-        #     inVar.dType
-        #     )
+        var = inVar.mesh.add_variable(
+            inVar.varDim,
+            inVar.dType
+            )
 
         self.stringVariants = {'surface': surface}
         self.inVars = [inVar]
@@ -1702,7 +1700,7 @@ class Surface(Function):
 
     def _partial_update(self):
         self.var.data[:] = \
-            [np.nan for dim in range(inVar.varDim)]
+            [np.nan for dim in range(self.inVar.varDim)]
         self.var.data[self._surface] = \
             np.round(
                 self.inVar.evaluate(
