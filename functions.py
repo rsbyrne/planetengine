@@ -912,50 +912,90 @@ class HandleNaN(Function):
     # @staticmethod
     # def max()
 
+
+
 class Clip(Function):
 
     opTag = 'Clip'
 
-    def __init__(self, inVar, lBnd, uBnd, *args, **kwargs):
+    def __init__(
+            self,
+            inVar,
+            lBnd = None,
+            lClipVal = 'null',
+            uBnd = None,
+            uClipVal = 'null',
+            **kwargs
+            ):
 
-        inVar, lBnd, uBnd = inVars = [
-            convert(arg) for arg in (inVar, lBnd, uBnd)
-            ]
-
-        var = fn.branching.conditional([
-            (inFn < lBnd, lBnd),
-            (inFn > uBnd, uBnd),
-            (True, inFn)
-            ])
-
-        self.stringVariants = {}
-        self.inVars = inVars
-        self.parameters = []
-        self.var = var
-
-        super().__init__(**kwargs)
-
-class Interval(Function):
-
-    opTag = 'Interval'
-
-    def __init__(self, inVar, lBnd, uBnd, *args, **kwargs):
-
-        inVar, lBnd, uBnd = inVars = convert(inVar, lBnd, uBnd)
-
+        inVar = convert(inVar)
+        inVars = [inVar]
+        stringVariants = {}
+        parameters = []
+        clauses = []
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var = fn.branching.conditional([
-            (inVar <= lBnd, nullVal),
-            (inVar >= uBnd, nullVal),
-            (True, inVar),
-            ])
 
-        self.stringVariants = {}
-        self.inVars = [inVar, lBnd, uBnd]
-        self.parameters = []
+        if lBnd is None:
+            stringVariants['lower'] = 'open'
+        else:
+            lBnd = convert(lBnd)
+            if not lBnd in inVars:
+                inVars.append(lBnd)
+            lBnd = Parameter(lBnd.minFn)
+            parameters.append(lBnd)
+            if lClipVal is 'null':
+                lClipVal = nullVal
+                stringVariants['lower'] = 'null'
+            elif lClipVal == 'fill':
+                lClipVal = lBnd
+                stringVariants['lower'] = 'fill'
+            else:
+                raise Exception
+            clauses.append((inVar < lBnd, lClipVal))
+
+        if uBnd is None:
+            stringVariants['lower'] = 'open'
+        else:
+            uBnd = convert(uBnd)
+            if not uBnd in inVars:
+                inVars.append(uBnd)
+            uBnd = Parameter(uBnd.maxFn)
+            parameters.append(uBnd)
+            if uClipVal is 'null':
+                uClipVal = nullVal
+                stringVariants['upper'] = 'null'
+            elif uClipVal == 'fill':
+                uClipVal = uBnd
+                stringVariants['upper'] = 'fill'
+            else:
+                raise Exception
+            clauses.append((inVar > uBnd, uClipVal))
+
+        clauses.append((True, inVar))
+
+        if stringVariants['lower'] == stringVariants['upper']:
+            stringVariants['both'] = stringVariants['lower']
+            del stringVariants['lower']
+            del stringVariants['upper']
+
+        var = fn.branching.conditional(clauses)
+
+        self.stringVariants = stringVariants
+        self.inVars = inVars
+        self.parameters = parameters
         self.var = var
 
         super().__init__(**kwargs)
+
+    @staticmethod
+    def torange(inVar, clipVar, **kwargs):
+        inVar, clipVar = convert(inVar, clipVar)
+        return Clip(
+            inVar,
+            lBnd = clipVar,
+            uBnd = clipVar,
+            **kwargs
+            )
 
 class Operations(Function):
 
@@ -1438,6 +1478,34 @@ class Range(Function):
     def outrange(*args, **kwargs):
         return Range(*args, operation = 'out', **kwargs)
 
+class Select(Function):
+
+    opTag = 'Select'
+
+    def __init__(self, inVar, selectVal, outVar = None, **kwargs):
+
+        inVar, selectVal = inVars = convert(
+            inVar, selectVal
+            )
+
+        if outVar is None:
+            outVar = inVar
+        else:
+            outVar = convert(outVar)
+            inVars.append(outVar)
+        nullVal = [np.nan for dim in range(inVar.varDim)]
+        var = fn.branching.conditional([
+            (fn.math.abs(inVar - selectVal) < 1e-18, outVar),
+            (True, nullVal)
+            ])
+
+        self.stringVariants = {}
+        self.inVars = inVars
+        self.parameters = []
+        self.var = var
+
+        super().__init__(**kwargs)
+
 class Filter(Function):
 
     opTag = 'Filter'
@@ -1455,8 +1523,8 @@ class Filter(Function):
             inVars.append(outVar)
         nullVal = [np.nan for dim in range(inVar.varDim)]
         var = fn.branching.conditional([
-            (fn.math.abs(inVar - filterVal) < 1e-18, outVar),
-            (True, nullVal)
+            (fn.math.abs(inVar - filterVal) < 1e-18, nullVal),
+            (True, outVar)
             ])
 
         self.stringVariants = {}
