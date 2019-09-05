@@ -432,9 +432,9 @@ class Frame:
             scripts = self.scripts,
             # params = self.params,
             # configs = self.configs,
-            self.inputs = inputs
+            inputs = self.inputs,
             stamps = self.stamps,
-            inFrames = self.inFrames
+            inFrames = self.inFrames,
             )
 
         if type(self.system.mesh) == uw.mesh._spherical_mesh.FeMesh_Annulus:

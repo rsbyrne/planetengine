@@ -88,7 +88,7 @@ class Checkpointer:
                 for dictname, inputDict in self.inputs.items():
                     filename = os.path.join(path, dictname + '.json')
                     with open(filename, 'w') as file:
-                         json.dump(inputDict, filename)
+                         json.dump(inputDict, file)
 
                 # paramsFilename = os.path.join(path, 'params.json')
                 # with open(paramsFilename, 'w') as file:
