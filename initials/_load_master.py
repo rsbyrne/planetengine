@@ -29,7 +29,7 @@ class IC:
             'sourceVarName': sourceVarName,
             'loadStep': loadStep
             }
-        self.script = __file__
+        self.scripts = [__file__,]
 
         self.LOADTYPE = None
 

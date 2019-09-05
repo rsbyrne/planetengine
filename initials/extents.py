@@ -10,7 +10,7 @@ class IC:
             ):
 
         # HOUSEKEEPING: this should always be here
-        self.script = __file__
+        self.scripts = [__file__,]
         self.inputs = {}
 
         if shapes is None:

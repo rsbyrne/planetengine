@@ -11,7 +11,7 @@ class IC:
 
         self.inputs = locals().copy()
         del self.inputs['self']
-        self.script = __file__
+        self.scripts = [__file__,]
 
         self.valRange = (0., 1.)
 

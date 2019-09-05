@@ -16,7 +16,7 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     inputs = locals().copy()
-    script = __file__
+    scripts = [__file__,]
 
     ### MESH & MESH VARIABLES ###
 

@@ -32,7 +32,7 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     inputs = locals().copy()
-    script = __file__
+    scripts = [__file__,]
 
     ### MESH & MESH VARIABLES ###
 
@@ -99,7 +99,7 @@ def build(
         )
 
     ### BOUNDARIES ###
-    
+
     inner = mesh.specialSets["inner"]
     outer = mesh.specialSets["outer"]
     sides = mesh.specialSets["MaxJ_VertexSet"] + mesh.specialSets["MinJ_VertexSet"]
@@ -259,7 +259,7 @@ def build(
             )
         # remove null space - the solid body rotation velocity contribution
         uw.libUnderworld.StgFEM.SolutionVector_RemoveVectorSpace(
-            stokes._velocitySol._cself, 
+            stokes._velocitySol._cself,
             stokes._vnsVec._cself
             )
 

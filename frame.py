@@ -81,13 +81,13 @@ def load_frame(
             options = json.load(json_file)
     options = uw.mpi.comm.bcast(options, root = 0)
 
-    systemscript = utilities.local_import(os.path.join(path, '_systemscript.py'))
+    systemscript = utilities.local_import(os.path.join(path, '_systemscript_0.py'))
     system = systemscript.build(**params)
 
     initials = {}
     for varName in sorted(system.varsOfState):
         initials[varName] = {**configs[varName]}
-        initialsLoadName = '_' + varName + '_initials.py'
+        initialsLoadName = '_' + varName + '_initials_0.py'
         module = utilities.local_import(
             os.path.join(path, initialsLoadName)
             )
@@ -177,7 +177,7 @@ def find_checkpoints(path, stamps):
     checkpoints_found = uw.mpi.comm.bcast(checkpoints_found, root = 0)
     return checkpoints_found
 
-def make_stamps(
+def _make_stamps(
         params,
         systemscripts,
         options,
@@ -219,9 +219,54 @@ def make_stamps(
     else:
         hashID = prefix + stamps['allstamp']
 
+    for stampKey, stampVal in stamps.items():
+        stamps[stampKey] = [stampVal, wordhashFn(stampVal)]
+
     message("Stamps made.")
 
     return stamps, hashID
+
+def _scripts_and_stamps(
+        system,
+        initials
+        ):
+
+    scripts = {}
+
+    systemscripts = []
+    for index, script in enumerate(system.scripts):
+        scriptname = 'systemscript' + '_' + str(index)
+        scripts[scriptname] = script
+        systemscripts.append(script)
+
+    configs = {}
+    initialscripts = []
+    for varName, IC in sorted(initials.items()):
+        for index, script in enumerate(IC.scripts):
+            scriptname = varName + '_initials_' + str(index)
+            scripts[scriptname] = script
+            initialscripts.append(script)
+        configs[varName] = IC.inputs
+
+    params = system.inputs
+    options = {}
+    configs = configs
+
+    stamps, hashID = _make_stamps(
+        params,
+        systemscripts,
+        options,
+        configs,
+        initialscripts
+        )
+
+    inputs = {
+        'params': params,
+        'options': options,
+        'configs': configs,
+        }
+
+    return inputs, stamps, hashID, scripts
 
 def make_frame(
         system,
@@ -240,28 +285,11 @@ def make_frame(
     initials condition classes.
     '''
 
-    message("Making a new frame...")
-
-    scripts = {
-        'systemscript': system.script
-        }
-
-    configs = {}
-    for varName, IC in sorted(initials.items()):
-        scripts[varName + '_initials'] = IC.script
-        configs[varName] = IC.inputs
-
-    params = system.inputs
-    options = {}
-    configs = configs
-
-    stamps, hashID = make_stamps(
-        params,
-        [system.script,],
-        options,
-        configs,
-        [IC.script for varName, IC in sorted(initials.items())]
-        )
+    inputs, stamps, hashID, scripts = \
+        _scripts_and_stamps(system, initials)
+    params = inputs['params']
+    options = inputs['options']
+    configs = inputs['configs']
 
     if instanceID == None:
         instanceID = hashID
@@ -294,11 +322,10 @@ def make_frame(
             with open(os.path.join(path, 'stamps.json')) as json_file:
                 loadstamps = json.load(json_file)
             shutil.rmtree(path)
-            print(stamps)
-            print(loadstamps)
             assert loadstamps == stamps
 
     if directory_state == 'clean':
+        message("Making a new frame...")
         frame = Frame(
             system,
             initials,
@@ -307,12 +334,11 @@ def make_frame(
             )
 
     else:
+        message("Preexisting frame found! Loading...")
         frame = load_frame(
             outputPath,
             instanceID
             )
-
-    message("Frame made.")
 
     return frame
 
@@ -347,7 +373,7 @@ class Frame:
         message("Building frame...")
 
         self.system = system
-        self.observers = set()
+        self.observers = {}
         self.initials = initials
         self.outputPath = outputPath
         self.instanceID = instanceID
@@ -356,30 +382,13 @@ class Frame:
         self._is_child = _is_child
         self._autobackup = _autobackup
 
-        scripts = {
-            'systemscript': system.script
-            }
+        inputs, stamps, hashID, scripts = \
+            _scripts_and_stamps(system, initials)
 
-        configs = {}
-        for varName, IC in sorted(initials.items()):
-            scripts[varName + '_initials'] = IC.script
-            configs[varName] = IC.inputs
-
-        params = system.inputs
-        options = {}
-        configs = configs
-
-        stamps, hashID = make_stamps(
-            params,
-            [system.script,],
-            options,
-            configs,
-            [IC.script for varName, IC in sorted(initials.items())]
-            )
-
-        self.params = params
-        self.options = options
-        self.configs = configs
+        self.inputs = inputs
+        self.params = inputs['params']
+        self.options = inputs['options']
+        self.configs = inputs['configs']
         self.stamps = stamps
         self.hashID = hashID
         self.scripts = scripts
@@ -417,11 +426,6 @@ class Frame:
         self.analysers = []
         self.collectors = []
         self.figs = []
-        self.inputs = {
-            'params': params,
-            'options': options,
-            'configs': configs,
-            }
 
         self.checkpointer = checkpoint.Checkpointer(
             step = self.system.step,
