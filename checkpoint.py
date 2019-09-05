@@ -28,7 +28,7 @@ class Checkpointer:
             # params = None,
             # configs = None,
             # options = None,
-            inputs = {}
+            inputs = {},
             step = None,
             modeltime = None,
             inFrames = [],
