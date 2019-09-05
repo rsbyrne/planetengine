@@ -19,7 +19,6 @@ from .wordhash import wordhash as wordhashFn
 from . import checkpoint
 from .initials import apply
 from .utilities import message
-from . import observer
 from .visualisation import QuickFig
 
 def load_frame(

@@ -1,92 +1,78 @@
-import underworld as uw
-from underworld import function as fn
-import math
-import time
-import glucifer
-import numpy as np
-import math
-
-from . import utilities
-from . import analysis
-from . import visualisation
 from .utilities import Grouper
+from .utilities import hashstamp
+from .wordhash import wordhash as wordhashFn
+from .checkpoint import Checkpointer
+from .frame import _scripts_and_stamps
+import underworld as uw
 
-def build():
+class Observer:
 
-    ### HOUSEKEEPING: IMPORTANT! ###
+    figs = []
+    collectors = []
 
-#     inputs = locals().copy()
-#     script = __file__
-#     name = 'standard'
-# #     hashID = utilities.hashstamp(script, inputs)
-#
-#     def attach(system):
-#
-#         step = system.step
-#         modeltime = system.modeltime
-#         if hasattr(system, 'obsVars'):
-#             obsVars = [
-#                 *sorted(system.varsOfState.items()),
-#                 *[varTuple for varTuple in sorted(system.obsVars.items()) \
-#                     if not varTuple in system.varsOfState.items()]
-#                 ]
-#         else:
-#             obsVars = sorted(system.varsOfState.items())
-#
-#         ### MAKE STATS ###
-#
-#         statsDict = {}
-#         formatDict = {}
-#
-#         for varName, var in obsVars:
-#
-#             pevar = standardise(var)
-#             var = pevar.var
-#
-#             standardIntegralSuite = {
-#                 'surface': ['volume', 'inner', 'outer'],
-#                 'comp': [None, 'ang', 'rad'],
-#                 'gradient': [None, 'ang', 'rad']
-#                 }
-#
-#             for inputDict in utilities.suite_list(standardIntegralSuite):
-#
-#                 try:
-#
-#                     anVar = analysis.Analyse.StandardIntegral(
-#                         var,
-#                         **inputDict
-#                         )
-#                     statsDict[varName + '_' + anVar.opTag] = anVar
-#
-#                     formatDict[varName + '_' + anVar.opTag] = "{:.2f}"
-#
-#                 except:
-#                     pass
-#
-#         analyser = analysis.Analyser(
-#             name,
-#             statsDict,
-#             formatDict,
-#             step,
-#             modeltime
-#             )
-#         analysers = [analyser,] # MAGIC NAME: MUST BE DEFINED
-#
-#         maincollector = analysis.DataCollector(analysers)
-#         collectors = [maincollector,] # MAGIC NAME: MUST BE DEFINED
-#
-#         ### FIGS ###
-#
-#         fig = visualisation.QuickFig(
-#             *obsVars,
-#             figname = name,
-#             colourBar = False
-#             )
-#         figs = [fig,] # MAGIC NAME: MUST BE DEFINED
-#
-#         return analysers, collectors, figs
-#
-#     ### HOUSEKEEPING: IMPORTANT! ###
+    def __init__(
+            self,
+            system,
+            initials,
+            scriptlist,
+            **kwargs
+            ):
 
-    return Grouper(locals())
+        obsInp = kwargs
+
+        scripts = {}
+        for index, script in enumerate(scriptlist):
+            scriptname = 'observerscript_' + str(index)
+            scripts[scriptname] = script
+
+        # Making stamps and stuff
+
+        _model_inputs, _model_stamps, _model_hashID, _model_scripts = \
+            _scripts_and_stamps(system, initials)
+
+        stamps = {}
+        if uw.mpi.rank == 0:
+            stamps = {
+                'inputs': hashstamp(obsInp),
+                'scripts': hashstamp(
+                    [open(script) for scriptname, script \
+                        in sorted(scripts.items())]
+                    )
+                }
+            for stampKey, stampVal in stamps.items():
+                stamps[stampKey] = [stampVal, wordhashFn(stampVal)]
+            stamps['model_stamps'] = [_model_hashID, _model_stamps]
+        stamps = uw.mpi.comm.bcast(stamps, root = 0)
+
+        scripts.update(_model_scripts)
+        inputs = {
+            'obsInp': obsInp,
+            **_model_inputs,
+            }
+
+        # Making the checkpointer:
+
+        checkpointer = Checkpointer(
+            stamps = stamps,
+            step = system.step,
+            modeltime = system.modeltime,
+            figs = self.figs,
+            dataCollectors = self.collectors,
+            scripts = scripts,
+            inputs = inputs
+            )
+
+        self.checkpointer = checkpointer
+        self.inputs = inputs
+        self.scripts = scripts
+        self.stamps = stamps
+        self.system = system
+        self.initials = initials
+        self.step = system.step
+        self.modeltime = system.modeltime
+
+    def checkpoint(self, path):
+        self.checkpointer.checkpoint(path)
+
+    def prompt(self):
+        pass

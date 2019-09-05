@@ -11,6 +11,7 @@ from . import fieldops
 from . import meshutils
 from . import functions
 from . import visualisation
+from . import observer
 
 from .utilities import message
 from .utilities import log
