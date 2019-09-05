@@ -347,7 +347,7 @@ class Frame:
         message("Building frame...")
 
         self.system = system
-#         self.observers = observers
+        self.observers = set()
         self.initials = initials
         self.outputPath = outputPath
         self.instanceID = instanceID
@@ -417,6 +417,11 @@ class Frame:
         self.analysers = []
         self.collectors = []
         self.figs = []
+        self.inputs = {
+            'params': params,
+            'options': options,
+            'configs': configs,
+            }
 
         self.checkpointer = checkpoint.Checkpointer(
             step = self.system.step,
@@ -425,8 +430,9 @@ class Frame:
             figs = [self.fig], #self.figs,
             dataCollectors = self.collectors,
             scripts = self.scripts,
-            params = self.params,
-            configs = self.configs,
+            # params = self.params,
+            # configs = self.configs,
+            self.inputs = inputs
             stamps = self.stamps,
             inFrames = self.inFrames
             )
@@ -497,12 +503,19 @@ class Frame:
             self.checkpoints.append(self.step)
             self.checkpoints = sorted(set(self.checkpoints))
 
+            # CHECKPOINT OBSERVERS!!!
+            for observerName, observer \
+                    in sorted(self.observers.items()):
+                observer.checkpoint(path)
+
         else:
 
             self.checkpointer.checkpoint(path)
 
             if archive_remote:
                 self.archive(path)
+
+            # no need to checkpoint observers for remote
 
         if self.autoarchive:
             self.archive()
@@ -513,6 +526,9 @@ class Frame:
     def update(self):
         self.step = self.system.step.value
         self.modeltime = self.system.modeltime.value
+        for observerName, observer \
+                in sorted(self.observers.items()):
+            observer.prompt()
 
     def report(self):
         message(
