@@ -272,7 +272,27 @@ def _scripts_and_stamps(
 
 class _Frame:
 
+    _required_attributes = {
+        'system', # must be a 'system'-like object
+        'initials', # must be dict (key = str, val = IC)
+        'outputPath', # must be str
+        'instanceID', # must be str
+        '_is_child', # must be bool
+        'inFrames', # must be list of Frames objects
+        '_autoarchive', # must be bool
+        'checkpoint', # must take pos arg (path)
+        'load_checkpoint', # must take pos arg (step)
+        'stamps', # must be dict
+        'step', # must be int
+        }
+
     def __init__(self):
+
+        for attrname in self._required_attributes:
+            if not hasattr(self, attrname):
+                raise Exception(
+                    "Self requires attribute: '" + attrname + "'"
+                    )
 
         assert self.system.varsOfState.keys() == self.initials.keys()
 
@@ -405,10 +425,8 @@ class _Frame:
 
     def branch(self, extPath, return_frame = False, archive_remote = True):
         newpath = os.path.join(extPath, self.instanceID)
-        self.checkpoint(
-            newpath,
-            archive_remote = archive_remote
-            )
+        self.checkpoint(newpath)
+        self.archive(newpath)
         if return_frame:
             newframe = load_frame(extPath, self.instanceID)
             return newframe
@@ -768,7 +786,7 @@ class Frame(_Frame):
             self.checkpoint()
         self.status = "ready"
 
-    def checkpoint(self, path = None, archive_remote = False):
+    def checkpoint(self, path = None):
 
         if self.archived:
             self.unarchive()
@@ -800,9 +818,6 @@ class Frame(_Frame):
         else:
 
             self.checkpointer.checkpoint(path)
-
-            if archive_remote:
-                self.archive(path)
 
             # no need to checkpoint observers for remote
 
@@ -885,3 +900,43 @@ class Frame(_Frame):
                 self.archive()
 
             message("Checkpoint successfully loaded!")
+
+# An example of a custom class that inherits from _Frame:
+class CustomFrame(_Frame):
+    def __init__(self):
+
+        system = planetengine.systems.arrhenius.build(res = 16)
+        initials = {'temperatureField': planetengine.initials.sinusoidal.IC(freq = 1.)}
+        planetengine.initials.apply(
+            initials,
+            system,
+            )
+        system.solve()
+
+        self.system = system
+        self.initials = initials
+        self.outputPath = '/home/jovyan/workspace/data/test'
+        self.instanceID = 'testFrame'
+        self.stamps = {'a': 1}
+        self.step = 0
+        self.onDisk = False
+        self._is_child = False
+        self.inFrames = []
+        self._autoarchive = True
+        checkpointer = checkpoint.Checkpointer(
+            stamps = self.stamps,
+            step = system.step,
+            modeltime = system.modeltime,
+            )
+        mypath = os.path.join(self.outputPath, self.instanceID)
+        def checkpoint(path = None):
+            if path is None:
+                path = mypath
+            checkpointer.checkpoint(path)
+            self.onDisk = True
+        self.checkpoint = checkpoint
+        def load_checkpoint(step):
+            pass
+        self.load_checkpoint = load_checkpoint
+
+        super().__init__()
