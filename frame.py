@@ -20,6 +20,7 @@ from . import checkpoint
 from .initials.load import IC as _loadIC
 from .initials import apply
 from .utilities import message
+from .utilities import check_reqs
 from .visualisation import QuickFig
 
 def expose_tar(path):
@@ -286,16 +287,9 @@ class _Frame:
         'step', # must be int
         }
 
-    def _check_reqs(self):
-        for attrname in self._required_attributes:
-            if not hasattr(self, attrname):
-                raise Exception(
-                    "Self requires attribute: '" + attrname + "'"
-                    )
-
     def __init__(self):
 
-        _check_reqs()
+        check_reqs(self)
 
         assert self.system.varsOfState.keys() == self.initials.keys()
 

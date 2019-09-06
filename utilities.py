@@ -30,6 +30,13 @@ def log(text, outputPath = '', outputName = 'diaglog.txt'):
         file.write('\n')
         file.close()
 
+def check_reqs(obj):
+    for attrname in obj._required_attributes:
+        if not hasattr(obj, attrname):
+            raise Exception(
+                "Object requires attribute: '" + attrname + "'"
+                )
+
 def unpack_var(*args):
 
     if len(args) == 1 and type(args[0]) == tuple:
