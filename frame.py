@@ -286,13 +286,16 @@ class _Frame:
         'step', # must be int
         }
 
-    def __init__(self):
-
+    def _check_reqs(self):
         for attrname in self._required_attributes:
             if not hasattr(self, attrname):
                 raise Exception(
                     "Self requires attribute: '" + attrname + "'"
                     )
+
+    def __init__(self):
+
+        _check_reqs()
 
         assert self.system.varsOfState.keys() == self.initials.keys()
 

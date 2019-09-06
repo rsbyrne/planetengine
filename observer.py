@@ -5,7 +5,7 @@
 # from .frame import _scripts_and_stamps
 # from .frame import _Frame
 # import underworld as uw
-#
+# #
 # def make_observer_stamps_inputs(system, initials, options):
 #     stamps = {}
 #     _model_inputs, _model_stamps, _model_scripts = \
@@ -34,8 +34,8 @@
 #             self,
 #             system,
 #             initials,
-#             scriptlist,
-#             options = {},
+#             obsInps = {},
+#             subObservers = [],
 #             outputPath = '',
 #             _autoarchive = True,
 #             _parentFrame = None,
@@ -44,35 +44,30 @@
 #             ):
 #
 #         scripts = {}
-#         for index, script in enumerate(scriptlist):
+#         for index, subObserver in enumerate(subObservers):
 #             scriptname = 'observerscript_' + str(index)
 #             scripts[scriptname] = script
 #
 #         # Making stamps and stuff
 #
-#         _model_inputs, _model_stamps, _model_hashID, _model_scripts = \
+#         _model_inputs, _model_stamps, _model_scripts = \
 #             _scripts_and_stamps(system, initials)
+#
+#         self.inHashID = 'pemod_' + _model_stamps['allstamp'][1]
 #
 #         stamps = {}
 #         if uw.mpi.rank == 0:
-#             stamps.update(_model_stamps)
 #             stamps = {
-#                 'options': hashstamp(options),
+#                 'obsInps': hashstamp(obsInps),
 #                 'scripts': hashstamp(
 #                     [open(script) for scriptname, script \
 #                         in sorted(scripts.items())]
 #                     )
 #                 }
-#             stamps['allstamp'] = hashstamp(stamps)
-#             for stampKey, stampVal in stamps.items():
-#                 stamps[stampKey] = [stampVal, wordhashFn(stampVal)]
-#         stamps = uw.mpi.comm.bcast(stamps, root = 0)
-#
-#         scripts.update(_model_scripts)
-#         inputs = {
-#             'options': obsInp,
-#             **_model_inputs,
-#             }
+#         #     stamps['allstamp'] = hashstamp(stamps)
+#         #     for stampKey, stampVal in stamps.items():
+#         #         stamps[stampKey] = [stampVal, wordhashFn(stampVal)]
+#         # stamps = uw.mpi.comm.bcast(stamps, root = 0)
 #
 #         # Making the checkpointer:
 #
@@ -83,7 +78,7 @@
 #             figs = self.figs,
 #             dataCollectors = self.collectors,
 #             scripts = scripts,
-#             inputs = inputs
+#             inputs = {'obsInps': obsInps}
 #             )
 #
 #         self.checkpointer = checkpointer
