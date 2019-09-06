@@ -42,28 +42,27 @@ def expose_tar(path):
                 "Archive contained the wrong model file somehow."
             os.remove(tarpath)
 
-def load_inputs(inputNames, path):
-    inputs = {}
-    for inputName in inputNames:
-        filename = inputName + '.json'
-        inputDict = {}
-        if uw.mpi.rank == 0:
-            with open(os.path.join(path, filename)) as json_file:
-                inputDict = json.load(json_file)
-        inputDict = uw.mpi.comm.bcast(inputDict, root = 0)
-        inputs[inputName] = inputDict
-    return inputs
+def load_inputs(inputName, path):
+    filename = inputName + '.json'
+    inputDict = {}
+    if uw.mpi.rank == 0:
+        with open(os.path.join(path, filename)) as json_file:
+            inputDict = json.load(json_file)
+    inputDict = uw.mpi.comm.bcast(inputDict, root = 0)
+    return inputDict
 
-def load_system(params, path):
-    systemscript = utilities.local_import(os.path.join(path, '_systemscript_0.py'))
+def load_system(path):
+    params = load_inputs('params', path)
+    systemscript = utilities.local_import(os.path.join(path, 'systemscript_0.py'))
     system = systemscript.build(**params)
-    return system
+    return system, params
 
-def load_initials(system, configs, path):
+def load_initials(system, path):
+    configs = load_inputs('configs', path)
     initials = {}
     for varName in sorted(system.varsOfState):
         initials[varName] = {**configs[varName]}
-        initialsLoadName = '_' + varName + '_initials_0.py'
+        initialsLoadName = varName + '_initialscript_0.py'
         module = utilities.local_import(
             os.path.join(path, initialsLoadName)
             )
@@ -81,7 +80,30 @@ def load_initials(system, configs, path):
             initials[varName] = module.IC(
                 **configs[varName]
                 )
-    return initials
+    return initials, configs
+
+# def load_observers(system, initials, path):
+#     options = load_inputs('options', path)
+#     observers = []
+
+
+def find_checkpoints(path, stamps):
+    checkpoints_found = []
+    if uw.mpi.rank == 0:
+        for directory in glob(path + '/*/'):
+            basename = os.path.basename(directory[:-1])
+            if (basename.isdigit() and len(basename) == 8):
+                with open(os.path.join(directory, 'stamps.json')) as json_file:
+                    loadstamps = json.load(json_file)
+#                 with open(os.path.join(path, 'inputs.txt')) as json_file:
+#                     loadconfig = json.load(json_file)
+                assert loadstamps == stamps, \
+                    "Bad checkpoint found! Aborting."
+                message("Found checkpoint: " + basename)
+                checkpoints_found.append(int(basename))
+        checkpoints_found = sorted(list(set(checkpoints_found)))
+    checkpoints_found = uw.mpi.comm.bcast(checkpoints_found, root = 0)
+    return checkpoints_found
 
 def load_frame(
         outputPath = '',
@@ -109,12 +131,11 @@ def load_frame(
 
     expose_tar(path)
 
-    inputNames = {'params', 'configs', 'options'}
-    inputs = load_inputs(inputNames, path)
+    system, params = load_system(path)
 
-    system = load_system(inputs['params'], path)
+    initials, configs = load_initials(system, path)
 
-    initials = load_initials(system, inputs['configs'], path)
+    # observers, options = load_observers(system, initials, path)
 
     frame = Frame(
         system = system,
@@ -149,32 +170,13 @@ def load_frame(
 
     return frame
 
-def find_checkpoints(path, stamps):
-    checkpoints_found = []
-    if uw.mpi.rank == 0:
-        for directory in glob(path + '/*/'):
-            basename = os.path.basename(directory[:-1])
-            if (basename.isdigit() and len(basename) == 8):
-                with open(os.path.join(directory, 'stamps.json')) as json_file:
-                    loadstamps = json.load(json_file)
-#                 with open(os.path.join(path, 'inputs.txt')) as json_file:
-#                     loadconfig = json.load(json_file)
-                assert loadstamps == stamps, \
-                    "Bad checkpoint found! Aborting."
-                message("Found checkpoint: " + basename)
-                checkpoints_found.append(int(basename))
-        checkpoints_found = sorted(list(set(checkpoints_found)))
-    checkpoints_found = uw.mpi.comm.bcast(checkpoints_found, root = 0)
-    return checkpoints_found
-
 def _make_stamps(
         params,
         systemscripts,
-        options,
+        # options,
+        # observerscripts,
         configs,
-        initialscripts,
-        _use_wordhash = True,
-        prefix = 'pemod_'
+        initialscripts
         ):
 
     message("Making stamps...")
@@ -186,7 +188,10 @@ def _make_stamps(
             'systemscripts': utilities.hashstamp(
                 [open(script) for script in systemscripts]
                 ),
-            'options': utilities.hashstamp(options),
+            # 'options': utilities.hashstamp(options),
+            # 'observerscripts': utilities.hashstamp(
+            #     [open(script) for script in observerscripts]
+            #     ),
             'configs': utilities.hashstamp(configs),
             'initialscripts': utilities.hashstamp(
                 [open(script) for script in initialscripts]
@@ -198,6 +203,9 @@ def _make_stamps(
         stamps['system'] = utilities.hashstamp(
             (stamps['params'], stamps['systemscripts'])
             )
+        # stamps['observers'] = utilities.hashstamp(
+        #     (stamps['options'], stamps['observers'])
+        #     )
         stamps['initials'] = utilities.hashstamp(
             (stamps['configs'], stamps['initialscripts'])
             )
@@ -211,7 +219,8 @@ def _make_stamps(
 
 def _scripts_and_stamps(
         system,
-        initials
+        initials,
+        # observers
         ):
 
     scripts = {}
@@ -221,109 +230,43 @@ def _scripts_and_stamps(
         scriptname = 'systemscript' + '_' + str(index)
         scripts[scriptname] = script
         systemscripts.append(script)
+    params = system.inputs
 
     configs = {}
     initialscripts = []
     for varName, IC in sorted(initials.items()):
         for index, script in enumerate(IC.scripts):
-            scriptname = varName + '_initials_' + str(index)
+            scriptname = varName + '_initialscript_' + str(index)
             scripts[scriptname] = script
             initialscripts.append(script)
         configs[varName] = IC.inputs
 
-    params = system.inputs
-    options = {}
-    configs = configs
+    # options = {}
+    # observerscripts = []
+    # for observer in observers:
+    #     observerName = observer.hashID
+    #     for index, script in enumerate(observer.scripts):
+    #         scriptname = observerName + '_observerscript_' + str(index)
+    #         scripts[scriptname] = script
+    #         observerscripts.append(script)
+    #     options[observerName] = observer.inputs
 
     stamps = _make_stamps(
         params,
         systemscripts,
-        options,
+        # options,
+        # observerscripts,
         configs,
         initialscripts
         )
 
     inputs = {
         'params': params,
-        'options': options,
+        # 'options': options,
         'configs': configs,
         }
 
     return inputs, stamps, scripts
-
-def make_frame(
-        system,
-        initials,
-        outputPath = '',
-        instanceID = None,
-        ):
-    '''
-    'system' should be the object produced by the 'build' call
-    of a legitimate 'systemscript'.
-    'observer'... ?
-    'initials' should be a dictionary with an entry for each var mentioned
-    in the system 'varsOfState' attribute, indexed by var name, e.g.:
-    initials = {'temperatureField': tempIC, 'materialVar': materialIC}
-    ...where 'tempIC' and 'materialIC' are instances of legitimate
-    initials condition classes.
-    '''
-
-    inputs, stamps, scripts = \
-        _scripts_and_stamps(system, initials)
-    params = inputs['params']
-    options = inputs['options']
-    configs = inputs['configs']
-
-    if instanceID is None:
-        instanceID = 'pemod_' + stamps['allstamp'][1]
-
-    path = os.path.join(outputPath, instanceID)
-    tarpath = path + '.tar.gz'
-
-    directory_state = ''
-
-    if uw.mpi.rank == 0:
-
-        if os.path.isdir(path):
-            if os.path.isfile(tarpath):
-                raise Exception(
-                    "Cannot combine model directory and tar yet."
-                    )
-            else:
-                directory_state = 'directory'
-        elif os.path.isfile(tarpath):
-            directory_state = 'tar'
-        else:
-            directory_state = 'clean'
-
-    directory_state = uw.mpi.comm.bcast(directory_state, root = 0)
-
-    if directory_state == 'tar':
-        if uw.mpi.rank == 0:
-            with tarfile.open(tarpath) as tar:
-                tar.extract('stamps.json', path)
-            with open(os.path.join(path, 'stamps.json')) as json_file:
-                loadstamps = json.load(json_file)
-            shutil.rmtree(path)
-            assert loadstamps == stamps
-
-    if directory_state == 'clean':
-        message("Making a new frame...")
-        frame = Frame(
-            system,
-            initials,
-            outputPath,
-            instanceID
-            )
-
-    else:
-        message("Preexisting frame found! Loading...")
-        frame = load_frame(
-            outputPath,
-            instanceID
-            )
-
-    return frame
 
 ################
 
@@ -578,6 +521,70 @@ class _Frame:
             if inFrame._is_child:
                 inFrame._set_inner_archive_status(status)
 
+def make_frame(
+        system,
+        initials,
+        outputPath = '',
+        instanceID = None,
+        ):
+
+    inputs, stamps, scripts = \
+        _scripts_and_stamps(system, initials)
+    params = inputs['params']
+    # options = inputs['options']
+    configs = inputs['configs']
+
+    if instanceID is None:
+        instanceID = 'pemod_' + stamps['allstamp'][1]
+
+    path = os.path.join(outputPath, instanceID)
+    tarpath = path + '.tar.gz'
+
+    directory_state = ''
+
+    if uw.mpi.rank == 0:
+
+        if os.path.isdir(path):
+            if os.path.isfile(tarpath):
+                raise Exception(
+                    "Cannot combine model directory and tar yet."
+                    )
+            else:
+                directory_state = 'directory'
+        elif os.path.isfile(tarpath):
+            directory_state = 'tar'
+        else:
+            directory_state = 'clean'
+
+    directory_state = uw.mpi.comm.bcast(directory_state, root = 0)
+
+    if directory_state == 'tar':
+        if uw.mpi.rank == 0:
+            with tarfile.open(tarpath) as tar:
+                tar.extract('stamps.json', path)
+            with open(os.path.join(path, 'stamps.json')) as json_file:
+                loadstamps = json.load(json_file)
+            shutil.rmtree(path)
+            assert loadstamps == stamps
+
+    if directory_state == 'clean':
+        message("Making a new frame...")
+        frame = Frame(
+            system,
+            initials,
+            outputPath,
+            instanceID
+            )
+
+    else:
+        message("Preexisting frame found! Loading...")
+        frame = load_frame(
+            outputPath,
+            instanceID
+            )
+
+    return frame
+
 class Frame(_Frame):
 
     def __init__(self,
@@ -590,16 +597,6 @@ class Frame(_Frame):
             _is_child = False,
             _autobackup = True,
             ):
-        '''
-        'system' should be the object produced by the 'build' call
-        of a legitimate 'systemscript'.
-        'observer'... ?
-        'initials' should be a dictionary with an entry for each var mentioned
-        in the system 'varsOfState' attribute, indexed by var name, e.g.:
-        initials = {'temperatureField': tempIC, 'materialVar': materialIC}
-        ...where 'tempIC' and 'materialIC' are instances of legitimate
-        initials condition classes.
-        '''
 
         message("Building frame...")
 
@@ -618,7 +615,7 @@ class Frame(_Frame):
 
         self.inputs = inputs
         self.params = inputs['params']
-        self.options = inputs['options']
+        # self.options = inputs['options']
         self.configs = inputs['configs']
         self.stamps = stamps
         self.scripts = scripts

@@ -25,9 +25,6 @@ class Checkpointer:
             scripts = None,
             figs = None,
             dataCollectors = None,
-            # params = None,
-            # configs = None,
-            # options = None,
             inputs = {},
             step = None,
             modeltime = None,
@@ -40,9 +37,6 @@ class Checkpointer:
         self.varsOfState = varsOfState
         self.step = step
         self.modeltime = modeltime
-        # self.params = params
-        # self.configs = configs
-        # self.options = options
         self.inputs = inputs
         self.stamps = stamps
         self.inFrames = inFrames
@@ -82,7 +76,7 @@ class Checkpointer:
                     for scriptname in self.scripts:
                         scriptpath = self.scripts[scriptname]
                         tweakedpath = os.path.splitext(scriptpath)[0] + ".py"
-                        newpath = os.path.join(path, "_" + scriptname + ".py")
+                        newpath = os.path.join(path, scriptname + ".py")
                         shutil.copyfile(tweakedpath, newpath)
 
                 for dictname, inputDict in self.inputs.items():
@@ -90,18 +84,6 @@ class Checkpointer:
                     with open(filename, 'w') as file:
                          json.dump(inputDict, file)
 
-                # paramsFilename = os.path.join(path, 'params.json')
-                # with open(paramsFilename, 'w') as file:
-                #      json.dump(self.params, file)
-                #
-                # configsFilename = os.path.join(path, 'configs.json')
-                # with open(configsFilename, 'w') as file:
-                #      json.dump(self.configs, file)
-                #
-                # optionsFilename = os.path.join(path, 'options.json')
-                # with open(optionsFilename, 'w') as file:
-                #      json.dump(self.options, file)
-                #
                 stampFilename = os.path.join(path, 'stamps.json')
                 with open(stampFilename, 'w') as file:
                      json.dump(self.stamps, file)
