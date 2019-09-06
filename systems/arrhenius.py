@@ -182,6 +182,7 @@ def build(
 
     ### HOUSEKEEPING: IMPORTANT! ###
 
+    params = [inputs,]
     varsOfState = {'temperatureField': temperatureField}
     obsVars = {
         'temperature': temperatureField,

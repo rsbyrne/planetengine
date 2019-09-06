@@ -55,7 +55,7 @@ def load_inputs(inputName, path):
 def load_system(path):
     params = load_inputs('params', path)
     systemscript = utilities.local_import(os.path.join(path, 'systemscript_0.py'))
-    system = systemscript.build(**params)
+    system = systemscript.build(**params['systeminputs_0'])
     return system, params
 
 def load_initials(system, path):
@@ -83,11 +83,6 @@ def load_initials(system, path):
                 )
     return initials, configs
 
-# def load_observers(system, initials, path):
-#     options = load_inputs('options', path)
-#     observers = []
-
-
 def find_checkpoints(path, stamps):
     checkpoints_found = []
     if uw.mpi.rank == 0:
@@ -96,8 +91,6 @@ def find_checkpoints(path, stamps):
             if (basename.isdigit() and len(basename) == 8):
                 with open(os.path.join(directory, 'stamps.json')) as json_file:
                     loadstamps = json.load(json_file)
-#                 with open(os.path.join(path, 'inputs.txt')) as json_file:
-#                     loadconfig = json.load(json_file)
                 assert loadstamps == stamps, \
                     "Bad checkpoint found! Aborting."
                 message("Found checkpoint: " + basename)
@@ -136,11 +129,8 @@ def load_frame(
 
     initials, configs = load_initials(system, path)
 
-    # observers, options = load_observers(system, initials, path)
-
     frame = Frame(
         system = system,
-#         observers = observers,
         initials = initials,
         outputPath = outputPath,
         instanceID = instanceID,
@@ -174,8 +164,6 @@ def load_frame(
 def _make_stamps(
         params,
         systemscripts,
-        # options,
-        # observerscripts,
         configs,
         initialscripts
         ):
@@ -189,10 +177,6 @@ def _make_stamps(
             'systemscripts': utilities.hashstamp(
                 [open(script) for script in systemscripts]
                 ),
-            # 'options': utilities.hashstamp(options),
-            # 'observerscripts': utilities.hashstamp(
-            #     [open(script) for script in observerscripts]
-            #     ),
             'configs': utilities.hashstamp(configs),
             'initialscripts': utilities.hashstamp(
                 [open(script) for script in initialscripts]
@@ -204,9 +188,6 @@ def _make_stamps(
         stamps['system'] = utilities.hashstamp(
             (stamps['params'], stamps['systemscripts'])
             )
-        # stamps['observers'] = utilities.hashstamp(
-        #     (stamps['options'], stamps['observers'])
-        #     )
         stamps['initials'] = utilities.hashstamp(
             (stamps['configs'], stamps['initialscripts'])
             )
@@ -221,7 +202,6 @@ def _make_stamps(
 def _scripts_and_stamps(
         system,
         initials,
-        # observers
         ):
 
     scripts = {}
@@ -231,7 +211,11 @@ def _scripts_and_stamps(
         scriptname = 'systemscript' + '_' + str(index)
         scripts[scriptname] = script
         systemscripts.append(script)
-    params = system.inputs
+
+    params = {}
+    for index, paramsDict in enumerate(system.params):
+        paramsName = 'systeminputs_' + str(index)
+        params[paramsName] = paramsDict
 
     configs = {}
     initialscripts = []
@@ -242,21 +226,9 @@ def _scripts_and_stamps(
             initialscripts.append(script)
         configs[varName] = IC.inputs
 
-    # options = {}
-    # observerscripts = []
-    # for observer in observers:
-    #     observerName = observer.hashID
-    #     for index, script in enumerate(observer.scripts):
-    #         scriptname = observerName + '_observerscript_' + str(index)
-    #         scripts[scriptname] = script
-    #         observerscripts.append(script)
-    #     options[observerName] = observer.inputs
-
     stamps = _make_stamps(
         params,
         systemscripts,
-        # options,
-        # observerscripts,
         configs,
         initialscripts
         )
@@ -785,12 +757,12 @@ class Frame(_Frame):
 
     def checkpoint(self, path = None):
 
-        if self.archived:
-            self.unarchive()
-
         self.all_collect()
 
         if path is None or path == self.path:
+
+            if self.archived:
+                self.unarchive()
 
             path = self.path
 
@@ -812,17 +784,17 @@ class Frame(_Frame):
                     in sorted(self.observers.items()):
                 observer.checkpoint(path)
 
+            if self._autoarchive:
+                self.archive()
+
+            if self._autobackup:
+                self.backup()
+
         else:
 
             self.checkpointer.checkpoint(path)
 
             # no need to checkpoint observers for remote
-
-        if self._autoarchive:
-            self.archive()
-
-        if self._autobackup:
-            self.backup()
 
     def load_checkpoint(self, loadStep):
 

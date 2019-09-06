@@ -91,7 +91,6 @@ class Checkpointer:
             for inFrame in self.inFrames:
                 inFrame.checkpoint(
                     os.path.join(path, inFrame.hashID),
-                    archive_remote = False
                     )
 
         message("Checkpointing...")
