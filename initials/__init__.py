@@ -33,7 +33,7 @@ def _apply(initials, system):
 
         # APPLY VALUES:
 
-        if hasattr(IC, 'LOADTYPE'):
+        if type(IC) == load.IC:
             tolerance = copyField(
                 IC.inVar,
                 var,
