@@ -109,7 +109,7 @@ class Checkpointer:
         message("Figures saved.")
 
         message("Saving vars of state...")
-        if not self.vars is None:
+        if not self.saveVars is None:
             disk.varsOnDisk(self.saveVars, checkpointDir, 'save')
         message("Saved.")
 
