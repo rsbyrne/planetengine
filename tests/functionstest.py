@@ -1,14 +1,16 @@
-import planetengine
-from planetengine import functions as pfn
+from .. import initials
+from .. import systems
+from .. import functions as pfn
+from ..visualisation import quickShow
 import numpy as np
 from timeit import timeit
 
 def testfn():
 
-    system = planetengine.systems.arrhenius.build(res = 16)
-    initials = {'temperatureField': planetengine.initials.sinusoidal.IC(freq = 1.)}
-    planetengine.initials.apply(
-        initials,
+    system = systems.arrhenius.build(res = 32)
+    ICs = {'temperatureField': initials.sinusoidal.IC(freq = 1.)}
+    initials.apply(
+        ICs,
         system,
         )
     system.solve()
@@ -51,12 +53,12 @@ def testfn():
 
     var = makevar()
 
-    planetengine.quickShow(var.mesh, var)
+    quickShow(var.mesh, var)
 
     def testfn(var, timings = '', layer = 1):
         def outer_timefn(var, timinglist = []):
-            planetengine.initials.apply(
-                initials,
+            initials.apply(
+                ICs,
                 system,
                 )
             var.update()
@@ -87,8 +89,8 @@ def testfn():
 
     red = pfn.Integral(var)
 
-    planetengine.initials.apply(
-        initials,
+    initials.apply(
+        ICs,
         system,
         )
     red.update()
@@ -103,8 +105,8 @@ def testfn():
         freshsteps = []
         stalesteps = []
         for i in range(3):
-            planetengine.initials.apply(
-                initials,
+            initials.apply(
+                ICs,
                 system,
                 )
             red.update

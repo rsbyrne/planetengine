@@ -25,6 +25,7 @@ from . import functions
 from . import visualisation
 from . import observer
 from . import tests
+from . import disk
 
 from .utilities import message
 from .utilities import log

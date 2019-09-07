@@ -1,4 +1,7 @@
-import planetengine
+from .. import initials
+from .. import frame
+from .. import systems
+from ..utilities import message
 import underworld as uw
 from underworld import function as fn
 
@@ -6,24 +9,24 @@ from .testdir import TestDir
 
 def testfn():
     with TestDir() as outputPath:
-        inModel = planetengine.frame.make_frame(
-            planetengine.systems.arrhenius.build(res = 16, f = 0.5),
-            {'temperatureField': planetengine.initials.sinusoidal.IC()},
-            outputPath = '../data/test'
+        inModel = frame.make_frame(
+            systems.arrhenius.build(res = 32, f = 0.5),
+            {'temperatureField': initials.sinusoidal.IC()},
+            outputPath = outputPath
             )
-        model = planetengine.frame.make_frame(
-            planetengine.systems.arrhenius.build(res = 16, f = 1.),
-            {'temperatureField': planetengine.initials.load.IC(inModel, 'temperatureField')},
-            outputPath = '../data/test'
+        model = frame.make_frame(
+            systems.arrhenius.build(res = 32, f = 1.),
+            {'temperatureField': initials.load.IC(inModel, 'temperatureField')},
+            outputPath = outputPath
             )
         model.checkpoint()
-        model2 = planetengine.frame.make_frame(
-            planetengine.systems.arrhenius.build(res = 16, f = 1.),
-            {'temperatureField': planetengine.initials.load.IC(inModel, 'temperatureField')},
-            outputPath = '../data/test'
+        model2 = frame.make_frame(
+            systems.arrhenius.build(res = 32, f = 1.),
+            {'temperatureField': initials.load.IC(inModel, 'temperatureField')},
+            outputPath = outputPath
             )
         model2.iterate()
         model2.unarchive()
         model2.archive()
         model2.checkpoint()
-        planetengine.message('Success!')
+        message('Success!')

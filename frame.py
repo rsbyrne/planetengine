@@ -1,20 +1,13 @@
-import numpy as np
 import underworld as uw
-from underworld import function as fn
-import math
-import time
 import tarfile
 import os
 import shutil
 import json
-import itertools
-import inspect
-import importlib
-import csv
 import copy
-from glob import glob
+import glob
 
 from . import utilities
+from . import disk
 from .wordhash import wordhash as wordhashFn
 from . import checkpoint
 from .initials.load import IC as _loadIC
@@ -86,7 +79,7 @@ def load_initials(system, path):
 def find_checkpoints(path, stamps):
     checkpoints_found = []
     if uw.mpi.rank == 0:
-        for directory in glob(path + '/*/'):
+        for directory in glob.glob(path + '/*/'):
             basename = os.path.basename(directory[:-1])
             if (basename.isdigit() and len(basename) == 8):
                 with open(os.path.join(directory, 'stamps.json')) as json_file:
@@ -824,7 +817,7 @@ class Frame(_Frame):
 
             checkpointFile = os.path.join(self.path, stepStr)
 
-            utilities.varsOnDisk(
+            disk.varsOnDisk(
                 self.system.varsOfState,
                 checkpointFile,
                 'load',
