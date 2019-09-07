@@ -413,7 +413,7 @@ class _Frame:
             message("Bumping archive call up to parent...")
             self._parentFrame.archive(_path)
 
-        assert archived == False
+        assert self.archived == False
 
         message("Archiving...")
 
@@ -458,7 +458,7 @@ class _Frame:
             self._parentFrame.archive(_path)
             return None
 
-        assert archived == True
+        assert self.archived == True
 
         message("Unarchiving...")
 
