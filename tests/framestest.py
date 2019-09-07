@@ -2,7 +2,7 @@ import planetengine
 import underworld as uw
 from underworld import function as fn
 
-from planetengine.tests.testdir import TestDir
+from .testdir import TestDir
 
 def testfn():
     with TestDir() as outputPath:
@@ -27,5 +27,3 @@ def testfn():
         model2.archive()
         model2.checkpoint()
         planetengine.message('Success!')
-
-testfn()

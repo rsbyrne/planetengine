@@ -1744,6 +1744,8 @@ class Reduction(PlanetVar):
         self.meshUtils = None
         self.meshbased = False
 
+        self._hashVars = self.inVars
+
         super().__init__(**kwargs)
 
 class GetStat(Reduction):

@@ -3,14 +3,16 @@ import os
 import shutil
 import subprocess
 import underworld as uw
+from .. import workdir
+from .. import outdir
 
-workpath = '/home/jovyan/workspace'
-outputPath = os.path.join(workpath, 'data/test')
+workPath = workdir
+outputPath = os.path.join(outdir, 'test')
 
 class TestDir:
 
     def __init__(self):
-        self.workpath = workpath
+        self.workPath = workPath
         self.outputPath = outputPath
         pass
 
@@ -32,8 +34,8 @@ class TestDir:
         import shutil
         import subprocess
         if uw.mpi.rank == 0:
-            if not self.workpath in sys.path:
-                sys.path.append(self.workpath)
+            if not self.workPath in sys.path:
+                sys.path.append(self.workPath)
             if os.path.isdir(self.outputPath):
                 ignoreme = subprocess.call(['chmod', '-R', '777', self.outputPath])
                 shutil.rmtree(self.outputPath)

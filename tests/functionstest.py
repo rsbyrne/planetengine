@@ -1,8 +1,3 @@
-import sys
-workdir = '/home/jovyan/workspace'
-if not workdir in sys.path:
-    sys.path.append(workdir)
-
 import planetengine
 from planetengine import functions as pfn
 import numpy as np
@@ -123,5 +118,3 @@ def testfn():
         return(average_fresh, average_stale, ratio)
 
     print(testfn())
-
-testfn()

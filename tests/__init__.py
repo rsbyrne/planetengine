@@ -1,3 +1,3 @@
-from . import framestest
-from . import paracheck
-from . import testdir
+from .framestest import testfn as framestest
+from .functionstest import testfn as functionstest
+from .testdir import TestDir
