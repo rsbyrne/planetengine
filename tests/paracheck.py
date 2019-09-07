@@ -1,3 +1,8 @@
+import sys
+workdir = '/home/jovyan/workspace'
+if not workdir in sys.path:
+    sys.path.append(workdir)
+
 import planetengine
 from planetengine import functions as pfn
 import numpy as np
@@ -5,7 +10,7 @@ from timeit import timeit
 
 def testfn():
 
-    system = planetengine.systems.arrhenius.build(res = 128)
+    system = planetengine.systems.arrhenius.build(res = 16)
     initials = {'temperatureField': planetengine.initials.sinusoidal.IC(freq = 1.)}
     planetengine.initials.apply(
         initials,
@@ -118,3 +123,5 @@ def testfn():
         return(average_fresh, average_stale, ratio)
 
     print(testfn())
+
+testfn()
