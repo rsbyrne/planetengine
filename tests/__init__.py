@@ -1,4 +1,4 @@
-from .framestest import testfn as framestest
-from .functionstest import testfn as functionstest
-from .testdir import TestDir
+from . import framestest
+from . import functionstest
+from . import testdir
 from . import testsystems

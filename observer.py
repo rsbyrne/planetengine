@@ -1,9 +1,9 @@
-from planetengine.utilities import check_reqs
-from planetengine.utilities import hashstamp
-from planetengine.wordhash import wordhash as wordhashFn
-from planetengine.frame import _Frame
-from planetengine.frame import _scripts_and_stamps
-from planetengine import checkpoint
+from .utilities import check_reqs
+from .utilities import hashstamp
+from .wordhash import wordhash as wordhashFn
+from .frame import _Frame
+from .frame import _scripts_and_stamps
+from . import checkpoint
 
 import os
 
@@ -39,7 +39,7 @@ class Observer(_Frame):
         # Making stamps and stuff
 
         _model_inputs, _model_stamps, _model_scripts = \
-            _scripts_and_stamps(system, initials)
+            _scripts_and_stamps(self.system, self.initials)
 
         inHashID = 'pemod_' + _model_stamps['allstamp'][1]
 
@@ -105,7 +105,7 @@ class Observer(_Frame):
 
         super().__init__()
 
-    def update():
+    def update(self):
         self.step = self.system.step.value
         self.modeltime = self.system.modeltime.value
 

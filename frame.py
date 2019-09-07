@@ -143,8 +143,6 @@ def load_frame(
 
     frame.load_checkpoint(loadStep)
 
-    frame.onDisk = True # since you just loaded from disk!
-
     if all([
             frame._autoarchive,
             not frame.archived,
@@ -266,7 +264,6 @@ class _Frame:
         self.backuptarpath = os.path.join(self.backupdir, self.tarname)
 
         self.archived = False #_isArchived
-        self.onDisk = False
 
         if type(self.system.mesh) == uw.mesh._spherical_mesh.FeMesh_Annulus:
             self.blackhole = [0., 0.]
@@ -395,105 +392,109 @@ class _Frame:
 
     def archive(self, _path = None):
 
-        if not self.onDisk and (_path is None or _path == self.path):
+        if _path is None or _path == self.path:
+            path = self.path
+            tarpath = self.tarpath
+            localArchive = True
+            message("Making a local archive...")
+        else:
+            path = _path
+            tarpath = path + '.tar.gz'
+            localArchive = False
+            message("Making a remote archive...")
+
+        if not os.path.isdir(path):
             message("Nothing to archive yet!")
             return None
-        if self.archived and (_path is None or _path == self.path):
+        if os.path.isfile(tarpath):
             message("Already archived!")
             return None
         if self._is_child:
             message("Bumping archive call up to parent...")
             self._parentFrame.archive(_path)
 
-        else:
+        assert archived == False
 
-            message("Archiving...")
+        message("Archiving...")
 
-            if _path is None or _path == self.path:
-                path = self.path
-                tarpath = self.tarpath
-                localArchive = True
-                message("Making a local archive...")
-            else:
-                path = _path
-                tarpath = path + '.tar.gz'
-                localArchive = False
-                message("Making a remote archive...")
+        if uw.mpi.rank == 0:
 
-            if uw.mpi.rank == 0:
+            with tarfile.open(tarpath, 'w:gz') as tar:
+                tar.add(path, arcname = '')
 
-                print(path)
-                assert os.path.isdir(path), \
-                    "Nothing to archive yet!"
-                assert not os.path.isfile(tarpath), \
-                    "Destination archive already exists!"
+            assert os.path.isfile(tarpath), \
+                "The archive should have saved, but we can't find it!"
 
-                with tarfile.open(tarpath, 'w:gz') as tar:
-                    tar.add(path, arcname = '')
+            message("Deleting model directory...")
+            shutil.rmtree(path)
+            message("Model directory deleted.")
 
-                assert os.path.isfile(tarpath), \
-                    "The archive should have saved, but we can't find it!"
+        if localArchive:
+            self._set_inner_archive_status(True)
 
-                message("Deleting model directory...")
-
-                shutil.rmtree(path)
-
-                message("Model directory deleted.")
-
-            if localArchive:
-                self._set_inner_archive_status(True)
-
-            message("Archived!")
+        message("Archived!")
 
     def unarchive(self, _path = None):
 
-        if not self.onDisk and (_path is None or _path == self.path):
-            message("Nothing to unarchive yet!")
-            return None
-        if not self.archived and (_path is None or _path == self.path):
+        if _path is None or _path == self.path:
+            path = self.path
+            tarpath = self.tarpath
+            localArchive = True
+            message("Unarchiving the local archive...")
+        else:
+            path = _path
+            tarpath = path + '.tar.gz'
+            localArchive = False
+            message("Unarchiving a remote archive...")
+
+        if os.path.isdir(path):
             message("Already unarchived!")
+            return None
+        if not os.path.isfile(tarpath):
+            message("Nothing to unarchive yet!")
             return None
         if self._is_child:
             message("Bumping unarchive call up to parent...")
-            self._parentFrame.unarchive(_path)
+            self._parentFrame.archive(_path)
+            return None
 
+        assert archived == True
+
+        message("Unarchiving...")
+
+        if _path is None or _path == self.path:
+            path = self.path
+            tarpath = self.tarpath
+            localArchive = True
+            message("Unarchiving the local archive...")
         else:
+            path = _path
+            tarpath = path + '.tar.gz'
+            localArchive = False
+            message("Unarchiving a remote archive...")
 
-            message("Unarchiving...")
+        if uw.mpi.rank == 0:
+            assert not os.path.isdir(path), \
+                "Destination directory already exists!"
+            assert os.path.isfile(tarpath), \
+                "No archive to unpack!"
 
-            if _path is None or _path == self.path:
-                path = self.path
-                tarpath = self.tarpath
-                localArchive = True
-                message("Unarchiving the local archive...")
-            else:
-                path = _path
-                tarpath = path + '.tar.gz'
-                localArchive = False
-                message("Unarchiving a remote archive...")
+            with tarfile.open(tarpath) as tar:
+                tar.extractall(path)
 
-            if uw.mpi.rank == 0:
-                assert not os.path.isdir(path), \
-                    "Destination directory already exists!"
-                assert os.path.isfile(tarpath), \
-                    "No archive to unpack!"
+            assert os.path.isdir(path), \
+                "The model directory doesn't appear to exist."
 
-                with tarfile.open(tarpath) as tar:
-                    tar.extractall(path)
+            message("Deleting archive...")
 
-                assert os.path.isdir(path), \
-                    "The model directory doesn't appear to exist."
+            os.remove(tarpath)
 
-                message("Deleting archive...")
+            message("Model directory deleted.")
 
-                os.remove(tarpath)
+        if localArchive:
+            self._set_inner_archive_status(False)
 
-                message("Model directory deleted.")
-
-            if localArchive:
-                self._set_inner_archive_status(False)
-
-            message("Unarchived!")
+        message("Unarchived!")
 
     def _set_inner_archive_status(self, status):
         self.archived = status
@@ -770,8 +771,6 @@ class Frame(_Frame):
             self.checkpoints.append(self.step)
             self.checkpoints = sorted(set(self.checkpoints))
 
-            self.onDisk = True
-
             # CHECKPOINT OBSERVERS!!!
             for observerName, observer \
                     in sorted(self.observers.items()):
@@ -865,7 +864,6 @@ class CustomFrame(_Frame):
         self.instanceID = 'testFrame'
         self.stamps = {'a': 1}
         self.step = 0
-        self.onDisk = False
         self._is_child = False
         self.inFrames = []
         self._autoarchive = True
@@ -879,7 +877,6 @@ class CustomFrame(_Frame):
             if path is None:
                 path = mypath
             checkpointer.checkpoint(path)
-            self.onDisk = True
         self.checkpoint = checkpoint
         def load_checkpoint(step):
             pass

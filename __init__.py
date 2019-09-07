@@ -1,14 +1,15 @@
 import sys
 import os
 import subprocess
-workdir = '/home/jovyan/workspace'
-if not workdir in sys.path:
-    sys.path.append(workdir)
-ignoreme = subprocess.call(['chmod', '-R', '777', workdir])
-outdir = '/home/jovyan/workspace/out'
-if not os.path.isdir(outdir):
-    os.makedirs(outdir)
-ignoreme = subprocess.call(['chmod', '-R', '777', outdir])
+workPath = '/home/jovyan/workspace'
+if not workPath in sys.path:
+    sys.path.append(workPath)
+ignoreme = subprocess.call(['chmod', '-R', '777', workPath])
+outPath = '/home/jovyan/workspace/out'
+if not os.path.isdir(outPath):
+    os.makedirs(outPath)
+ignoreme = subprocess.call(['chmod', '-R', '777', outPath])
+testPath = '/home/jovyan/workspace/out/test'
 
 from . import utilities
 from . import analysis
