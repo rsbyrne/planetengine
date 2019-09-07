@@ -12,7 +12,7 @@ class Checkpointer:
     def __init__(
             self,
             stamps,
-            vars = None,
+            saveVars = None,
             scripts = None,
             figs = None,
             dataCollectors = None,
@@ -25,7 +25,7 @@ class Checkpointer:
         self.scripts = scripts
         self.figs = figs
         self.dataCollectors = dataCollectors
-        self.vars = vars
+        self.saveVars = saveVars
         self.step = step
         self.modeltime = modeltime
         self.inputs = inputs
@@ -110,7 +110,7 @@ class Checkpointer:
 
         message("Saving vars of state...")
         if not self.vars is None:
-            disk.varsOnDisk(self.vars, checkpointDir, 'save')
+            disk.varsOnDisk(self.saveVars, checkpointDir, 'save')
         message("Saved.")
 
         message("Saving snapshot...")

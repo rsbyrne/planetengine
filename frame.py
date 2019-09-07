@@ -624,7 +624,7 @@ class Frame(_Frame):
         self.checkpointer = checkpoint.Checkpointer(
             step = self.system.step,
             modeltime = self.system.modeltime,
-            vars = self.varsOfState,
+            saveVars = self.varsOfState,
             figs = self.figs,
             dataCollectors = self.collectors,
             scripts = self.scripts,

@@ -3,13 +3,13 @@ import underworld as uw
 from .utilities import message
 from .functions import Variable
 
-def varsOnDisk(vars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
+def varsOnDisk(saveVars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     substrates = []
     substrateNames = []
     substrateHandles = {}
     extension = '.h5'
 
-    for varName, var in sorted(vars.items()):
+    for varName, var in sorted(saveVars.items()):
 
         if type(var) == Variable:
             var.update()
