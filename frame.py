@@ -824,22 +824,6 @@ class Frame(_Frame):
                 self.blackhole
                 )
 
-            # dataDict = {}
-            # if uw.mpi.rank == 0:
-            #     filelist = sorted(os.listdir(checkpointFile))
-            #     for file in filelist:
-            #         if '_snapshot.txt' in file:
-            #             # Any saved data will do:
-            #             snapshot = os.path.join(checkpointFile, file)
-            #             break
-            #     with open(snapshot, 'r') as csv_file:
-            #         csv_reader = csv.reader(csv_file, delimiter=',')
-            #         header, data = csv_reader
-            #     for dataName, dataItem in zip(header, data):
-            #         key = dataName[1:].lstrip()
-            #         dataDict[key] = dataItem
-            # dataDict = uw.mpi.comm.bcast({**dataDict}, root = 0)
-
             self.system.step.value = loadStep
 
             modeltime = 0.

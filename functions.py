@@ -118,7 +118,7 @@ def _construct(
 
     return outObj
 
-def _convert(var, varName = 'anon'):
+def _convert(var, varName = None):
     if isinstance(var, PlanetVar):
         # message("Already a PlanetVar! Returning.")
         return var
@@ -127,7 +127,19 @@ def _convert(var, varName = 'anon'):
         if isinstance(outVar, PlanetVar):
             # message("Premade PlanetVar found! Returning.")
             return outVar
-    try:
+    if type(var) == np.ndarray:
+        if len(var.shape) == 2:
+            if varName is None:
+                varName = Shape.defaultName
+            stringVariants = {'varName': varName}
+            varClass = Shape
+        elif len(var.shape) == 1:
+            valString = utilities.stringify(var)
+            stringVariants = {'val': valString}
+            varClass = Constant
+        else:
+            raise Exception
+    else:
         var = UWFn.convert(var)
         if var is None:
             raise Exception
@@ -137,37 +149,26 @@ def _convert(var, varName = 'anon'):
                 var.evaluate()[0]
                 )
             stringVariants = {'val': valString}
-            var = _construct(
-                var,
-                varClass = Constant,
-                stringVariants = stringVariants
-                )
+            varClass = Constant
         elif type(var) in Variable.convertTypes:
+            if varName is None:
+                varName = Variable.defaultName
             stringVariants = {'varName': varName}
-            var = _construct(
-                var,
-                varClass = Variable,
-                stringVariants = stringVariants
-                )
+            varClass = Variable
         elif isinstance(var, UWFn):
-            stringVariants = {'varName': varName}
-            var = _construct(
-                var,
-                varClass = Vanilla,
-                stringVariants = stringVariants
-                )
+            if not varName is None:
+                stringVariants = {'varName': varName}
+                varClass = Variable
+            else:
+                stringVariants = {}
+                varClass = Vanilla
         else:
             raise Exception
-    except:
-        try:
-            stringVariants = {'varName': varName}
-            var = _construct(
-                var,
-                varClass = Shape,
-                stringVariants = stringVariants
-                )
-        except:
-            raise Exception
+    var = _construct(
+        var,
+        varClass = varClass,
+        stringVariants = stringVariants
+        )
     # message("New PlanetVar made! Returning.")
     return var
 
@@ -254,6 +255,20 @@ def get_dType(sample_data):
             "Input data type not acceptable."
             )
     return dType
+
+# def get_uwVar(peVar):
+#     if type(peVar) == Variable:
+#         return peVar.var
+#     else:
+#         inVars = peVar.inVars
+#         meshbased = all(
+#             [inVar.meshbased for inVar in inVars]
+#             )
+#         dimension = len(inVars)
+#         if meshbased:
+#             var = substrate.add_variable(dimension, dType)
+#         else:
+#             var = substrate.add_variable(dType, dimension)
 
 class PlanetVar(UWFn):
 
@@ -578,12 +593,17 @@ class Variable(BaseTypes):
 
     opTag = 'Variable'
 
+    defaultName = 'anon'
+
     convertTypes = {
         uw.mesh._meshvariable.MeshVariable,
         uw.swarm._swarmvariable.SwarmVariable
         }
 
-    def __init__(self, inVar, varName = 'anon', *args, **kwargs):
+    def __init__(self, inVar, varName = None, *args, **kwargs):
+
+        if varName is None:
+            varName = self.defaultName
 
         var = UWFn.convert(inVar)
 
@@ -591,6 +611,12 @@ class Variable(BaseTypes):
             raise Exception
         if len(list(var._underlyingDataItems)) == 0:
             raise Exception
+
+        if not type(var) in self.convertTypes:
+            vanillaVar = Vanilla(var)
+            projVar = get_meshVar(vanillaVar)
+            var = projVar.var
+            self._projUpdate = projVar.update
 
         if hasattr(var, 'fn_gradient'):
             self.fn_gradient = var.fn_gradient
@@ -639,6 +665,8 @@ class Variable(BaseTypes):
         self.meshdata = self.var.evaluate(self.mesh)
 
     def _partial_update(self):
+        if hasattr(self, '_projUpdate'):
+            self._projUpdate()
         if not type(self.var) == uw.mesh._meshvariable.MeshVariable:
             self._set_meshdata()
 
@@ -646,7 +674,12 @@ class Shape(BaseTypes):
 
     opTag = 'Shape'
 
-    def __init__(self, vertices, varName = 'anon', *args, **kwargs):
+    defaultName = 'anon'
+
+    def __init__(self, vertices, varName = None, *args, **kwargs):
+
+        if varName is None:
+            varName = self.defaultName
 
         shape = fn.shape.Polygon(vertices)
         self.vertices = vertices
@@ -729,7 +762,7 @@ class Vanilla(Function):
 
     opTag = 'Vanilla'
 
-    def __init__(self, inVar, *args, varName = 'anon', **kwargs):
+    def __init__(self, inVar, *args, **kwargs):
 
         var = UWFn.convert(inVar)
 
@@ -742,10 +775,12 @@ class Vanilla(Function):
         for underlying in sorted(var._underlyingDataItems):
             inVars.append(convert(underlying))
 
-        self.stringVariants = {'varName': varName}
+        self.stringVariants = {}
         self.inVars = inVars
         self.parameters = []
         self.var = var
+
+        self._hashID = random.randint(1, 1e18)
 
         super().__init__(**kwargs)
 
