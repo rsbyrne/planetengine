@@ -30,7 +30,8 @@ class MeshUtils:
                 'inner': mesh.specialSets['Bottom_VertexSet'],
                 'outer': mesh.specialSets['Top_VertexSet'],
                 'left': mesh.specialSets['Left_VertexSet'],
-                'right': mesh.specialSets['Right_VertexSet']
+                'right': mesh.specialSets['Right_VertexSet'],
+                'all': mesh.specialSets['AllWalls_VertexSet']
                 }
             if mesh.dim == 2:
                 self.comps = {
@@ -61,7 +62,8 @@ class MeshUtils:
                 'inner': mesh.specialSets['inner'],
                 'outer': mesh.specialSets['outer'],
                 'left': mesh.specialSets['MaxJ_VertexSet'],
-                'right': mesh.specialSets['MinJ_VertexSet']
+                'right': mesh.specialSets['MinJ_VertexSet'],
+                'all': mesh.specialSets['AllWalls_VertexSet']
                 }
         else:
             raise Exception("That kind of mesh is not supported yet.")

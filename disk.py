@@ -45,7 +45,8 @@ def varsOnDisk(vars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
                         substrateName + extension
                         )
                     )
-                substrateHandles[substrateName] = handle
+                # substrateHandles[substrateName] = handle
+                substrateHandles[substrate] = handle
             elif mode == 'load':
                 message("Loading substrate from disk: " + substrateName)
                 if type(substrate) == uw.swarm.Swarm:
@@ -59,7 +60,7 @@ def varsOnDisk(vars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
 
         else:
             if mode == 'save':
-                handle = substrateHandles[substrateNames]
+                handle = substrateHandles[substrate]
 
         if mode == 'save':
             message("Saving var to disk: " + varName)

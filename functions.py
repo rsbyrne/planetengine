@@ -812,6 +812,9 @@ class Projection(Function):
 
     def _partial_update(self):
         self._projector.solve()
+        allwalls = self.meshUtils.surfaces['all']
+        self.var.data[allwalls.data] = \
+            self.inVar.evaluate(allwalls)
         if self.inVar.dType in ('int', 'boolean'):
             rounding = 1
         else:

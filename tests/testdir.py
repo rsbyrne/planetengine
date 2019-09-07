@@ -2,6 +2,7 @@ import sys
 import os
 import shutil
 import subprocess
+import traceback
 import underworld as uw
 from .. import workdir
 from .. import outdir
