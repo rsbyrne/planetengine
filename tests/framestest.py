@@ -5,7 +5,7 @@ from ..utilities import message
 import underworld as uw
 from underworld import function as fn
 
-from .testdir import TestDir
+from ..paths import TestDir
 
 def testfn():
     with TestDir() as outputPath:

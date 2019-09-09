@@ -12,12 +12,17 @@ import hashlib
 import random
 import io
 
+from . import paths
+
 def message(*args):
     for arg in args:
         if uw.mpi.rank == 0:
             print(arg)
 
-def log(text, outputPath = '', outputName = 'diaglog.txt'):
+def log(text, outputPath = None, outputName = 'diaglog.txt'):
+    if outputPath == None:
+        outputPath = paths.defaultPath
+
     if uw.mpi.rank == 0:
         filename = os.path.join(outputPath, outputName)
         if not os.path.exists(outputPath):

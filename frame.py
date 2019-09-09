@@ -6,6 +6,7 @@ import json
 import copy
 import glob
 
+from . import paths
 from . import utilities
 from . import disk
 from .wordhash import wordhash as wordhashFn
@@ -93,7 +94,7 @@ def find_checkpoints(path, stamps):
     return checkpoints_found
 
 def load_frame(
-        outputPath = '',
+        outputPath = None,
         instanceID = '',
         loadStep = 0,
         _is_child = False,
@@ -104,6 +105,9 @@ def load_frame(
     to a previous checkpoint step, or can be the string 'max'
     which loads the highest stable checkpoint available.
     '''
+
+    if outputPath is None:
+        outputPath = paths.defaultPath
 
     # Check that target directory is not inside
     # another planetengine directory:
@@ -505,9 +509,12 @@ class _Frame:
 def make_frame(
         system,
         initials,
-        outputPath = '',
+        outputPath = None,
         instanceID = None,
         ):
+
+    if outputPath is None:
+        outputPath = paths.defaultPath
 
     inputs, stamps, scripts = \
         _scripts_and_stamps(system, initials)
@@ -571,13 +578,16 @@ class Frame(_Frame):
     def __init__(self,
             system,
             initials,
-            outputPath = '',
+            outputPath = None,
             instanceID = 'test',
             _autoarchive = True,
             _parentFrame = None,
             _is_child = False,
             _autobackup = True,
             ):
+
+        if outputPath is None:
+            outputPath = paths.defaultPath
 
         message("Building frame...")
 

@@ -2,6 +2,7 @@ import underworld as uw
 import numpy as np
 import os
 
+from .. import paths
 from .. import mapping
 from .. import frame
 
@@ -13,9 +14,12 @@ class IC:
             sourceVarName = None,
             loadStep = None,
             hashID = None,
-            _outputPath = '',
+            _outputPath = None,
             _is_child = False,
             ):
+
+        if _outputPath is None:
+            _outputPath = paths.defaultPath
 
         assert sourceVarName is not None, \
             "sourceVarName input must be a string \
