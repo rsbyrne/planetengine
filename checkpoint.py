@@ -7,30 +7,55 @@ import json
 from . import disk
 from .utilities import message
 
+from . import frame
+
+def save_builts(builts, path):
+
+    if uw.mpi.rank == 0:
+
+        builtsDir = os.path.join(path, 'builts')
+        if not os.path.isdir(builtsDir):
+            os.makedirs(builtsDir)
+
+        for builtName, built in sorted(builts.items()):
+            inputs = built.inputs
+            scripts = built.scripts
+            for index, script in enumerate(scripts):
+                tweakedPath = os.path.splitext(script)[0] + ".py"
+                scriptName = builtName + '_' + str(index)
+                newPath = os.path.join(builtsDir, scriptName + ".py")
+                shutil.copyfile(tweakedPath, newPath)
+            inputsFilename = os.path.join(builtsDir, builtName + '.json')
+            with open(inputsFilename, 'w') as file:
+                 json.dump(inputs, file)
+
+def save_stamps(stamps, path):
+    if uw.mpi.rank == 0:
+        stampFilename = os.path.join(path, 'stamps.json')
+        with open(stampFilename, 'w') as file:
+             json.dump(stamps, file)
+
 class Checkpointer:
 
     def __init__(
             self,
-            stamps,
             saveVars = None,
-            scripts = None,
+            builts = None,
             figs = None,
             dataCollectors = None,
-            inputs = {},
             step = None,
             modeltime = None,
             inFrames = [],
             ):
 
-        self.scripts = scripts
         self.figs = figs
         self.dataCollectors = dataCollectors
         self.saveVars = saveVars
         self.step = step
         self.modeltime = modeltime
-        self.inputs = inputs
-        self.stamps = stamps
+        self.builts = builts
         self.inFrames = inFrames
+        self.stamps = frame.make_stamps(self.builts)
 
     def checkpoint(
             self,
@@ -63,27 +88,9 @@ class Checkpointer:
                 if not os.path.isdir(path):
                     os.makedirs(path)
 
-                builtsDir = os.path.join(path, 'builts')
-                if not os.path.isdir(builtsDir):
-                    os.makedirs(builtsDir)
+                save_builts(self.builts, path)
 
-                if not self.scripts is None:
-                    for scriptType, scripts in sorted(self.scripts.items()):
-                        for index, script in enumerate(scripts):
-                            scriptPath = self.scripts[script]
-                            tweakedPath = os.path.splitext(scriptPath)[0] + ".py"
-                            scriptName = script + '_' + str(index)
-                            newPath = os.path.join(builtsDir, scriptName + ".py")
-                            shutil.copyfile(tweakedpath, newpath)
-
-                for dictName, inputDict in self.inputs.items():
-                    filename = os.path.join(builtsDir, dictName + '.json')
-                    with open(filename, 'w') as file:
-                         json.dump(inputDict, file)
-
-                stampFilename = os.path.join(path, 'stamps.json')
-                with open(stampFilename, 'w') as file:
-                     json.dump(self.stamps, file)
+                save_stamps(self.stamps, path)
 
             for inFrame in self.inFrames:
                 inFrame.checkpoint(

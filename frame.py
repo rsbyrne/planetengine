@@ -59,19 +59,28 @@ def load_jsons(jsonNames, path):
     jsons = uw.mpi.comm.bcast(jsons, root = 0)
     return jsons
 
-def load_builts(names, path):
+def load_builts(path):
     builtsDir = os.path.join(path, 'builts')
+    names = set()
     if uw.mpi.rank == 0:
         assert os.path.isdir(builtsDir)
+        files = os.listdir(builtsDir)
+        for file in os.listdir(builtsDir):
+            if file.endswith('.json'):
+                builtName = os.path.splitext(
+                    os.path.basename(file)
+                    )[0]
+                names.add(builtName)
+    names = uw.mpi.comm.bcast(names, root = 0)
     outDict = {}
     for name in sorted(names):
         outDict[name] = []
-        jsonName = name + 'inputs'
+        jsonName = name
         inputDict = load_json(jsonName, builtsDir)
         maxIndex = len(inputDict) - 1
         index = 0
         while index <= maxIndex:
-            scriptName = name + 'script_' + str(index) + '.py'
+            scriptName = name + '_' str(index) + '.py'
             scriptPath = os.path.join(
                 path,
                 scriptName
@@ -94,12 +103,9 @@ def load_builts(names, path):
 def get_inputs(builts):
     outDict = {}
     for name, builts in sorted(builts.items()):
-        inputsName = name + 'inputs'
-        outDict[inputsName] = []
-        for index, built in enumerate(builts):
-            subInputsName = inputsName + '_' + str(index)
-            outDict[inputsName].append(built.inputs)
-
+        outDict[name] = [
+            built.inputs for built in builts
+            ]
 
 def find_checkpoints(path, stamps):
     checkpoints_found = []
@@ -117,6 +123,33 @@ def find_checkpoints(path, stamps):
     checkpoints_found = uw.mpi.comm.bcast(checkpoints_found, root = 0)
     return checkpoints_found
 
+def make_stamps(builts):
+    scripts = {}
+    inputs = {}
+    for builtName, built in sorted(builts.items()):
+        scripts[builtName] = built.scripts
+        inputs[builtName] = built.inputs
+    assert inputs.keys() == scripts.keys()
+    stamps = {}
+    if uw.mpi.rank == 0:
+        toHash = {}
+        for key in sorted(inputs.keys()):
+            inputList = inputs[key]
+            scriptList = scripts[key]
+            toHash[key + 'inputs'] = inputList
+            toHash[key + 'scripts'] = [
+                open(script) for script in scriptList
+                ]
+        stamps = {
+            key: utilities.hashstamp(val) \
+                for key, val in sorted(toHash.items())
+            }
+        stamps['all'] = utilities.hashstamp(stamps)
+        for stampKey, stampVal in stamps.items():
+            stamps[stampKey] = [stampVal, wordhashFn(stampVal)]
+    stamps = uw.mpi.comm.bcast(stamps, root = 0)
+    return stamps
+
 class Frame:
 
     _required_attributes = {
@@ -127,15 +160,13 @@ class Frame:
         '_autoarchive', # must be bool
         'stamps', # must be dict
         'step', # must be int
-        'stamps', # dict
         'saveVars', # dict of vars
         'figs', # figs to save
         'collectors',
-        'scripts',
-        'inputs',
         'subCheckpointFns',
         'update',
         'initialise',
+        'builts',
         }
 
     def __init__(self):
@@ -161,9 +192,7 @@ class Frame:
             saveVars = self.saveVars,
             figs = self.figs,
             dataCollectors = self.collectors,
-            scripts = self.scripts,
-            inputs = self.inputs,
-            stamps = self.stamps,
+            builts = self.builts,
             inFrames = self.inFrames,
             )
 

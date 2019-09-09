@@ -16,13 +16,15 @@ def testfn():
             )
         model1 = model.make_model(
             systems.arrhenius.build(res = 32, f = 1.),
-            {'temperatureField': initials.load.build(model0, 'temperatureField')},
+            {'temperatureField': initials.sinusoidal.build()},
+            # {'temperatureField': initials.load.build(model0, 'temperatureField')},
             outputPath = outputPath
             )
         model1.checkpoint()
         model2 = model.make_model(
             systems.arrhenius.build(res = 32, f = 1.),
-            {'temperatureField': initials.load.build(model0, 'temperatureField')},
+            {'temperatureField': initials.sinusoidal.build()},
+            # {'temperatureField': initials.load.build(model0, 'temperatureField')},
             outputPath = outputPath
             )
         model2.iterate()

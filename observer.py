@@ -41,7 +41,7 @@
 #         _model_inputs, _model_stamps, _model_scripts = \
 #             _scripts_and_stamps(self.system, self.initials)
 #
-#         inHashID = 'pemod_' + _model_stamps['allstamp'][1]
+#         inHashID = 'pemod_' + _model_stamps['all'][1]
 #
 #         stamps = {}
 #         if uw.mpi.rank == 0:
@@ -51,9 +51,9 @@
 #                     [open(script) for scriptname, script \
 #                         in sorted(scripts.items())]
 #                     ),
-#                 'inHash': _model_stamps['allstamp'][0]
+#                 'inHash': _model_stamps['all'][0]
 #                 }
-#             stamps['allstamp'] = hashstamp(stamps)
+#             stamps['all'] = hashstamp(stamps)
 #             for stampKey, stampVal in stamps.items():
 #                 stamps[stampKey] = [stampVal, wordhashFn(stampVal)]
 #         stamps = uw.mpi.comm.bcast(stamps, root = 0)
@@ -62,7 +62,7 @@
 #         scripts.update(_model_scripts)
 #         inputs.update(_model_inputs)
 #
-#         instanceID = 'peobs_' + stamps['allstamp'][1]
+#         instanceID = 'peobs_' + stamps['all'][1]
 #
 #         # checkpointer = checkpoint.Checkpointer(
 #         #     stamps = stamps,

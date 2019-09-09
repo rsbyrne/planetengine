@@ -81,20 +81,18 @@ def load_model(
 
     if not _is_child:
         if uw.mpi.rank == 0:
-            assert not os.path.isfile(os.path.join(outputPath, 'stamps.json')), \
-                "Loading a child model as an independent frame \
-                not currently supported."
+            assert not os.path.isfile(os.path.join(outputPath, 'stamps.json'))
 
     path = os.path.join(outputPath, instanceID)
 
     frame.expose_tar(path)
 
-    builts = frame.load_builts({'system'})
+    builts = frame.load_builts(path)
     system = builts['system']
-
-    # system, params = load_system(path)
-
-    initials, configs = load_initials(system, path)
+    initials = {
+        key: val for key, val in builts.items() \
+            if not key == 'system'
+        }
 
     model = Model(
         system = system,
@@ -147,7 +145,7 @@ def load_model(
 #                 [open(script) for script in initialscripts]
 #                 )
 #             }
-#         stamps['allstamp'] = utilities.hashstamp(
+#         stamps['all'] = utilities.hashstamp(
 #             [val for key, val in sorted(stamps.items())]
 #             )
 #         stamps['system'] = utilities.hashstamp(
@@ -164,25 +162,6 @@ def load_model(
 #
 #     return stamps
 
-def _make_stamps(inputs, scripts):
-    assert inputs.keys() == scripts.keys()
-    stamps = {}
-    if uw.mpi.rank == 0:
-        toHash = {}
-        for key in sorted(inputs.keys()):
-            inputList = inputs[key]
-            scriptList = scripts[key]
-            stamps[key + 'inputs'] = inputList
-            stamps[key + 'scripts'] = [
-                [open(script) for script in initialscripts]
-                ]
-        stamps = {
-            key, utilitie.hashstamp(val) \
-                for key, val in sorted(toHash.items())
-            }
-    stamps = uw.mpi.comm.bcast(stamps, root = 0)
-    return stamps
-
 def _scripts_and_stamps(
         system,
         initials,
@@ -192,23 +171,11 @@ def _scripts_and_stamps(
     inputs = {}
 
     scripts['system'] = system.scripts
+    inputs['system'] = [system.params,]
 
-    params = []
-    for index, paramsDict in enumerate(system.params):
-        params.append(paramsDict)
-    inputs['system'] = params
-
-    allconfigs = {}
-    initialscripts = []
     for varName, IC in sorted(initials.items()):
-        configs = []
-        for index, script in enumerate(IC.scripts):
-            scriptname = varName + '_' + str(index)
-            scripts[scriptname] = script
-            initialscripts.append(script)
-        configs.append(IC.inputs)
-        allconfigs[varName] = configs
-        inputs[varName] = configs
+        scripts[varName] = IC.scripts
+        inputs[varName] = [IC.inputs,]
 
     assert inputs.keys() == scripts.keys()
 
@@ -229,11 +196,11 @@ def make_model(
     if outputPath is None:
         outputPath = paths.defaultPath
 
-    inputs, stamps, scripts = \
-        _scripts_and_stamps(system, initials)
+    builts = {'system': system, **initials}
+    stamps = frame.make_stamps(builts)
 
     if instanceID is None:
-        instanceID = 'pemod_' + stamps['allstamp'][1]
+        instanceID = 'pemod_' + stamps['all'][1]
 
     path = os.path.join(outputPath, instanceID)
     tarpath = path + '.tar.gz'
@@ -285,6 +252,8 @@ def make_model(
 
 class Model(frame.Frame):
 
+    script = __file__
+
     def __init__(self,
             system,
             initials,
@@ -313,16 +282,11 @@ class Model(frame.Frame):
         self._is_child = _is_child
         self._autobackup = _autobackup
 
-        inputs, stamps, scripts = \
-            _scripts_and_stamps(system, initials)
+        self.builts = {'system': system, **initials}
+        self.stamps = frame.make_stamps(self.builts)
 
-        self.inputs = inputs
-        self.stamps = stamps
-        self.scripts = scripts
+        self.hashID = 'pemod_' + self.stamps['all'][1]
 
-        self.hashID = 'pemod_' + self.stamps['allstamp'][1]
-
-        self.varsOfState = self.system.varsOfState
         self.step = 0
         self.modeltime = 0.
 
