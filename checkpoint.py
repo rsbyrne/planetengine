@@ -8,6 +8,7 @@ from . import disk
 from .utilities import message
 
 from . import frame
+from . import paths
 
 def save_builts(builts, path):
 
@@ -59,8 +60,14 @@ class Checkpointer:
 
     def checkpoint(
             self,
-            path = 'test',
+            path = None,
             ):
+
+        if path is None:
+            path = paths.defaultPath
+
+        step = self.step()
+        modeltime = self.modeltime()
 
         coldstart = True
 
@@ -99,10 +106,9 @@ class Checkpointer:
 
         message("Checkpointing...")
 
-        if self.step is None:
+        if step is None:
             stepStr = ""
         else:
-            step = self.step
             stepStr = str(step).zfill(8)
 
         checkpointDir = os.path.join(path, stepStr)
@@ -149,7 +155,6 @@ class Checkpointer:
                 checkpointDir,
                 'modeltime.json'
                 )
-            modeltime = self.modeltime
             with open(modeltime_filepath, 'w') as file:
                 json.dump(modeltime, file)
         message("Modeltime saved.")

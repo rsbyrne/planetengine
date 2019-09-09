@@ -72,56 +72,35 @@ def load_builts(path):
                     )[0]
                 names.add(builtName)
     names = uw.mpi.comm.bcast(names, root = 0)
-    outDict = {}
+    builts = {}
     for name in sorted(names):
-        outDict[name] = []
-        jsonName = name
-        inputDict = load_json(jsonName, builtsDir)
-        maxIndex = len(inputDict) - 1
+        inputDict = load_json(name, builtsDir)
+        scriptModules = []
         index = 0
-        while index <= maxIndex:
-            scriptName = name + '_' str(index) + '.py'
+        while True:
+            scriptName = name + '_' + str(index) + '.py'
             scriptPath = os.path.join(
-                path,
+                builtsDir,
                 scriptName
                 )
             fileCheck = False
             if uw.mpi.rank == 0:
                 fileCheck = os.path.isfile(scriptPath)
             fileCheck = uw.mpi.comm.bcast(fileCheck, root = 0)
-            assert fileCheck
-            scriptModule = utilities.local_import(
-                scriptPath
-                )
-            builtInputsName = jsonName + '_' + str(index)
-            builtInputs = inputDict[builtInputsName]
-            builtObj = scriptModule.build(**builtInputs)
-            outDict[name].append(builtObj)
-            index += 1
-    return outDict
-
-def get_inputs(builts):
-    outDict = {}
-    for name, builts in sorted(builts.items()):
-        outDict[name] = [
-            built.inputs for built in builts
-            ]
-
-def find_checkpoints(path, stamps):
-    checkpoints_found = []
-    if uw.mpi.rank == 0:
-        for directory in glob.glob(path + '/*/'):
-            basename = os.path.basename(directory[:-1])
-            if (basename.isdigit() and len(basename) == 8):
-                with open(os.path.join(directory, 'stamps.json')) as json_file:
-                    loadstamps = json.load(json_file)
-                assert loadstamps == stamps, \
-                    "Bad checkpoint found! Aborting."
-                message("Found checkpoint: " + basename)
-                checkpoints_found.append(int(basename))
-        checkpoints_found = sorted(list(set(checkpoints_found)))
-    checkpoints_found = uw.mpi.comm.bcast(checkpoints_found, root = 0)
-    return checkpoints_found
+            if fileCheck:
+                scriptModule = utilities.local_import(
+                    scriptPath
+                    )
+                scriptModules.append(scriptModule)
+                index += 1
+            else:
+                break
+        built = scriptModule.build(
+            *scriptModules[1:],
+            **inputDict
+            )
+        builts[name] = built
+    return builts
 
 def make_stamps(builts):
     scripts = {}
@@ -155,19 +134,22 @@ class Frame:
     _required_attributes = {
         'outputPath', # must be str
         'instanceID', # must be str
-        '_is_child', # must be bool
         'inFrames', # must be list of Frames objects
-        '_autoarchive', # must be bool
-        'stamps', # must be dict
         'step', # must be int
+        'modeltime', # must be float
         'saveVars', # dict of vars
         'figs', # figs to save
         'collectors',
-        'subCheckpointFns',
         'update',
         'initialise',
         'builts',
         }
+
+    _autobackup = True
+    _autoarchive = True
+    _is_child = False
+    _parentFrame = None
+    blackhole = [0., 0.]
 
     def __init__(self):
 
@@ -180,15 +162,15 @@ class Frame:
         self.backuppath = os.path.join(self.backupdir, self.instanceID)
         self.backuptarpath = os.path.join(self.backupdir, self.tarname)
 
-        self.archived = False #_isArchived
+        self.stamps = make_stamps(self.builts)
 
-        self.blackhole = [0., 0.]
+        self.archived = False #_isArchived
 
         self.checkpoints = []
 
         self.checkpointer = checkpoint.Checkpointer(
-            step = self.step,
-            modeltime = self.modeltime,
+            step = lambda: self.step,
+            modeltime = lambda: self.modeltime,
             saveVars = self.saveVars,
             figs = self.figs,
             dataCollectors = self.collectors,
@@ -197,6 +179,19 @@ class Frame:
             )
 
         self.initialise()
+
+        self.find_checkpoints()
+
+        for inFrame in self.inFrames:
+            # CIRCULAR REFERENCE:
+            inFrame._parentFrame = self
+
+        if all([
+                self._autoarchive,
+                not self.archived,
+                not self._is_child
+                ]):
+            self.archive()
 
         message("Frame built!")
 
@@ -225,6 +220,8 @@ class Frame:
             if self.archived:
                 self.unarchive()
 
+            self._pre_checkpoint_hook()
+
             path = self.path
 
             if self.step in self.checkpoints:
@@ -239,11 +236,7 @@ class Frame:
             self.checkpoints = sorted(set(self.checkpoints))
 
             # CHECKPOINT OBSERVERS!!!
-            for subCheckpointFn in self.subCheckpointFns:
-                subCheckpointFn()
-            # for observerName, observer \
-            #         in sorted(self.observers.items()):
-            #     observer.checkpoint(path)
+            self._post_checkpoint_hook()
 
             if self._autoarchive:
                 self.archive()
@@ -254,8 +247,6 @@ class Frame:
         else:
 
             self.checkpointer.checkpoint(path)
-
-            # no need to checkpoint observers for remote
 
     def load_checkpoint(self, loadStep):
 
@@ -307,12 +298,35 @@ class Frame:
             self.modeltime = modeltime
 
             self.update()
-            self.status = "ready"
 
             if self._autoarchive and not self._is_child:
                 self.archive()
 
             message("Checkpoint successfully loaded!")
+
+    def find_checkpoints(self):
+        path = os.path.join(self.outputPath, self.instanceID)
+        stamps = make_stamps(self.builts)
+        checkpoints_found = []
+        if uw.mpi.rank == 0:
+            for directory in glob.glob(path + '/*/'):
+                basename = os.path.basename(directory[:-1])
+                if (basename.isdigit() and len(basename) == 8):
+                    with open(os.path.join(directory, 'stamps.json')) as json_file:
+                        loadstamps = json.load(json_file)
+                    assert loadstamps == stamps, \
+                        "Bad checkpoint found! Aborting."
+                    message("Found checkpoint: " + basename)
+                    checkpoints_found.append(int(basename))
+            checkpoints_found = sorted(list(set(checkpoints_found)))
+        checkpoints_found = uw.mpi.comm.bcast(checkpoints_found, root = 0)
+        self.checkpoints = checkpoints_found
+
+    def _pre_checkpoint_hook(self):
+        pass
+
+    def _post_checkpoint_hook(self):
+        pass
 
     def fork(self, extPath, return_frame = False):
 
@@ -415,7 +429,7 @@ class Frame:
             self.archived = True
             self.unarchive()
 
-        self.checkpoints = find_checkpoints(self.path, self.stamps)
+        self.checkpoints = self.find_checkpoints()
 
         self.load_checkpoint(min(self.checkpoints, key=lambda x:abs(x - self.step)))
 

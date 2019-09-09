@@ -56,14 +56,13 @@ class IC:
             self.inFrame = model.load_model(
                 _outputPath,
                 hashID,
-                loadStep = self.loadStep,
                 _is_child = _is_child
                 )
+
         elif type(inFrame) == str:
             self.inFrame = model.load_model(
                 os.path.dirname(inFrame),
                 os.path.basename(inFrame),
-                loadStep = self.loadStep,
                 _is_child = _is_child
                 )
         elif type(inFrame) == model.Model:
@@ -71,6 +70,8 @@ class IC:
             self.inFrame.load_checkpoint(self.loadStep)
         else:
             raise Exception("inFrame input not recognised.")
+
+        self.inFrame.load_checkpoint(self.loadStep)
 
         self.inputs['hashID'] = self.inFrame.hashID
 

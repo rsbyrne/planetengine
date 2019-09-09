@@ -42,6 +42,13 @@ def check_reqs(obj):
                 "Object requires attribute: '" + attrname + "'"
                 )
 
+def parallelise_set(setobj):
+    setlist = []
+    if uw.mpi.rank == 0:
+        setlist = list(setobj)
+    setlist = uw.mpi.comm.bcast(setlist, root = 0)
+    return setlist
+
 def unpack_var(*args):
 
     if len(args) == 1 and type(args[0]) == tuple:
