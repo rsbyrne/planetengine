@@ -126,9 +126,6 @@ def build(
         conditions = [tempBC,]
         )
 
-    step = fn.misc.constant(0)
-    modeltime = fn.misc.constant(0.)
-
     ### SOLVING ###
 
     def postSolve():
@@ -159,8 +156,7 @@ def build(
     def integrate():
         dt = advDiff.get_max_dt()
         advDiff.integrate(dt)
-        modeltime.value += dt
-        step.value += 1
+        return dt
 
     def clipVals():
         for varName, var in sorted(varsOfState.items()):
@@ -171,9 +167,10 @@ def build(
                 ).T
 
     def iterate():
-        integrate()
+        dt = integrate()
         clipVals()
         solve()
+        return dt
 
     ### HOUSEKEEPING: IMPORTANT! ###
 

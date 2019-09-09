@@ -146,9 +146,6 @@ def build(
         conditions = [tempBC,]
         )
 
-    step = fn.misc.constant(0)
-    modeltime = fn.misc.constant(0.)
-
     ### SOLVING ###
 
     def postSolve():
@@ -180,12 +177,12 @@ def build(
     def integrate():
         dt = advDiff.get_max_dt()
         advDiff.integrate(dt)
-        modeltime.value += dt
-        step.value += 1
+        return dt
 
     def iterate():
-        integrate()
+        dt = integrate()
         solve()
+        return dt
 
     ### HOUSEKEEPING: IMPORTANT! ###
 

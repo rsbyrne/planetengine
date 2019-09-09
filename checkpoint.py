@@ -63,15 +63,21 @@ class Checkpointer:
                 if not os.path.isdir(path):
                     os.makedirs(path)
 
-                if not self.scripts is None:
-                    for scriptname in self.scripts:
-                        scriptpath = self.scripts[scriptname]
-                        tweakedpath = os.path.splitext(scriptpath)[0] + ".py"
-                        newpath = os.path.join(path, scriptname + ".py")
-                        shutil.copyfile(tweakedpath, newpath)
+                builtsDir = os.path.join(path, 'builts')
+                if not os.path.isdir(builtsDir):
+                    os.makedirs(builtsDir)
 
-                for dictname, inputDict in self.inputs.items():
-                    filename = os.path.join(path, dictname + '.json')
+                if not self.scripts is None:
+                    for scriptType, scripts in sorted(self.scripts.items()):
+                        for index, script in enumerate(scripts):
+                            scriptPath = self.scripts[script]
+                            tweakedPath = os.path.splitext(scriptPath)[0] + ".py"
+                            scriptName = script + '_' + str(index)
+                            newPath = os.path.join(builtsDir, scriptName + ".py")
+                            shutil.copyfile(tweakedpath, newpath)
+
+                for dictName, inputDict in self.inputs.items():
+                    filename = os.path.join(builtsDir, dictName + '.json')
                     with open(filename, 'w') as file:
                          json.dump(inputDict, file)
 
@@ -89,7 +95,7 @@ class Checkpointer:
         if self.step is None:
             stepStr = ""
         else:
-            step = self.step.value
+            step = self.step
             stepStr = str(step).zfill(8)
 
         checkpointDir = os.path.join(path, stepStr)
@@ -136,7 +142,7 @@ class Checkpointer:
                 checkpointDir,
                 'modeltime.json'
                 )
-            modeltime = self.modeltime.value
+            modeltime = self.modeltime
             with open(modeltime_filepath, 'w') as file:
                 json.dump(modeltime, file)
         message("Modeltime saved.")

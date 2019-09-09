@@ -4,7 +4,10 @@ import os
 
 from .. import paths
 from .. import mapping
-from .. import frame
+from .. import model
+
+def build(*args, **kwargs):
+    return IC(*args, **kwargs)
 
 class IC:
 
@@ -24,9 +27,9 @@ class IC:
         assert sourceVarName is not None, \
             "sourceVarName input must be a string \
             correlating to a varsOfState attribute \
-            on the input frame."
+            on the input model."
         assert inFrame is not None or type(hashID) == str, \
-            "Must provide a str or frame instance \
+            "Must provide a str or model instance \
             for 'inFrame' keyword argument."
 
         self.inputs = {
@@ -41,7 +44,7 @@ class IC:
 
         self.sourceVarName = sourceVarName
         if loadStep is None:
-            if type(inFrame) == frame.Frame:
+            if type(inFrame) == model.Model:
                 self.loadStep = inFrame.step
             else:
                 self.loadStep = 0
@@ -50,20 +53,20 @@ class IC:
             self.loadStep = loadStep
 
         if inFrame is None and type(hashID) == str:
-            self.inFrame = frame.load_frame(
+            self.inFrame = model.load_model(
                 _outputPath,
                 hashID,
                 loadStep = self.loadStep,
                 _is_child = _is_child
                 )
         elif type(inFrame) == str:
-            self.inFrame = frame.load_frame(
+            self.inFrame = model.load_model(
                 os.path.dirname(inFrame),
                 os.path.basename(inFrame),
                 loadStep = self.loadStep,
                 _is_child = _is_child
                 )
-        elif type(inFrame) == frame.Frame:
+        elif type(inFrame) == model.Model:
             self.inFrame = inFrame
             self.inFrame.load_checkpoint(self.loadStep)
         else:

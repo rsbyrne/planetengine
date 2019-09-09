@@ -11,8 +11,6 @@ from . import utilities
 from . import disk
 from .wordhash import wordhash as wordhashFn
 from . import checkpoint
-from .initials.load import IC as _loadIC
-from .initials import apply
 from .utilities import message
 from .utilities import check_reqs
 from .visualisation import QuickFig
@@ -20,6 +18,8 @@ from .visualisation import QuickFig
 def expose_tar(path):
 
     tarpath = path + '.tar.gz'
+
+    print(path)
 
     if uw.mpi.rank == 0:
         assert os.path.isdir(path) or os.path.isfile(tarpath), \
@@ -37,45 +37,69 @@ def expose_tar(path):
                 "Archive contained the wrong model file somehow."
             os.remove(tarpath)
 
-def load_inputs(inputName, path):
-    filename = inputName + '.json'
-    inputDict = {}
+def load_json(jsonName, path):
+    filename = jsonName + '.json'
+    jsonDict = {}
     if uw.mpi.rank == 0:
         with open(os.path.join(path, filename)) as json_file:
-            inputDict = json.load(json_file)
-    inputDict = uw.mpi.comm.bcast(inputDict, root = 0)
-    return inputDict
+            jsonDict = json.load(json_file)
+    jsonDict = uw.mpi.comm.bcast(jsonDict, root = 0)
+    return jsonDict
 
-def load_system(path):
-    params = load_inputs('params', path)
-    systemscript = utilities.local_import(os.path.join(path, 'systemscript_0.py'))
-    system = systemscript.build(**params['systeminputs_0'])
-    return system, params
+load_inputs = load_json
 
-def load_initials(system, path):
-    configs = load_inputs('configs', path)
-    initials = {}
-    for varName in sorted(system.varsOfState):
-        initials[varName] = {**configs[varName]}
-        initialsLoadName = varName + '_initialscript_0.py'
-        module = utilities.local_import(
-            os.path.join(path, initialsLoadName)
-            )
-        # check if an identical 'initial' object already exists:
-        if hasattr(module, 'LOADTYPE'):
-            initials[varName] = _loadIC(
-                **configs[varName], _outputPath = path, _is_child = True
+def load_jsons(jsonNames, path):
+    jsons = {}
+    if uw.mpi.rank == 0:
+        for jsonName in jsonNames:
+            jsons[jsonName] = load_json(
+                jsonName,
+                path
                 )
-        elif module.IC in [type(IC) for IC in initials.values()]:
-            for priorVarName, IC in sorted(initials.items()):
-                if type(IC) == module.IC and configs[varName] == configs[priorVarName]:
-                    initials[varName] = initials[priorVarName]
-                    break
-        else:
-            initials[varName] = module.IC(
-                **configs[varName]
+    jsons = uw.mpi.comm.bcast(jsons, root = 0)
+    return jsons
+
+def load_builts(names, path):
+    builtsDir = os.path.join(path, 'builts')
+    if uw.mpi.rank == 0:
+        assert os.path.isdir(builtsDir)
+    outDict = {}
+    for name in sorted(names):
+        outDict[name] = []
+        jsonName = name + 'inputs'
+        inputDict = load_json(jsonName, builtsDir)
+        maxIndex = len(inputDict) - 1
+        index = 0
+        while index <= maxIndex:
+            scriptName = name + 'script_' + str(index) + '.py'
+            scriptPath = os.path.join(
+                path,
+                scriptName
                 )
-    return initials, configs
+            fileCheck = False
+            if uw.mpi.rank == 0:
+                fileCheck = os.path.isfile(scriptPath)
+            fileCheck = uw.mpi.comm.bcast(fileCheck, root = 0)
+            assert fileCheck
+            scriptModule = utilities.local_import(
+                scriptPath
+                )
+            builtInputsName = jsonName + '_' + str(index)
+            builtInputs = inputDict[builtInputsName]
+            builtObj = scriptModule.build(**builtInputs)
+            outDict[name].append(builtObj)
+            index += 1
+    return outDict
+
+def get_inputs(builts):
+    outDict = {}
+    for name, builts in sorted(builts.items()):
+        inputsName = name + 'inputs'
+        outDict[inputsName] = []
+        for index, built in enumerate(builts):
+            subInputsName = inputsName + '_' + str(index)
+            outDict[inputsName].append(built.inputs)
+
 
 def find_checkpoints(path, stamps):
     checkpoints_found = []
@@ -93,172 +117,30 @@ def find_checkpoints(path, stamps):
     checkpoints_found = uw.mpi.comm.bcast(checkpoints_found, root = 0)
     return checkpoints_found
 
-def load_frame(
-        outputPath = None,
-        instanceID = '',
-        loadStep = 0,
-        _is_child = False,
-        ):
-    '''
-    Creates a new 'frame' instance attached to a pre-existing
-    model directory. LoadStep can be an integer corresponding
-    to a previous checkpoint step, or can be the string 'max'
-    which loads the highest stable checkpoint available.
-    '''
-
-    if outputPath is None:
-        outputPath = paths.defaultPath
-
-    # Check that target directory is not inside
-    # another planetengine directory:
-
-    if not _is_child:
-        if uw.mpi.rank == 0:
-            assert not os.path.isfile(os.path.join(outputPath, 'stamps.json')), \
-                "Loading a child model as an independent frame \
-                not currently supported."
-
-    path = os.path.join(outputPath, instanceID)
-
-    expose_tar(path)
-
-    system, params = load_system(path)
-
-    initials, configs = load_initials(system, path)
-
-    frame = Frame(
-        system = system,
-        initials = initials,
-        outputPath = outputPath,
-        instanceID = instanceID,
-        _is_child = _is_child
-        )
-
-    # we may know it's a child already,
-    # but we may not have constructed the parent yet.
-
-    # If it's a loaded frame, it must have been saved to disk at some point -
-    # hence its internal frames will all be held as copies inside
-    # the loaded frame. We need to flag this:
-    for inFrame in frame.inFrames:
-        inFrame._parentFrame = frame
-
-    frame.checkpoints = find_checkpoints(path, frame.stamps)
-
-    frame.load_checkpoint(loadStep)
-
-    if all([
-            frame._autoarchive,
-            not frame.archived,
-            not _is_child
-            ]):
-        frame.archive()
-
-    return frame
-
-def _make_stamps(
-        params,
-        systemscripts,
-        configs,
-        initialscripts
-        ):
-
-    message("Making stamps...")
-
-    stamps = {}
-    if uw.mpi.rank == 0:
-        stamps = {
-            'params': utilities.hashstamp(params),
-            'systemscripts': utilities.hashstamp(
-                [open(script) for script in systemscripts]
-                ),
-            'configs': utilities.hashstamp(configs),
-            'initialscripts': utilities.hashstamp(
-                [open(script) for script in initialscripts]
-                )
-            }
-        stamps['allstamp'] = utilities.hashstamp(
-            [val for key, val in sorted(stamps.items())]
-            )
-        stamps['system'] = utilities.hashstamp(
-            (stamps['params'], stamps['systemscripts'])
-            )
-        stamps['initials'] = utilities.hashstamp(
-            (stamps['configs'], stamps['initialscripts'])
-            )
-        for stampKey, stampVal in stamps.items():
-            stamps[stampKey] = [stampVal, wordhashFn(stampVal)]
-    stamps = uw.mpi.comm.bcast(stamps, root = 0)
-
-    message("Stamps made.")
-
-    return stamps
-
-def _scripts_and_stamps(
-        system,
-        initials,
-        ):
-
-    scripts = {}
-
-    systemscripts = []
-    for index, script in enumerate(system.scripts):
-        scriptname = 'systemscript' + '_' + str(index)
-        scripts[scriptname] = script
-        systemscripts.append(script)
-
-    params = {}
-    for index, paramsDict in enumerate(system.params):
-        paramsName = 'systeminputs_' + str(index)
-        params[paramsName] = paramsDict
-
-    configs = {}
-    initialscripts = []
-    for varName, IC in sorted(initials.items()):
-        for index, script in enumerate(IC.scripts):
-            scriptname = varName + '_initialscript_' + str(index)
-            scripts[scriptname] = script
-            initialscripts.append(script)
-        configs[varName] = IC.inputs
-
-    stamps = _make_stamps(
-        params,
-        systemscripts,
-        configs,
-        initialscripts
-        )
-
-    inputs = {
-        'params': params,
-        # 'options': options,
-        'configs': configs,
-        }
-
-    return inputs, stamps, scripts
-
-################
-
-class _Frame:
+class Frame:
 
     _required_attributes = {
-        'system', # must be a 'system'-like object
-        'initials', # must be dict (key = str, val = IC)
         'outputPath', # must be str
         'instanceID', # must be str
         '_is_child', # must be bool
         'inFrames', # must be list of Frames objects
         '_autoarchive', # must be bool
-        'checkpoint', # must take pos arg (path)
-        'load_checkpoint', # must take pos arg (step)
         'stamps', # must be dict
         'step', # must be int
+        'stamps', # dict
+        'saveVars', # dict of vars
+        'figs', # figs to save
+        'collectors',
+        'scripts',
+        'inputs',
+        'subCheckpointFns',
+        'update',
+        'initialise',
         }
 
     def __init__(self):
 
         check_reqs(self)
-
-        assert self.system.varsOfState.keys() == self.initials.keys()
 
         self.path = os.path.join(self.outputPath, self.instanceID)
         self.tarname = self.instanceID + '.tar.gz'
@@ -269,12 +151,139 @@ class _Frame:
 
         self.archived = False #_isArchived
 
-        if type(self.system.mesh) == uw.mesh._spherical_mesh.FeMesh_Annulus:
-            self.blackhole = [0., 0.]
-        else:
-            raise Exception("Only the Annulus mesh is supported at this time.")
+        self.blackhole = [0., 0.]
 
         self.checkpoints = []
+
+        self.checkpointer = checkpoint.Checkpointer(
+            step = self.step,
+            modeltime = self.modeltime,
+            saveVars = self.saveVars,
+            figs = self.figs,
+            dataCollectors = self.collectors,
+            scripts = self.scripts,
+            inputs = self.inputs,
+            stamps = self.stamps,
+            inFrames = self.inFrames,
+            )
+
+        self.initialise()
+
+        message("Frame built!")
+
+    def reset(self):
+        self.initialise()
+        self.most_recent_checkpoint = None
+
+    def all_collect(self):
+        message("Collecting...")
+        for collector in self.collectors:
+            collector.collect()
+        message("Collecting complete!")
+
+    def all_clear(self):
+        message("Clearing all data...")
+        for collector in self.collectors:
+            collector.clear()
+        message("All data cleared!")
+
+    def checkpoint(self, path = None):
+
+        self.all_collect()
+
+        if path is None or path == self.path:
+
+            if self.archived:
+                self.unarchive()
+
+            path = self.path
+
+            if self.step in self.checkpoints:
+                message("Checkpoint already exists! Skipping.")
+            else:
+                self.checkpointer.checkpoint(path)
+
+            self.all_clear()
+
+            self.most_recent_checkpoint = self.step
+            self.checkpoints.append(self.step)
+            self.checkpoints = sorted(set(self.checkpoints))
+
+            # CHECKPOINT OBSERVERS!!!
+            for subCheckpointFn in self.subCheckpointFns:
+                subCheckpointFn()
+            # for observerName, observer \
+            #         in sorted(self.observers.items()):
+            #     observer.checkpoint(path)
+
+            if self._autoarchive:
+                self.archive()
+
+            if self._autobackup:
+                self.backup()
+
+        else:
+
+            self.checkpointer.checkpoint(path)
+
+            # no need to checkpoint observers for remote
+
+    def load_checkpoint(self, loadStep):
+
+        message("Loading checkpoint...")
+
+        if loadStep == 'max':
+            loadStep = max(self.checkpoints)
+        elif loadStep == 'min':
+            loadStep = min(self.checkpoints)
+        elif loadStep == 'latest':
+            loadStep = self.most_recent_checkpoint
+
+        if loadStep == self.step:
+            message(
+                "Already at step " + str(loadStep) + ": aborting load_checkpoint."
+                )
+
+        elif loadStep == 0:
+            self.reset()
+
+        else:
+
+            if self.archived:
+                self.unarchive()
+
+            stepStr = str(loadStep).zfill(8)
+
+            checkpointFile = os.path.join(self.path, stepStr)
+
+            disk.varsOnDisk(
+                self.saveVars,
+                checkpointFile,
+                'load',
+                self.blackhole
+                )
+
+            self.step = loadStep
+
+            modeltime = 0.
+            if uw.mpi.rank == 0:
+                modeltime_filepath = os.path.join(
+                    checkpointFile,
+                    'modeltime.json'
+                    )
+                with open(modeltime_filepath, 'r') as file:
+                    modeltime = json.load(file)
+            modeltime = uw.mpi.comm.bcast(modeltime, root = 0)
+
+            self.modeltime = modeltime
+
+            self.update()
+            self.status = "ready"
+
+            if self._autoarchive and not self._is_child:
+                self.archive()
+
+            message("Checkpoint successfully loaded!")
 
     def fork(self, extPath, return_frame = False):
 
@@ -505,391 +514,3 @@ class _Frame:
         for inFrame in self.inFrames:
             if inFrame._is_child:
                 inFrame._set_inner_archive_status(status)
-
-def make_frame(
-        system,
-        initials,
-        outputPath = None,
-        instanceID = None,
-        ):
-
-    if outputPath is None:
-        outputPath = paths.defaultPath
-
-    inputs, stamps, scripts = \
-        _scripts_and_stamps(system, initials)
-    params = inputs['params']
-    # options = inputs['options']
-    configs = inputs['configs']
-
-    if instanceID is None:
-        instanceID = 'pemod_' + stamps['allstamp'][1]
-
-    path = os.path.join(outputPath, instanceID)
-    tarpath = path + '.tar.gz'
-
-    directory_state = ''
-
-    if uw.mpi.rank == 0:
-
-        if os.path.isdir(path):
-            if os.path.isfile(tarpath):
-                raise Exception(
-                    "Cannot combine model directory and tar yet."
-                    )
-            else:
-                directory_state = 'directory'
-        elif os.path.isfile(tarpath):
-            directory_state = 'tar'
-        else:
-            directory_state = 'clean'
-
-    directory_state = uw.mpi.comm.bcast(directory_state, root = 0)
-
-    if directory_state == 'tar':
-        if uw.mpi.rank == 0:
-            with tarfile.open(tarpath) as tar:
-                tar.extract('stamps.json', path)
-            with open(os.path.join(path, 'stamps.json')) as json_file:
-                loadstamps = json.load(json_file)
-            shutil.rmtree(path)
-            assert loadstamps == stamps
-
-    if directory_state == 'clean':
-        message("Making a new frame...")
-        frame = Frame(
-            system,
-            initials,
-            outputPath,
-            instanceID
-            )
-
-    else:
-        message("Preexisting frame found! Loading...")
-        frame = load_frame(
-            outputPath,
-            instanceID
-            )
-
-    return frame
-
-class Frame(_Frame):
-
-    def __init__(self,
-            system,
-            initials,
-            outputPath = None,
-            instanceID = 'test',
-            _autoarchive = True,
-            _parentFrame = None,
-            _is_child = False,
-            _autobackup = True,
-            ):
-
-        if outputPath is None:
-            outputPath = paths.defaultPath
-
-        message("Building frame...")
-
-        self.system = system
-        self.observers = {}
-        self.initials = initials
-        self.outputPath = outputPath
-        self.instanceID = instanceID
-        self._autoarchive = _autoarchive
-        self._parentFrame = _parentFrame
-        self._is_child = _is_child
-        self._autobackup = _autobackup
-
-        inputs, stamps, scripts = \
-            _scripts_and_stamps(system, initials)
-
-        self.inputs = inputs
-        self.params = inputs['params']
-        # self.options = inputs['options']
-        self.configs = inputs['configs']
-        self.stamps = stamps
-        self.scripts = scripts
-
-        self.hashID = 'pemod_' + self.stamps['allstamp'][1]
-
-        self.varsOfState = self.system.varsOfState
-        self.step = 0
-        self.modeltime = 0.
-
-        self.inFrames = []
-        for IC in self.initials.values():
-            try:
-                self.inFrames.append(IC.inFrame)
-            except:
-                pass
-
-        self.analysers = []
-        self.collectors = []
-        self.fig = QuickFig(
-            system.varsOfState,
-            style = 'smallblack',
-            )
-        self.figs = [self.fig]
-
-        self.checkpointer = checkpoint.Checkpointer(
-            step = self.system.step,
-            modeltime = self.system.modeltime,
-            saveVars = self.varsOfState,
-            figs = self.figs,
-            dataCollectors = self.collectors,
-            scripts = self.scripts,
-            inputs = self.inputs,
-            stamps = self.stamps,
-            inFrames = self.inFrames,
-            )
-
-        self.initialise()
-
-        message("Frame built!")
-
-        super().__init__()
-
-    def initialise(self):
-        message("Initialising...")
-        apply(
-            self.initials,
-            self.system,
-            )
-        self.system.solve()
-        self.most_recent_checkpoint = None
-        self.update()
-        self.status = "ready"
-        message("Initialisation complete!")
-
-    def reset(self):
-        self.initialise()
-
-    def all_analyse(self):
-        message("Analysing...")
-        for analyser in self.analysers:
-            analyser.analyse()
-        message("Analysis complete!")
-
-    def all_collect(self):
-        message("Collecting...")
-        for collector in self.collectors:
-            collector.collect()
-        message("Collecting complete!")
-
-    def all_clear(self):
-        message("Clearing all data...")
-        for collector in self.collectors:
-            collector.clear()
-        message("All data cleared!")
-
-    def update(self):
-        self.step = self.system.step.value
-        self.modeltime = self.system.modeltime.value
-        for observerName, observer \
-                in sorted(self.observers.items()):
-            observer.prompt()
-
-    def report(self):
-        message(
-            '\n' \
-            + 'Step: ' + str(self.step) \
-            + ', modeltime: ' + '%.3g' % self.modeltime
-            )
-        self.fig.show()
-
-    def iterate(self):
-        assert not self._is_child, \
-            "Cannot iterate child models independently."
-        message("Iterating step " + str(self.step) + " ...")
-        self.system.iterate()
-        self.update()
-        message("Iteration complete!")
-
-    def go(self, steps):
-        stopStep = self.step + steps
-        self.traverse(lambda: self.step >= stopStep)
-
-    def traverse(self, stopCondition,
-            collectConditions = lambda: False,
-            checkpointCondition = lambda: False,
-            reportCondition = lambda: False,
-            forge_on = False,
-            ):
-
-        self.status = "pre-traverse"
-
-        if not type(collectConditions) is list:
-            collectConditions = [collectConditions,]
-            assert len(collectConditions) == len(self.collectors)
-
-        if checkpointCondition():
-            self.checkpoint()
-
-        message("Running...")
-
-        while not stopCondition():
-
-            try:
-                self.status = "traversing"
-                self.iterate()
-                if checkpointCondition():
-                    self.checkpoint()
-                else:
-                    for collector, collectCondition in zip(
-                            self.collectors,
-                            collectConditions
-                            ):
-                        if collectCondition():
-                            collector.collect()
-                if reportCondition():
-                    self.report()
-
-            except:
-                if forge_on:
-                    message("Something went wrong...loading last checkpoint.")
-                    assert type(self.most_recent_checkpoint) == int, "No most recent checkpoint logged."
-                    self.load_checkpoint(self.most_recent_checkpoint)
-                else:
-                    raise Exception("Something went wrong.")
-
-        self.status = "post-traverse"
-        message("Done!")
-        if checkpointCondition():
-            self.checkpoint()
-        self.status = "ready"
-
-    def checkpoint(self, path = None):
-
-        self.all_collect()
-
-        if path is None or path == self.path:
-
-            if self.archived:
-                self.unarchive()
-
-            path = self.path
-
-            if self.step in self.checkpoints:
-                message("Checkpoint already exists! Skipping.")
-            else:
-                self.checkpointer.checkpoint(path)
-
-            self.all_clear()
-
-            self.most_recent_checkpoint = self.step
-            self.checkpoints.append(self.step)
-            self.checkpoints = sorted(set(self.checkpoints))
-
-            # CHECKPOINT OBSERVERS!!!
-            for observerName, observer \
-                    in sorted(self.observers.items()):
-                observer.checkpoint(path)
-
-            if self._autoarchive:
-                self.archive()
-
-            if self._autobackup:
-                self.backup()
-
-        else:
-
-            self.checkpointer.checkpoint(path)
-
-            # no need to checkpoint observers for remote
-
-    def load_checkpoint(self, loadStep):
-
-        message("Loading checkpoint...")
-
-        if loadStep == 'max':
-            loadStep = max(self.checkpoints)
-        elif loadStep == 'min':
-            loadStep = min(self.checkpoints)
-        elif loadStep == 'latest':
-            loadStep = self.most_recent_checkpoint
-
-        if loadStep == self.step:
-            message(
-                "Already at step " + str(loadStep) + ": aborting load_checkpoint."
-                )
-
-        elif loadStep == 0:
-            self.reset()
-
-        else:
-
-            if self.archived:
-                self.unarchive()
-
-            stepStr = str(loadStep).zfill(8)
-
-            checkpointFile = os.path.join(self.path, stepStr)
-
-            disk.varsOnDisk(
-                self.system.varsOfState,
-                checkpointFile,
-                'load',
-                self.blackhole
-                )
-
-            self.system.step.value = loadStep
-
-            modeltime = 0.
-            if uw.mpi.rank == 0:
-                modeltime_filepath = os.path.join(
-                    checkpointFile,
-                    'modeltime.json'
-                    )
-                with open(modeltime_filepath, 'r') as file:
-                    modeltime = json.load(file)
-            modeltime = uw.mpi.comm.bcast(modeltime, root = 0)
-            self.system.modeltime.value = modeltime
-
-            self.system.solve()
-
-            self.update()
-            self.status = "ready"
-
-            if self._autoarchive and not self._is_child:
-                self.archive()
-
-            message("Checkpoint successfully loaded!")
-
-# An example of a custom class that inherits from _Frame:
-class CustomFrame(_Frame):
-    def __init__(self):
-
-        system = planetengine.systems.arrhenius.build(res = 16)
-        initials = {'temperatureField': planetengine.initials.sinusoidal.IC(freq = 1.)}
-        planetengine.initials.apply(
-            initials,
-            system,
-            )
-        system.solve()
-
-        self.system = system
-        self.initials = initials
-        self.outputPath = '/home/jovyan/workspace/data/test'
-        self.instanceID = 'testFrame'
-        self.stamps = {'a': 1}
-        self.step = 0
-        self._is_child = False
-        self.inFrames = []
-        self._autoarchive = True
-        checkpointer = checkpoint.Checkpointer(
-            stamps = self.stamps,
-            step = system.step,
-            modeltime = system.modeltime,
-            )
-        mypath = os.path.join(self.outputPath, self.instanceID)
-        def checkpoint(path = None):
-            if path is None:
-                path = mypath
-            checkpointer.checkpoint(path)
-        self.checkpoint = checkpoint
-        def load_checkpoint(step):
-            pass
-        self.load_checkpoint = load_checkpoint
-
-        super().__init__()
