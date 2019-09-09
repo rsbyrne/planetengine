@@ -244,9 +244,6 @@ def build(
         order = 2,
         )
 
-    step = fn.misc.constant(0)
-    modeltime = fn.misc.constant(0.)
-
     ### SOLVING ###
 
     def postSolve():
@@ -280,12 +277,12 @@ def build(
         advDiff.integrate(dt)
         advector.integrate(dt)
         repopulator.repopulate()
-        modeltime.value += dt
-        step.value += 1
+        return dt
 
     def iterate():
-        integrate()
+        dt = integrate()
         solve()
+        return dt
 
     ### HOUSEKEEPING: IMPORTANT! ###
 

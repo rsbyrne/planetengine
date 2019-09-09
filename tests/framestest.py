@@ -1,32 +1,35 @@
 from .. import initials
-from .. import frame
+from .. import model
 from .. import systems
 from ..utilities import message
 import underworld as uw
 from underworld import function as fn
 
-from .testdir import TestDir
+from ..paths import TestDir
 
 def testfn():
     with TestDir() as outputPath:
-        inModel = frame.make_frame(
+        model0 = model.make_model(
             systems.arrhenius.build(res = 32, f = 0.5),
-            {'temperatureField': initials.sinusoidal.IC()},
+            {'temperatureField': initials.sinusoidal.build()},
             outputPath = outputPath
             )
-        model = frame.make_frame(
+        model1 = model.make_model(
             systems.arrhenius.build(res = 32, f = 1.),
-            {'temperatureField': initials.load.IC(inModel, 'temperatureField')},
+            {'temperatureField': initials.sinusoidal.build()},
+            # {'temperatureField': initials.load.build(model0, 'temperatureField')},
             outputPath = outputPath
             )
-        model.checkpoint()
-        model2 = frame.make_frame(
+        model1.checkpoint()
+        model2 = model.make_model(
             systems.arrhenius.build(res = 32, f = 1.),
-            {'temperatureField': initials.load.IC(inModel, 'temperatureField')},
+            {'temperatureField': initials.sinusoidal.build()},
+            # {'temperatureField': initials.load.build(model0, 'temperatureField')},
             outputPath = outputPath
             )
         model2.iterate()
         model2.unarchive()
         model2.archive()
         model2.checkpoint()
+        model3 = model.load_model(outputPath, model1.instanceID)
         message('Success!')

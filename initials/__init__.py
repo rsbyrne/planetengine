@@ -57,8 +57,8 @@ def _apply(initials, system):
 
     # RESET PROGRESS VARS:
 
-    system.step.value = 0
-    system.modeltime.value = 0.
+    # system.step.value = 0
+    # system.modeltime.value = 0.
 
 # def preview(IC, _2D = True):
 #     if hasattr(IC, 'LOADTYPE'):

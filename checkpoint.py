@@ -7,35 +7,67 @@ import json
 from . import disk
 from .utilities import message
 
+from . import frame
+from . import paths
+
+def save_builts(builts, path):
+
+    if uw.mpi.rank == 0:
+
+        builtsDir = os.path.join(path, 'builts')
+        if not os.path.isdir(builtsDir):
+            os.makedirs(builtsDir)
+
+        for builtName, built in sorted(builts.items()):
+            inputs = built.inputs
+            scripts = built.scripts
+            for index, script in enumerate(scripts):
+                tweakedPath = os.path.splitext(script)[0] + ".py"
+                scriptName = builtName + '_' + str(index)
+                newPath = os.path.join(builtsDir, scriptName + ".py")
+                shutil.copyfile(tweakedPath, newPath)
+            inputsFilename = os.path.join(builtsDir, builtName + '.json')
+            with open(inputsFilename, 'w') as file:
+                 json.dump(inputs, file)
+
+def save_stamps(stamps, path):
+    if uw.mpi.rank == 0:
+        stampFilename = os.path.join(path, 'stamps.json')
+        with open(stampFilename, 'w') as file:
+             json.dump(stamps, file)
+
 class Checkpointer:
 
     def __init__(
             self,
-            stamps,
             saveVars = None,
-            scripts = None,
+            builts = None,
             figs = None,
             dataCollectors = None,
-            inputs = {},
             step = None,
             modeltime = None,
             inFrames = [],
             ):
 
-        self.scripts = scripts
         self.figs = figs
         self.dataCollectors = dataCollectors
         self.saveVars = saveVars
         self.step = step
         self.modeltime = modeltime
-        self.inputs = inputs
-        self.stamps = stamps
+        self.builts = builts
         self.inFrames = inFrames
+        self.stamps = frame.make_stamps(self.builts)
 
     def checkpoint(
             self,
-            path = 'test',
+            path = None,
             ):
+
+        if path is None:
+            path = paths.defaultPath
+
+        step = self.step()
+        modeltime = self.modeltime()
 
         coldstart = True
 
@@ -63,21 +95,9 @@ class Checkpointer:
                 if not os.path.isdir(path):
                     os.makedirs(path)
 
-                if not self.scripts is None:
-                    for scriptname in self.scripts:
-                        scriptpath = self.scripts[scriptname]
-                        tweakedpath = os.path.splitext(scriptpath)[0] + ".py"
-                        newpath = os.path.join(path, scriptname + ".py")
-                        shutil.copyfile(tweakedpath, newpath)
+                save_builts(self.builts, path)
 
-                for dictname, inputDict in self.inputs.items():
-                    filename = os.path.join(path, dictname + '.json')
-                    with open(filename, 'w') as file:
-                         json.dump(inputDict, file)
-
-                stampFilename = os.path.join(path, 'stamps.json')
-                with open(stampFilename, 'w') as file:
-                     json.dump(self.stamps, file)
+                save_stamps(self.stamps, path)
 
             for inFrame in self.inFrames:
                 inFrame.checkpoint(
@@ -86,10 +106,9 @@ class Checkpointer:
 
         message("Checkpointing...")
 
-        if self.step is None:
+        if step is None:
             stepStr = ""
         else:
-            step = self.step.value
             stepStr = str(step).zfill(8)
 
         checkpointDir = os.path.join(path, stepStr)
@@ -136,7 +155,6 @@ class Checkpointer:
                 checkpointDir,
                 'modeltime.json'
                 )
-            modeltime = self.modeltime.value
             with open(modeltime_filepath, 'w') as file:
                 json.dump(modeltime, file)
         message("Modeltime saved.")

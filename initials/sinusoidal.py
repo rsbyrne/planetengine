@@ -1,5 +1,8 @@
 import numpy as np
 
+def build(*args, **kwargs):
+    return IC(*args, **kwargs)
+
 class IC:
 
     def __init__(
