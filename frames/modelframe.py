@@ -24,9 +24,9 @@ def build(builts, **kwargs):
         key: val for key, val in builts.items() \
             if not key == 'system'
         }
-    return Model(system, initials, **kwargs)
+    return ModelFrame(system, initials, **kwargs)
 
-class Model(Frame):
+class ModelFrame(Frame):
 
     def __init__(self,
             system,

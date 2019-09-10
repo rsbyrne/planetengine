@@ -9,7 +9,7 @@ def build(
         res = 64,
         f = 0.54,
         aspect = 1.,
-        Ra = 1e7,
+        Ra = 1e7
         ):
 
     ### HOUSEKEEPING: IMPORTANT! ###

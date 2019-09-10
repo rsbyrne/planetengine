@@ -1,9 +1,9 @@
 from ..utilities import check_reqs
 from ..builts import Built
 
-class System(Built):
+class Observer(Built):
 
-    _required_attributes{
+    _required_attributes = {
         'inputs',
         'scripts',
         }
@@ -11,3 +11,5 @@ class System(Built):
     def __init__(self):
 
         check_reqs(self)
+
+        super().__init__()

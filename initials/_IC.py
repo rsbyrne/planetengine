@@ -7,10 +7,11 @@ from ..fieldops import set_boundaries
 from ..utilities import check_reqs
 from ..generic import mesh2D as ICmesh
 from .. import mapping
+from ..builts import Built
 
 from types import ModuleType
 
-class _IC:
+class _IC(Built):
 
     _required_attributes = {
         'script',
@@ -47,6 +48,8 @@ class _IC:
         else:
             boxDims = ((0., 1.),) * self.meshDim
             self.apply(self.var, boxDims)
+
+        super().__init__()
 
     @staticmethod
     def _construct_inners(*args, **kwargs):

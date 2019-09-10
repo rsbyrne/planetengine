@@ -31,6 +31,15 @@ def set_scales(variable, values):
         values
         )
 
+def clip_array(variable, scales):
+    variable.data[:] = np.array([
+        np.clip(subarr, *clipval) \
+            for subarr, clipval in zip(
+                variable.data.T,
+                scales
+                )
+        ]).T
+
 def weightVar(mesh, specialSets = None):
 
     maskVar = uw.mesh.MeshVariable(mesh, nodeDofCount = 1)

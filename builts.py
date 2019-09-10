@@ -2,7 +2,7 @@ from .utilities import check_reqs
 
 class Built:
 
-    _required_attributes{
+    _required_attributes = {
         'inputs',
         'scripts',
         }
