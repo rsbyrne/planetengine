@@ -6,6 +6,7 @@ import numpy as np
 from planetengine.utilities import Grouper
 
 def build(
+        *args,
         res = 64,
         f = 0.54,
         aspect = 1.,
@@ -16,7 +17,7 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     inputs = locals().copy()
-    scripts = [__file__,]
+    script = __file__
 
     ### MESH & MESH VARIABLES ###
 
@@ -179,7 +180,7 @@ def build(
 
     ### HOUSEKEEPING: IMPORTANT! ###
 
-    params = [inputs,]
+    scripts = [script,]
     varsOfState = {'temperatureField': temperatureField}
     obsVars = {
         'temperature': temperatureField,

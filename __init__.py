@@ -14,7 +14,7 @@ from . import visualisation
 from . import tests
 from . import disk
 from . import paths
-from . import default
+from . import generic
 
 from .utilities import message
 from .utilities import log

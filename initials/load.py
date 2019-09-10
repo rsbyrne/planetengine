@@ -14,7 +14,6 @@ class IC(_IC):
 
     def __init__(
             self,
-            *args,
             inFrame = None,
             sourceVarName = None,
             loadStep = None,
@@ -86,4 +85,4 @@ class IC(_IC):
             self.varDim = self.inVar.count
             self.meshDim = self.inVar.swarm.mesh.dim
 
-        super().__init__(*args)
+        super().__init__()

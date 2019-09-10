@@ -15,7 +15,7 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     inputs = locals().copy()
-    scripts = [__file__,]
+    script = __file__
 
     ### MESH & MESH VARIABLES ###
 
@@ -173,6 +173,9 @@ def build(
         return dt
 
     ### HOUSEKEEPING: IMPORTANT! ###
+
+    inputs = input
+    scripts = [script,]
 
     varsOfState = {'temperatureField': temperatureField}
     obsVars = {'velocityField': velocityField}

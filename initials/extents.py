@@ -12,7 +12,6 @@ class IC(_IC):
 
     def __init__(
             self,
-            *args,
             shapes = None
             ):
 
@@ -31,7 +30,7 @@ class IC(_IC):
                 (val, fn.shape.Polygon(vertices))
                 )
 
-        super().__init__(*args)
+        super().__init__()
 
     def evaluate(self, coordArray):
         outArray = np.zeros(

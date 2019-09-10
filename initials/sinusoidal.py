@@ -11,7 +11,6 @@ class IC(_IC):
 
     def __init__(
             self,
-            *args,
             pert = 0.2,
             freq = 1.,
             phase = 0.
@@ -27,7 +26,7 @@ class IC(_IC):
         self.phase = phase
         self.pert = pert
 
-        super().__init__(*args)
+        super().__init__()
 
     def evaluate(self, coordArray):
         valMin, valMax = self.valRange
