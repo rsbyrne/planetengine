@@ -10,15 +10,9 @@ from ..fieldops import set_scales
 from ..fieldops import set_boundaries
 from ..visualisation import quickShow
 
+import underworld as uw
+
 def apply(initials, system):
-
-    if hasattr(system, "sub_systems"):
-        for sub_system in inputs.sub_systems:
-            apply(initials, sub_system)
-    else:
-        _apply(initials, system)
-
-def _apply(initials, system):
 
     varsOfState = system.varsOfState
 
@@ -27,7 +21,6 @@ def _apply(initials, system):
     for varName, var in sorted(varsOfState.items()):
 
         IC = initials[varName]
-        var, varType, mesh, substrate, dType, varDim = get_varInfo(var, return_var = True)
         try: boxDims = system.boxDims
         except: boxDims = ((0., 1.),) * system.mesh.dim
 
@@ -40,7 +33,10 @@ def _apply(initials, system):
                 )
 
         else: # hence is an ordinary IC:
-            box = mapping.box(mesh, substrate.data, boxDims)
+            if type(var) == uw.mesh.MeshVariable:
+                box = mapping.box(var.mesh, var.mesh.data, boxDims)
+            elif type(var) == uw.swarm.SwarmVariable:
+                box = mapping.box(var.swarm.mesh, var.swarm.data, boxDims)
             var.data[:] = IC.evaluate(box)
 
         # APPLY SCALES:

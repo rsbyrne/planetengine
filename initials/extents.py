@@ -1,10 +1,14 @@
 from underworld import function as fn
 import numpy as np
+from ._IC import _IC
 
 def build(*args, **kwargs):
     return IC(*args, **kwargs)
 
-class IC:
+class IC(_IC):
+
+    varDim = 1
+    meshDim = 2
 
     def __init__(
             self,
@@ -13,11 +17,12 @@ class IC:
             ):
 
         # HOUSEKEEPING: this should always be here
-        self.scripts = [__file__,]
+        self.script = __file__
         self.inputs = {}
 
         if shapes is None:
-            shapes = args
+            # shapes = args
+            raise Exception
         self.inputs['shapes'] = shapes
 
         self.polygons = [(0, fn.misc.constant(True))]
@@ -25,6 +30,8 @@ class IC:
             self.polygons.append(
                 (val, fn.shape.Polygon(vertices))
                 )
+
+        super().__init__(*args)
 
     def evaluate(self, coordArray):
         outArray = np.zeros(

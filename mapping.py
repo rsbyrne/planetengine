@@ -238,6 +238,8 @@ def unbox(
         tolerance = 0.,
         ):
 
+    meshUtils = get_meshUtils(mesh)
+
     if coordArray is None:
         coordArray = mesh.data[:]
     pureBoxDims = get_pureBoxDims(coordArray)
@@ -258,7 +260,7 @@ def unbox(
             inBox,
             boxDims,
             outBoxDims,
-            flip = [True, True]
+            flip = meshUtils.flip
             ),
         inverse = True
         )

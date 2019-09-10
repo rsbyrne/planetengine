@@ -1,12 +1,17 @@
 import numpy as np
+from ._IC import _IC
 
 def build(*args, **kwargs):
     return IC(*args, **kwargs)
 
-class IC:
+class IC(_IC):
+
+    varDim = 1
+    meshDim = 2
 
     def __init__(
             self,
+            *args,
             pert = 0.2,
             freq = 1.,
             phase = 0.
@@ -14,13 +19,15 @@ class IC:
 
         self.inputs = locals().copy()
         del self.inputs['self']
-        self.scripts = [__file__,]
+        self.script = __file__
 
         self.valRange = (0., 1.)
 
         self.freq = freq
         self.phase = phase
         self.pert = pert
+
+        super().__init__(*args)
 
     def evaluate(self, coordArray):
         valMin, valMax = self.valRange

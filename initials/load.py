@@ -5,20 +5,22 @@ import os
 from .. import paths
 from .. import mapping
 from .. import frames
+from ._IC import _IC
 
 def build(*args, **kwargs):
     return IC(*args, **kwargs)
 
-class IC:
+class IC(_IC):
 
     def __init__(
             self,
+            *args,
             inFrame = None,
             sourceVarName = None,
             loadStep = None,
             hashID = None,
             _outputPath = None,
-            _is_child = False,
+            _is_child = False
             ):
 
         if _outputPath is None:
@@ -40,7 +42,7 @@ class IC:
             os.path.dirname(__file__),
             '_load_dummy.py'
             )
-        self.scripts = [script]
+        self.script = script
 
         self.sourceVarName = sourceVarName
         if loadStep is None:
@@ -76,3 +78,12 @@ class IC:
         self.inputs['hashID'] = self.inFrame.hashID
 
         self.inVar = self.inFrame.saveVars[self.sourceVarName]
+
+        try:
+            self.varDim = self.inVar.nodeDofCount
+            self.meshDim = self.inVar.mesh.dim
+        except:
+            self.varDim = self.inVar.count
+            self.meshDim = self.inVar.swarm.mesh.dim
+
+        super().__init__(*args)
