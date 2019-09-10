@@ -4,7 +4,7 @@ import os
 
 from .. import paths
 from .. import mapping
-from .. import model
+from .. import frames
 
 def build(*args, **kwargs):
     return IC(*args, **kwargs)
@@ -53,19 +53,19 @@ class IC:
             self.loadStep = loadStep
 
         if inFrame is None and type(hashID) == str:
-            self.inFrame = model.load_model(
+            self.inFrame = frames.load_frame(
                 _outputPath,
                 hashID,
                 _is_child = _is_child
                 )
 
         elif type(inFrame) == str:
-            self.inFrame = model.load_model(
+            self.inFrame = frames.load_frame(
                 os.path.dirname(inFrame),
                 os.path.basename(inFrame),
                 _is_child = _is_child
                 )
-        elif type(inFrame) == model.Model:
+        elif isinstace(inFrame, frame.Frame):
             self.inFrame = inFrame
             self.inFrame.load_checkpoint(self.loadStep)
         else:
@@ -75,4 +75,4 @@ class IC:
 
         self.inputs['hashID'] = self.inFrame.hashID
 
-        self.inVar = self.inFrame.system.varsOfState[self.sourceVarName]
+        self.inVar = self.inFrame.saveVars[self.sourceVarName]

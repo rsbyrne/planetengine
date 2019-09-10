@@ -1,7 +1,7 @@
 from . import utilities
 from . import analysis
 from . import checkpoint
-from . import frame
+from . import frames
 from . import initials
 from . import systems
 from . import mapping
@@ -11,7 +11,6 @@ from . import fieldops
 from . import meshutils
 from . import functions
 from . import visualisation
-from . import observer
 from . import tests
 from . import disk
 from . import paths

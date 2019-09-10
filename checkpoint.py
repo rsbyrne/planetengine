@@ -7,7 +7,7 @@ import json
 from . import disk
 from .utilities import message
 
-from . import frame
+from . import frames
 from . import paths
 
 def save_builts(builts, path):
@@ -30,11 +30,11 @@ def save_builts(builts, path):
             with open(inputsFilename, 'w') as file:
                  json.dump(inputs, file)
 
-def save_stamps(stamps, path):
+def save_json(jsonObj, name, path):
     if uw.mpi.rank == 0:
-        stampFilename = os.path.join(path, 'stamps.json')
-        with open(stampFilename, 'w') as file:
-             json.dump(stamps, file)
+        jsonFilename = os.path.join(path, name + '.json')
+        with open(jsonFilename, 'w') as file:
+             json.dump(jsonObj, file)
 
 class Checkpointer:
 
@@ -47,6 +47,7 @@ class Checkpointer:
             step = None,
             modeltime = None,
             inFrames = [],
+            info = {},
             ):
 
         self.figs = figs
@@ -56,7 +57,8 @@ class Checkpointer:
         self.modeltime = modeltime
         self.builts = builts
         self.inFrames = inFrames
-        self.stamps = frame.make_stamps(self.builts)
+        self.stamps = frames._frametools.make_stamps(self.builts)
+        self.info = info
 
     def checkpoint(
             self,
@@ -97,7 +99,9 @@ class Checkpointer:
 
                 save_builts(self.builts, path)
 
-                save_stamps(self.stamps, path)
+                save_json(self.stamps, 'stamps', path)
+
+                save_json(self.info, 'info', path)
 
             for inFrame in self.inFrames:
                 inFrame.checkpoint(
