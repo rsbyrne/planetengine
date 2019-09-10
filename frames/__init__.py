@@ -1,5 +1,5 @@
-from . import model
-from . import observer
+from . import modelframe
+from . import observerframe
 from ._frametools import make_frame
 from ._frametools import load_frame
 

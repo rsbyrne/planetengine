@@ -1,7 +1,7 @@
 from ..utilities import check_reqs
 from ..builts import Built
 
-class System(Built):
+class Observer(Built):
 
     _required_attributes{
         'inputs',

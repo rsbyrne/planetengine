@@ -1,7 +1,6 @@
-from ..utilities import check_reqs
-from ..builts import Built
+from .utilities import check_reqs
 
-class System(Built):
+class Built:
 
     _required_attributes{
         'inputs',

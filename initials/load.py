@@ -45,7 +45,7 @@ class IC(_IC):
 
         self.sourceVarName = sourceVarName
         if loadStep is None:
-            if type(inFrame) == model.Model:
+            if type(inFrame) == model.ModelFrame:
                 self.loadStep = inFrame.step
             else:
                 self.loadStep = 0

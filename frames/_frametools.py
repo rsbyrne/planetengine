@@ -15,8 +15,8 @@ from ..utilities import message
 from ..utilities import check_reqs
 from ..visualisation import QuickFig
 
-from . import model as model_module
-from . import observer as observer_module
+from . import modelframe as model_module
+from . import observerframe as observer_module
 
 frameTypes = {
     'model': model_module,
