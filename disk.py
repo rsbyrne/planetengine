@@ -39,8 +39,6 @@ def expose_tar(path):
 
     tarpath = path + '.tar.gz'
 
-    print(path)
-
     if uw.mpi.rank == 0:
         assert os.path.isdir(path) or os.path.isfile(tarpath), \
             "No model found at that directory!"

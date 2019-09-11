@@ -69,10 +69,11 @@ def load_built(name, path):
 def load_builtsDir(path):
     builtsDir = os.path.join(path, 'builts')
     names = set()
+    files = os.listdir(builtsDir)
     if uw.mpi.rank == 0:
         assert os.path.isdir(builtsDir)
         files = os.listdir(builtsDir)
-        for file in os.listdir(builtsDir):
+        for file in files:
             if file.endswith('.json'):
                 builtName = os.path.splitext(
                     os.path.basename(file)
