@@ -1,4 +1,4 @@
-from . import isovisc
+# from . import isovisc
 from . import arrhenius
 #
 # import modelscripts.isovisc_observerscript

@@ -30,7 +30,6 @@ class System(Built):
         if '__class__' in self.inputs:
             del self.inputs['__class__']
 
-        print(self.inputs)
         for key, val in self.inputs.items():
             if type(val) == tuple:
                 self.inputs[key] = list(val)
