@@ -1,6 +1,7 @@
 import os
 import json
 import shutil
+import tarfile
 import underworld as uw
 from . import utilities
 from .utilities import message
