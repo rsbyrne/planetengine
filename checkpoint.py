@@ -21,7 +21,6 @@ class Checkpointer:
             dataCollectors = None,
             step = None,
             modeltime = None,
-            inFrames = [],
             info = {},
             framescript = None,
             ):
@@ -32,7 +31,6 @@ class Checkpointer:
         self.step = step
         self.modeltime = modeltime
         self.builts = builts
-        self.inFrames = inFrames
         self.stamps = built.make_stamps(builts)
         self.info = info
         self.framescript = framescript
@@ -85,11 +83,6 @@ class Checkpointer:
                         self.framescript, 'framescript', path
                         )
 
-            for inFrame in self.inFrames:
-                inFrame.checkpoint(
-                    os.path.join(path, inFrame.hashID),
-                    )
-
         message("Checkpointing...")
 
         if step is None:
@@ -135,22 +128,9 @@ class Checkpointer:
                                     )
         message("Snapshot saved.")
 
-        message("Saving modeltime...")
-        if uw.mpi.rank == 0:
-            modeltime_filepath = os.path.join(
-                checkpointDir,
-                'modeltime.json'
-                )
-            with open(modeltime_filepath, 'w') as file:
-                json.dump(modeltime, file)
-        message("Modeltime saved.")
+        disk.save_json(modeltime, 'modeltime', checkpointDir)
 
-        message("Saving stamps...")
-        if uw.mpi.rank == 0:
-            filename = os.path.join(checkpointDir, 'stamps.json')
-            with open(filename, 'w') as file:
-                 json.dump(self.stamps, file)
-        message("Stamps saved.")
+        disk.save_json(self.stamps, 'stamps', checkpointDir)
 
         message("Saving datasets...")
         if not self.dataCollectors is None:

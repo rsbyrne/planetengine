@@ -62,6 +62,8 @@ def load_built(name, path):
         **inputDict
         )
 
+    built._post_load_hook(name, path)
+
     return built
 
 def load_builtsDir(path):
@@ -91,10 +93,15 @@ _accepted_inputTypes = {
 
 def _clean_inputs(inputs):
 
-    del inputs['args']
-    del inputs['kwargs']
-    del inputs['self']
-    del inputs['__class__']
+    cleanVals = {
+        'args',
+        'kwargs',
+        'self',
+        '__class__'
+        }
+    for val in cleanVals:
+        if val in inputs:
+            del inputs[val]
 
     for key, val in inputs.items():
         if type(val) == tuple:
@@ -211,7 +218,18 @@ class Built:
         self.stamps = stamps
         self.hashID = hashID
 
+    def _pre_save_hook(self, path, name = None):
+        pass
+
+    def _post_save_hook(self, path, name = None):
+        pass
+
     def save(self, path, name = None):
         if name is None:
             name = self.name
+        self._pre_save_hook(path, name)
         save_built(self, name, path)
+        self._post_save_hook(path, name)
+
+    def _post_load_hook(self, name, path):
+        pass

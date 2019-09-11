@@ -1,11 +1,8 @@
-import underworld as uw
-import numpy as np
 import os
 
-from .. import paths
-from .. import mapping
-from .. import frame
-from ._IC import _IC
+from planetengine import frame
+from planetengine.fieldops import copyField
+from planetengine.initials._IC import _IC
 
 def build(*args, name = None, **kwargs):
     built = IC(*args, **kwargs)
@@ -15,77 +12,54 @@ def build(*args, name = None, **kwargs):
 
 class IC(_IC):
 
+    script = __file__
+
     def __init__(
             self,
+            *args,
             inFrame = None,
-            sourceVarName = None,
-            loadStep = None,
-            hashID = None,
-            _outputPath = None,
-            _is_child = False
+            varName = None,
+            _loadStep = None,
+            **kwargs
             ):
 
-        if _outputPath is None:
-            _outputPath = paths.defaultPath
+        assert not varName is None
+        if isinstance(inFrame, frame.Frame): # hence new
+            assert _loadStep is None
+            _loadStep = inFrame.step
+        elif type(inFrame) == str: # hence loaded
+            assert type(_loadStep) == int
+            outputPath = os.path.dirname(self.script)
+            inFrame = frame.load_frame(
+                outputPath,
+                inFrame,
+                loadStep = _loadStep
+                )
+        else:
+            raise Exception
 
-        assert sourceVarName is not None, \
-            "sourceVarName input must be a string \
-            correlating to a varsOfState attribute \
-            on the input model."
-        assert inFrame is not None or type(hashID) == str, \
-            "Must provide a str or model instance \
-            for 'inFrame' keyword argument."
+        self.inFrame = inFrame
+        self.inVar = inFrame.saveVars[varName]
 
-        self.inputs = {
-            'sourceVarName': sourceVarName,
-            'loadStep': loadStep
+        inputs = {
+            'varName': varName,
+            '_loadStep': _loadStep,
+            'inFrame': inFrame.instanceID
             }
-        script = os.path.join(
-            os.path.dirname(__file__),
-            '_load_dummy.py'
+
+        super().__init__(
+            args = args,
+            kwargs = kwargs,
+            inputs = inputs,
+            script = self.script
             )
-        self.script = script
 
-        self.sourceVarName = sourceVarName
-        if loadStep is None:
-            if type(inFrame) == model.ModelFrame:
-                self.loadStep = inFrame.step
-            else:
-                self.loadStep = 0
-            self.inputs['loadStep'] = self.loadStep
-        else:
-            self.loadStep = loadStep
+    def evaluate(self, coordArray):
+        return coordArray
 
-        if inFrame is None and type(hashID) == str:
-            self.inFrame = frames.load_frame(
-                _outputPath,
-                hashID,
-                _is_child = _is_child
-                )
+    def _apply(self, var, boxDims = None):
+        tolerance = copyField(self.inVar, var)
 
-        elif type(inFrame) == str:
-            self.inFrame = frames.load_frame(
-                os.path.dirname(inFrame),
-                os.path.basename(inFrame),
-                _is_child = _is_child
-                )
-        elif isinstace(inFrame, frame.Frame):
-            self.inFrame = inFrame
-            self.inFrame.load_checkpoint(self.loadStep)
-        else:
-            raise Exception("inFrame input not recognised.")
-
-        self.inFrame.load_checkpoint(self.loadStep)
-
-        self.inputs['hashID'] = self.inFrame.hashID
-
-        self.inVar = self.inFrame.saveVars[self.sourceVarName]
-
-        try:
-            self.varDim = self.inVar.nodeDofCount
-            self.meshDim = self.inVar.mesh.dim
-        except:
-            self.varDim = self.inVar.count
-            self.meshDim = self.inVar.swarm.mesh.dim
-
-        super().__init__()
+    def _pre_save_hook(self, path, name = None):
+        path = os.path.join(path, self.inFrame.instanceID)
+        self.inFrame.checkpoint(path)

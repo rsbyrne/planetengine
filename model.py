@@ -23,6 +23,8 @@ def make_model(
         )
     return outFrame
 
+load_model = frame.load_frame
+
 def new_frame(*args, **kwargs):
     outFrame = Model(
         *args,
@@ -41,8 +43,6 @@ class Model(Frame):
             outputPath = None,
             instanceID = 'test',
             _autoarchive = True,
-            _parentFrame = None,
-            _is_child = False,
             _autobackup = True,
             ):
 
@@ -62,13 +62,6 @@ class Model(Frame):
         step = 0
         modeltime = 0.
 
-        inFrames = []
-        for IC in initials.values():
-            try:
-                inFrames.append(IC.inFrame)
-            except:
-                pass
-
         analysers = []
         collectors = []
         fig = QuickFig(
@@ -87,7 +80,6 @@ class Model(Frame):
         # NECESSARY FOR FRAME CLASS:
         self.outputPath = outputPath
         self.instanceID = instanceID
-        self.inFrames = inFrames
         self.step = step
         self.modeltime = modeltime
         self.saveVars = saveVars
@@ -98,8 +90,6 @@ class Model(Frame):
         # OVERRIDE FRAME CLASS:
         self._autobackup = _autobackup
         self._autoarchive = _autoarchive
-        self._is_child = _is_child
-        self._parentFrame = _parentFrame
 
         super().__init__()
 
@@ -146,8 +136,6 @@ class Model(Frame):
             fig.show()
 
     def iterate(self):
-        assert not self._is_child, \
-            "Cannot iterate child models independently."
         message("Iterating step " + str(self.step) + " ...")
         dt = self.system.iterate()
         self.step += 1

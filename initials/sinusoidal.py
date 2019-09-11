@@ -9,8 +9,6 @@ def build(*args, name = None, **kwargs):
 
 class IC(_IC):
 
-    varDim = 1
-    meshDim = 2
     script = __file__
 
     def __init__(

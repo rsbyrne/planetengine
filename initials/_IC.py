@@ -14,12 +14,8 @@ from types import ModuleType
 class _IC(Built):
 
     _required_attributes = {
-        'varDim',
-        'meshDim',
         'evaluate',
         }
-
-    subICs = []
 
     def __init__(
             self,
@@ -31,33 +27,12 @@ class _IC(Built):
 
         check_reqs(self)
 
-        self.nullVal = [1.] * self.varDim
-        self.unitVal = [0.] * self.varDim
-
-        # self.var = ICmesh.add_variable(self.varDim)
-        #
-        # if hasattr(self, 'inVar'):
-        #     tolerance = copyField(
-        #         self.inVar,
-        #         self.var,
-        #         )
-        # else:
-        #     boxDims = ((0., 1.),) * self.meshDim
-        #     self.apply(self.var, boxDims)
-
         super().__init__(
             args = args,
             kwargs = kwargs,
             inputs = inputs,
             script = script
             )
-
-    # def copy(self, var, boxDims = None):
-    #
-    #     tolerance = copyField(
-    #         self.var,
-    #         var,
-    #         )
 
     def _get_ICdata(self, var, boxDims):
 
@@ -74,9 +49,13 @@ class _IC(Built):
 
         return ICdata
 
-    def apply(self, var, boxDims = None):
+    def _apply(self, var, boxDims = None):
 
         var.data[:] = self._get_ICdata(var, boxDims)
+
+    def apply(self, var, boxDims = None):
+
+        self._apply(var, boxDims = boxDims)
 
         if hasattr(var, 'scales'):
             set_scales(var, var.scales)

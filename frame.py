@@ -64,8 +64,7 @@ def make_frame(
         if uw.mpi.rank == 0:
             with tarfile.open(tarpath) as tar:
                 tar.extract('stamps.json', path)
-            with open(os.path.join(path, 'stamps.json')) as json_file:
-                loadstamps = json.load(json_file)
+            loadstamps = disk.load_json('stamps', path)
             shutil.rmtree(path)
             assert loadstamps == stamps
 
@@ -88,8 +87,7 @@ def make_frame(
 def load_frame(
         outputPath = None,
         instanceID = '',
-        loadStep = 0,
-        _is_child = False,
+        loadStep = 0
         ):
     '''
     Creates a new 'model' instance attached to a pre-existing
@@ -104,11 +102,10 @@ def load_frame(
     # Check that target directory is not inside
     # another planetengine directory:
 
-    if not _is_child:
-        if uw.mpi.rank == 0:
-            assert not os.path.isfile(
-                os.path.join(outputPath, 'stamps.json')
-                )
+    if uw.mpi.rank == 0:
+        assert not os.path.isfile(
+            os.path.join(outputPath, 'stamps.json')
+            )
 
     path = os.path.join(outputPath, instanceID)
 
@@ -122,8 +119,7 @@ def load_frame(
     frame = frameModule.new_frame(
         builts,
         outputPath = outputPath,
-        instanceID = instanceID,
-        _is_child = _is_child
+        instanceID = instanceID
         )
 
     return frame
@@ -175,7 +171,6 @@ class Frame:
     _required_attributes = {
         'outputPath', # must be str
         'instanceID', # must be str
-        'inFrames', # must be list of Frames objects
         'step', # must be int
         'modeltime', # must be float
         'saveVars', # dict of vars
@@ -190,8 +185,6 @@ class Frame:
 
     _autobackup = True
     _autoarchive = True
-    _is_child = False
-    _parentFrame = None
     blackhole = [0., 0.]
 
     def __init__(self):
@@ -219,7 +212,6 @@ class Frame:
             dataCollectors = self.collectors,
             builts = self.builts,
             info = self.info,
-            inFrames = self.inFrames,
             framescript = self.framescript
             )
 
@@ -227,14 +219,9 @@ class Frame:
 
         self.find_checkpoints()
 
-        for inFrame in self.inFrames:
-            # CIRCULAR REFERENCE:
-            inFrame._parentFrame = self
-
         if all([
                 self._autoarchive,
-                not self.archived,
-                not self._is_child
+                not self.archived
                 ]):
             self.archive()
 
@@ -344,7 +331,7 @@ class Frame:
 
             self.update()
 
-            if self._autoarchive and not self._is_child:
+            if self._autoarchive:
                 self.archive()
 
             message("Checkpoint successfully loaded!")
@@ -357,8 +344,7 @@ class Frame:
             for directory in glob.glob(path + '/*/'):
                 basename = os.path.basename(directory[:-1])
                 if (basename.isdigit() and len(basename) == 8):
-                    with open(os.path.join(directory, 'stamps.json')) as json_file:
-                        loadstamps = json.load(json_file)
+                    loadstamps = disk.load_json('stamps', directory)
                     assert loadstamps == stamps, \
                         "Bad checkpoint found! Aborting."
                     message("Found checkpoint: " + basename)
@@ -381,7 +367,7 @@ class Frame:
 
             os.makedirs(extPath, exist_ok = True)
 
-            if self.archived and not self._is_child:
+            if self.archived:
                 newpath = os.path.join(
                     extPath,
                     self.tarname
@@ -510,9 +496,6 @@ class Frame:
         if os.path.isfile(tarpath):
             message("Already archived!")
             return None
-        if self._is_child:
-            message("Bumping archive call up to parent...")
-            self._parentFrame.archive(_path)
 
         assert self.archived == False
 
@@ -531,7 +514,7 @@ class Frame:
             message("Model directory deleted.")
 
         if localArchive:
-            self._set_inner_archive_status(True)
+            self.archived = True
 
         message("Archived!")
 
@@ -553,10 +536,6 @@ class Frame:
             return None
         if not os.path.isfile(tarpath):
             message("Nothing to unarchive yet!")
-            return None
-        if self._is_child:
-            message("Bumping unarchive call up to parent...")
-            self._parentFrame.archive(_path)
             return None
 
         assert self.archived == True
@@ -593,12 +572,6 @@ class Frame:
             message("Model directory deleted.")
 
         if localArchive:
-            self._set_inner_archive_status(False)
+            self.archived = False
 
         message("Unarchived!")
-
-    def _set_inner_archive_status(self, status):
-        self.archived = status
-        for inFrame in self.inFrames:
-            if inFrame._is_child:
-                inFrame._set_inner_archive_status(status)

@@ -4,22 +4,18 @@ from .. import functions as pfn
 from ..visualisation import quickShow
 import numpy as np
 from timeit import timeit
+from . import testsystems
 
 def testfn():
 
-    system = systems.arrhenius.build(res = 32)
-    ICs = {'temperatureField': initials.sinusoidal.build(freq = 1.)}
-    initials.apply(
-        ICs,
-        system,
-        )
-    system.solve()
+    system = testsystems.get_system()
+    ICs = system.initials
 
-    variable1 = pfn.convert(system.velocityField, 'velocity')
-    variable2 = pfn.convert(system.temperatureField, 'temperature')
+    variable1 = pfn.convert(system.locals.velocityField, 'velocity')
+    variable2 = pfn.convert(system.locals.temperatureField, 'temperature')
     constant = pfn.convert(2.)
     shape = pfn.convert(np.array([[0.2, 0.1], [0.9, 0.3], [0.8, 0.7], [0.4, 0.9]]))
-    vanilla = pfn.convert(system.viscosityFn, 'viscosity')
+    vanilla = pfn.convert(system.locals.viscosityFn, 'viscosity')
 
     def makevar():
         var = variable2
@@ -57,10 +53,7 @@ def testfn():
 
     def testfn(var, timings = '', layer = 1):
         def outer_timefn(var, timinglist = []):
-            initials.apply(
-                ICs,
-                system,
-                )
+            system.reset()
             var.update()
             system.iterate()
             timing = timeit(var.update, number = 1)
@@ -89,10 +82,7 @@ def testfn():
 
     red = pfn.Integral(var)
 
-    initials.apply(
-        ICs,
-        system,
-        )
+    system.reset()
     red.update()
     system.iterate()
     print(red.evaluate())
@@ -105,10 +95,7 @@ def testfn():
         freshsteps = []
         stalesteps = []
         for i in range(3):
-            initials.apply(
-                ICs,
-                system,
-                )
+            system.reset()
             red.update
             system.iterate()
             freshsteps.append(timeit(red.update, number = 1))

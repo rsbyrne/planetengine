@@ -1,5 +1,5 @@
 from .. import initials
-from .. import frame
+from .. import model
 from .. import systems
 from ..utilities import message
 import underworld as uw
@@ -9,30 +9,25 @@ from ..paths import TestDir
 
 def testfn():
     with TestDir() as outputPath:
-        model0 = frames.frame.make_frame(
-            'model',
+        model0 = model.make_model(
             systems.arrhenius.build(res = 32, f = 0.5),
             {'temperatureField': initials.sinusoidal.build()},
             outputPath = outputPath
             )
-        model1 = frames.frame.make_frame(
-            'model',
+        model1 = model.make_model(
             systems.arrhenius.build(res = 32, f = 1.),
-            {'temperatureField': initials.sinusoidal.build()},
-            # {'temperatureField': initials.load.build(model0, 'temperatureField')},
+            {'temperatureField': initials.load.build(inFrame = model0, varName = 'temperatureField')},
             outputPath = outputPath
             )
         model1.checkpoint()
-        model2 = frames.frame.make_frame(
-            'model',
+        model2 = model.make_model(
             systems.arrhenius.build(res = 32, f = 1.),
-            {'temperatureField': initials.sinusoidal.build()},
-            # {'temperatureField': initials.load.build(model0, 'temperatureField')},
+            {'temperatureField': initials.load.build(inFrame = model0, varName = 'temperatureField')},
             outputPath = outputPath
             )
         model2.iterate()
         model2.unarchive()
         model2.archive()
         model2.checkpoint()
-        model3 = frames.frame.load_frame(outputPath, model1.instanceID)
+        model3 = model.load_model(model1.outputPath, model1.instanceID)
         message('Success!')

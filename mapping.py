@@ -2,6 +2,9 @@ import numpy as np
 import math
 import underworld as uw
 
+from . import meshutils
+get_meshUtils = meshutils.get_meshUtils
+
 def get_pureBoxDims(coordArray):
     pureBoxDims = ((0., 1.),) * coordArray.shape[1]
     return pureBoxDims
