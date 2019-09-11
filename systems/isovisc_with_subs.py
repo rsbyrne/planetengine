@@ -6,20 +6,20 @@ import numpy as np
 from planetengine.systems._system import System
 
 def build(*args, **kwargs):
-    return Arrhenius(*args, **kwargs)
+    return IsoviscWithSubs(*args, **kwargs)
 
-class Arrhenius(System):
+class IsoviscWithSubs(System):
 
-    name = "arrhenius"
+    name = "isoviscwithsubs"
 
     def __init__(
         self,
+        subsystem,
         *args,
         res = 64,
         f = 0.54,
         aspect = 1.,
         Ra = 1e7,
-        eta0 = 3e4,
         **kwargs
         ):
 
@@ -116,10 +116,7 @@ class Arrhenius(System):
 
         ### RHEOLOGY ###
 
-        viscosityFn = fn.math.pow(
-            eta0,
-            1. - temperatureField
-            )
+        viscosityFn = 1.
 
         ### SYSTEMS ###
 
@@ -183,12 +180,12 @@ class Arrhenius(System):
             varsOfState = {'temperatureField': temperatureField},
             obsVars = {
                 'temperature': temperatureField,
-                'velocity': velocityField,
-                'stress': velocityField * viscosityFn
+                'velocity': velocityField
                 },
             _update = update,
             _integrate = integrate,
             _locals = locals(),
+            subs = [subsystem,],
             args = args,
             kwargs = kwargs,
             inputs = inputs,

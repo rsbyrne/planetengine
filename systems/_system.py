@@ -1,46 +1,35 @@
-from ..utilities import check_reqs
+# from ..utilities import check_reqs
 from ..builts import Built
 from .. import fieldops
+from planetengine.utilities import Grouper
 
 class System(Built):
 
-    _required_attributes = {
-        'inputs',
-        'scripts',
-        'varsOfState',
-        'obsVars',
-        'inArgs',
-        '_update',
-        '_integrate',
-        }
+    def __init__(
+            self,
+            varsOfState,
+            obsVars,
+            _update,
+            _integrate,
+            _locals,
+            args,
+            kwargs,
+            inputs,
+            scripts,
+            ):
 
-    _accepted_inputTypes = {
-        type([]),
-        type(0),
-        type(0.),
-        type('0')
-        }
+        self.varsOfState = varsOfState
+        self.obsVars = obsVars
+        self._update = _update
+        self._integrate = _integrate
+        self.locals = Grouper(_locals)
 
-    def __init__(self):
-
-        if 'self' in self.inputs:
-            del self.inputs['self']
-        if 'args' in self.inputs:
-            del self.inputs['args']
-        if '__class__' in self.inputs:
-            del self.inputs['__class__']
-
-        for key, val in self.inputs.items():
-            if type(val) == tuple:
-                self.inputs[key] = list(val)
-            if not type(val) in self._accepted_inputTypes:
-                raise Exception(
-                    "Type " + str(type(val)) + " not accepted."
-                    )
-
-        check_reqs(self)
-
-        super().__init__()
+        super().__init__(
+            args = args,
+            kwargs = kwargs,
+            inputs = inputs,
+            scripts = scripts
+            )
 
     def clipVals(self):
         for varName, var in sorted(varsOfState.items()):
