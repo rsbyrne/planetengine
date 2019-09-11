@@ -1,36 +1,43 @@
-import underworld as uw
-import tarfile
-import os
-import shutil
-import json
-import copy
-import glob
+from planetengine import paths
+from planetengine import utilities
+from planetengine.utilities import message
+from planetengine.visualisation import QuickFig
+from planetengine import frame
+Frame = frame.Frame
 
-from .. import paths
-from .. import utilities
-from .. import disk
-from ..wordhash import wordhash as wordhashFn
-from .. import checkpoint
-from .. import initials as initialModule
-from ..utilities import message
-from ..utilities import check_reqs
-from ..visualisation import QuickFig
-
-from ._frame import Frame
-
-def build(builts, **kwargs):
-    system = builts['system']
-    initials = {
-        key: val for key, val in builts.items() \
-            if not key == 'system'
+def make_model(
+        system,
+        initials,
+        outputPath = None,
+        instanceID = None,
+        ):
+    builts = {
+        'system': system,
+        **initials
         }
-    return ModelFrame(system, initials, **kwargs)
+    outFrame = frame.make_frame(
+        Model,
+        builts,
+        outputPath,
+        instanceID
+        )
+    return outFrame
 
-class ModelFrame(Frame):
+def new_frame(*args, **kwargs):
+    outFrame = Model(
+        *args,
+        **kwargs
+        )
+    return outFrame
+
+class Model(Frame):
+
+    prefix = 'pemod'
+    framescript = __file__
+    info = {}
 
     def __init__(self,
-            system,
-            initials,
+            builts,
             outputPath = None,
             instanceID = 'test',
             _autoarchive = True,
@@ -39,7 +46,11 @@ class ModelFrame(Frame):
             _autobackup = True,
             ):
 
-        self.info = {'frameType': 'model'}
+        system = builts['system']
+        initials = {
+            key: val for key, val in builts.items() \
+                if not key == 'system'
+            }
 
         if outputPath is None:
             outputPath = paths.defaultPath
@@ -47,8 +58,6 @@ class ModelFrame(Frame):
         assert system.varsOfState.keys() == initials.keys()
 
         message("Building model...")
-
-        builts = {'system': system, **initials}
 
         step = 0
         modeltime = 0.
@@ -63,8 +72,8 @@ class ModelFrame(Frame):
         analysers = []
         collectors = []
         fig = QuickFig(
-            system.varsOfState,
-            # style = 'smallblack',
+            *[value for key, value in sorted(system.varsOfState.items())],
+            style = 'smallblack',
             )
         figs = [fig]
         saveVars = system.varsOfState
@@ -98,18 +107,16 @@ class ModelFrame(Frame):
 
     def initialise(self):
         message("Initialising...")
-        initialModule.apply(
-            self.initials,
-            self.system,
-            )
-        self.system.solve()
+        for varName, var in sorted(self.system.varsOfState.items()):
+            self.initials[varName].apply(var)
+        self.system.update()
         self.step = 0
         self.modeltime = 0.
         self.update()
         message("Initialisation complete!")
 
     def update(self):
-        self.system.solve()
+        self.system.update()
 
     # METHODS NOT NECESSARY:
 

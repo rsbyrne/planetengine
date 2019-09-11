@@ -1,7 +1,10 @@
 from ._IC import _IC
 
-def build(*args, **kwargs):
-    return IC(*args, **kwargs)
+def build(*args, name = None, **kwargs):
+    built = IC(*args, **kwargs)
+    if type(name) == str:
+        built.name = name
+    return built
 
 class IC(_IC):
 

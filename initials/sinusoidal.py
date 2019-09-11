@@ -1,24 +1,28 @@
 import numpy as np
-from ._IC import _IC
+from planetengine.initials._IC import _IC
 
-def build(*args, **kwargs):
-    return IC(*args, **kwargs)
+def build(*args, name = None, **kwargs):
+    built = IC(*args, **kwargs)
+    if type(name) == str:
+        built.name = name
+    return built
 
 class IC(_IC):
 
     varDim = 1
     meshDim = 2
+    script = __file__
 
     def __init__(
             self,
+            *args,
             pert = 0.2,
             freq = 1.,
-            phase = 0.
+            phase = 0.,
+            **kwargs
             ):
 
-        self.inputs = locals().copy()
-        del self.inputs['self']
-        self.script = __file__
+        inputs = locals().copy()
 
         self.valRange = (0., 1.)
 
@@ -26,7 +30,12 @@ class IC(_IC):
         self.phase = phase
         self.pert = pert
 
-        super().__init__()
+        super().__init__(
+            args = args,
+            kwargs = kwargs,
+            inputs = inputs,
+            script = self.script
+            )
 
     def evaluate(self, coordArray):
         valMin, valMax = self.valRange

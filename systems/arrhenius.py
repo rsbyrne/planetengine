@@ -5,12 +5,16 @@ import numpy as np
 
 from planetengine.systems._system import System
 
-def build(*args, **kwargs):
-    return Arrhenius(*args, **kwargs)
+def build(*args, name = None, **kwargs):
+    built = Arrhenius(*args, **kwargs)
+    if type(name) == str:
+        built.name = name
+    return built
 
 class Arrhenius(System):
 
     name = "arrhenius"
+    script = __file__
 
     def __init__(
         self,
@@ -26,7 +30,6 @@ class Arrhenius(System):
         ### HOUSEKEEPING: IMPORTANT! ###
 
         inputs = locals().copy()
-        script = __file__
 
         ### MESH & MESH VARIABLES ###
 
@@ -192,5 +195,5 @@ class Arrhenius(System):
             args = args,
             kwargs = kwargs,
             inputs = inputs,
-            scripts = [script,]
+            script = self.script
             )

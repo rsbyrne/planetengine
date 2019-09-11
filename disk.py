@@ -1,7 +1,60 @@
 import os
+import json
+import shutil
 import underworld as uw
+from . import utilities
 from .utilities import message
 from .functions import Variable
+
+def save_json(jsonObj, name, path):
+    if uw.mpi.rank == 0:
+        jsonFilename = os.path.join(path, name + '.json')
+        with open(jsonFilename, 'w') as file:
+             json.dump(jsonObj, file)
+
+def load_json(jsonName, path):
+    filename = jsonName + '.json'
+    jsonDict = {}
+    if uw.mpi.rank == 0:
+        with open(os.path.join(path, filename)) as json_file:
+            jsonDict = json.load(json_file)
+    jsonDict = uw.mpi.comm.bcast(jsonDict, root = 0)
+    return jsonDict
+
+def save_script(script, name, path):
+    if uw.mpi.rank == 0:
+        tweakedPath = os.path.splitext(script)[0] + ".py"
+        newPath = os.path.join(path, name + ".py")
+        shutil.copyfile(tweakedPath, newPath)
+
+def load_script(name, path):
+    scriptPath = os.path.join(path, name) + '.py'
+    scriptModule = utilities.local_import(
+        scriptPath
+        )
+    return scriptModule
+
+def expose_tar(path):
+
+    tarpath = path + '.tar.gz'
+
+    print(path)
+
+    if uw.mpi.rank == 0:
+        assert os.path.isdir(path) or os.path.isfile(tarpath), \
+            "No model found at that directory!"
+
+    if uw.mpi.rank == 0:
+        if os.path.isfile(tarpath):
+            assert not os.path.isdir(path), \
+                "Conflicting archive and directory found."
+            message("Tar found - unarchiving...")
+            with tarfile.open(tarpath) as tar:
+                tar.extractall(path)
+            message("Unarchived.")
+            assert os.path.isdir(path), \
+                "Archive contained the wrong model file somehow."
+            os.remove(tarpath)
 
 def varsOnDisk(saveVars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     substrates = []

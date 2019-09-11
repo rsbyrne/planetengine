@@ -1,7 +1,8 @@
 from . import utilities
 from . import analysis
 from . import checkpoint
-from . import frames
+from . import frame
+from . import built
 from . import initials
 from . import systems
 from . import mapping
@@ -15,6 +16,8 @@ from . import tests
 from . import disk
 from . import paths
 from . import generic
+from . import model
+from . import observer
 
 from .utilities import message
 from .utilities import log

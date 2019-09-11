@@ -7,15 +7,13 @@ from ..fieldops import set_boundaries
 from ..utilities import check_reqs
 from ..generic import mesh2D as ICmesh
 from .. import mapping
-from ..builts import Built
+from ..built import Built
 
 from types import ModuleType
 
 class _IC(Built):
 
     _required_attributes = {
-        'script',
-        'inputs',
         'varDim',
         'meshDim',
         'evaluate',
@@ -23,53 +21,43 @@ class _IC(Built):
 
     subICs = []
 
-    def __init__(self):
+    def __init__(
+            self,
+            args,
+            kwargs,
+            inputs,
+            script
+            ):
 
         check_reqs(self)
 
-        self.subICs = _construct_inners()
-
-        scripts = [
-            self.script,
-            *[IC.script for IC in self.subICs]
-            ]
-
-        self.scripts = scripts
         self.nullVal = [1.] * self.varDim
         self.unitVal = [0.] * self.varDim
 
-        self.var = ICmesh.add_variable(self.varDim)
+        # self.var = ICmesh.add_variable(self.varDim)
+        #
+        # if hasattr(self, 'inVar'):
+        #     tolerance = copyField(
+        #         self.inVar,
+        #         self.var,
+        #         )
+        # else:
+        #     boxDims = ((0., 1.),) * self.meshDim
+        #     self.apply(self.var, boxDims)
 
-        if hasattr(self, 'inVar'):
-            tolerance = copyField(
-                self.inVar,
-                self.var,
-                )
-        else:
-            boxDims = ((0., 1.),) * self.meshDim
-            self.apply(self.var, boxDims)
-
-        super().__init__()
-
-    @staticmethod
-    def _construct_inners(*args, **kwargs):
-
-        subICs = []
-
-        for arg in args:
-            if isinstance(arg, _IC):
-                subICs.append(arg)
-            elif isinstance(arg, ModuleType):
-                arg.build()
-            else:
-                raise Exception
-
-    def copy(self, var, boxDims = None):
-
-        tolerance = copyField(
-            self.var,
-            var,
+        super().__init__(
+            args = args,
+            kwargs = kwargs,
+            inputs = inputs,
+            script = script
             )
+
+    # def copy(self, var, boxDims = None):
+    #
+    #     tolerance = copyField(
+    #         self.var,
+    #         var,
+    #         )
 
     def _get_ICdata(self, var, boxDims):
 
@@ -79,7 +67,7 @@ class _IC(Built):
             box = mapping.box(var.swarm.mesh, var.swarm.data, boxDims)
 
         ICdata = np.ones(var.data.shape)
-        ICchain = [*self.subICs[-1::-1], self]
+        ICchain = [*self.subs[-1::-1], self]
 
         for IC in ICchain:
             ICdata *= IC.evaluate(box)

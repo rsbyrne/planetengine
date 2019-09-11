@@ -1,4 +1,174 @@
-from ._frametools import *
+import underworld as uw
+import tarfile
+import os
+import shutil
+import json
+import copy
+import glob
+
+from . import paths
+from . import utilities
+from . import disk
+from . import built as builtModule
+from .wordhash import wordhash as wordhashFn
+from . import checkpoint
+from .utilities import message
+from .utilities import check_reqs
+from .disk import load_json
+from .disk import expose_tar
+from .visualisation import QuickFig
+
+make_stamps = builtModule.make_stamps
+
+frameTypes = {}
+prefixDict = {}
+
+def make_frame(
+        subFrameClass,
+        builts,
+        outputPath = None,
+        instanceID = None,
+        ):
+
+    if outputPath is None:
+        outputPath = paths.defaultPath
+
+    stamps = make_stamps(builts)
+
+    if instanceID is None:
+        prefix = subFrameClass.prefix
+        instanceID = prefix + '_' + stamps['all'][1]
+
+    path = os.path.join(outputPath, instanceID)
+    tarpath = path + '.tar.gz'
+
+    directory_state = ''
+
+    if uw.mpi.rank == 0:
+
+        if os.path.isdir(path):
+            if os.path.isfile(tarpath):
+                raise Exception(
+                    "Cannot combine model directory and tar yet."
+                    )
+            else:
+                directory_state = 'directory'
+        elif os.path.isfile(tarpath):
+            directory_state = 'tar'
+        else:
+            directory_state = 'clean'
+
+    directory_state = uw.mpi.comm.bcast(directory_state, root = 0)
+
+    if directory_state == 'tar':
+        if uw.mpi.rank == 0:
+            with tarfile.open(tarpath) as tar:
+                tar.extract('stamps.json', path)
+            with open(os.path.join(path, 'stamps.json')) as json_file:
+                loadstamps = json.load(json_file)
+            shutil.rmtree(path)
+            assert loadstamps == stamps
+
+    if not directory_state == 'clean':
+        message("Preexisting model found! Loading...")
+        frame = load_frame(
+            outputPath,
+            instanceID
+            )
+    else:
+        message("Making a new frame...")
+        frame = subFrameClass(
+            builts,
+            outputPath = outputPath,
+            instanceID = instanceID
+            )
+
+    return frame
+
+def load_frame(
+        outputPath = None,
+        instanceID = '',
+        loadStep = 0,
+        _is_child = False,
+        ):
+    '''
+    Creates a new 'model' instance attached to a pre-existing
+    model directory. LoadStep can be an integer corresponding
+    to a previous checkpoint step, or can be the string 'max'
+    which loads the highest stable checkpoint available.
+    '''
+
+    if outputPath is None:
+        outputPath = paths.defaultPath
+
+    # Check that target directory is not inside
+    # another planetengine directory:
+
+    if not _is_child:
+        if uw.mpi.rank == 0:
+            assert not os.path.isfile(
+                os.path.join(outputPath, 'stamps.json')
+                )
+
+    path = os.path.join(outputPath, instanceID)
+
+    expose_tar(path)
+
+    builts = builtModule.load_builtsDir(path)
+
+    info = load_json('info', path)
+    frameModule = disk.load_script('framescript', path)
+
+    frame = frameModule.new_frame(
+        builts,
+        outputPath = outputPath,
+        instanceID = instanceID,
+        _is_child = _is_child
+        )
+
+    return frame
+
+# def load_system(path):
+#     builtsDir = os.path.join(path, 'builts')
+#     params = frame.load_inputs('system', builtsDir)
+#     systemscript = utilities.local_import(os.path.join(builtsDir, 'system_0.py'))
+#     system = systemscript.build(**params['system_0'])
+#     return system, params
+
+# def load_initials(system, path):
+#     builtsDir = os.path.join(path, 'builts')
+#     configs = frame.load_inputs('initial', builtsDir)
+#     initials = {}
+#     for varName in sorted(system.varsOfState):
+#         initials[varName] = {**configs[varName]}
+#         initialsLoadName = varName + '_0.py'
+#         module = utilities.local_import(
+#             os.path.join(builtsDir, initialsLoadName)
+#             )
+#         # check if an identical 'initial' object already exists:
+#         if hasattr(module, 'LOADTYPE'):
+#             initials[varName] = initialModule.load.build(
+#                 **configs[varName], _outputPath = path, _is_child = True
+#                 )
+#         elif module.IC in [type(IC) for IC in initials.values()]:
+#             for priorVarName, IC in sorted(initials.items()):
+#                 if type(IC) == module.IC and configs[varName] == configs[priorVarName]:
+#                     initials[varName] = initials[priorVarName]
+#                     break
+#         else:
+#             initials[varName] = module.build(
+#                 **configs[varName]
+#                 )
+        # if module.IC in [type(IC) for IC in initials.values()]:
+        #     for priorVarName, IC in sorted(initials.items()):
+        #         if type(IC) == module.IC and configs[varName] == configs[priorVarName]:
+        #             initials[varName] = initials[priorVarName]
+        #             break
+        # else:
+        #     initials[varName] = module.build(
+        #         **configs[varName]
+        #         )
+    # return initials, configs
 
 class Frame:
 
@@ -14,7 +184,8 @@ class Frame:
         'update',
         'initialise',
         'builts',
-        'info'
+        'info',
+        'framescript',
         }
 
     _autobackup = True
@@ -49,6 +220,7 @@ class Frame:
             builts = self.builts,
             info = self.info,
             inFrames = self.inFrames,
+            framescript = self.framescript
             )
 
         self.initialise()

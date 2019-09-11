@@ -1,9 +1,11 @@
 # from ..utilities import check_reqs
-from ..builts import Built
+from ..built import Built
 from .. import fieldops
 from planetengine.utilities import Grouper
 
 class System(Built):
+
+    name = 'system'
 
     def __init__(
             self,
@@ -15,7 +17,7 @@ class System(Built):
             args,
             kwargs,
             inputs,
-            scripts,
+            script,
             ):
 
         self.varsOfState = varsOfState
@@ -28,16 +30,16 @@ class System(Built):
             args = args,
             kwargs = kwargs,
             inputs = inputs,
-            scripts = scripts
+            script = script
             )
 
     def clipVals(self):
-        for varName, var in sorted(varsOfState.items()):
+        for varName, var in sorted(self.varsOfState.items()):
             if hasattr(var, 'scales'):
                 fieldops.clip_array(var, var.scales)
 
     def setBounds(self):
-        for varName, var in sorted(varsOfState.items()):
+        for varName, var in sorted(self.varsOfState.items()):
             if hasattr(var, 'bounds'):
                 fieldops.set_boundaries(var, var.bounds)
 

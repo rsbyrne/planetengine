@@ -5,8 +5,11 @@ import numpy as np
 
 from planetengine.systems._system import System
 
-def build(*args, **kwargs):
-    return Isovisc(*args, **kwargs)
+def build(*args, name = None, **kwargs):
+    built = Isovisc(*args, **kwargs)
+    if type(name) == str:
+        built.name = name
+    return built
 
 class Isovisc(System):
 
@@ -187,5 +190,5 @@ class Isovisc(System):
             args = args,
             kwargs = kwargs,
             inputs = inputs,
-            scripts = [script,]
+            script = script
             )
