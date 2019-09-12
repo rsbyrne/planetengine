@@ -13,6 +13,7 @@ def save_built(built, name, path):
     if uw.mpi.rank == 0:
         if not os.path.isdir(path):
             os.makedirs(path)
+        assert os.path.isdir(path)
     uw.mpi.barrier()
 
     inputs = built.inputs
@@ -26,10 +27,11 @@ def save_built(built, name, path):
 
 def save_builtsDir(builts, path):
 
+    builtsDir = os.path.join(path, 'builts')
     if uw.mpi.rank == 0:
-        builtsDir = os.path.join(path, 'builts')
         if not os.path.isdir(builtsDir):
             os.makedirs(builtsDir)
+        assert os.path.isdir(builtsDir)
     uw.mpi.barrier()
 
     for builtName, built in sorted(builts.items()):
@@ -163,7 +165,8 @@ def make_stamps(built):
         if uw.mpi.rank == 0:
             toHash['inputs'] = built.inputs
             toHash['scripts'] = [
-                open(script) for script in built.scripts
+                utilities.stringify(open(script)) \
+                    for script in built.scripts
                 ]
         toHash = uw.mpi.comm.bcast(toHash, root = 0)
         uw.mpi.barrier()

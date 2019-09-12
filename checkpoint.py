@@ -73,6 +73,7 @@ class Checkpointer:
             if uw.mpi.rank == 0:
                 if not os.path.isdir(path):
                     os.makedirs(path)
+                assert os.path.isdir(path)
             uw.mpi.barrier()
 
             built.save_builtsDir(self.builts, path)
@@ -96,9 +97,10 @@ class Checkpointer:
             if os.path.isdir(checkpointDir):
                 message('Checkpoint directory found: removing')
                 shutil.rmtree(checkpointDir)
-            else:
-                message('Making checkpoint directory.')
-                os.makedirs(checkpointDir)
+                assert not os.path.isdir(checkpointDir)
+            message('Making checkpoint directory.')
+            os.makedirs(checkpointDir)
+            assert os.path.isdir(checkpointDir)
         uw.mpi.barrier()
 
         message("Saving figures...")

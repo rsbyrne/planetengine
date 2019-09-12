@@ -334,6 +334,7 @@ class Frame:
 
         if uw.mpi.rank == 0:
             os.makedirs(extPath, exist_ok = True)
+            assert os.path.isdir(extPath)
         uw.mpi.barrier()
 
         if self.archived:

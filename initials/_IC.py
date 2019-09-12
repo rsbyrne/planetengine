@@ -47,8 +47,6 @@ class _IC(Built):
         for IC in ICchain:
             ICdata *= IC.evaluate(box)
 
-        ICdata = self.evaluate(box)
-
         return ICdata
 
     def _apply(self, var, boxDims = None):
@@ -59,7 +57,6 @@ class _IC(Built):
 
         self._apply(var, boxDims = boxDims)
 
-        ### DEBUGGING ###
         if hasattr(var, 'scales'):
             set_scales(var, var.scales)
 

@@ -56,8 +56,7 @@ def make_testdir():
 
     if uw.mpi.rank == 0:
         os.makedirs(testPath)
-        if not os.path.isdir(testPath):
-            raise Exception
+        assert os.path.isdir(testPath)
     uw.mpi.barrier()
 
     return testPath

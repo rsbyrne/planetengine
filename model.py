@@ -100,29 +100,24 @@ class Model(Frame):
         message("Initialising...")
         for varName, var in sorted(self.system.varsOfState.items()):
             self.initials[varName].apply(var)
-        message("Bananas!")
         self.update()
         self.step = 0
         self.modeltime = 0.
         message("Initialisation complete!")
 
     def update(self):
-        message("Apricots!")
         message("Updating...")
-        ### DEBUGGING ###
-        # self.system.locals.temperatureField.data[:] = 0.
         self.system.update()
         message("Updated.")
 
     # METHODS NOT NECESSARY:
 
     def _prompt_observers(self, prompt):
-        pass
-        # observerList = utilities.parallelise_set(
-        #     self.observers
-        #     )
-        # for observer in observerList:
-        #     observer.prompt(prompt)
+        observerList = utilities.parallelise_set(
+            self.observers
+            )
+        for observer in observerList:
+            observer.prompt(prompt)
 
     def _post_checkpoint_hook(self):
         self._prompt_observers('checkpointing')
