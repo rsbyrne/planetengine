@@ -215,7 +215,6 @@ class Frame:
 
             if self.archived:
                 self.unarchive()
-                assert not self.archived
 
             self._pre_checkpoint_hook()
 
@@ -237,15 +236,9 @@ class Frame:
 
             if self._autoarchive:
                 self.archive()
-                assert self.archived
 
             if self._autobackup:
                 self.backup()
-                assert self.archived == self._autoarchive
-
-            ### DEBUG ###
-            if path is None or path == self.path:
-                self.archived = True
 
         else:
 
@@ -487,10 +480,17 @@ class Frame:
             localArchive = False
             message("Making a remote archive...")
 
-        if not os.path.isdir(path):
+        isdir = False
+        isfile = False
+        if uw.mpi.rank == 0:
+            isdir = os.path.isdir(path)
+            isfile = os.path.isfile(path)
+        isdir = uw.mpi.comm.bcast(isdir, root = 0)
+        isfile = uw.mpi.comm.bcast(isfile, root = 0)
+        if not isdir:
             message("Nothing to archive yet!")
             return None
-        if os.path.isfile(tarpath):
+        if isfile:
             message("Already archived!")
             return None
 
@@ -499,8 +499,6 @@ class Frame:
         #     if localArchive:
         #         self._parentFrame.archive()
         #         return None
-
-        assert self.archived == False
 
         message("Archiving...")
 
@@ -538,10 +536,17 @@ class Frame:
             localArchive = False
             message("Unarchiving a remote archive...")
 
-        if os.path.isdir(path):
+        isdir = False
+        isfile = False
+        if uw.mpi.rank == 0:
+            isdir = os.path.isdir(path)
+            isfile = os.path.isfile(path)
+        isdir = uw.mpi.comm.bcast(isdir, root = 0)
+        isfile = uw.mpi.comm.bcast(isfile, root = 0)
+        if isdir:
             message("Already unarchived!")
             return None
-        if not os.path.isfile(tarpath):
+        if not isfile:
             message("Nothing to unarchive yet!")
             return None
 
@@ -550,8 +555,6 @@ class Frame:
         #     if localArchive:
         #         self._parentFrame.unarchive()
         #         return None
-
-        assert self.archived == True
 
         message("Unarchiving...")
 
