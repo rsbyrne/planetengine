@@ -1,8 +1,9 @@
-from planetengine import paths
-from planetengine import utilities
-from planetengine.utilities import message
-from planetengine.visualisation import QuickFig
-from planetengine import frame
+from . import paths
+from . import utilities
+from .utilities import message
+from .visualisation import QuickFig
+from . import frame
+
 Frame = frame.Frame
 
 def make_model(
@@ -25,18 +26,18 @@ def make_model(
 
 load_model = frame.load_frame
 
-def new_frame(*args, **kwargs):
-    outFrame = Model(
-        *args,
-        **kwargs
-        )
-    return outFrame
+# def new_frame(*args, **kwargs):
+#     outFrame = Model(
+#         *args,
+#         **kwargs
+#         )
+#     return outFrame
 
 class Model(Frame):
 
     prefix = 'pemod'
     framescript = __file__
-    info = {}
+    info = {'frameType': 'pemod'}
 
     def __init__(self,
             builts,
@@ -190,3 +191,6 @@ class Model(Frame):
         message("Done!")
         if checkpointCondition():
             self.checkpoint()
+
+### IMPORTANT!!! ###
+frame.frameClasses['pemod'] = Model

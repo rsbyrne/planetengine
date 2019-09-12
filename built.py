@@ -68,18 +68,23 @@ def load_built(name, path):
 
 def load_builtsDir(path):
     builtsDir = os.path.join(path, 'builts')
-    names = set()
-    files = os.listdir(builtsDir)
+    files = []
     if uw.mpi.rank == 0:
         assert os.path.isdir(builtsDir)
         files = os.listdir(builtsDir)
-        for file in files:
-            if file.endswith('.json'):
-                builtName = os.path.splitext(
-                    os.path.basename(file)
-                    )[0]
-                names.add(builtName)
-    names = uw.mpi.comm.bcast(names, root = 0)
+    files = uw.mpi.comm.bcast(files, root = 0)
+    names = set()
+    for file in files:
+        if file.endswith('.json'):
+            builtName = os.path.splitext(
+                os.path.basename(file)
+                )[0]
+            if builtName == 'all':
+                raise Exception
+            names.add(builtName)
+    print(1000 * '!', uw.mpi.rank, names, 1000 * '!')
+    if 'all' in names:
+        raise Exception
     builts = {}
     for name in sorted(names):
         builts[name] = load_built(name, builtsDir)

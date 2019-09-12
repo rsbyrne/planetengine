@@ -6,19 +6,19 @@ import traceback
 import underworld as uw
 
 workPath = '/home/jovyan/workspace'
-if not workPath in sys.path:
-    sys.path.append(workPath)
+# if not workPath in sys.path:
+#     sys.path.append(workPath)
 # ignoreme = subprocess.call(['chmod', '-R', '777', workPath])
 outPath = '/home/jovyan/workspace/out'
-if not os.path.isdir(outPath):
-    os.makedirs(outPath)
+# if not os.path.isdir(outPath):
+#     os.makedirs(outPath)
 # ignoreme = subprocess.call(['chmod', '-R', '777', outPath])
 testPath = '/home/jovyan/workspace/out/test'
-defaultPath = os.path.join(outPath, 'default')
-if not os.path.isdir(defaultPath):
-    os.makedirs(defaultPath)
+# defaultPath = os.path.join(outPath, 'default')
+# if not os.path.isdir(defaultPath):
+#     os.makedirs(defaultPath)
 # ignoreme = subprocess.call(['chmod', '-R', '777', defaultPath])
-ignoreme = subprocess.call(['chmod', '-R', '777', outPath])
+# ignoreme = subprocess.call(['chmod', '-R', '777', outPath])
 
 class TestDir:
 

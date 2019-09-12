@@ -20,6 +20,8 @@ from .visualisation import QuickFig
 
 make_stamps = builtModule.make_stamps
 
+frameClasses = {}
+
 frameTypes = {}
 prefixDict = {}
 
@@ -114,57 +116,16 @@ def load_frame(
     builts = builtModule.load_builtsDir(path)
 
     info = load_json('info', path)
-    frameModule = disk.load_script('framescript', path)
+    # frameModule = disk.load_script('framescript', path)
+    frameClass = frameClasses[info['frameType']]
 
-    frame = frameModule.new_frame(
+    frame = frameClass(
         builts,
         outputPath = outputPath,
         instanceID = instanceID
         )
 
     return frame
-
-# def load_system(path):
-#     builtsDir = os.path.join(path, 'builts')
-#     params = frame.load_inputs('system', builtsDir)
-#     systemscript = utilities.local_import(os.path.join(builtsDir, 'system_0.py'))
-#     system = systemscript.build(**params['system_0'])
-#     return system, params
-
-# def load_initials(system, path):
-#     builtsDir = os.path.join(path, 'builts')
-#     configs = frame.load_inputs('initial', builtsDir)
-#     initials = {}
-#     for varName in sorted(system.varsOfState):
-#         initials[varName] = {**configs[varName]}
-#         initialsLoadName = varName + '_0.py'
-#         module = utilities.local_import(
-#             os.path.join(builtsDir, initialsLoadName)
-#             )
-#         # check if an identical 'initial' object already exists:
-#         if hasattr(module, 'LOADTYPE'):
-#             initials[varName] = initialModule.load.build(
-#                 **configs[varName], _outputPath = path, _is_child = True
-#                 )
-#         elif module.IC in [type(IC) for IC in initials.values()]:
-#             for priorVarName, IC in sorted(initials.items()):
-#                 if type(IC) == module.IC and configs[varName] == configs[priorVarName]:
-#                     initials[varName] = initials[priorVarName]
-#                     break
-#         else:
-#             initials[varName] = module.build(
-#                 **configs[varName]
-#                 )
-        # if module.IC in [type(IC) for IC in initials.values()]:
-        #     for priorVarName, IC in sorted(initials.items()):
-        #         if type(IC) == module.IC and configs[varName] == configs[priorVarName]:
-        #             initials[varName] = initials[priorVarName]
-        #             break
-        # else:
-        #     initials[varName] = module.build(
-        #         **configs[varName]
-        #         )
-    # return initials, configs
 
 class Frame:
 
