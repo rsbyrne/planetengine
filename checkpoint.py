@@ -40,6 +40,8 @@ class Checkpointer:
             path = None,
             ):
 
+        message("Attempting to checkpoint...")
+
         if path is None:
             path = paths.defaultPath
 
@@ -53,6 +55,8 @@ class Checkpointer:
                 )
         stamps_exist = uw.mpi.comm.bcast(stamps_exist, root = 0)
         uw.mpi.barrier()
+
+        message("Checking for pre-existing frame on disk...")
 
         if stamps_exist:
 
@@ -103,12 +107,14 @@ class Checkpointer:
             assert os.path.isdir(checkpointDir)
         uw.mpi.barrier()
 
+        ## DEBUGGING ###
         message("Saving figures...")
         if not self.figs is None:
             for fig in self.figs:
                 fig.save(checkpointDir)
         message("Figures saved.")
 
+        ## DEBUGGING ###
         message("Saving vars of state...")
         if not self.saveVars is None:
             disk.varsOnDisk(self.saveVars, checkpointDir, 'save')

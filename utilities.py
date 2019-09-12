@@ -17,7 +17,6 @@ def message(*args):
     for arg in args:
         if uw.mpi.rank == 0:
             print(arg)
-        uw.mpi.barrier()
 
 def log(text, outputPath = None, outputName = 'diaglog.txt'):
     if outputPath == None:
