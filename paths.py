@@ -19,6 +19,7 @@ testPath = '/home/jovyan/workspace/out/test'
 #     os.makedirs(defaultPath)
 # ignoreme = subprocess.call(['chmod', '-R', '777', defaultPath])
 # ignoreme = subprocess.call(['chmod', '-R', '777', outPath])
+defaultPath = outPath
 
 class TestDir:
 
