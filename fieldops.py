@@ -72,7 +72,7 @@ def makeLocalAnnulus(mesh):
                 periodic = mesh.periodic,
                 partitioned = False,
                 )
-    uw.mpi.barrier()
+    # uw.mpi.barrier()
     return localAnn
 
 def makeLocalCart(mesh):
@@ -86,7 +86,7 @@ def makeLocalCart(mesh):
                 periodic = mesh.periodic,
                 partitioned = False,
                 )
-    uw.mpi.barrier()
+    # uw.mpi.barrier()
     return localMesh
 
 def copyField(field1, field2,
@@ -130,7 +130,7 @@ def copyField(field1, field2,
             for data, ID in zip(allData[proc], allGID[proc]):
                 fullInField.data[ID] = data
     fullInField.data[:] = uw.mpi.comm.bcast(fullInField.data, root = 0)
-    uw.mpi.barrier()
+    # uw.mpi.barrier()
 
     outField = field2
     if type(field2) == uw.mesh._meshvariable.MeshVariable:

@@ -210,5 +210,5 @@ class QuickFig:
             if not os.path.isdir(path):
                 os.mkdir(path)
             assert os.path.isdir(path)
-        uw.mpi.barrier()
+        # uw.mpi.barrier()
         self.fig.save(os.path.join(path, name))

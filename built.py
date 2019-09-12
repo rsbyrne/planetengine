@@ -14,7 +14,7 @@ def save_built(built, name, path):
         if not os.path.isdir(path):
             os.makedirs(path)
         assert os.path.isdir(path)
-    uw.mpi.barrier()
+    # uw.mpi.barrier()
 
     inputs = built.inputs
     scripts = built.scripts
@@ -32,7 +32,7 @@ def save_builtsDir(builts, path):
         if not os.path.isdir(builtsDir):
             os.makedirs(builtsDir)
         assert os.path.isdir(builtsDir)
-    uw.mpi.barrier()
+    # uw.mpi.barrier()
 
     for builtName, built in sorted(builts.items()):
         built.save(builtsDir, name = builtName)
@@ -57,7 +57,7 @@ def load_built(name, path):
             else:
                 break
     scripts_to_load = uw.mpi.comm.bcast(scripts_to_load, root = 0)
-    uw.mpi.barrier()
+    # uw.mpi.barrier()
 
     scriptModules = []
     for script_to_load in sorted(scripts_to_load):
@@ -88,7 +88,7 @@ def load_builtsDir(path):
                     )[0]
                 names.append(builtName)
     names = uw.mpi.comm.bcast(names, root = 0)
-    uw.mpi.barrier()
+    # uw.mpi.barrier()
 
     names = list(set(names))
     builts = {}
@@ -169,7 +169,7 @@ def make_stamps(built):
                     for script in built.scripts
                 ]
         toHash = uw.mpi.comm.bcast(toHash, root = 0)
-        uw.mpi.barrier()
+        # uw.mpi.barrier()
 
         stamps = {
             key: utilities.hashstamp(val) \

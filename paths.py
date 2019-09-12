@@ -58,7 +58,7 @@ def make_testdir():
     if uw.mpi.rank == 0:
         os.makedirs(testPath)
         assert os.path.isdir(testPath)
-    uw.mpi.barrier()
+    # uw.mpi.barrier()
 
     return testPath
 
@@ -68,4 +68,4 @@ def delete_testdir():
             shutil.rmtree(testPath)
         if os.path.isdir(testPath):
             raise Exception
-    uw.mpi.barrier()
+    # uw.mpi.barrier()

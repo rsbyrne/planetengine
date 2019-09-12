@@ -33,7 +33,7 @@ def log(text, outputPath = None, outputName = 'diaglog.txt'):
         file.write(text)
         file.write('\n')
         file.close()
-    uw.mpi.barrier()
+    # uw.mpi.barrier()
 
 def check_reqs(obj):
     for attrname in obj._required_attributes:
@@ -47,7 +47,7 @@ def parallelise_set(setobj):
     if uw.mpi.rank == 0:
         setlist = list(setobj)
     setlist = uw.mpi.comm.bcast(setlist, root = 0)
-    uw.mpi.barrier()
+    # uw.mpi.barrier()
     return setlist
 
 def unpack_var(*args):

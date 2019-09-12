@@ -54,7 +54,7 @@ class Checkpointer:
                 os.path.join(path, 'stamps.json')
                 )
         stamps_exist = uw.mpi.comm.bcast(stamps_exist, root = 0)
-        uw.mpi.barrier()
+        # uw.mpi.barrier()
 
         message("Checking for pre-existing frame on disk...")
 
@@ -78,7 +78,7 @@ class Checkpointer:
                 if not os.path.isdir(path):
                     os.makedirs(path)
                 assert os.path.isdir(path)
-            uw.mpi.barrier()
+            # uw.mpi.barrier()
 
             built.save_builtsDir(self.builts, path)
             disk.save_json(self.stamps, 'stamps', path)
@@ -105,7 +105,7 @@ class Checkpointer:
             message('Making checkpoint directory.')
             os.makedirs(checkpointDir)
             assert os.path.isdir(checkpointDir)
-        uw.mpi.barrier()
+        # uw.mpi.barrier()
 
         ## DEBUGGING ###
         message("Saving figures...")
@@ -135,7 +135,7 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = headerStr
                                     )
-        uw.mpi.barrier()
+        # uw.mpi.barrier()
         message("Snapshot saved.")
 
         disk.save_json(modeltime, 'modeltime', checkpointDir)
@@ -160,12 +160,12 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = header
                                     )
-                    uw.mpi.barrier()
+                    # uw.mpi.barrier()
         message("Datasets saved.")
 
         if uw.mpi.rank == 0:
             assert os.path.isfile(os.path.join(checkpointDir, 'stamps.json')), \
                 "The files did not get saved for some reason!"
-        uw.mpi.barrier()
+        # uw.mpi.barrier()
 
         message("Checkpointed!")

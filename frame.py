@@ -64,11 +64,11 @@ def make_frame(
         if uw.mpi.rank == 0:
             with tarfile.open(tarpath) as tar:
                 tar.extract('stamps.json', path)
-        uw.mpi.barrier()
+        # uw.mpi.barrier()
         loadstamps = disk.load_json('stamps', path)
         if uw.mpi.rank == 0:
             shutil.rmtree(path)
-        uw.mpi.barrier()
+        # uw.mpi.barrier()
         assert loadstamps == stamps
 
     if not directory_state == 'clean':
@@ -110,7 +110,7 @@ def load_frame(
                 os.path.join(outputPath, 'stamps.json')
                 ):
             raise Exception
-    uw.mpi.barrier()
+    # uw.mpi.barrier()
 
     path = os.path.join(outputPath, instanceID)
 
@@ -335,7 +335,7 @@ class Frame:
         if uw.mpi.rank == 0:
             os.makedirs(extPath, exist_ok = True)
             assert os.path.isdir(extPath)
-        uw.mpi.barrier()
+        # uw.mpi.barrier()
 
         if self.archived:
 
@@ -349,7 +349,7 @@ class Frame:
                     self.tarpath,
                     newpath
                     )
-            uw.mpi.barrier()
+            # uw.mpi.barrier()
 
             message(
                 "Model forked to directory: " + extPath
@@ -366,7 +366,7 @@ class Frame:
             if uw.mpi.rank == 0:
                 pathexists = os.path.isdir(self.path)
             pathexists = uw.mpi.comm.bcast(pathexists, root = 0)
-            uw.mpi.barrier()
+            # uw.mpi.barrier()
 
             if pathexists:
 
@@ -380,7 +380,7 @@ class Frame:
                         self.path,
                         newpath
                         )
-                uw.mpi.barrier()
+                # uw.mpi.barrier()
 
                 message(
                     "Model forked to directory: " + extPath + self.instanceID
@@ -511,7 +511,7 @@ class Frame:
                 "The directory should have been deleted, but it's still there!"
             message("Model directory deleted.")
 
-        uw.mpi.barrier()
+        # uw.mpi.barrier()
 
         if localArchive:
             self.archived = True
@@ -572,7 +572,7 @@ class Frame:
                 "Tar should have been deleted but wasn't!"
             message("Model archive deleted.")
 
-        uw.mpi.barrier()
+        # uw.mpi.barrier()
 
         if localArchive:
             self.archived = False
