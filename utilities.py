@@ -7,7 +7,6 @@ import time
 import os
 import itertools
 import inspect
-import importlib
 import hashlib
 import random
 import io
@@ -18,6 +17,7 @@ def message(*args):
     for arg in args:
         if uw.mpi.rank == 0:
             print(arg)
+        uw.mpi.barrier()
 
 def log(text, outputPath = None, outputName = 'diaglog.txt'):
     if outputPath == None:
@@ -34,6 +34,7 @@ def log(text, outputPath = None, outputName = 'diaglog.txt'):
         file.write(text)
         file.write('\n')
         file.close()
+    uw.mpi.barrier()
 
 def check_reqs(obj):
     for attrname in obj._required_attributes:
@@ -47,6 +48,7 @@ def parallelise_set(setobj):
     if uw.mpi.rank == 0:
         setlist = list(setobj)
     setlist = uw.mpi.comm.bcast(setlist, root = 0)
+    uw.mpi.barrier()
     return setlist
 
 def unpack_var(*args):
@@ -405,19 +407,6 @@ def getDefaultKwargs(function):
     argbind.apply_defaults()
     argdict = dict(argbind.arguments)
     return argdict
-
-def local_import(filepath):
-
-    modname = os.path.basename(filepath)
-
-    spec = importlib.util.spec_from_file_location(
-        modname,
-        filepath,
-        )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    return module
 
 def stringify(*args):
     outStr = '{'

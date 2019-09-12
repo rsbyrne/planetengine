@@ -46,42 +46,42 @@ class Checkpointer:
         step = self.step()
         modeltime = self.modeltime()
 
-        coldstart = True
-
+        stamps_exist = False
         if uw.mpi.rank == 0:
+            stamps_exist = os.path.isfile(
+                os.path.join(path, 'stamps.json')
+                )
+        stamps_exist = uw.mpi.comm.bcast(stamps_exist, root = 0)
+        uw.mpi.barrier()
 
-            if os.path.isfile(os.path.join(path, 'stamps.json')):
+        if stamps_exist:
 
-                with open(os.path.join(path, 'stamps.json')) as json_file:
-                    loadstamps = json.load(json_file)
-                if not loadstamps == self.stamps:
-                    raise Exception("You are trying to save a model in a different model's directory!")
-                else:
-                    message("Pre-existing directory for this model has been found. Continuing...")
+            loadstamps = disk.load_json('stamps', path)
+            if not loadstamps == self.stamps:
+                raise Exception("You are trying to save a model in a different model's directory!")
 
-                coldstart = False
+            message("Pre-existing directory for this model has been found. Continuing...")
 
-        coldstart = uw.mpi.comm.bcast(coldstart, root = 0)
+            coldstart = False
 
-        if coldstart:
+        else:
+
+            message("No pre-existing directory for this model found. Making a new one...")
+
+            coldstart = True
 
             if uw.mpi.rank == 0:
-
-                message("No pre-existing directory for this model found. Making a new one...")
-
                 if not os.path.isdir(path):
                     os.makedirs(path)
+            uw.mpi.barrier()
 
-                built.save_builtsDir(self.builts, path)
-
-                disk.save_json(self.stamps, 'stamps', path)
-
-                disk.save_json(self.info, 'info', path)
-
-                if not self.framescript is None:
-                    disk.save_script(
-                        self.framescript, 'framescript', path
-                        )
+            built.save_builtsDir(self.builts, path)
+            disk.save_json(self.stamps, 'stamps', path)
+            disk.save_json(self.info, 'info', path)
+            if not self.framescript is None:
+                disk.save_script(
+                    self.framescript, 'framescript', path
+                    )
 
         message("Checkpointing...")
 
@@ -99,6 +99,7 @@ class Checkpointer:
             else:
                 message('Making checkpoint directory.')
                 os.makedirs(checkpointDir)
+        uw.mpi.barrier()
 
         message("Saving figures...")
         if not self.figs is None:
@@ -126,6 +127,7 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = headerStr
                                     )
+        uw.mpi.barrier()
         message("Snapshot saved.")
 
         disk.save_json(modeltime, 'modeltime', checkpointDir)
@@ -150,10 +152,12 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = header
                                     )
+                    uw.mpi.barrier()
         message("Datasets saved.")
 
         if uw.mpi.rank == 0:
             assert os.path.isfile(os.path.join(checkpointDir, 'stamps.json')), \
                 "The files did not get saved for some reason!"
+        uw.mpi.barrier()
 
         message("Checkpointed!")

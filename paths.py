@@ -39,22 +39,33 @@ class TestDir:
         delete_testdir()
         return True
 
+def liberate_paths():
+    subprocess.call(
+        ['chmod', '777', workPath]
+        )
+    subprocess.call(
+        ['chmod', '777', outPath]
+        )
+    subprocess.call(
+        ['chmod', '777', testPath]
+        )
+
 def make_testdir():
 
+    delete_testdir()
+
     if uw.mpi.rank == 0:
-        if not workPath in sys.path:
-            sys.path.append(workPath)
-        delete_testdir()
         os.makedirs(testPath)
-        ignoreme = subprocess.call(
-            ['chmod', '-R', '777', testPath]
-            )
+        if not os.path.isdir(testPath):
+            raise Exception
+    uw.mpi.barrier()
+
     return testPath
 
 def delete_testdir():
     if uw.mpi.rank == 0:
         if os.path.isdir(testPath):
-            subprocess.call(
-                ['chmod', '-R', '777', testPath]
-                )
             shutil.rmtree(testPath)
+        if os.path.isdir(testPath):
+            raise Exception
+    uw.mpi.barrier()

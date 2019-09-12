@@ -209,4 +209,5 @@ class QuickFig:
         if uw.mpi.rank == 0:
             if not os.path.isdir(path):
                 os.mkdir(path)
+        uw.mpi.barrier()
         self.fig.save(os.path.join(path, name))

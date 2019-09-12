@@ -5,57 +5,62 @@ import underworld as uw
 from . import utilities
 from . import wordhash
 from . import disk
+from . import paths
 # from .utilities import check_reqs
 
 def save_built(built, name, path):
 
     if uw.mpi.rank == 0:
-
         if not os.path.isdir(path):
             os.makedirs(path)
+    uw.mpi.barrier()
 
-        inputs = built.inputs
-        scripts = built.scripts
+    inputs = built.inputs
+    scripts = built.scripts
 
-        disk.save_json(inputs, name, path)
+    disk.save_json(inputs, name, path)
 
-        for index, script in enumerate(scripts):
-            scriptName = name + '_' + str(index)
-            disk.save_script(script, scriptName, path)
+    for index, script in enumerate(scripts):
+        scriptName = name + '_' + str(index)
+        disk.save_script(script, scriptName, path)
 
 def save_builtsDir(builts, path):
 
     if uw.mpi.rank == 0:
-
         builtsDir = os.path.join(path, 'builts')
         if not os.path.isdir(builtsDir):
             os.makedirs(builtsDir)
+    uw.mpi.barrier()
 
-        for builtName, built in sorted(builts.items()):
-            built.save(builtsDir, name = builtName)
+    for builtName, built in sorted(builts.items()):
+        built.save(builtsDir, name = builtName)
 
 def load_built(name, path):
 
     inputDict = disk.load_json(name, path)
-    scriptModules = []
+
     index = 0
 
-    while True:
-        scriptName = name + '_' + str(index)
-        scriptPath = os.path.join(
-            path,
-            scriptName
-            ) + '.py'
-        fileCheck = False
-        if uw.mpi.rank == 0:
-            fileCheck = os.path.isfile(scriptPath)
-        fileCheck = uw.mpi.comm.bcast(fileCheck, root = 0)
-        if fileCheck:
-            scriptModule = disk.load_script(scriptName, path)
-            scriptModules.append(scriptModule)
-            index += 1
-        else:
-            break
+    scripts_to_load = []
+    if uw.mpi.rank == 0:
+        while True:
+            scriptName = name + '_' + str(index)
+            scriptPath = os.path.join(
+                path,
+                scriptName
+                ) + '.py'
+            if os.path.isfile(scriptPath):
+                scripts_to_load.append(scriptName)
+                index += 1
+            else:
+                break
+    scripts_to_load = uw.mpi.comm.bcast(scripts_to_load, root = 0)
+    uw.mpi.barrier()
+
+    scriptModules = []
+    for script_to_load in sorted(scripts_to_load):
+        scriptModule = disk.load_script(script_to_load, path)
+        scriptModules.append(scriptModule)
 
     built = scriptModules[0].build(
         *scriptModules[1:],
@@ -67,24 +72,23 @@ def load_built(name, path):
     return built
 
 def load_builtsDir(path):
+
     builtsDir = os.path.join(path, 'builts')
-    files = []
+    names = []
+
     if uw.mpi.rank == 0:
         assert os.path.isdir(builtsDir)
         files = os.listdir(builtsDir)
-    files = uw.mpi.comm.bcast(files, root = 0)
-    names = set()
-    for file in files:
-        if file.endswith('.json'):
-            builtName = os.path.splitext(
-                os.path.basename(file)
-                )[0]
-            if builtName == 'all':
-                raise Exception
-            names.add(builtName)
-    print(1000 * '!', uw.mpi.rank, names, 1000 * '!')
-    if 'all' in names:
-        raise Exception
+        for file in sorted(files):
+            if file.endswith('.json'):
+                builtName = os.path.splitext(
+                    os.path.basename(file)
+                    )[0]
+                names.append(builtName)
+    names = uw.mpi.comm.bcast(names, root = 0)
+    uw.mpi.barrier()
+
+    names = list(set(names))
     builts = {}
     for name in sorted(names):
         builts[name] = load_built(name, builtsDir)
@@ -155,23 +159,22 @@ def make_stamps(built):
 
     else:
 
+        toHash = {}
         if uw.mpi.rank == 0:
-
-            toHash = {}
-
             toHash['inputs'] = built.inputs
             toHash['scripts'] = [
                 open(script) for script in built.scripts
                 ]
-            stamps = {
-                key: utilities.hashstamp(val) \
-                    for key, val in sorted(toHash.items())
-                }
-            stamps['all'] = utilities.hashstamp(stamps)
-            for stampKey, stampVal in stamps.items():
-                stamps[stampKey] = [stampVal, wordhash.wordhash(stampVal)]
+        toHash = uw.mpi.comm.bcast(toHash, root = 0)
+        uw.mpi.barrier()
 
-        stamps = uw.mpi.comm.bcast(stamps, root = 0)
+        stamps = {
+            key: utilities.hashstamp(val) \
+                for key, val in sorted(toHash.items())
+            }
+        stamps['all'] = utilities.hashstamp(stamps)
+        for stampKey, stampVal in stamps.items():
+            stamps[stampKey] = [stampVal, wordhash.wordhash(stampVal)]
 
         return stamps
 

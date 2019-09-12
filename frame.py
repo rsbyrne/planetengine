@@ -22,9 +22,6 @@ make_stamps = builtModule.make_stamps
 
 frameClasses = {}
 
-frameTypes = {}
-prefixDict = {}
-
 def make_frame(
         subFrameClass,
         builts,
@@ -61,14 +58,18 @@ def make_frame(
             directory_state = 'clean'
 
     directory_state = uw.mpi.comm.bcast(directory_state, root = 0)
+    uw.mpi.comm.barrier()
 
     if directory_state == 'tar':
         if uw.mpi.rank == 0:
             with tarfile.open(tarpath) as tar:
                 tar.extract('stamps.json', path)
-            loadstamps = disk.load_json('stamps', path)
+        uw.mpi.barrier()
+        loadstamps = disk.load_json('stamps', path)
+        if uw.mpi.rank == 0:
             shutil.rmtree(path)
-            assert loadstamps == stamps
+        uw.mpi.barrier()
+        assert loadstamps == stamps
 
     if not directory_state == 'clean':
         message("Preexisting model found! Loading...")
@@ -105,9 +106,11 @@ def load_frame(
     # another planetengine directory:
 
     if uw.mpi.rank == 0:
-        assert not os.path.isfile(
-            os.path.join(outputPath, 'stamps.json')
-            )
+        if os.path.isfile(
+                os.path.join(outputPath, 'stamps.json')
+                ):
+            raise Exception
+    uw.mpi.barrier()
 
     path = os.path.join(outputPath, instanceID)
 
@@ -115,8 +118,14 @@ def load_frame(
 
     builts = builtModule.load_builtsDir(path)
 
-    info = load_json('info', path)
-    # frameModule = disk.load_script('framescript', path)
+    info = disk.load_json('info', path)
+
+    print(info)
+    print(type(info))
+    print(info['frameType'])
+    print(frameClasses)
+    print(frameClasses[info['frameType']])
+
     frameClass = frameClasses[info['frameType']]
 
     frame = frameClass(
@@ -278,17 +287,7 @@ class Frame:
 
             self.step = loadStep
 
-            modeltime = 0.
-            if uw.mpi.rank == 0:
-                modeltime_filepath = os.path.join(
-                    checkpointFile,
-                    'modeltime.json'
-                    )
-                with open(modeltime_filepath, 'r') as file:
-                    modeltime = json.load(file)
-            modeltime = uw.mpi.comm.bcast(modeltime, root = 0)
-
-            self.modeltime = modeltime
+            self.modeltime = disk.load_json('modeltime', checkpointFile)
 
             self.update()
 
@@ -298,20 +297,27 @@ class Frame:
             message("Checkpoint successfully loaded!")
 
     def find_checkpoints(self):
+
         path = os.path.join(self.outputPath, self.instanceID)
         stamps = make_stamps(self.builts)
         checkpoints_found = []
+
+        directories = []
         if uw.mpi.rank == 0:
-            for directory in glob.glob(path + '/*/'):
-                basename = os.path.basename(directory[:-1])
-                if (basename.isdigit() and len(basename) == 8):
-                    loadstamps = disk.load_json('stamps', directory)
-                    assert loadstamps == stamps, \
-                        "Bad checkpoint found! Aborting."
-                    message("Found checkpoint: " + basename)
-                    checkpoints_found.append(int(basename))
-            checkpoints_found = sorted(list(set(checkpoints_found)))
-        checkpoints_found = uw.mpi.comm.bcast(checkpoints_found, root = 0)
+            directories = glob.glob(path + '/*/')
+        directories = uw.mpi.comm.bcast(directories, root = 0)
+        uw.mpi.comm.barrier()
+
+        for directory in directories:
+            basename = os.path.basename(directory[:-1])
+            if (basename.isdigit() and len(basename) == 8):
+                loadstamps = disk.load_json('stamps', directory)
+                assert loadstamps == stamps, \
+                    "Bad checkpoint found! Aborting."
+                message("Found checkpoint: " + basename)
+                checkpoints_found.append(int(basename))
+        checkpoints_found = sorted(list(set(checkpoints_found)))
+
         self.checkpoints = checkpoints_found
 
     def _pre_checkpoint_hook(self):
@@ -324,45 +330,72 @@ class Frame:
 
         message("Forking model to new directory...")
 
+        hardFork = False
+
         if uw.mpi.rank == 0:
-
             os.makedirs(extPath, exist_ok = True)
+        uw.mpi.barrier()
 
-            if self.archived:
-                newpath = os.path.join(
-                    extPath,
-                    self.tarname
-                    )
+        if self.archived:
+
+            newpath = os.path.join(
+                extPath,
+                self.tarname
+                )
+
+            if uw.mpi.rank == 0:
                 shutil.copyfile(
                     self.tarpath,
                     newpath
                     )
-                message(
-                    "Model forked to directory: " + extPath
+            uw.mpi.barrier()
+
+            message(
+                "Model forked to directory: " + extPath
+                )
+
+            hardFork = True
+
+        else:
+
+            if self.archived:
+                self.unarchive()
+
+            pathexists = False
+            if uw.mpi.rank == 0:
+                pathexists = os.path.isdir(self.path)
+            pathexists = uw.mpi.comm.bcast(pathexists, root = 0)
+            uw.mpi.barrier()
+
+            if pathexists:
+
+                newpath = os.path.join(
+                    extPath,
+                    self.instanceID
                     )
-                hardFork = True
-            else:
-                if self.archived:
-                    self.unarchive()
-                if os.path.isdir(self.path):
-                    newpath = os.path.join(
-                        extPath,
-                        self.instanceID
-                        )
+
+                if uw.mpi.rank == 0:
                     shutil.copytree(
                         self.path,
                         newpath
                         )
-                    message(
-                        "Model forked to directory: " + extPath + self.instanceID
-                        )
-                    if self._autoarchive:
-                        self.archive()
-                        self.archive(newpath)
-                    hardFork = True
-                else:
-                    message("No files to fork yet.")
-                    hardFork = False
+                uw.mpi.barrier()
+
+                message(
+                    "Model forked to directory: " + extPath + self.instanceID
+                    )
+
+                if self._autoarchive:
+                    self.archive()
+                    self.archive(newpath)
+
+                hardFork = True
+
+            else:
+
+                message("No files to fork yet.")
+
+                hardFork = False
 
         if return_frame:
 
@@ -415,6 +448,7 @@ class Frame:
                 shutil.copytree(self.backuppath, self.path)
 
         backup_archived = uw.mpi.comm.bcast(backup_archived, root = 0)
+        uw.mpi.comm.barrier()
 
         was_archived = self.archived
         if backup_archived:
@@ -472,7 +506,11 @@ class Frame:
 
             message("Deleting model directory...")
             shutil.rmtree(path)
+            assert not os.path.isdir(path), \
+                "The directory should have been deleted, but it's still there!"
             message("Model directory deleted.")
+
+        uw.mpi.barrier()
 
         if localArchive:
             self.archived = True
@@ -515,6 +553,7 @@ class Frame:
             message("Unarchiving a remote archive...")
 
         if uw.mpi.rank == 0:
+
             assert not os.path.isdir(path), \
                 "Destination directory already exists!"
             assert os.path.isfile(tarpath), \
@@ -527,10 +566,12 @@ class Frame:
                 "The model directory doesn't appear to exist."
 
             message("Deleting archive...")
-
             os.remove(tarpath)
+            assert not os.path.isfile(path), \
+                "Tar should have been deleted but wasn't!"
+            message("Model archive deleted.")
 
-            message("Model directory deleted.")
+        uw.mpi.barrier()
 
         if localArchive:
             self.archived = False
