@@ -250,43 +250,6 @@ def hash_var(
     else:
         return hashVal
 
-    # hashVal = 0
-    # checked = [var]
-    # print(type(var))
-    # def hash_obj(obj):
-    #     if not obj in checked:
-    #         addVal, _checked = hash_var(
-    #             obj,
-    #             _check_redundancy = True
-    #             )
-    #         hashVal += addVal
-    #         checked.append(_checked)
-    # if type(var) == tuple:
-    #     for subVar in var:
-    #         hash_obj(subVar)
-    # if hasattr(var, 'value'):
-    #     hashVal += hash(str(var.value))
-    # if hasattr(var, 'data'):
-    #     hashVal += hash(str(var.data))
-    # if hasattr(var, 'mesh'):
-    #     hashVal += hash_var(var.mesh)
-    #     hash_obj(var.mesh)
-    # if hasattr(var, 'swarm'):
-    #     hashVal += hash_var(var.swarm)
-    #     hash_obj(var.swarm)
-    # if hasattr(var, '_underlyingDataItems'):
-    #     for subVar in var._underlyingDataItems:
-    #         if not var is subVar:
-    #             hashVal += hash_var(subVar)
-    #             hash_obj(subVar)
-    # assert not hashVal == 0, \
-    #     "Not a valid var for hashing!"
-    # global_hashVal = sum(uw.mpi.comm.allgather(hashVal))
-    # if _check_redundancy:
-    #     return global_hashVal, checked
-    # else:
-    #     return global_hashVal
-
 def get_valSets(array):
     valSets = []
     assert len(array.shape) == 2

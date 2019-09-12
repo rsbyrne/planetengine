@@ -1,7 +1,8 @@
 import os
 
 from planetengine import frame
-from planetengine.fieldops import copyField
+from planetengine import fieldops
+from planetengine import mapping
 from planetengine.initials._IC import _IC
 
 def build(*args, name = None, **kwargs):
@@ -40,6 +41,7 @@ class IC(_IC):
 
         self.inFrame = inFrame
         self.inVar = inFrame.saveVars[varName]
+        self.fullInField = fieldops.make_fullLocalMeshVar(self.inVar)
 
         inputs = {
             'varName': varName,
@@ -55,10 +57,27 @@ class IC(_IC):
             )
 
     def evaluate(self, coordArray):
-        return coordArray
+        tolerance = 0.
+        while tolerance < 0.1:
+            try:
+                evalCoords = mapping.unbox(
+                    self.fullInField.mesh,
+                    coordArray,
+                    tolerance = tolerance
+                    )
+                outArray = self.fullInField.evaluate(evalCoords)
+                break
+            except:
+                if tolerance == 0.:
+                    tolerance += 0.00001
+                else:
+                    tolerance *= 1.01
+        raise Exception("Acceptable tolerance for load IC could not be found.")
 
-    def _apply(self, var, boxDims = None):
-        tolerance = copyField(self.inVar, var)
+        return outArray
+
+    # def _apply(self, var, boxDims = None):
+    #     tolerance = fieldops.copyField(self.inVar, var)
 
     def _pre_save_hook(self, path, name = None):
         path = os.path.join(path, self.inFrame.instanceID)

@@ -89,20 +89,7 @@ def makeLocalCart(mesh):
     # uw.mpi.barrier()
     return localMesh
 
-def copyField(field1, field2,
-        tolerance = 0.01,
-        rounded = False,
-        boxDims = None,
-        freqs = None,
-        mirrored = None,
-        blendweight = None,
-        scales = None,
-        boundaries = None,
-        ):
-
-    if not boxDims is None:
-        assert np.max(np.array(boxDims)) <= 1., "Max boxdim is 1."
-        assert np.min(np.array(boxDims)) >= 0., "Min boxdim is 0."
+def make_fullLocalMeshVar(field1):
 
     if type(field1) == uw.mesh._meshvariable.MeshVariable:
         inField = field1
@@ -130,7 +117,27 @@ def copyField(field1, field2,
             for data, ID in zip(allData[proc], allGID[proc]):
                 fullInField.data[ID] = data
     fullInField.data[:] = uw.mpi.comm.bcast(fullInField.data, root = 0)
-    # uw.mpi.barrier()
+
+    return fullInField
+
+def copyField(field1, field2,
+        tolerance = 0.01,
+        rounded = False,
+        boxDims = None,
+        freqs = None,
+        mirrored = None,
+        blendweight = None,
+        scales = None,
+        boundaries = None
+        ):
+
+    if not boxDims is None:
+        assert np.max(np.array(boxDims)) <= 1., "Max boxdim is 1."
+        assert np.min(np.array(boxDims)) >= 0., "Min boxdim is 0."
+
+    fullInField = make_fullLocalMeshVar(field1)
+    inDim = fullInField.nodeDofCount
+    inMesh = fullInField.mesh
 
     outField = field2
     if type(field2) == uw.mesh._meshvariable.MeshVariable:

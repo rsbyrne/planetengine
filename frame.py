@@ -120,12 +120,6 @@ def load_frame(
 
     info = disk.load_json('info', path)
 
-    print(info)
-    print(type(info))
-    print(info['frameType'])
-    print(frameClasses)
-    print(frameClasses[info['frameType']])
-
     frameClass = frameClasses[info['frameType']]
 
     frame = frameClass(
@@ -493,6 +487,12 @@ class Frame:
             message("Already archived!")
             return None
 
+        ### INDEV ###
+        # if hasattr(self, '_parentFrame'):
+        #     if localArchive:
+        #         self._parentFrame.archive()
+        #         return None
+
         assert self.archived == False
 
         message("Archiving...")
@@ -538,39 +538,26 @@ class Frame:
             message("Nothing to unarchive yet!")
             return None
 
+        ### INDEV ###
+        # if hasattr(self, '_parentFrame'):
+        #     if localArchive:
+        #         self._parentFrame.unarchive()
+        #         return None
+
         assert self.archived == True
 
         message("Unarchiving...")
 
         if _path is None or _path == self.path:
             path = self.path
-            tarpath = self.tarpath
             localArchive = True
             message("Unarchiving the local archive...")
         else:
             path = _path
-            tarpath = path + '.tar.gz'
             localArchive = False
             message("Unarchiving a remote archive...")
 
-        if uw.mpi.rank == 0:
-
-            assert not os.path.isdir(path), \
-                "Destination directory already exists!"
-            assert os.path.isfile(tarpath), \
-                "No archive to unpack!"
-
-            with tarfile.open(tarpath) as tar:
-                tar.extractall(path)
-
-            assert os.path.isdir(path), \
-                "The model directory doesn't appear to exist."
-
-            message("Deleting archive...")
-            os.remove(tarpath)
-            assert not os.path.isfile(path), \
-                "Tar should have been deleted but wasn't!"
-            message("Model archive deleted.")
+        disk.expose_tar(path)
 
         # uw.mpi.barrier()
 

@@ -55,7 +55,9 @@ class MeshUtils:
                 self.surfaces['back'] = mesh.specialSets['MaxK_VertexSet']
         elif type(mesh) == uw.mesh.FeMesh_Annulus:
 
-            self.flip = [True, False]
+            ### DEBUGGING ###
+            # self.flip = [True, False]
+            self.flip = [True, True]
 
             self.comps = {
                 'x': fn.misc.constant((1., 0.)),
