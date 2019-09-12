@@ -215,6 +215,7 @@ class Frame:
 
             if self.archived:
                 self.unarchive()
+                assert not self.archived
 
             self._pre_checkpoint_hook()
 
@@ -236,9 +237,15 @@ class Frame:
 
             if self._autoarchive:
                 self.archive()
+                assert self.archived
 
             if self._autobackup:
                 self.backup()
+                assert self.archived == self._autoarchive
+
+            ### DEBUG ###
+            if path is None or path == self.path:
+                self.archived = True
 
         else:
 

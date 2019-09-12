@@ -58,7 +58,8 @@ class IC(_IC):
 
     def evaluate(self, coordArray):
         tolerance = 0.
-        while tolerance < 0.1:
+        maxTolerance = 0.1
+        while tolerance < maxTolerance:
             try:
                 evalCoords = mapping.unbox(
                     self.fullInField.mesh,
@@ -72,7 +73,9 @@ class IC(_IC):
                     tolerance += 0.00001
                 else:
                     tolerance *= 1.01
-        raise Exception("Acceptable tolerance for load IC could not be found.")
+
+        if tolerance > maxTolerance:
+            raise Exception("Acceptable tolerance for load IC could not be found.")
 
         return outArray
 
