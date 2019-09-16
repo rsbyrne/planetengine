@@ -8,36 +8,18 @@ from . import _system
 
 Frame = frame.Frame
 
-# def make_model(
-#         system,
-#         initials,
-#         outputPath = None,
-#         instanceID = None,
-#         ):
-#     builts = {
-#         'system': system,
-#         **initials
-#         }
-#     outFrame = frame.make_frame(
-#         Model,
-#         builts,
-#         outputPath,
-#         instanceID
-#         )
-#     return outFrame
-
 def make_model(
         outputPath = None,
         instanceID = None,
         system = None,
-        initials = None,
+        initials = None
         ):
     return frame.make_frame(
         Model,
         outputPath = outputPath,
         instanceID = instanceID,
         system = system,
-        **initials
+        initials = initials
         )
 
 load_model = frame.load_frame
@@ -58,11 +40,11 @@ class Model(Frame):
     def __init__(
             self,
             system = None,
+            initials = None,
             outputPath = None,
             instanceID = 'test',
             _autoarchive = True,
-            _autobackup = True,
-            **initials
+            _autobackup = True
             ):
 
         if outputPath is None:
@@ -99,7 +81,7 @@ class Model(Frame):
         self._autobackup = _autobackup
         self._autoarchive = _autoarchive
 
-        builts = {'system': system, **initials}
+        builts = {'system': system, 'initials': initials}
 
         super().__init__(
             outputPath, # must be str
