@@ -3,7 +3,7 @@ from underworld import function as fn
 import math
 import numpy as np
 
-from planetengine.systems._system import System
+from planetengine._system import System
 
 def build(*args, name = None, **kwargs):
     built = Isovisc(*args, **kwargs)

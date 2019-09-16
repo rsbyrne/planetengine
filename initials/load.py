@@ -1,9 +1,9 @@
 import os
 
-from planetengine import frame
+from planetengine import _frame as frame
 from planetengine import fieldops
 from planetengine import mapping
-from planetengine.initials._IC import _IC
+from planetengine._IC import IC
 
 def build(*args, name = None, **kwargs):
     built = IC(*args, **kwargs)
@@ -11,7 +11,7 @@ def build(*args, name = None, **kwargs):
         built.name = name
     return built
 
-class IC(_IC):
+class Load(IC):
 
     script = __file__
 

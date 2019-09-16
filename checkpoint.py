@@ -7,9 +7,8 @@ import json
 from . import disk
 from .utilities import message
 
-from . import frame
 from . import paths
-from . import built
+from . import _built as built
 
 class Checkpointer:
 

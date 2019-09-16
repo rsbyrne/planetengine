@@ -9,7 +9,7 @@ import glob
 from . import paths
 from . import utilities
 from . import disk
-from . import built as builtModule
+from . import _built as builtModule
 from .wordhash import wordhash as wordhashFn
 from . import checkpoint
 from .utilities import message

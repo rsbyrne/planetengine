@@ -1,6 +1,6 @@
 from underworld import function as fn
 import numpy as np
-from ._IC import _IC
+from planetengine._IC import IC
 
 def build(*args, name = None, **kwargs):
     built = IC(*args, **kwargs)
@@ -8,7 +8,7 @@ def build(*args, name = None, **kwargs):
         built.name = name
     return built
 
-class IC(_IC):
+class Extents(IC):
 
     varDim = 1
     meshDim = 2

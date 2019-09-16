@@ -1,4 +1,4 @@
-from ._IC import _IC
+from planetengine._IC import IC
 
 def build(*args, name = None, **kwargs):
     built = IC(*args, **kwargs)
@@ -6,7 +6,7 @@ def build(*args, name = None, **kwargs):
         built.name = name
     return built
 
-class IC(_IC):
+class Product(IC):
 
     varDim = 1
     meshDim = 2
