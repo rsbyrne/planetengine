@@ -1,7 +1,7 @@
 from planetengine._IC import IC
 
 def build(*args, name = None, **kwargs):
-    built = IC(*args, **kwargs)
+    built = Product(*args, **kwargs)
     if type(name) == str:
         built.name = name
     return built

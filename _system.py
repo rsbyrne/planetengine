@@ -1,6 +1,6 @@
 # from ..utilities import check_reqs
-from .._built import Built
-from .. import fieldops
+from ._built import Built
+from . import fieldops
 from planetengine.utilities import Grouper
 
 class System(Built):

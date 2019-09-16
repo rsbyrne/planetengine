@@ -2,7 +2,7 @@ from . import paths
 from . import utilities
 from .utilities import message
 from .visualisation import QuickFig
-from . import frame
+from . import _frame as frame
 
 Frame = frame.Frame
 
