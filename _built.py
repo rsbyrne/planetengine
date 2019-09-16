@@ -25,9 +25,9 @@ def save_built(built, name, path):
         scriptName = name + '_' + str(index)
         disk.save_script(script, scriptName, path)
 
-def save_builtsDir(builts, path, builtsDir = 'builts'):
+def save_builtsDir(builts, path, name = 'builts'):
 
-    builtsDir = os.path.join(path, builtsDir)
+    builtsDir = os.path.join(path, name)
     if uw.mpi.rank == 0:
         if not os.path.isdir(builtsDir):
             os.makedirs(builtsDir)
@@ -36,8 +36,8 @@ def save_builtsDir(builts, path, builtsDir = 'builts'):
 
     for key, val in sorted(builts.items()):
         if type(val) == dict:
-            subPath = os.path.join(builtsDir, key)
-            save_builtsDir(val, subPath, builtsDir = '')
+            subDir = 'sub_' + key
+            save_builtsDir(val, builtsDir, name = subDir)
         else:
             val.save(builtsDir, name = key)
 
@@ -77,10 +77,9 @@ def load_built(name, path):
 
     return built
 
-def load_builtsDir(path, builtsDir = 'builts'):
+def load_builtsDir(path, name = 'builts'):
 
-    builtsDir = os.path.join(path, builtsDir)
-    print(builtsDir)
+    builtsDir = os.path.join(path, name)
     names = []
     dirs = []
 
@@ -96,7 +95,8 @@ def load_builtsDir(path, builtsDir = 'builts'):
                         )[0]
                     names.append(builtName)
             elif os.path.isdir(filePath):
-                dirs.append(file)
+                if file[:4] == 'sub_':
+                    dirs.append(file)
     names = uw.mpi.comm.bcast(names, root = 0)
     dirs = uw.mpi.comm.bcast(dirs, root = 0)
     # uw.mpi.barrier()
@@ -107,8 +107,8 @@ def load_builtsDir(path, builtsDir = 'builts'):
     for name in sorted(names):
         builts[name] = load_built(name, builtsDir)
     for subDir in sorted(dirs):
-        subPath = os.path.join(builtsDir, subDir)
-        builts[subDir] = load_builtsDir(subPath, builtsDir = '')
+        subName = subDir[4:]
+        builts[subName] = load_builtsDir(builtsDir, name = subDir)
     return builts
 
 _accepted_inputTypes = {
@@ -167,8 +167,15 @@ def make_stamps(built):
 
     if type(built) == dict:
         builts = built
-        for builtName, built in builts.items():
-            stamps[builtName] = built.stamps
+        for key, val in sorted(builts.items()):
+            if type(val) == dict:
+                stamps[key] = make_stamps(val)
+            elif isinstance(val, Built):
+                stamps[key] = val.stamps
+            else:
+                raise Exception(
+                    "Only Builts or dicts of builts can be stamped."
+                    )
         allstamp = utilities.hashstamp(stamps)
         allwords = wordhash.wordhash(allstamp)
         stamps['all'] = [allstamp, allwords]
