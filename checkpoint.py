@@ -1,5 +1,4 @@
 import numpy as np
-import underworld as uw
 import os
 import shutil
 import json
@@ -9,6 +8,8 @@ from .utilities import message
 
 from . import paths
 from . import _built as built
+
+from . import mpi
 
 class Checkpointer:
 
@@ -48,12 +49,12 @@ class Checkpointer:
         modeltime = self.modeltime()
 
         stamps_exist = False
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             stamps_exist = os.path.isfile(
                 os.path.join(path, 'stamps.json')
                 )
-        stamps_exist = uw.mpi.comm.bcast(stamps_exist, root = 0)
-        # uw.mpi.barrier()
+        stamps_exist = mpi.comm.bcast(stamps_exist, root = 0)
+        # mpi.barrier()
 
         message("Checking for pre-existing frame on disk...")
 
@@ -73,11 +74,11 @@ class Checkpointer:
 
             coldstart = True
 
-            if uw.mpi.rank == 0:
+            if mpi.rank == 0:
                 if not os.path.isdir(path):
                     os.makedirs(path)
                 assert os.path.isdir(path)
-            # uw.mpi.barrier()
+            # mpi.barrier()
 
             built.save_builtsDir(self.builts, path)
             disk.save_json(self.stamps, 'stamps', path)
@@ -96,7 +97,7 @@ class Checkpointer:
 
         checkpointDir = os.path.join(path, stepStr)
 
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             if os.path.isdir(checkpointDir):
                 message('Checkpoint directory found: removing')
                 shutil.rmtree(checkpointDir)
@@ -104,7 +105,7 @@ class Checkpointer:
             message('Making checkpoint directory.')
             os.makedirs(checkpointDir)
             assert os.path.isdir(checkpointDir)
-        # uw.mpi.barrier()
+        # mpi.barrier()
 
         ## DEBUGGING ###
         message("Saving figures...")
@@ -120,7 +121,7 @@ class Checkpointer:
         message("Saved.")
 
         message("Saving snapshot...")
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             if not self.dataCollectors is None:
                 for dataCollector in self.dataCollectors:
                     for analyser in dataCollector.analysers:
@@ -134,7 +135,7 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = headerStr
                                     )
-        # uw.mpi.barrier()
+        # mpi.barrier()
         message("Snapshot saved.")
 
         disk.save_json(modeltime, 'modeltime', checkpointDir)
@@ -145,7 +146,7 @@ class Checkpointer:
         if not self.dataCollectors is None:
             for dataCollector in self.dataCollectors:
                 for row in dataCollector.out():
-                    if uw.mpi.rank == 0:
+                    if mpi.rank == 0:
                         name, headerStr, dataArray = row
                         filename = os.path.join(path, name + '.csv')
                         if not type(dataArray) == type(None):
@@ -159,12 +160,12 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = header
                                     )
-                    # uw.mpi.barrier()
+                    # mpi.barrier()
         message("Datasets saved.")
 
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             assert os.path.isfile(os.path.join(checkpointDir, 'stamps.json')), \
                 "The files did not get saved for some reason!"
-        # uw.mpi.barrier()
+        # mpi.barrier()
 
         message("Checkpointed!")

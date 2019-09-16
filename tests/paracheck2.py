@@ -1,13 +1,12 @@
 import planetengine
 import numpy as np
-import underworld as uw
 planetengine.paths.delete_testdir()
 outputPath = planetengine.paths.make_testdir()
 system = planetengine.systems.arrhenius.build()
 # IC = planetengine.initials.sinusoidal.build()
 # IC.apply(system.locals.temperatureField)
 # system.locals.solver.solve()
-# uw.mpi.barrier()
+# mpi.barrier()
 # planetengine.built.save_built(system, 'system', outputPath)
 # planetengine.built.save_built(IC, 'IC', outputPath)
 # system_load = planetengine.built.load_built('system', outputPath)

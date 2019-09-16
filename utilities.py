@@ -13,16 +13,18 @@ import io
 
 from . import paths
 
+from . import mpi
+
 def message(*args):
     for arg in args:
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             print(arg)
 
 def log(text, outputPath = None, outputName = 'diaglog.txt'):
     if outputPath == None:
         outputPath = paths.defaultPath
 
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         filename = os.path.join(outputPath, outputName)
         if not os.path.exists(outputPath):
             os.mkdir(outputPath)
@@ -33,7 +35,7 @@ def log(text, outputPath = None, outputName = 'diaglog.txt'):
         file.write(text)
         file.write('\n')
         file.close()
-    # uw.mpi.barrier()
+    # mpi.barrier()
 
 def check_reqs(obj):
     for attrname in obj._required_attributes:
@@ -44,10 +46,10 @@ def check_reqs(obj):
 
 def parallelise_set(setobj):
     setlist = []
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         setlist = list(setobj)
-    setlist = uw.mpi.comm.bcast(setlist, root = 0)
-    # uw.mpi.barrier()
+    setlist = mpi.comm.bcast(setlist, root = 0)
+    # mpi.barrier()
     return setlist
 
 def unpack_var(*args):
@@ -244,7 +246,7 @@ def hash_var(
     assert not hashVal == 0, \
         "Not a valid var for hashing!"
     if global_eval:
-        hashVal = sum(uw.mpi.comm.allgather(hashVal))
+        hashVal = sum(mpi.comm.allgather(hashVal))
     if return_checked:
         return hashVal, checked
     else:
@@ -258,7 +260,7 @@ def get_valSets(array):
         for item in list(localVals):
             if math.isnan(item):
                 localVals.remove(item)
-        allValsGathered = uw.mpi.comm.allgather(localVals)
+        allValsGathered = mpi.comm.allgather(localVals)
         valSet = {val.item() for localVals in allValsGathered for val in localVals}
         valSets.append(valSet)
     return valSets
@@ -271,8 +273,8 @@ def get_scales(array, valSets = None):
         for component in array:
             minVal = np.nanmin(component)
             maxVal = np.nanmax(component)
-            minVals = uw.mpi.comm.allgather(minVal)
-            maxVals = uw.mpi.comm.allgather(maxVal)
+            minVals = mpi.comm.allgather(minVal)
+            maxVals = mpi.comm.allgather(maxVal)
             minVals = [val for val in minVals if val < np.inf]
             maxVals = [val for val in maxVals if val < np.inf]
             assert len(minVals) > 0

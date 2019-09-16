@@ -16,7 +16,7 @@ def get_pureFreqs(coordArray):
 def boundary_interpolate(fromData, toData, dim):
     # NOT PARALLEL SAFE
 
-    assert uw.mpi.size == 1
+    assert mpi.size == 1
 
     fromField, fromMesh, fromIndexSet = fromData
     comp = 0

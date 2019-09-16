@@ -8,6 +8,8 @@ from . import mapping
 from .utilities import get_scales
 from .utilities import message
 
+from . import mpi
+
 def set_boundaries(variable, values):
 
     try:
@@ -62,8 +64,8 @@ def weightVar(mesh, specialSets = None):
     return weightVar
 
 def makeLocalAnnulus(mesh):
-    for proc in range(uw.mpi.size):
-        if uw.mpi.rank == proc:
+    for proc in range(mpi.size):
+        if mpi.rank == proc:
             localAnn = uw.mesh.FeMesh_Annulus(
                 elementType = mesh.elementType,
                 elementRes = mesh.elementRes,
@@ -72,12 +74,12 @@ def makeLocalAnnulus(mesh):
                 periodic = mesh.periodic,
                 partitioned = False,
                 )
-    # uw.mpi.barrier()
+    # mpi.barrier()
     return localAnn
 
 def makeLocalCart(mesh):
-    for proc in range(uw.mpi.size):
-        if uw.mpi.rank == proc:
+    for proc in range(mpi.size):
+        if mpi.rank == proc:
             localMesh = uw.mesh.FeMesh_Cartesian(
                 elementType = mesh.elementType,
                 elementRes = mesh.elementRes,
@@ -86,7 +88,7 @@ def makeLocalCart(mesh):
                 periodic = mesh.periodic,
                 partitioned = False,
                 )
-    # uw.mpi.barrier()
+    # mpi.barrier()
     return localMesh
 
 def make_fullLocalMeshVar(field1):
@@ -110,13 +112,13 @@ def make_fullLocalMeshVar(field1):
         inDim = field1.count
 
     fullInField = makeLocalAnnulus(inMesh).add_variable(inDim)
-    allData = uw.mpi.comm.gather(inField.data, root = 0)
-    allGID = uw.mpi.comm.gather(inField.mesh.data_nodegId, root = 0)
-    if uw.mpi.rank == 0:
-        for proc in range(uw.mpi.size):
+    allData = mpi.comm.gather(inField.data, root = 0)
+    allGID = mpi.comm.gather(inField.mesh.data_nodegId, root = 0)
+    if mpi.rank == 0:
+        for proc in range(mpi.size):
             for data, ID in zip(allData[proc], allGID[proc]):
                 fullInField.data[ID] = data
-    fullInField.data[:] = uw.mpi.comm.bcast(fullInField.data, root = 0)
+    fullInField.data[:] = mpi.comm.bcast(fullInField.data, root = 0)
 
     return fullInField
 

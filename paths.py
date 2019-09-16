@@ -3,7 +3,8 @@ import os
 import shutil
 import subprocess
 import traceback
-import underworld as uw
+
+from . import mpi
 
 workPath = '/home/jovyan/workspace'
 # if not workPath in sys.path:
@@ -55,17 +56,17 @@ def make_testdir():
 
     delete_testdir()
 
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         os.makedirs(testPath)
         assert os.path.isdir(testPath)
-    # uw.mpi.barrier()
+    # mpi.barrier()
 
     return testPath
 
 def delete_testdir():
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         if os.path.isdir(testPath):
             shutil.rmtree(testPath)
         if os.path.isdir(testPath):
             raise Exception
-    # uw.mpi.barrier()
+    # mpi.barrier()

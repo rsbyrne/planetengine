@@ -1,4 +1,3 @@
-import underworld as uw
 import tarfile
 import os
 import shutil
@@ -17,6 +16,8 @@ from .utilities import check_reqs
 from .disk import load_json
 from .disk import expose_tar
 from .visualisation import QuickFig
+
+from . import mpi
 
 make_stamps = builtModule.make_stamps
 
@@ -43,7 +44,7 @@ def make_frame(
 
     directory_state = ''
 
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
 
         if os.path.isdir(path):
             if os.path.isfile(tarpath):
@@ -57,18 +58,18 @@ def make_frame(
         else:
             directory_state = 'clean'
 
-    directory_state = uw.mpi.comm.bcast(directory_state, root = 0)
-    uw.mpi.comm.barrier()
+    directory_state = mpi.comm.bcast(directory_state, root = 0)
+    mpi.comm.barrier()
 
     if directory_state == 'tar':
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             with tarfile.open(tarpath) as tar:
                 tar.extract('stamps.json', path)
-        # uw.mpi.barrier()
+        # mpi.barrier()
         loadstamps = disk.load_json('stamps', path)
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             shutil.rmtree(path)
-        # uw.mpi.barrier()
+        # mpi.barrier()
         assert loadstamps == stamps
 
     if not directory_state == 'clean':
@@ -108,12 +109,12 @@ def load_frame(
     # Check that target directory is not inside
     # another planetengine directory:
 
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         if os.path.isfile(
                 os.path.join(outputPath, 'stamps.json')
                 ):
             raise Exception
-    # uw.mpi.barrier()
+    # mpi.barrier()
 
     path = os.path.join(outputPath, instanceID)
 
@@ -314,10 +315,10 @@ class Frame:
         checkpoints_found = []
 
         directories = []
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             directories = glob.glob(path + '/*/')
-        directories = uw.mpi.comm.bcast(directories, root = 0)
-        uw.mpi.comm.barrier()
+        directories = mpi.comm.bcast(directories, root = 0)
+        mpi.comm.barrier()
 
         for directory in directories:
             basename = os.path.basename(directory[:-1])
@@ -343,10 +344,10 @@ class Frame:
 
         hardFork = False
 
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             os.makedirs(extPath, exist_ok = True)
             assert os.path.isdir(extPath)
-        # uw.mpi.barrier()
+        # mpi.barrier()
 
         if self.archived:
 
@@ -355,12 +356,12 @@ class Frame:
                 self.tarname
                 )
 
-            if uw.mpi.rank == 0:
+            if mpi.rank == 0:
                 shutil.copyfile(
                     self.tarpath,
                     newpath
                     )
-            # uw.mpi.barrier()
+            # mpi.barrier()
 
             message(
                 "Model forked to directory: " + extPath
@@ -374,10 +375,10 @@ class Frame:
                 self.unarchive()
 
             pathexists = False
-            if uw.mpi.rank == 0:
+            if mpi.rank == 0:
                 pathexists = os.path.isdir(self.path)
-            pathexists = uw.mpi.comm.bcast(pathexists, root = 0)
-            # uw.mpi.barrier()
+            pathexists = mpi.comm.bcast(pathexists, root = 0)
+            # mpi.barrier()
 
             if pathexists:
 
@@ -386,12 +387,12 @@ class Frame:
                     self.instanceID
                     )
 
-                if uw.mpi.rank == 0:
+                if mpi.rank == 0:
                     shutil.copytree(
                         self.path,
                         newpath
                         )
-                # uw.mpi.barrier()
+                # mpi.barrier()
 
                 message(
                     "Model forked to directory: " + extPath + self.instanceID
@@ -441,7 +442,7 @@ class Frame:
 
         backup_archived = False
 
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
 
             assert os.path.exists(self.backuppath) or os.path.exists(self.backuptarpath), \
                 "No backup found!"
@@ -459,8 +460,8 @@ class Frame:
             else:
                 shutil.copytree(self.backuppath, self.path)
 
-        backup_archived = uw.mpi.comm.bcast(backup_archived, root = 0)
-        uw.mpi.comm.barrier()
+        backup_archived = mpi.comm.bcast(backup_archived, root = 0)
+        mpi.comm.barrier()
 
         was_archived = self.archived
         if backup_archived:
@@ -499,11 +500,11 @@ class Frame:
 
         isdir = False
         isfile = False
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             isdir = os.path.isdir(path)
             isfile = os.path.isfile(path)
-        isdir = uw.mpi.comm.bcast(isdir, root = 0)
-        isfile = uw.mpi.comm.bcast(isfile, root = 0)
+        isdir = mpi.comm.bcast(isdir, root = 0)
+        isfile = mpi.comm.bcast(isfile, root = 0)
         if not isdir:
             message("Nothing to archive yet!")
             return None
@@ -519,7 +520,7 @@ class Frame:
 
         message("Archiving...")
 
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
 
             with tarfile.open(tarpath, 'w:gz') as tar:
                 tar.add(path, arcname = '')
@@ -533,7 +534,7 @@ class Frame:
                 "The directory should have been deleted, but it's still there!"
             message("Model directory deleted.")
 
-        # uw.mpi.barrier()
+        # mpi.barrier()
 
         if localArchive:
             self.archived = True
@@ -555,11 +556,11 @@ class Frame:
 
         isdir = False
         isfile = False
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             isdir = os.path.isdir(path)
             isfile = os.path.isfile(path)
-        isdir = uw.mpi.comm.bcast(isdir, root = 0)
-        isfile = uw.mpi.comm.bcast(isfile, root = 0)
+        isdir = mpi.comm.bcast(isdir, root = 0)
+        isfile = mpi.comm.bcast(isfile, root = 0)
         if isdir:
             message("Already unarchived!")
             return None
@@ -586,7 +587,7 @@ class Frame:
 
         disk.expose_tar(path)
 
-        # uw.mpi.barrier()
+        # mpi.barrier()
 
         if localArchive:
             self.archived = False

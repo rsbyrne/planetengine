@@ -44,7 +44,7 @@
 #         inHashID = 'pemod_' + _model_stamps['all'][1]
 #
 #         stamps = {}
-#         if uw.mpi.rank == 0:
+#         if mpi.rank == 0:
 #             stamps = {
 #                 'inputs': hashstamp(self.inputs),
 #                 'scripts': hashstamp(
@@ -56,7 +56,7 @@
 #             stamps['all'] = hashstamp(stamps)
 #             for stampKey, stampVal in stamps.items():
 #                 stamps[stampKey] = [stampVal, wordhashFn(stampVal)]
-#         stamps = uw.mpi.comm.bcast(stamps, root = 0)
+#         stamps = mpi.comm.bcast(stamps, root = 0)
 #         stamps['inStamps'] = _model_stamps
 #
 #         scripts.update(_model_scripts)

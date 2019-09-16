@@ -18,6 +18,8 @@ from .meshutils import get_meshUtils
 from .mapping import unbox
 from .shapes import interp_shape
 
+from . import mpi
+
 _premade_fns = {}
 
 def update_opTag(opTag, stringVariants):
@@ -379,7 +381,7 @@ class PlanetVar(UWFn):
     def _has_changed(self, lazy = False):
         currenthash = self._check_hash(lazy = lazy)
         has_changed = bool(
-            uw.mpi.comm.allreduce(
+            mpi.comm.allreduce(
                 currenthash - self.lasthash
                 )
             )

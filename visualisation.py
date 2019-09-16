@@ -1,4 +1,3 @@
-import underworld as uw
 from underworld import function as fn
 import glucifer
 import numpy as np
@@ -8,6 +7,8 @@ from . import functions as pfn
 from .utilities import message
 from .functions import get_planetVar
 from .meshutils import get_meshUtils
+
+from . import mpi
 
 def quickShow(*args, **kwargs):
 
@@ -206,9 +207,9 @@ class QuickFig:
         self.update()
         if name is None:
             name = self.figname
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             if not os.path.isdir(path):
                 os.mkdir(path)
             assert os.path.isdir(path)
-        # uw.mpi.barrier()
+        # mpi.barrier()
         self.fig.save(os.path.join(path, name))

@@ -1,20 +1,21 @@
 import inspect
 import os
 import shutil
-import underworld as uw
 from . import utilities
 from . import wordhash
 from . import disk
 from . import paths
+
+from . import mpi
 # from .utilities import check_reqs
 
 def save_built(built, name, path):
 
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         if not os.path.isdir(path):
             os.makedirs(path)
         assert os.path.isdir(path)
-    # uw.mpi.barrier()
+    # mpi.barrier()
 
     inputs = built.inputs
     scripts = built.scripts
@@ -28,11 +29,11 @@ def save_built(built, name, path):
 def save_builtsDir(builts, path, name = 'builts'):
 
     builtsDir = os.path.join(path, name)
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         if not os.path.isdir(builtsDir):
             os.makedirs(builtsDir)
         assert os.path.isdir(builtsDir)
-    # uw.mpi.barrier()
+    # mpi.barrier()
 
     for key, val in sorted(builts.items()):
         if type(val) == dict:
@@ -48,7 +49,7 @@ def load_built(name, path):
     index = 0
 
     scripts_to_load = []
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         while True:
             scriptName = name + '_' + str(index)
             scriptPath = os.path.join(
@@ -60,8 +61,8 @@ def load_built(name, path):
                 index += 1
             else:
                 break
-    scripts_to_load = uw.mpi.comm.bcast(scripts_to_load, root = 0)
-    # uw.mpi.barrier()
+    scripts_to_load = mpi.comm.bcast(scripts_to_load, root = 0)
+    # mpi.barrier()
 
     scriptModules = []
     for script_to_load in sorted(scripts_to_load):
@@ -83,7 +84,7 @@ def load_builtsDir(path, name = 'builts'):
     names = []
     dirs = []
 
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         assert os.path.isdir(builtsDir)
         files = os.listdir(builtsDir)
         for file in sorted(files):
@@ -97,9 +98,9 @@ def load_builtsDir(path, name = 'builts'):
             elif os.path.isdir(filePath):
                 if file[:4] == 'sub_':
                     dirs.append(file)
-    names = uw.mpi.comm.bcast(names, root = 0)
-    dirs = uw.mpi.comm.bcast(dirs, root = 0)
-    # uw.mpi.barrier()
+    names = mpi.comm.bcast(names, root = 0)
+    dirs = mpi.comm.bcast(dirs, root = 0)
+    # mpi.barrier()
 
     names = list(set(names))
     dirs = list(set(dirs))
@@ -184,14 +185,14 @@ def make_stamps(built):
     else:
 
         toHash = {}
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             toHash['inputs'] = built.inputs
             toHash['scripts'] = [
                 utilities.stringify(open(script)) \
                     for script in built.scripts
                 ]
-        toHash = uw.mpi.comm.bcast(toHash, root = 0)
-        # uw.mpi.barrier()
+        toHash = mpi.comm.bcast(toHash, root = 0)
+        # mpi.barrier()
 
         stamps = {
             key: utilities.hashstamp(val) \

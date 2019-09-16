@@ -9,14 +9,16 @@ from .utilities import message
 from .functions import Variable
 from . import paths
 
+from . import mpi
+
 import underworld as uw
 
 def save_json(jsonObj, name, path):
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         jsonFilename = os.path.join(path, name + '.json')
         with open(jsonFilename, 'w') as file:
              json.dump(jsonObj, file)
-    # uw.mpi.barrier()
+    # mpi.barrier()
 
 def load_json(jsonName, path):
     filename = jsonName + '.json'
@@ -39,11 +41,11 @@ def local_import(filepath):
     return module
 
 def save_script(script, name, path):
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         tweakedPath = os.path.splitext(script)[0] + ".py"
         newPath = os.path.join(path, name + ".py")
         shutil.copyfile(tweakedPath, newPath)
-    # uw.mpi.barrier()
+    # mpi.barrier()
 
 def load_script(name, path):
     scriptPath = os.path.join(path, name) + '.py'
@@ -56,12 +58,12 @@ def expose_tar(path):
 
     tarpath = path + '.tar.gz'
 
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         assert os.path.isdir(path) or os.path.isfile(tarpath), \
             "No model found at that directory!"
-    # uw.mpi.barrier()
+    # mpi.barrier()
 
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         if os.path.isfile(tarpath):
             assert not os.path.isdir(path), \
                 "Conflicting archive and directory found."
@@ -72,7 +74,7 @@ def expose_tar(path):
             assert os.path.isdir(path), \
                 "Archive contained the wrong model file somehow."
             os.remove(tarpath)
-    # uw.mpi.barrier()
+    # mpi.barrier()
 
 def varsOnDisk(saveVars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     substrates = []

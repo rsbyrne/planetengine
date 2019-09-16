@@ -1,5 +1,5 @@
-import underworld as uw
+from .. import mpi
 
-if uw.mpi.rank == 0:
-    uw.mpi.barrier()
+if mpi.rank == 0:
+    mpi.barrier()
 print("Done!")
