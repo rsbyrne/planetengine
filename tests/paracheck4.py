@@ -19,8 +19,8 @@ with paths.TestDir() as outputPath:
     system0 = systems.arrhenius.build(res = 32, f = 0.5)
 
     model0 = model.make_model(
-        system0,
-        IC0,
+        system = system0,
+        initials = IC0,
         outputPath = outputPath
         )
 
@@ -38,8 +38,8 @@ with paths.TestDir() as outputPath:
     system1 = systems.arrhenius.build(res = 32, f = 1.)
 
     model1 = model.make_model(
-        system1,
-        IC1,
+        system = system1,
+        initials = IC1,
         outputPath = outputPath
         )
 
@@ -71,8 +71,8 @@ with paths.TestDir() as outputPath:
     system2 = systems.arrhenius.build(res = 32, f = 0.7)
 
     model2 = model.make_model(
-        system2,
-        IC2,
+        system = system2,
+        initials = IC2,
         outputPath = outputPath
         )
 

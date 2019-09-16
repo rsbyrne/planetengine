@@ -24,9 +24,9 @@ frameClasses = {}
 
 def make_frame(
         subFrameClass,
-        builts,
         outputPath = None,
         instanceID = None,
+        **builts
         ):
 
     if outputPath is None:
@@ -80,9 +80,9 @@ def make_frame(
     else:
         message("Making a new frame...")
         frame = subFrameClass(
-            builts,
             outputPath = outputPath,
-            instanceID = instanceID
+            instanceID = instanceID,
+            **builts
             )
 
     return frame
@@ -123,37 +123,64 @@ def load_frame(
     frameClass = frameClasses[info['frameType']]
 
     frame = frameClass(
-        builts,
         outputPath = outputPath,
-        instanceID = instanceID
+        instanceID = instanceID,
+        **builts
         )
 
     return frame
 
 class Frame:
 
-    _required_attributes = {
-        'outputPath', # must be str
-        'instanceID', # must be str
-        'step', # must be int
-        'modeltime', # must be float
-        'saveVars', # dict of vars
-        'figs', # figs to save
-        'collectors',
-        'update',
-        'initialise',
-        'builts',
-        'info',
-        'framescript',
-        }
+    # _required_attributes = {
+    #     'outputPath', # must be str
+    #     'instanceID', # must be str
+    #     'step', # must be int
+    #     'modeltime', # must be float
+    #     'saveVars', # dict of vars
+    #     'figs', # figs to save
+    #     'collectors',
+    #     'update',
+    #     'initialise',
+    #     'builts',
+    #     'info',
+    #     'framescript',
+    #     }
 
     _autobackup = True
     _autoarchive = True
     blackhole = [0., 0.]
 
-    def __init__(self):
+    def __init__(
+            self,
+            outputPath, # must be str
+            instanceID, # must be str
+            step, # must be 'Value'
+            modeltime, # must be 'Value'
+            saveVars, # dict of vars
+            figs, # figs to save
+            collectors,
+            update,
+            initialise,
+            builts,
+            info,
+            framescript,
+            ):
 
-        check_reqs(self)
+        self.outputPath = outputPath
+        self.instanceID = instanceID
+        self.saveVars = saveVars
+        self.step = step
+        self.modeltime = modeltime
+        self.figs = figs
+        self.collectors = collectors
+        self.update = update
+        self.initialise = initialise
+        self.builts = builts
+        self.info = info
+        self.framescript = framescript
+
+        # check_reqs(self)
 
         self.path = os.path.join(self.outputPath, self.instanceID)
         self.tarname = self.instanceID + '.tar.gz'
@@ -169,8 +196,8 @@ class Frame:
         self.checkpoints = []
 
         self.checkpointer = checkpoint.Checkpointer(
-            step = lambda: self.step,
-            modeltime = lambda: self.modeltime,
+            step = self.step,
+            modeltime = self.modeltime,
             saveVars = self.saveVars,
             figs = self.figs,
             dataCollectors = self.collectors,
@@ -220,15 +247,15 @@ class Frame:
 
             path = self.path
 
-            if self.step in self.checkpoints:
+            if self.step() in self.checkpoints:
                 message("Checkpoint already exists! Skipping.")
             else:
                 self.checkpointer.checkpoint(path)
 
             self.all_clear()
 
-            self.most_recent_checkpoint = self.step
-            self.checkpoints.append(self.step)
+            self.most_recent_checkpoint = self.step()
+            self.checkpoints.append(self.step())
             self.checkpoints = sorted(set(self.checkpoints))
 
             # CHECKPOINT OBSERVERS!!!
@@ -255,7 +282,7 @@ class Frame:
         elif loadStep == 'latest':
             loadStep = self.most_recent_checkpoint
 
-        if loadStep == self.step:
+        if loadStep == self.step():
             message(
                 "Already at step " + str(loadStep) + ": aborting load_checkpoint."
                 )
@@ -279,9 +306,9 @@ class Frame:
                 self.blackhole
                 )
 
-            self.step = loadStep
+            self.step.value = loadStep
 
-            self.modeltime = disk.load_json('modeltime', checkpointFile)
+            self.modeltime.value = disk.load_json('modeltime', checkpointFile)
 
             self.update()
 
@@ -398,7 +425,7 @@ class Frame:
                 message(
                     "Loading newly forked frame at current model step: "
                     )
-                newframe = load_frame(extPath, self.instanceID, loadStep = self.step)
+                newframe = load_frame(extPath, self.instanceID, loadStep = self.step())
                 message(
                     "Loaded newly forked frame."
                     )
@@ -452,7 +479,7 @@ class Frame:
 
         self.checkpoints = self.find_checkpoints()
 
-        self.load_checkpoint(min(self.checkpoints, key=lambda x:abs(x - self.step)))
+        self.load_checkpoint(min(self.checkpoints, key=lambda x:abs(x - self.step())))
 
         if was_archived:
             self.archive()

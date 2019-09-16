@@ -19,8 +19,8 @@ initials = {
     }
 
 model = planetengine.model.make_model(
-    system,
-    initials,
+    system = system,
+    initials = initials,
     outputPath = outputPath
     )
 

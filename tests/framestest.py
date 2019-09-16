@@ -10,19 +10,19 @@ from ..paths import TestDir
 def testfn():
     with TestDir() as outputPath:
         model0 = model.make_model(
-            systems.arrhenius.build(res = 32, f = 0.5),
-            {'temperatureField': initials.sinusoidal.build()},
+            system = systems.arrhenius.build(res = 32, f = 0.5),
+            initials = {'temperatureField': initials.sinusoidal.build()},
             outputPath = outputPath
             )
         model1 = model.make_model(
-            systems.arrhenius.build(res = 32, f = 1.),
-            {'temperatureField': initials.load.build(inFrame = model0, varName = 'temperatureField')},
+            system = systems.arrhenius.build(res = 32, f = 1.),
+            initials = {'temperatureField': initials.load.build(inFrame = model0, varName = 'temperatureField')},
             outputPath = outputPath
             )
         model1.checkpoint()
         model2 = model.make_model(
-            systems.arrhenius.build(res = 32, f = 1.),
-            {'temperatureField': initials.load.build(inFrame = model0, varName = 'temperatureField')},
+            system = systems.arrhenius.build(res = 32, f = 1.),
+            initials = {'temperatureField': initials.load.build(inFrame = model0, varName = 'temperatureField')},
             outputPath = outputPath
             )
         model2.iterate()

@@ -20,6 +20,7 @@ from . import paths
 from . import generic
 from . import model
 from . import observer
+from . import value
 
 from .utilities import message
 from .utilities import log

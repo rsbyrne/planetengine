@@ -3,26 +3,42 @@ from . import utilities
 from .utilities import message
 from .visualisation import QuickFig
 from . import _frame as frame
+from .value import Value
+from . import _system
 
 Frame = frame.Frame
 
+# def make_model(
+#         system,
+#         initials,
+#         outputPath = None,
+#         instanceID = None,
+#         ):
+#     builts = {
+#         'system': system,
+#         **initials
+#         }
+#     outFrame = frame.make_frame(
+#         Model,
+#         builts,
+#         outputPath,
+#         instanceID
+#         )
+#     return outFrame
+
 def make_model(
-        system,
-        initials,
         outputPath = None,
         instanceID = None,
+        system = None,
+        initials = None,
         ):
-    builts = {
-        'system': system,
-        **initials
-        }
-    outFrame = frame.make_frame(
+    return frame.make_frame(
         Model,
-        builts,
-        outputPath,
-        instanceID
+        outputPath = outputPath,
+        instanceID = instanceID,
+        system = system,
+        **initials
         )
-    return outFrame
 
 load_model = frame.load_frame
 
@@ -39,29 +55,35 @@ class Model(Frame):
     framescript = __file__
     info = {'frameType': 'pemod'}
 
-    def __init__(self,
-            builts,
+    def __init__(
+            self,
+            system = None,
             outputPath = None,
             instanceID = 'test',
             _autoarchive = True,
             _autobackup = True,
+            **initials
             ):
 
-        system = builts['system']
-        initials = {
-            key: val for key, val in builts.items() \
-                if not key == 'system'
-            }
+        # initials = {
+        #     key: val for key, val in builts.items() \
+        #         if not key == 'system'
+        #     }
 
         if outputPath is None:
             outputPath = paths.defaultPath
+
+        if not isinstance(system, _system.System):
+            raise Exception(
+                "System must be an instance of 'system'; instead, type was " + str(type(system)) + "."
+                )
 
         assert system.varsOfState.keys() == initials.keys()
 
         message("Building model...")
 
-        step = 0
-        modeltime = 0.
+        step = Value(0)
+        modeltime = Value(0.)
 
         analysers = []
         collectors = []
@@ -78,21 +100,36 @@ class Model(Frame):
         self.initials = initials
         self.analysers = analysers
 
-        # NECESSARY FOR FRAME CLASS:
-        self.outputPath = outputPath
-        self.instanceID = instanceID
-        self.step = step
-        self.modeltime = modeltime
-        self.saveVars = saveVars
-        self.figs = figs
-        self.collectors = collectors
-        self.builts = builts
+        # # NECESSARY FOR FRAME CLASS:
+        # self.outputPath = outputPath
+        # self.instanceID = instanceID
+        # self.step = step
+        # self.modeltime = modeltime
+        # self.saveVars = saveVars
+        # self.figs = figs
+        # self.collectors = collectors
+        # self.builts = builts
 
         # OVERRIDE FRAME CLASS:
         self._autobackup = _autobackup
         self._autoarchive = _autoarchive
 
-        super().__init__()
+        builts = {'system': system, **initials}
+
+        super().__init__(
+            outputPath, # must be str
+            instanceID, # must be str
+            step, # must be int
+            modeltime, # must be float
+            saveVars, # dict of vars
+            figs, # figs to save
+            collectors,
+            self.update,
+            self.initialise,
+            builts,
+            self.info,
+            self.framescript,
+            )
 
     # METHODS NECESSARY FOR FRAME CLASS:
 
@@ -101,8 +138,8 @@ class Model(Frame):
         for varName, var in sorted(self.system.varsOfState.items()):
             self.initials[varName].apply(var)
         self.update()
-        self.step = 0
-        self.modeltime = 0.
+        self.step.value = 0
+        self.modeltime.value = 0.
         message("Initialisation complete!")
 
     def update(self):
@@ -133,23 +170,23 @@ class Model(Frame):
     def report(self):
         message(
             '\n' \
-            + 'Step: ' + str(self.step) \
-            + ', modeltime: ' + '%.3g' % self.modeltime
+            + 'Step: ' + str(self.step()) \
+            + ', modeltime: ' + '%.3g' % self.modeltime()
             )
         for fig in self.figs:
             fig.show()
 
     def iterate(self):
-        message("Iterating step " + str(self.step) + " ...")
+        message("Iterating step " + str(self.step()) + " ...")
         dt = self.system.iterate()
-        self.step += 1
-        self.modeltime += dt
+        self.step.value += 1
+        self.modeltime.value += dt
         self._prompt_observers('iterated')
         message("Iteration complete!")
 
     def go(self, steps):
-        stopStep = self.step + steps
-        self.traverse(lambda: self.step >= stopStep)
+        stopStep = self.step() + steps
+        self.traverse(lambda: self.step() >= stopStep)
 
     def traverse(self, stopCondition,
             collectConditions = lambda: False,

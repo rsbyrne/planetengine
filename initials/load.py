@@ -27,7 +27,7 @@ class Load(IC):
         assert not varName is None
         if isinstance(inFrame, frame.Frame): # hence new
             assert _loadStep is None
-            _loadStep = inFrame.step
+            _loadStep = inFrame.step()
         elif type(inFrame) == str: # hence loaded
             assert type(_loadStep) == int
             outputPath = os.path.dirname(self.script)
@@ -53,7 +53,8 @@ class Load(IC):
             args = args,
             kwargs = kwargs,
             inputs = inputs,
-            script = self.script
+            script = self.script,
+            evaluate = self.evaluate
             )
 
     def evaluate(self, coordArray):

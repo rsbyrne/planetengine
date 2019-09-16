@@ -32,7 +32,8 @@ class Sinusoidal(IC):
             args = args,
             kwargs = kwargs,
             inputs = inputs,
-            script = self.script
+            script = self.script,
+            evaluate = self.evaluate
             )
 
     def evaluate(self, coordArray):

@@ -13,19 +13,16 @@ from types import ModuleType
 
 class IC(Built):
 
-    _required_attributes = {
-        'evaluate',
-        }
-
     def __init__(
             self,
             args,
             kwargs,
             inputs,
-            script
+            script,
+            evaluate
             ):
 
-        check_reqs(self)
+        self.evaluate = evaluate
 
         super().__init__(
             args = args,
