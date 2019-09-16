@@ -24,13 +24,6 @@ def make_model(
 
 load_model = frame.load_frame
 
-# def new_frame(*args, **kwargs):
-#     outFrame = Model(
-#         *args,
-#         **kwargs
-#         )
-#     return outFrame
-
 class Model(Frame):
 
     prefix = 'pemod'
