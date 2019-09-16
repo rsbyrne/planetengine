@@ -84,6 +84,8 @@ def make_frame(
             instanceID = instanceID,
             **builts
             )
+        if hasattr(frame, '_post_load_hook'):
+            frame._post_load_hook()
 
     return frame
 
