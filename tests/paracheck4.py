@@ -81,3 +81,5 @@ with paths.TestDir() as outputPath:
     model2.iterate()
 
     model2.checkpoint()
+
+    # model2.report()
