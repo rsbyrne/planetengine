@@ -35,7 +35,7 @@ class Model(Frame):
             system = None,
             initials = None,
             outputPath = None,
-            instanceID = 'test',
+            instanceID = None,
             _autoarchive = True,
             _autobackup = True
             ):
