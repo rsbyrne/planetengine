@@ -87,5 +87,3 @@ with paths.TestDir() as outputPath:
         initials = IC2,
         outputPath = outputPath
         )
-
-    # model2.report()
