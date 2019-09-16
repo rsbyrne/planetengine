@@ -25,17 +25,21 @@ def save_built(built, name, path):
         scriptName = name + '_' + str(index)
         disk.save_script(script, scriptName, path)
 
-def save_builtsDir(builts, path):
+def save_builtsDir(builts, path, builtsDir = 'builts'):
 
-    builtsDir = os.path.join(path, 'builts')
+    builtsDir = os.path.join(path, builtsDir)
     if uw.mpi.rank == 0:
         if not os.path.isdir(builtsDir):
             os.makedirs(builtsDir)
         assert os.path.isdir(builtsDir)
     # uw.mpi.barrier()
 
-    for builtName, built in sorted(builts.items()):
-        built.save(builtsDir, name = builtName)
+    for key, val in sorted(builts.items()):
+        if type(val) == dict:
+            subPath = os.path.join(builtsDir, key)
+            save_builtsDir(val, subPath, builtsDir = '')
+        else:
+            val.save(builtsDir, name = key)
 
 def load_built(name, path):
 
@@ -73,27 +77,38 @@ def load_built(name, path):
 
     return built
 
-def load_builtsDir(path):
+def load_builtsDir(path, builtsDir = 'builts'):
 
-    builtsDir = os.path.join(path, 'builts')
+    builtsDir = os.path.join(path, builtsDir)
+    print(builtsDir)
     names = []
+    dirs = []
 
     if uw.mpi.rank == 0:
         assert os.path.isdir(builtsDir)
         files = os.listdir(builtsDir)
         for file in sorted(files):
-            if file.endswith('.json'):
-                builtName = os.path.splitext(
-                    os.path.basename(file)
-                    )[0]
-                names.append(builtName)
+            filePath = os.path.join(builtsDir, file)
+            if os.path.isfile(filePath):
+                if file.endswith('.json'):
+                    builtName = os.path.splitext(
+                        os.path.basename(file)
+                        )[0]
+                    names.append(builtName)
+            elif os.path.isdir(filePath):
+                dirs.append(file)
     names = uw.mpi.comm.bcast(names, root = 0)
+    dirs = uw.mpi.comm.bcast(dirs, root = 0)
     # uw.mpi.barrier()
 
     names = list(set(names))
+    dirs = list(set(dirs))
     builts = {}
     for name in sorted(names):
         builts[name] = load_built(name, builtsDir)
+    for subDir in sorted(dirs):
+        subPath = os.path.join(builtsDir, subDir)
+        builts[subDir] = load_builtsDir(subPath, builtsDir = '')
     return builts
 
 _accepted_inputTypes = {
@@ -187,8 +202,8 @@ class Built:
 
     def __init__(
             self,
-            args,
-            kwargs,
+            args, # subBuilts (as Builts)
+            kwargs, # subBuilts (as modules)
             inputs,
             script
             ):
@@ -245,3 +260,11 @@ class Built:
 
     def _post_load_hook(self, name, path):
         pass
+
+# class Aggregate:
+#
+#     def __init__(self, **kwargs):
+#
+#         for key, val in kwargs:
+#             if not type(key) == str and isinstance(val, Built):
+#                 raise Exception

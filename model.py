@@ -65,11 +65,6 @@ class Model(Frame):
             **initials
             ):
 
-        # initials = {
-        #     key: val for key, val in builts.items() \
-        #         if not key == 'system'
-        #     }
-
         if outputPath is None:
             outputPath = paths.defaultPath
 
@@ -100,16 +95,6 @@ class Model(Frame):
         self.initials = initials
         self.analysers = analysers
 
-        # # NECESSARY FOR FRAME CLASS:
-        # self.outputPath = outputPath
-        # self.instanceID = instanceID
-        # self.step = step
-        # self.modeltime = modeltime
-        # self.saveVars = saveVars
-        # self.figs = figs
-        # self.collectors = collectors
-        # self.builts = builts
-
         # OVERRIDE FRAME CLASS:
         self._autobackup = _autobackup
         self._autoarchive = _autoarchive
@@ -119,8 +104,8 @@ class Model(Frame):
         super().__init__(
             outputPath, # must be str
             instanceID, # must be str
-            step, # must be int
-            modeltime, # must be float
+            step, # must be Value
+            modeltime, # must be Value
             saveVars, # dict of vars
             figs, # figs to save
             collectors,
