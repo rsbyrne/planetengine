@@ -84,8 +84,9 @@ def make_frame(
             instanceID = instanceID,
             **builts
             )
-        if hasattr(frame, '_post_load_hook'):
-            frame._post_load_hook()
+
+        frame._post_init_hook()
+
 
     return frame
 
@@ -130,24 +131,11 @@ def load_frame(
         **builts
         )
 
+    frame._post_load_hook()
+
     return frame
 
 class Frame:
-
-    # _required_attributes = {
-    #     'outputPath', # must be str
-    #     'instanceID', # must be str
-    #     'step', # must be int
-    #     'modeltime', # must be float
-    #     'saveVars', # dict of vars
-    #     'figs', # figs to save
-    #     'collectors',
-    #     'update',
-    #     'initialise',
-    #     'builts',
-    #     'info',
-    #     'framescript',
-    #     }
 
     _autobackup = True
     _autoarchive = True
@@ -604,3 +592,9 @@ class Frame:
             self.archived = False
 
         message("Unarchived!")
+
+    def _post_load_hook(self):
+        pass
+
+    def _post_init_hook(self):
+        pass
