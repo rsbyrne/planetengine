@@ -200,4 +200,4 @@ class Model(Frame):
             self.checkpoint()
 
 ### IMPORTANT!!! ###
-frame.frameClasses['pemod'] = Model
+frame.frameClasses[Model.prefix] = Model
