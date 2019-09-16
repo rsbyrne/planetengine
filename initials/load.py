@@ -85,4 +85,4 @@ class Load(IC):
 
     def _pre_save_hook(self, path, name = None):
         path = os.path.join(path, self.inFrame.instanceID)
-        self.inFrame.checkpoint(path)
+        self.inFrame.checkpoint(path, backup = False, archive = False)

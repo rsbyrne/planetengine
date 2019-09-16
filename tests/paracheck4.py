@@ -82,4 +82,10 @@ with paths.TestDir() as outputPath:
 
     model2.checkpoint()
 
+    model2_remake = model.make_model(
+        system = system2,
+        initials = IC2,
+        outputPath = outputPath
+        )
+
     # model2.report()

@@ -13,6 +13,23 @@ from . import mpi
 
 import underworld as uw
 
+def disk_state(path):
+    path = os.path.splitext(path)[0]
+    tarpath = path + '.tar.gz'
+    diskstate = ''
+    if mpi.rank == 0:
+        isfile = os.path.isfile(tarpath)
+        isdir = os.path.isdir(path)
+        assert not (isfile and isdir)
+        if isfile:
+            diskstate = 'tar'
+        elif isdir:
+            diskstate = 'dir'
+        else:
+            diskstate = 'clean'
+    diskstate = mpi.comm.bcast(diskstate, root = 0)
+    return diskstate
+
 def save_json(jsonObj, name, path):
     if mpi.rank == 0:
         jsonFilename = os.path.join(path, name + '.json')
@@ -23,8 +40,10 @@ def save_json(jsonObj, name, path):
 def load_json(jsonName, path):
     filename = jsonName + '.json'
     jsonDict = {}
-    with open(os.path.join(path, filename)) as json_file:
-        jsonDict = json.load(json_file)
+    if mpi.rank == 0:
+        with open(os.path.join(path, filename)) as json_file:
+            jsonDict = json.load(json_file)
+    jsonDict = mpi.comm.bcast(jsonDict, root = 0)
     return jsonDict
 
 def local_import(filepath):
@@ -56,25 +75,21 @@ def load_script(name, path):
 
 def expose_tar(path):
 
+    assert disk_state(path) == 'tar'
+
     tarpath = path + '.tar.gz'
 
+    message("Tar found - unarchiving...")
     if mpi.rank == 0:
-        assert os.path.isdir(path) or os.path.isfile(tarpath), \
-            "No model found at that directory!"
-    # mpi.barrier()
+        with tarfile.open(tarpath) as tar:
+            tar.extractall(path)
+        assert os.path.isdir(path), \
+            "Archive contained the wrong model file somehow."
+        os.remove(tarpath)
 
-    if mpi.rank == 0:
-        if os.path.isfile(tarpath):
-            assert not os.path.isdir(path), \
-                "Conflicting archive and directory found."
-            message("Tar found - unarchiving...")
-            with tarfile.open(tarpath) as tar:
-                tar.extractall(path)
-            message("Unarchived.")
-            assert os.path.isdir(path), \
-                "Archive contained the wrong model file somehow."
-            os.remove(tarpath)
-    # mpi.barrier()
+    assert disk_state(path) == 'dir'
+
+    message("Unarchived.")
 
 def varsOnDisk(saveVars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     substrates = []

@@ -35,9 +35,7 @@ class Model(Frame):
             system = None,
             initials = None,
             outputPath = None,
-            instanceID = None,
-            _autoarchive = True,
-            _autobackup = True
+            instanceID = None
             ):
 
         if outputPath is None:
@@ -69,10 +67,6 @@ class Model(Frame):
         self.observers = set()
         self.initials = initials
         self.analysers = analysers
-
-        # OVERRIDE FRAME CLASS:
-        self._autobackup = _autobackup
-        self._autoarchive = _autoarchive
 
         builts = {'system': system, 'initials': initials}
 
