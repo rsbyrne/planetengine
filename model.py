@@ -55,11 +55,7 @@ class Model(Frame):
 
         analysers = []
         collectors = []
-        fig = QuickFig(
-            *[value for key, value in sorted(system.varsOfState.items())],
-            style = 'smallblack',
-            )
-        figs = [fig]
+        figs = [system.fig]
         saveVars = system.varsOfState
 
         # SPECIAL TO MODEL

@@ -120,6 +120,12 @@ def make_fullLocalMeshVar(field1):
                 fullInField.data[ID] = data
     fullInField.data[:] = mpi.comm.bcast(fullInField.data, root = 0)
 
+    if hasattr(field1, 'scales'):
+        set_scales(fullInField, field1.scales)
+
+    if hasattr(field1, 'bounds'):
+        set_boundaries(fullInField, field1.bounds)
+
     return fullInField
 
 def copyField(field1, field2,
@@ -210,6 +216,12 @@ def copyField(field1, field2,
 
     if not boundaries is None:
         set_boundaries(field2, boundaries)
+
+    if hasattr(field1, 'scales'):
+        set_scales(field2, field1.scales)
+
+    if hasattr(field1, 'bounds'):
+        set_boundaries(field2, field1.bounds)
 
     # del field1Proj
     # del field1Projector

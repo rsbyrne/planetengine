@@ -61,6 +61,8 @@ class QuickFig:
 
     def add_vars(self, args):
 
+        args = list(args)
+
         if len(args) == 1 and type(args[0]) == dict:
             args = sorted(args[0].items())
         for arg in args:

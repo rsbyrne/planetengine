@@ -11,11 +11,11 @@ def testfn():
     system = testsystems.get_system()
     ICs = system.initials
 
-    variable1 = pfn.convert(system.locals.velocityField, 'velocity')
-    variable2 = pfn.convert(system.locals.temperatureField, 'temperature')
+    variable1 = pfn.convert(system.velocityField, 'velocity')
+    variable2 = pfn.convert(system.temperatureField, 'temperature')
     constant = pfn.convert(2.)
     shape = pfn.convert(np.array([[0.2, 0.1], [0.9, 0.3], [0.8, 0.7], [0.4, 0.9]]))
-    vanilla = pfn.convert(system.locals.viscosityFn, 'viscosity')
+    vanilla = pfn.convert(system.viscosityFn, 'viscosity')
 
     def makevar():
         var = variable2

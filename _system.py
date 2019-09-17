@@ -2,7 +2,7 @@
 from ._built import Built
 from . import fieldops
 from . import value
-from .visualisation import quickShow
+from .visualisation import QuickFig
 
 class System(Built):
 
@@ -25,14 +25,12 @@ class System(Built):
         self.obsVars = obsVars
         self._update = _update
         self._integrate = _integrate
-        for key in _locals:
-            if not hasattr(self, key):
-                setattr(self, key, _locals[key])
 
         self.step = value.Value(0)
         self.modeltime = value.Value(0.)
 
         self.initials = None
+        self.fig = QuickFig(varsOfState, style = 'smallblack')
 
         super().__init__(
             args = args,
@@ -40,6 +38,10 @@ class System(Built):
             inputs = inputs,
             script = script
             )
+
+        for key in _locals:
+            if not hasattr(self, key):
+                setattr(self, key, _locals[key])
 
     def clipVals(self):
         for varName, var in sorted(self.varsOfState.items()):
@@ -89,4 +91,4 @@ class System(Built):
             self.iterate()
 
     def show(self):
-        quickShow(self.obsVars)
+        self.fig.show()
