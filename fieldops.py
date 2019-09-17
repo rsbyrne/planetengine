@@ -20,18 +20,54 @@ def set_boundaries(variable, values):
     meshUtils = get_meshUtils(variable.mesh)
     walls = meshUtils.wallsList
 
+    if values is None:
+        try:
+            values = variable.bounds
+        except:
+            raise Exception
+
     for i, component in enumerate(values):
         for value, wall in zip(component, walls):
             if not value is '.':
                 variable.data[wall, i] = value
 
-def set_scales(variable, values):
+def try_set_boundaries(variable, variable2 = None):
+    if variable2 is None:
+        try:
+            set_boundaries(variable)
+        except:
+            pass
+    else:
+        try:
+            set_boundaries(variable, variable2.boundaries)
+        except:
+            pass
+
+def set_scales(variable, values = None):
+
+    if values is None:
+        try:
+            values = variable.scales
+        except:
+            raise Exception
 
     variable.data[:] = mapping.rescale_array(
         variable.data,
         get_scales(variable.data),
         values
         )
+
+def try_set_scales(variable, variable2 = None):
+    if variable2 is None:
+        try:
+            set_scales(variable)
+        except:
+            pass
+    else:
+        try:
+            set_scales(variable, variable2.scales)
+        except:
+            pass
 
 def normalise(variable, norm = [0., 1.]):
     scales = [
@@ -120,20 +156,24 @@ def make_fullLocalMeshVar(field1):
         inField = field1Proj
         inDim = field1.count
 
-    fullInField = makeLocalAnnulus(inMesh).add_variable(inDim)
-    allData = mpi.comm.gather(inField.data, root = 0)
-    allGID = mpi.comm.gather(inField.mesh.data_nodegId, root = 0)
-    if mpi.rank == 0:
-        for proc in range(mpi.size):
-            for data, ID in zip(allData[proc], allGID[proc]):
-                fullInField.data[ID] = data
-    fullInField.data[:] = mpi.comm.bcast(fullInField.data, root = 0)
+    localAnnulus = makeLocalAnnulus(inMesh)
+    fullInField = localAnnulus.add_variable(inDim)
 
-    if hasattr(field1, 'scales'):
-        set_scales(fullInField, field1.scales)
+    def update():
+        allData = mpi.comm.gather(inField.data, root = 0)
+        allGID = mpi.comm.gather(inField.mesh.data_nodegId, root = 0)
+        if mpi.rank == 0:
+            for proc in range(mpi.size):
+                for data, ID in zip(allData[proc], allGID[proc]):
+                    fullInField.data[ID] = data
+        fullInField.data[:] = mpi.comm.bcast(fullInField.data, root = 0)
 
-    if hasattr(field1, 'bounds'):
-        set_boundaries(fullInField, field1.bounds)
+        try_set_scales(fullInField, field1)
+        try_set_boundaries(fullInField, field1)
+
+    # POSSIBLE CIRCULAR REFERENCE:
+    fullInField.update = update
+    fullInField.update()
 
     return fullInField
 
@@ -144,15 +184,20 @@ def copyField(field1, field2,
         freqs = None,
         mirrored = None,
         blendweight = None,
-        scales = None,
-        boundaries = None
+        _fullLocalMeshVar = None
+        # scales = None,
+        # boundaries = None
         ):
 
     if not boxDims is None:
         assert np.max(np.array(boxDims)) <= 1., "Max boxdim is 1."
         assert np.min(np.array(boxDims)) >= 0., "Min boxdim is 0."
 
-    fullInField = make_fullLocalMeshVar(field1)
+    if _fullLocalMeshVar is None:
+        fullInField = make_fullLocalMeshVar(field1)
+    else:
+        fullInField = _fullLocalMeshVar
+        fullInField.update()
     inDim = fullInField.nodeDofCount
     inMesh = fullInField.mesh
 
@@ -198,7 +243,7 @@ def copyField(field1, field2,
 
         outField.data[:] = newData
 
-        message("Mapping achieved at tolerance = " + str(tolerance))
+        # message("Mapping achieved at tolerance = " + str(tolerance))
         return tolerance
 
     tryTolerance = 0.
@@ -220,22 +265,15 @@ def copyField(field1, field2,
     if rounded:
         field2.data[:] = np.around(field2.data)
 
-    if not scales is None:
-        set_scales(field2, scales)
+    # if not scales is None:
+    #     set_scales(field2, scales)
+    #
+    # if not boundaries is None:
+    #     set_boundaries(field2, boundaries)
 
-    if not boundaries is None:
-        set_boundaries(field2, boundaries)
-
-    if hasattr(field1, 'scales'):
-        set_scales(field2, field1.scales)
-
-    if hasattr(field1, 'bounds'):
-        set_boundaries(field2, field1.bounds)
-
-    # del field1Proj
-    # del field1Projector
-    # del fullInField
-    # del allData
-    # del allGID
+    try_set_scales(field2, field1)
+    try_set_boundaries(field2, field1)
+    try_set_scales(field2)
+    try_set_boundaries(field2)
 
     return tryTolerance
