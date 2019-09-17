@@ -80,8 +80,6 @@ class QuickFig:
             self.planetVars.append(planetVar)
             self.updateFuncs.append(planetVar.update)
 
-        print(self.planetVars)
-
         for planetVar in self.planetVars:
             found = False
             for function in self.inventory:
