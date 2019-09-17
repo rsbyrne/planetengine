@@ -70,6 +70,9 @@ class System(Built):
         self.modeltime.value = 0.
         self.update()
 
+    def reset(self):
+        self.initialise()
+
     def update(self):
         self._update()
 
