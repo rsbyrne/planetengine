@@ -259,7 +259,7 @@ class Built:
     def _post_save_hook(self, path, name = None):
         pass
 
-    def save(self, path, name = None):
+    def save(self, path = '', name = None):
         if name is None:
             name = self.name
         self._pre_save_hook(path, name)
