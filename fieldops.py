@@ -33,6 +33,15 @@ def set_scales(variable, values):
         values
         )
 
+def normalise(variable, norm = [0., 1.]):
+    scales = [
+        norm \
+            for dim in range(
+                variable.data.shape[1]
+                )
+        ]
+    set_scales(variable, scales)
+
 def clip_array(variable, scales):
     variable.data[:] = np.array([
         np.clip(subarr, *clipval) \
