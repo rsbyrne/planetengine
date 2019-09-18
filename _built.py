@@ -211,7 +211,7 @@ class Built:
     def __init__(
             self,
             args, # subBuilts (as Builts)
-            kwargs, # subBuilts (as modules)
+            kwargs,
             inputs,
             script
             ):

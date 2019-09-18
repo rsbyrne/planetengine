@@ -34,14 +34,8 @@ class Analyser:
         self.formatDict = formatDict
 
         miscDict = {
-            'step': ArrayStripper(
-                step,
-                (0, 0),
-                ),
-            'modeltime': ArrayStripper(
-                modeltime,
-                (0, 0),
-                )
+            'step': step,
+            'modeltime': modeltime
             }
         miscFormatDict = {
             'step': "{:.0f}",

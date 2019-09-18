@@ -124,12 +124,12 @@ def _convert(var, varName = None):
     if isinstance(var, PlanetVar):
         # message("Already a PlanetVar! Returning.")
         return var
-    if hasattr(var, '_planetVar'):
-        outVar = var._planetVar()
-        if isinstance(outVar, PlanetVar):
-            # message("Premade PlanetVar found! Returning.")
-            return outVar
-    if type(var) == np.ndarray:
+    # elif hasattr(var, '_planetVar'):
+    #     outVar = var._planetVar()
+    #     if isinstance(outVar, PlanetVar):
+    #         # message("Premade PlanetVar found! Returning.")
+    #         return outVar
+    elif type(var) == np.ndarray:
         if len(var.shape) == 2:
             if varName is None:
                 varName = Shape.defaultName
@@ -653,6 +653,11 @@ class Variable(BaseTypes):
         self.varDim = self.data.shape[1]
         self.meshUtils = get_meshUtils(self.mesh)
 
+        if hasattr(var, 'scales'):
+            self.scales = var.scales
+        if hasattr(var, 'bounds'):
+            self.bounds = var.bounds
+
         super().__init__(**kwargs)
 
     def _check_hash(self, lazy = False):
@@ -717,9 +722,17 @@ class Function(PlanetVar):
 
     def __init__(self, *args, **kwargs):
 
+        self._detect_substrates()
+        self._detect_attributes()
+        if not self.mesh is None:
+            self._detect_scales_bounds()
+        self._hashVars = self.inVars
+
+        super().__init__(**kwargs)
+
+    def _detect_substrates(self):
         meshes = set()
         substrates = set()
-
         for inVar in self.inVars:
             if hasattr(inVar, 'mesh'):
                 if not inVar.mesh is None:
@@ -741,6 +754,7 @@ class Function(PlanetVar):
         else:
             raise Exception
 
+    def _detect_attributes(self):
         if not self.mesh is None and self.substrate is self.mesh:
             self.meshbased = True
             self.varType = 'meshFn'
@@ -756,9 +770,59 @@ class Function(PlanetVar):
         self.dType = get_dType(sample_data)
         self.varDim = sample_data.shape[1]
 
-        self._hashVars = self.inVars
-
-        super().__init__(**kwargs)
+    def _detect_scales_bounds(self):
+        fields = []
+        for inVar in self.inVars:
+            if type(inVar) == Variable:
+                fields.append(inVar)
+            elif isinstance(inVar, Function):
+                fields.append(inVar)
+        inscales = []
+        inbounds = []
+        for inVar in fields:
+            if hasattr(inVar, 'scales'):
+                if inVar.varDim == self.varDim:
+                    inscales.append(inVar.scales)
+                else:
+                    inscales.append(inVar.scales * self.varDim)
+            else:
+                inscales.append(
+                    [['.', '.']] * self.varDim
+                    ) # i.e. perfectly free
+            if hasattr(inVar, 'bounds'):
+                if inVar.varDim == self.varDim:
+                    inbounds.append(inVar.bounds)
+                else:
+                    inbounds.append(inVar.bounds * self.varDim)
+            else:
+                inbounds.append(
+                    [['.'] * self.mesh.dim ** 2] * self.varDim
+                    ) # i.e. perfectly free
+        scales = []
+        for varDim in range(self.varDim):
+            fixed = not any([
+                inscale[varDim] == ['.', '.'] \
+                    for inscale in inscales
+                ])
+            if fixed:
+                scales.append('!')
+            else:
+                scales.append('.')
+        bounds = []
+        for varDim in range(self.varDim):
+            dimBounds = []
+            for index in range(self.mesh.dim ** 2):
+                fixed = not any([
+                    inbound[varDim][index] == '.' \
+                        for inbound in inbounds
+                    ])
+                if fixed:
+                    dimBounds.append('!')
+                else:
+                    dimBounds.append('.')
+            bounds.append(dimBounds)
+        self.scales = scales
+        self.bounds = bounds
 
 class Vanilla(Function):
 
@@ -943,14 +1007,6 @@ class HandleNaN(Function):
     @staticmethod
     def unit(inVar, **kwargs):
         return HandleNaN._NaNFloat(inVar, 1., **kwargs)
-
-    # @staticmethod
-    # def min()
-    #
-    # @staticmethod
-    # def max()
-
-
 
 class Clip(Function):
 
@@ -1750,6 +1806,34 @@ class Surface(Function):
                 6
                 )
 
+    @staticmethod
+    def volume(*args, **kwargs):
+        return Surface(*args, surface = 'volume', **kwargs)
+
+    @staticmethod
+    def inner(*args, **kwargs):
+        return Surface(*args, surface = 'inner', **kwargs)
+
+    @staticmethod
+    def outer(*args, **kwargs):
+        return Surface(*args, surface = 'outer', **kwargs)
+
+    @staticmethod
+    def left(*args, **kwargs):
+        return Surface(*args, surface = 'left', **kwargs)
+
+    @staticmethod
+    def right(*args, **kwargs):
+        return Surface(*args, surface = 'right', **kwargs)
+
+    @staticmethod
+    def front(*args, **kwargs):
+        return Surface(*args, surface = 'front', **kwargs)
+
+    @staticmethod
+    def back(*args, **kwargs):
+        return Surface(*args, surface = 'back', **kwargs)
+
 class Normalise(Function):
 
     opTag = 'Normalise'
@@ -1831,7 +1915,7 @@ class Integral(Reduction):
 
     def __init__(self, inVar, *args, surface = 'volume', **kwargs):
 
-        inVar = convert(inVar)
+        inVar = HandleNaN.zero(inVar)
 
         if isinstance(inVar, Reduction):
             raise Exception
@@ -1891,3 +1975,12 @@ class Integral(Reduction):
     @staticmethod
     def back(*args, **kwargs):
         return Integral(*args, surface = 'back', **kwargs)
+
+    @staticmethod
+    def auto(*args, **kwargs):
+        inVar = convert(args[0])
+        if 'surface' in inVar.stringVariants:
+            surface = inVar.stringVariants['surface']
+        else:
+            surface = 'volume'
+        return Integral(inVar, *args, surface = surface, **kwargs)

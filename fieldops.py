@@ -17,6 +17,9 @@ def set_boundaries(variable, values):
     except:
         raise Exception("Variable does not appear to be mesh variable.")
 
+    if not hasattr(variable, 'data'):
+        raise Exception("Variable lacks 'data' attribute.")
+
     meshUtils = get_meshUtils(variable.mesh)
     walls = meshUtils.wallsList
 
@@ -28,7 +31,7 @@ def set_boundaries(variable, values):
 
     for i, component in enumerate(values):
         for value, wall in zip(component, walls):
-            if not value is '.':
+            if not value in ['.', '!']:
                 variable.data[wall, i] = value
 
 def try_set_boundaries(variable, variable2 = None):
@@ -44,6 +47,9 @@ def try_set_boundaries(variable, variable2 = None):
             pass
 
 def set_scales(variable, values = None):
+
+    if not hasattr(variable, 'data'):
+        raise Exception("Variable lacks 'data' attribute.")
 
     if values is None:
         try:

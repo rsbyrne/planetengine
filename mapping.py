@@ -101,6 +101,15 @@ def rescale_array(
         flip = None,
         ):
 
+    assert not any([
+        scale in ['.', '!'] \
+            for scale in inScales
+        ])
+    assert not any([
+        scale in ['.', '!'] \
+            for scale in outScales
+        ])
+
     transposed = inArray.transpose()
     outVals = []
     for nD in range(len(transposed)):

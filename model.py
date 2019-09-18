@@ -50,8 +50,8 @@ class Model(Frame):
 
         message("Building model...")
 
-        step = Value(0)
-        modeltime = Value(0.)
+        step = system.step
+        modeltime = system.modeltime
 
         analysers = []
         collectors = []
@@ -85,11 +85,7 @@ class Model(Frame):
 
     def initialise(self):
         message("Initialising...")
-        for varName, var in sorted(self.system.varsOfState.items()):
-            self.initials[varName].apply(var)
-        self.update()
-        self.step.value = 0
-        self.modeltime.value = 0.
+        self.system.initialise(self.initials)
         message("Initialisation complete!")
 
     def update(self):
