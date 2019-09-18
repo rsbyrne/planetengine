@@ -825,8 +825,10 @@ class Function(PlanetVar):
                 else:
                     dimBounds.append('.')
             bounds.append(dimBounds)
-        self.scales = scales
-        self.bounds = bounds
+        if not hasattr(self, 'scales'):
+            self.scales = scales
+        if not hasattr(self, 'bounds'):
+            self.bounds = bounds
 
 class Vanilla(Function):
 
@@ -1481,6 +1483,9 @@ class Gradient(Function):
         self.parameters = []
         self.var = var
 
+        self.scales = [['.', '.']] * inVar.mesh.dim ** 2
+        self.bounds = [['.'] * inVar.mesh.dim ** 2] * inVar.varDim
+
         super().__init__(**kwargs)
 
     @staticmethod
@@ -1590,7 +1595,7 @@ class Select(Function):
             outVar = inVar
         else:
             outVar = convert(outVar)
-            inVars.append(outVar)
+            inVars = tuple([*list(inVars), outVar])
         nullVal = [np.nan for dim in range(inVar.varDim)]
         var = fn.branching.conditional([
             (fn.math.abs(inVar - selectVal) < 1e-18, outVar),
