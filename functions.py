@@ -724,7 +724,7 @@ class Function(PlanetVar):
 
         self._detect_substrates()
         self._detect_attributes()
-        if not self.mesh is None:
+        if not self.varType == 'constFn':
             self._detect_scales_bounds()
         self._hashVars = self.inVars
 
