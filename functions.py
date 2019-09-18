@@ -619,6 +619,10 @@ class Variable(BaseTypes):
             projVar = get_meshVar(vanillaVar)
             var = projVar.var
             self._projUpdate = projVar.update
+            if hasattr(vanillaVar, 'scales'):
+                var.scales = vanillaVar.scales
+            if hasattr(vanillaVar, 'bounds'):
+                var.bounds = vanillaVar.bounds
 
         if hasattr(var, 'fn_gradient'):
             self.fn_gradient = var.fn_gradient
