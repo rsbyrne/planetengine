@@ -9,7 +9,6 @@ from . import testsystems
 def testfn():
 
     system = testsystems.get_system()
-    ICs = system.initials
 
     variable1 = pfn.convert(system.velocityField, 'velocity')
     variable2 = pfn.convert(system.temperatureField, 'temperature')
@@ -23,16 +22,18 @@ def testfn():
         var = pfn.Region(var, shape)
         var = var * variable1
         var = pfn.Component.rad(var)
+        var = pfn.Operations.log(var)
         var = pfn.Gradient.mag(var)
         var = pfn.HandleNaN.zero(var)
         var = var + 1.
         var = var * vanilla
         var = pfn.Quantiles.terciles(var)
-        var = pfn.Substitute(var, 2., 20.)
+        var = pfn.Substitute(var, 2., 0.)
         var = pfn.Binarise(var)
         var = var * variable1
         var_a, var_b = pfn.Split.getall(var)
-        var_b = var_b ** -1
+        var_a = var_a * -1.
+        var_b = var_b * -1.
         var = pfn.Merge(var_a, var_b)
         var = pfn.Component.rad(var)
         var = pfn.Gradient.ang(var)
