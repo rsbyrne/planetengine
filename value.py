@@ -1,3 +1,5 @@
+import numpy as np
+
 class Value:
 
     def __init__(self, val):
@@ -19,7 +21,7 @@ class Value:
             dict.__setattr__(self, item, value)
 
     def evaluate(self):
-        return self.value
+        return np.array([[self.value]])
 
     def __call__(self):
         return self.value
