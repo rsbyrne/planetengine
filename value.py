@@ -18,7 +18,7 @@ class Value:
         else:
             dict.__setattr__(self, item, value)
 
-    def evaluate():
+    def evaluate(self):
         return self.value
 
     def __call__(self):

@@ -44,6 +44,9 @@ class Analyser:
         self.analyserDict.update(miscDict)
         self.formatDict.update(miscFormatDict)
 
+        if not formatDict.keys() == analyserDict.keys():
+            raise Exception
+
         self.keys = sorted(analyserDict, key=str.lower)
         self.header = ', '.join(self.keys)
         self.dataDict = {}
@@ -53,7 +56,9 @@ class Analyser:
 
     def analyse(self):
         for key in self.keys:
-            self.dataDict[key] = self.analyserDict[key].evaluate()
+            print(self.analyserDict[key])
+            print(self.analyserDict[key].evaluate())
+            self.dataDict[key] = self.analyserDict[key].evaluate()[0][0]
         self.data = [self.dataDict[key] for key in self.keys]
         self.dataBrief = [
             (key, self.formatDict[key].format(self.dataDict[key])) \

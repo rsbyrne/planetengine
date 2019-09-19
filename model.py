@@ -96,13 +96,11 @@ class Model(Frame):
     # METHODS NOT NECESSARY:
 
     def _prompt_observers(self, prompt):
-        ### DEBUGGING ###
-        pass
-        # observerList = utilities.parallelise_set(
-        #     self.observers
-        #     )
-        # for observer in observerList:
-        #     observer.prompt(prompt)
+        observerList = utilities.parallelise_set(
+            self.observers
+            )
+        for observer in observerList:
+            observer.prompt(prompt)
 
     def _post_checkpoint_hook(self):
         self._prompt_observers('checkpointing')
