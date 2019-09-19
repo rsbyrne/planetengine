@@ -1014,6 +1014,16 @@ class HandleNaN(Function):
     def unit(inVar, **kwargs):
         return HandleNaN._NaNFloat(inVar, 1., **kwargs)
 
+    @staticmethod
+    def mins(inVar, **kwargs):
+        handleVal = GetStat.mins(inVar)
+        return HandleNaN._NaNFloat(inVar, handleVal, **kwargs)
+
+    @staticmethod
+    def maxs(inVar, **kwargs):
+        handleVal = GetStat.maxs(inVar)
+        return HandleNaN._NaNFloat(inVar, handleVal, **kwargs)
+
 class Clip(Function):
 
     opTag = 'Clip'
