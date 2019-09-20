@@ -256,7 +256,7 @@ class Frame:
             else:
                 self.checkpointer.checkpoint(path)
 
-            self.all_clear()
+            # self.all_clear()
 
             self.most_recent_checkpoint = self.step()
             self.checkpoints.append(self.step())
@@ -273,7 +273,7 @@ class Frame:
 
         else:
 
-            self.checkpointer.checkpoint(path)
+            self.checkpointer.checkpoint(path, clear = False)
             if archive:
                 self.archive(path)
 

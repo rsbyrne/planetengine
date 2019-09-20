@@ -148,7 +148,7 @@ class Observer(_built.Built):
         if path is None:
             path = self.path
         checkpointPath = os.path.join(path, self.instanceID)
-        self.checkpointer.checkpoint(checkpointPath)
-        if path == self.path:
-            for collector in self.saveCollectors:
-                collector.clear()
+        self.checkpointer.checkpoint(
+            checkpointPath,
+            clear = path == self.path
+            )

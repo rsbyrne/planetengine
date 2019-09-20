@@ -38,6 +38,7 @@ class Checkpointer:
     def checkpoint(
             self,
             path = None,
+            clear = True
             ):
 
         message("Attempting to checkpoint...")
@@ -160,7 +161,10 @@ class Checkpointer:
                                     delimiter = ",",
                                     header = header
                                     )
+                if clear:
+                    dataCollector.clear()
                     # mpi.barrier()
+
         message("Datasets saved.")
 
         if mpi.rank == 0:
