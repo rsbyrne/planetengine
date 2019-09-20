@@ -63,6 +63,8 @@ class Model(Frame):
         self.observers = {}
         self.initials = initials
 
+        self.status = "idle"
+
         builts = {'system': system, 'initials': initials}
 
         super().__init__(
@@ -124,12 +126,16 @@ class Model(Frame):
             forge_on = False,
             ):
 
+        self.status = 'pre-traverse'
+
         if checkpointCondition():
             self.checkpoint()
 
         message("Running...")
 
         while not stopCondition():
+
+            self.status = 'traverse'
 
             try:
                 self.iterate()
@@ -146,9 +152,13 @@ class Model(Frame):
                 else:
                     raise Exception("Something went wrong.")
 
+        self.status = 'post-traverse'
+
         message("Done!")
         if checkpointCondition():
             self.checkpoint()
+
+        self.status = 'idle'
 
     def _post_load_hook(self):
         self._load_observers()
@@ -159,7 +169,7 @@ class Model(Frame):
             self.system
             )
         for loadObserver in loadObservers:
-            self.observers[loadObserver.name] = loadObserver
+            self.observers[loadObserver.instanceID] = loadObserver
 
 ### IMPORTANT!!! ###
 frame.frameClasses[Model.prefix] = Model

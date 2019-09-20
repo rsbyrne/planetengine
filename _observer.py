@@ -78,7 +78,6 @@ class Observer(_built.Built):
 
         if isinstance(attachee, _frame.Frame):
             frame = attachee
-            frame.observers[self.name] = self
             path = frame.path
             system = frame.system
             initials = frame.initials
@@ -119,6 +118,9 @@ class Observer(_built.Built):
             builts = builts
             )
 
+        if isinstance(attachee, _frame.Frame):
+            attachee.observers[instanceID] = self
+
         self.frame = frame
         self.system = system
         self.initials = system.initials
@@ -129,7 +131,6 @@ class Observer(_built.Built):
         self.checkpointer = checkpointer
         self.step = system.step
         self.modeltime = system.modeltime
-        self.stamps = stamps
         self.instanceID = instanceID
         self.path = path
 
