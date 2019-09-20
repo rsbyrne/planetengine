@@ -125,10 +125,10 @@ def build():
             }
 
         zerodAnalyser = analysis.Analyser('zerodData', zerodDataDict, zerodFormatDict)
-        dataCollector = analysis.DataCollector([zerodAnalyser,])
+        collector = analysis.DataCollector([zerodAnalyser,])
         data = {
             'analysers': [zerodAnalyser,],
-            'collectors': [dataCollector,],
+            'collectors': [collector,],
             }
 
         return data

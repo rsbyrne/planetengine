@@ -18,7 +18,7 @@ class Checkpointer:
             saveVars = None,
             builts = None,
             figs = None,
-            dataCollectors = None,
+            collectors = None,
             step = None,
             modeltime = None,
             info = {},
@@ -26,7 +26,7 @@ class Checkpointer:
             ):
 
         self.figs = figs
-        self.dataCollectors = dataCollectors
+        self.collectors = collectors
         self.saveVars = saveVars
         self.step = step
         self.modeltime = modeltime
@@ -123,9 +123,9 @@ class Checkpointer:
 
         message("Saving snapshot...")
         if mpi.rank == 0:
-            if not self.dataCollectors is None:
-                for dataCollector in self.dataCollectors:
-                    for analyser in dataCollector.analysers:
+            if not self.collectors is None:
+                for collector in self.collectors:
+                    for analyser in collector.analysers:
                         name = analyser.name
                         headerStr = analyser.header
                         dataArray = [analyser.data,]
@@ -144,9 +144,9 @@ class Checkpointer:
         disk.save_json(self.stamps, 'stamps', checkpointDir)
 
         message("Saving datasets...")
-        if not self.dataCollectors is None:
-            for dataCollector in self.dataCollectors:
-                for row in dataCollector.out():
+        if not self.collectors is None:
+            for collector in self.collectors:
+                for row in collector.out():
                     if mpi.rank == 0:
                         name, headerStr, dataArray = row
                         filename = os.path.join(path, name + '.csv')
@@ -162,7 +162,7 @@ class Checkpointer:
                                     header = header
                                     )
                 if clear:
-                    dataCollector.clear()
+                    collector.clear()
                     # mpi.barrier()
 
         message("Datasets saved.")

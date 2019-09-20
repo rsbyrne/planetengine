@@ -192,7 +192,7 @@ class Frame:
             modeltime = self.modeltime,
             saveVars = self.saveVars,
             figs = self.figs,
-            dataCollectors = self.collectors,
+            collectors = self.collectors,
             builts = self.builts,
             info = self.info,
             framescript = self.framescript

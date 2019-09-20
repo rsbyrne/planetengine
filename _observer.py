@@ -115,7 +115,7 @@ class Observer(_built.Built):
             modeltime = system.modeltime,
             saveVars = saveVars,
             figs = saveFigs,
-            dataCollectors = saveCollectors,
+            collectors = saveCollectors,
             builts = builts
             )
 
