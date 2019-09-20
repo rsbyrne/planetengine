@@ -10,19 +10,19 @@ from . import _observer
 Frame = frame.Frame
 
 def make_model(
-        outputPath = None,
         system = None,
         initials = None,
-        instanceID = None
+        instanceID = None,
+        outputPath = None
         ):
     if initials is None:
         initials = system.initials
     return frame.make_frame(
         Model,
-        outputPath = outputPath,
         system = system,
         initials = initials,
-        instanceID = instanceID
+        instanceID = instanceID,
+        outputPath = outputPath
         )
 
 load_model = frame.load_frame
