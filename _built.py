@@ -85,7 +85,8 @@ def load_builtsDir(path, name = 'builts'):
     dirs = []
 
     if mpi.rank == 0:
-        assert os.path.isdir(builtsDir)
+        assert os.path.isdir(builtsDir), \
+            "Path " + builtsDir + " does not exist."
         files = os.listdir(builtsDir)
         for file in sorted(files):
             filePath = os.path.join(builtsDir, file)

@@ -5,6 +5,7 @@ from .visualisation import QuickFig
 from . import _frame as frame
 from .value import Value
 from . import _system
+from . import _observer
 
 Frame = frame.Frame
 
@@ -60,7 +61,7 @@ class Model(Frame):
 
         # SPECIAL TO MODEL
         self.system = system
-        self.observers = set()
+        self.observers = {}
         self.initials = initials
         self.analysers = analysers
 
@@ -96,10 +97,8 @@ class Model(Frame):
     # METHODS NOT NECESSARY:
 
     def _prompt_observers(self, prompt):
-        observerList = utilities.parallelise_set(
-            self.observers
-            )
-        for observer in observerList:
+        for observerName, observer \
+                in sorted(self.observers.items()):
             observer.prompt(prompt)
 
     def _post_checkpoint_hook(self):
@@ -122,9 +121,7 @@ class Model(Frame):
 
     def iterate(self):
         message("Iterating step " + str(self.step()) + " ...")
-        dt = self.system.iterate()
-        self.step.value += 1
-        self.modeltime.value += dt
+        self.system.iterate()
         self._prompt_observers('iterated')
         message("Iteration complete!")
 
@@ -175,6 +172,14 @@ class Model(Frame):
         message("Done!")
         if checkpointCondition():
             self.checkpoint()
+
+    def _post_load_hook(self):
+        self._load_observers()
+
+    def _load_observers(self):
+        loadObservers = _observer.load_observers(self.path)
+        for loadObserver in loadObservers:
+            self.observers[loadObserver.name] = loadObserver
 
 ### IMPORTANT!!! ###
 frame.frameClasses[Model.prefix] = Model

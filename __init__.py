@@ -7,6 +7,7 @@ from . import _system
 from . import _IC
 from . import initials
 from . import systems
+from . import observers
 from . import mapping
 from . import shapes
 from . import wordhash
@@ -19,7 +20,6 @@ from . import disk
 from . import paths
 from . import generic
 from . import model
-from . import observer
 from . import value
 
 from .utilities import message

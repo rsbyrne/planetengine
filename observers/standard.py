@@ -2,6 +2,7 @@ import planetengine
 from planetengine import functions as pfn
 from planetengine.visualisation import QuickFig
 from planetengine import analysis
+from planetengine import _observer
 
 def build(*args, name = None, **kwargs):
     built = Standard(*args, **kwargs)
@@ -9,7 +10,7 @@ def build(*args, name = None, **kwargs):
         built.name = name
     return built
 
-class Standard(Observer):
+class Standard(_observer.Observer):
 
     script = __file__
     name = 'standard'

@@ -87,7 +87,6 @@ def make_frame(
 
         frame._post_init_hook()
 
-
     return frame
 
 def load_frame(
