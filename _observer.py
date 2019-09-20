@@ -8,7 +8,6 @@ import os
 
 def load_observer(name, path, system = None):
     obsDir = os.path.join(path, name)
-    print(obsDir)
     builts = _built.load_builtsDir(obsDir)
     loadObserver = builts['observer']
     if system is None:
@@ -20,6 +19,7 @@ def load_observer(name, path, system = None):
             raise Exception
         loadSystem = system
     loadObserver.attach(loadSystem)
+    loadObserver.path = path
     return loadObserver
 
 def load_observers(path, system = None, return_dict = False):
@@ -61,7 +61,6 @@ class Observer(_built.Built):
         self._prompt = _prompt
         self._attach = _attach
 
-        self.path = ''
         self.frame = None
         self.system = None
         self.initials = None
@@ -84,7 +83,7 @@ class Observer(_built.Built):
             system = frame.system
             initials = frame.initials
         elif isinstance(attachee, _system.System):
-            path = '.'
+            path = None
             frame = None
             system = attachee
             if not hasattr(system, 'initials'):
@@ -149,6 +148,8 @@ class Observer(_built.Built):
         if not self.attached:
             raise Exception("Not yet attached.")
         if path is None:
+            if self.path is None:
+                raise Exception
             path = self.path
         checkpointPath = os.path.join(path, self.instanceID)
         self.checkpointer.checkpoint(

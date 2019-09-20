@@ -206,7 +206,7 @@ class QuickFig:
     def show(self):
         self.update()
         for var in self.fittedvars:
-            print(var.varName)
+            message(var.varName)
         self.fig.show()
 
     def save(self, path = '', name = None):
