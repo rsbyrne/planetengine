@@ -32,8 +32,8 @@ class Load(IC):
             assert type(_loadStep) == int
             outputPath = os.path.dirname(self.script)
             inFrame = frame.load_frame(
-                outputPath,
                 inFrame,
+                outputPath,
                 loadStep = _loadStep
                 )
         else:

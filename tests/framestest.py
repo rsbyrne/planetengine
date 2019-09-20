@@ -50,7 +50,7 @@ def testfn():
 
         model1.checkpoint()
 
-        model1_load = model.load_model(outputPath, model1.instanceID)
+        model1_load = model.load_model(model1.instanceID, outputPath)
 
         model1_load.iterate()
 

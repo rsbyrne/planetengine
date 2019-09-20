@@ -30,7 +30,7 @@ model.checkpoint()
 
 model.unarchive()
 
-model2 = planetengine.frame.load_frame(outputPath, model.instanceID)
+model2 = planetengine.frame.load_frame(model.instanceID, outputPath)
 
 model2.checkpoint()
 

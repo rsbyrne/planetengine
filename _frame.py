@@ -74,8 +74,8 @@ def make_frame(
     if not directory_state == 'clean':
         message("Preexisting model found! Loading...")
         frame = load_frame(
-            outputPath,
-            instanceID
+            instanceID,
+            outputPath
             )
     else:
         message("Making a new frame...")
@@ -90,8 +90,8 @@ def make_frame(
     return frame
 
 def load_frame(
-        outputPath = None,
         instanceID = '',
+        outputPath = None,
         loadStep = 0
         ):
     '''
@@ -422,7 +422,7 @@ class Frame:
                 message(
                     "Loading newly forked frame at current model step: "
                     )
-                newframe = load_frame(extPath, self.instanceID, loadStep = self.step())
+                newframe = load_frame(self.instanceID, extPath, loadStep = self.step())
                 message(
                     "Loaded newly forked frame."
                     )
@@ -487,7 +487,7 @@ class Frame:
         self.checkpoint(newpath)
         self.archive(newpath)
         if return_frame:
-            newframe = load_frame(extPath, self.instanceID)
+            newframe = load_frame(self.instanceID, extPath)
             return newframe
 
     def archive(self, _path = None):

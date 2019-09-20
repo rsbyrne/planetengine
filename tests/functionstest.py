@@ -10,7 +10,7 @@ from . import testsystems
 
 def testfn():
 
-    system = testsystems.get_system(Ra = 1e4, res = 32)
+    system = testsystems.get_system()
 
     variable1 = pfn.convert(system.velocityField, 'velocity')
     variable2 = pfn.convert(system.temperatureField, 'temperature')
