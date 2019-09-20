@@ -87,7 +87,6 @@ class System(Built):
         self.update()
         self.modeltime.value += dt
         self.step.value += 1
-        return dt
 
     def go(self, steps):
         for step in range(steps):

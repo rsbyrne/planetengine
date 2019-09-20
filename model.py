@@ -177,7 +177,10 @@ class Model(Frame):
         self._load_observers()
 
     def _load_observers(self):
-        loadObservers = _observer.load_observers(self.path)
+        loadObservers = _observer.load_observers(
+            self.path,
+            self.system
+            )
         for loadObserver in loadObservers:
             self.observers[loadObserver.name] = loadObserver
 
