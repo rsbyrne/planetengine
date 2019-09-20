@@ -5,7 +5,7 @@ CHUNKS=${2:-1}
 CHUNKNO=${3:-0}
 CORES=${4:-1}
 ITERNO=0
-MAXITER=100
+MAXITER=999
 while [ $ITERNO -lt $MAXITER ]
 do
     # echo "Started job " $CHUNKNO $ITERNO
