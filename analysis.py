@@ -53,8 +53,9 @@ class Analyser:
         self.data = [None] * len(self.keys)
         self.name = name
         self.dataBrief = "No data."
+        self.lastAnalysedStep = None
 
-    def analyse(self):
+    def _analyse(self):
         for key in self.keys:
             self.dataDict[key] = self.analyserDict[key].evaluate()[0][0]
         self.data = [self.dataDict[key] for key in self.keys]
@@ -62,6 +63,12 @@ class Analyser:
             (key, self.formatDict[key].format(self.dataDict[key])) \
             for key in self.keys
             ]
+        self.lastAnalysedStep = self.analyserDict['step']()
+
+    def analyse(self):
+        step = self.analyserDict['step']()
+        if not step == self.lastAnalysedStep:
+            self._analyse()
 
     def report(self):
         self.analyse()

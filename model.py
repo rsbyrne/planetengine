@@ -56,16 +56,12 @@ class Model(Frame):
         step = system.step
         modeltime = system.modeltime
 
-        analysers = []
-        collectors = []
-        figs = [system.fig]
         saveVars = system.varsOfState
 
         # SPECIAL TO MODEL
         self.system = system
         self.observers = {}
         self.initials = initials
-        self.analysers = analysers
 
         builts = {'system': system, 'initials': initials}
 
@@ -74,14 +70,14 @@ class Model(Frame):
             instanceID, # must be str
             step, # must be Value
             modeltime, # must be Value
-            saveVars, # dict of vars
-            figs, # figs to save
-            collectors,
             self.update,
             self.initialise,
             builts,
             self.info,
             self.framescript,
+            saveVars, # dict of vars
+            # figs, # figs to save
+            # collectors,
             )
 
     # METHODS NECESSARY FOR FRAME CLASS:
@@ -106,20 +102,10 @@ class Model(Frame):
     def _post_checkpoint_hook(self):
         self._prompt_observers('checkpointing')
 
-    def all_analyse(self):
-        message("Analysing...")
-        for analyser in self.analysers:
-            analyser.analyse()
-        message("Analysis complete!")
-
     def report(self):
-        message(
-            '\n' \
-            + 'Step: ' + str(self.step()) \
-            + ', modeltime: ' + '%.3g' % self.modeltime()
-            )
-        for fig in self.figs:
-            fig.show()
+        for observerName, observer in sorted(observers.items()):
+            message(observerName + ':')
+            observer.report()
 
     def iterate(self):
         message("Iterating step " + str(self.step()) + " ...")
@@ -131,16 +117,12 @@ class Model(Frame):
         stopStep = self.step() + steps
         self.traverse(lambda: self.step() >= stopStep)
 
-    def traverse(self, stopCondition,
-            collectConditions = lambda: False,
+    def traverse(self,
+            stopCondition,
             checkpointCondition = lambda: False,
             reportCondition = lambda: False,
             forge_on = False,
             ):
-
-        if not type(collectConditions) is list:
-            collectConditions = [collectConditions,]
-            assert len(collectConditions) == len(self.collectors)
 
         if checkpointCondition():
             self.checkpoint()
@@ -153,13 +135,6 @@ class Model(Frame):
                 self.iterate()
                 if checkpointCondition():
                     self.checkpoint()
-                else:
-                    for collector, collectCondition in zip(
-                            self.collectors,
-                            collectConditions
-                            ):
-                        if collectCondition():
-                            collector.collect()
                 if reportCondition():
                     self.report()
 

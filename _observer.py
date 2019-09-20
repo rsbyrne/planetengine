@@ -3,6 +3,7 @@ from . import checkpoint
 from . import _frame
 from . import _system
 from . import mpi
+from .utilities import message
 import os
 
 def load_observer(name, path, system = None):
@@ -28,7 +29,7 @@ def load_observers(path, system = None, return_dict = False):
     files = mpi.comm.bcast(files, root = 0)
     loadObservers = []
     for file in files:
-        if file[:6] == 'peobs':
+        if file[:6] == Observer.prefix + '_':
             loadObserver = load_observer(
                 file,
                 path,
@@ -136,6 +137,7 @@ class Observer(_built.Built):
         self.attached = True
 
     def prompt(self, status = None):
+        message("Observer prompted.")
         if not self.attached:
             raise Exception("Not yet attached.")
         self._prompt()
@@ -143,6 +145,7 @@ class Observer(_built.Built):
             self.checkpoint()
 
     def checkpoint(self, path = None, clear = True):
+        message("Observer checkpointing...")
         if not self.attached:
             raise Exception("Not yet attached.")
         if path is None:
@@ -152,3 +155,4 @@ class Observer(_built.Built):
             checkpointPath,
             clear = path == self.path
             )
+        message("Observer checkpointed.")

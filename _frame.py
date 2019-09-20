@@ -151,14 +151,14 @@ class Frame:
             instanceID, # must be str
             step, # must be 'Value'
             modeltime, # must be 'Value'
-            saveVars, # dict of vars
-            figs, # figs to save
-            collectors,
             update,
             initialise,
             builts,
             info,
             framescript,
+            saveVars = {},
+            figs = [],
+            collectors = []
             ):
 
         self.outputPath = outputPath
@@ -255,8 +255,6 @@ class Frame:
                 message("Checkpoint already exists! Skipping.")
             else:
                 self.checkpointer.checkpoint(path)
-
-            # self.all_clear()
 
             self.most_recent_checkpoint = self.step()
             self.checkpoints.append(self.step())
@@ -378,6 +376,8 @@ class Frame:
                 )
 
             if mpi.rank == 0:
+                if os.path.isfile(newpath):
+                    os.remove(newpath)
                 shutil.copyfile(
                     self.tarpath,
                     newpath
@@ -399,10 +399,13 @@ class Frame:
                 )
 
             if mpi.rank == 0:
+                if os.path.isdir(newpath):
+                    shutil.rmtree(newpath)
                 shutil.copytree(
                     self.path,
                     newpath
                     )
+                assert os.path.isdir(newpath)
 
             message(
                 "Model forked to directory: " + extPath + self.instanceID

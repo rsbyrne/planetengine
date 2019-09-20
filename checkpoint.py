@@ -38,6 +38,7 @@ class Checkpointer:
     def checkpoint(
             self,
             path = None,
+            collect = True,
             clear = True
             ):
 
@@ -121,6 +122,10 @@ class Checkpointer:
             disk.varsOnDisk(self.saveVars, checkpointDir, 'save')
         message("Saved.")
 
+        if collect:
+            for collector in self.collectors:
+                collector.collect()
+
         message("Saving snapshot...")
         if mpi.rank == 0:
             if not self.collectors is None:
@@ -128,7 +133,8 @@ class Checkpointer:
                     for analyser in collector.analysers:
                         name = analyser.name
                         headerStr = analyser.header
-                        dataArray = [analyser.data,]
+                        dataArray = np.array(analyser.data)
+                        assert not None in dataArray
                         filename = os.path.join(checkpointDir, name + "_snapshot" + ".txt")
                         if not type(dataArray) == type(None):
                             with open(filename, 'w') as openedfile:
