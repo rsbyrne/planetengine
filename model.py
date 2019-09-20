@@ -15,6 +15,8 @@ def make_model(
         initials = None,
         instanceID = None
         ):
+    if initials is None:
+        initials = system.initials
     return frame.make_frame(
         Model,
         outputPath = outputPath,
