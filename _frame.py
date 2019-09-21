@@ -234,6 +234,8 @@ class Frame:
 
         self.all_collect()
 
+        clean = self.disk_state() == 'clean'
+
         if path is None or path == self.path:
 
             self._pre_checkpoint_hook()
@@ -254,7 +256,7 @@ class Frame:
             # CHECKPOINT OBSERVERS!!!
             self._post_checkpoint_hook()
 
-            if was_archived or ((self.disk_state() == 'clean') and archive):
+            if was_archived or (clean and archive):
                 self.try_archive()
 
             if backup:
@@ -399,7 +401,7 @@ class Frame:
                 assert os.path.isdir(newpath)
 
             message(
-                "Model forked to directory: " + extPath + self.instanceID
+                "Model forked to directory: " + os.path.join(extPath, self.instanceID)
                 )
 
             hardFork = True
