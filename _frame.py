@@ -229,25 +229,18 @@ class Frame:
             self,
             path = None,
             backup = True,
-            archive = None
+            archive = True
             ):
 
-        disk_state = self.disk_state()
-        if archive is None:
-            if disk_state == 'tar':
-                archive = True
-            elif disk_state == 'clean':
-                archive = True
-            else:
-                archive = False
-
         self.all_collect()
+
+        clean = self.disk_state() == 'clean'
 
         if path is None or path == self.path:
 
             self._pre_checkpoint_hook()
 
-            self.try_unarchive()
+            was_archived = self.try_unarchive()
 
             path = self.path
 
@@ -263,7 +256,7 @@ class Frame:
             # CHECKPOINT OBSERVERS!!!
             self._post_checkpoint_hook()
 
-            if archive:
+            if was_archived or (clean and archive):
                 self.try_archive()
 
             if backup:
@@ -408,7 +401,7 @@ class Frame:
                 assert os.path.isdir(newpath)
 
             message(
-                "Model forked to directory: " + extPath + self.instanceID
+                "Model forked to directory: " + os.path.join(extPath, self.instanceID)
                 )
 
             hardFork = True
@@ -528,7 +521,13 @@ class Frame:
             path = _path
             message("Unarchiving a remote archive...")
 
+        assert self.disk_state(path) == 'tar'
+
+        message("Unarchiving...")
+
         disk.expose_tar(path)
+
+        assert self.disk_state(path) == 'dir'
 
         message("Unarchived!")
 
