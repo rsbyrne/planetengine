@@ -131,6 +131,8 @@ class Model(Frame):
         if checkpointCondition():
             self.checkpoint()
 
+        was_archived = self.disk_state() == 'tar'
+
         message("Running...")
 
         while not stopCondition():
@@ -157,6 +159,9 @@ class Model(Frame):
         message("Done!")
         if checkpointCondition():
             self.checkpoint()
+
+        if was_archived:
+            assert self.disk_state() == 'tar'
 
         self.status = 'idle'
 
