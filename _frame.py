@@ -247,7 +247,7 @@ class Frame:
 
             self._pre_checkpoint_hook()
 
-            self.try_unarchive()
+            was_archived = self.try_unarchive()
 
             path = self.path
 
@@ -263,7 +263,7 @@ class Frame:
             # CHECKPOINT OBSERVERS!!!
             self._post_checkpoint_hook()
 
-            if archive:
+            if was_archived:
                 self.try_archive()
 
             if backup:
