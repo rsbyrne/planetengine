@@ -1,4 +1,3 @@
-import underworld as uw
 from underworld import function as fn
 import glucifer
 import numpy as np
@@ -7,7 +6,10 @@ import os
 from . import functions as pfn
 from .utilities import message
 from .functions import get_planetVar
+from . import functions as pfn
 from .meshutils import get_meshUtils
+
+from . import mpi
 
 def quickShow(*args, **kwargs):
 
@@ -55,11 +57,14 @@ class QuickFig:
 
         self.functions_used = []
 
-        self.add_vars(*args)
+        self.add_vars(args)
 
-    def add_vars(self, *args):
+    def add_vars(self, args):
 
         args = list(args)
+
+        if len(args) == 1 and type(args[0]) == dict:
+            args = sorted(args[0].items())
         for arg in args:
             if hasattr(arg, 'subMesh'):
                 args.remove(arg)
@@ -67,13 +72,15 @@ class QuickFig:
             elif hasattr(arg, 'particleCoordinates'):
                 args.remove(arg)
                 self.add_swarm(arg)
-        if len(args) > 0:
-            for arg in args:
-                planetVar = get_planetVar(arg)
-                self.planetVars.append(planetVar)
-                self.updateFuncs.append(planetVar.update)
-        else:
-            self.planetVars = []
+        for arg in args:
+            if type(arg) == tuple:
+                varName, var = arg
+                planetVar = pfn._convert(var, varName = varName)
+            else:
+                var = arg
+                planetVar = pfn._convert(var)
+            self.planetVars.append(planetVar)
+            self.updateFuncs.append(planetVar.update)
 
         for planetVar in self.planetVars:
             found = False
@@ -199,14 +206,16 @@ class QuickFig:
     def show(self):
         self.update()
         for var in self.fittedvars:
-            print(var.varName)
+            message(var.varName)
         self.fig.show()
 
     def save(self, path = '', name = None):
         self.update()
         if name is None:
             name = self.figname
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             if not os.path.isdir(path):
                 os.mkdir(path)
+            assert os.path.isdir(path)
+        # mpi.barrier()
         self.fig.save(os.path.join(path, name))

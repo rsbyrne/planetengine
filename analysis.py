@@ -34,14 +34,8 @@ class Analyser:
         self.formatDict = formatDict
 
         miscDict = {
-            'step': ArrayStripper(
-                step,
-                (0, 0),
-                ),
-            'modeltime': ArrayStripper(
-                modeltime,
-                (0, 0),
-                )
+            'step': step,
+            'modeltime': modeltime
             }
         miscFormatDict = {
             'step': "{:.0f}",
@@ -50,21 +44,31 @@ class Analyser:
         self.analyserDict.update(miscDict)
         self.formatDict.update(miscFormatDict)
 
+        if not formatDict.keys() == analyserDict.keys():
+            raise Exception
+
         self.keys = sorted(analyserDict, key=str.lower)
         self.header = ', '.join(self.keys)
         self.dataDict = {}
         self.data = [None] * len(self.keys)
         self.name = name
         self.dataBrief = "No data."
+        self.lastAnalysedStep = None
 
-    def analyse(self):
+    def _analyse(self):
         for key in self.keys:
-            self.dataDict[key] = self.analyserDict[key].evaluate()
+            self.dataDict[key] = self.analyserDict[key].evaluate()[0][0]
         self.data = [self.dataDict[key] for key in self.keys]
         self.dataBrief = [
             (key, self.formatDict[key].format(self.dataDict[key])) \
             for key in self.keys
             ]
+        self.lastAnalysedStep = self.analyserDict['step']()
+
+    def analyse(self):
+        step = self.analyserDict['step']()
+        if not step == self.lastAnalysedStep:
+            self._analyse()
 
     def report(self):
         self.analyse()

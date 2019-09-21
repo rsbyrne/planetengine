@@ -2,34 +2,91 @@ from .. import initials
 from .. import model
 from .. import systems
 from ..utilities import message
-import underworld as uw
-from underworld import function as fn
-
-from ..paths import TestDir
+from .. import paths
 
 def testfn():
-    with TestDir() as outputPath:
+
+    with paths.TestDir() as outputPath:
+
+        IC0 = {
+            'temperatureField': initials.sinusoidal.build(
+                initials.sinusoidal.build(
+                    freq = 2,
+                    pert = 0.4
+                    )
+                )
+            }
+
+        system0 = systems.arrhenius.build(res = 32, f = 0.5)
+
         model0 = model.make_model(
-            systems.arrhenius.build(res = 32, f = 0.5),
-            {'temperatureField': initials.sinusoidal.build()},
+            system = system0,
+            initials = IC0,
             outputPath = outputPath
             )
+
+        model0.iterate()
+
+        model0.checkpoint()
+
+        IC1 = {
+            'temperatureField': initials.load.build(
+                inFrame = model0,
+                varName = 'temperatureField'
+                )
+            }
+
+        system1 = systems.arrhenius.build(res = 32, f = 1.)
+
         model1 = model.make_model(
-            systems.arrhenius.build(res = 32, f = 1.),
-            {'temperatureField': initials.sinusoidal.build()},
-            # {'temperatureField': initials.load.build(model0, 'temperatureField')},
+            system = system1,
+            initials = IC1,
             outputPath = outputPath
             )
+
         model1.checkpoint()
+
+        model1.iterate()
+
+        model1.checkpoint()
+
+        model1_load = model.load_model(model1.instanceID, outputPath)
+
+        model1_load.iterate()
+
+        model1_load.checkpoint()
+
+        model1_load.unarchive()
+
+        model1_load.archive()
+
+        IC2 = {
+            'temperatureField': initials.load.build(
+                IC0['temperatureField'],
+                initials.sinusoidal.build(freq = 10., pert = 0.6),
+                inFrame = model0,
+                varName = 'temperatureField'
+                )
+            }
+
+        system2 = systems.arrhenius.build(res = 32, f = 0.7)
+
         model2 = model.make_model(
-            systems.arrhenius.build(res = 32, f = 1.),
-            {'temperatureField': initials.sinusoidal.build()},
-            # {'temperatureField': initials.load.build(model0, 'temperatureField')},
+            system = system2,
+            initials = IC2,
             outputPath = outputPath
             )
-        model2.iterate()
-        model2.unarchive()
-        model2.archive()
+
         model2.checkpoint()
-        model3 = model.load_model(outputPath, model1.instanceID)
+
+        model2.iterate()
+
+        model2.checkpoint()
+
+        model2_remake = model.make_model(
+            system = system2,
+            initials = IC2,
+            outputPath = outputPath
+            )
+
         message('Success!')

@@ -20,15 +20,7 @@ def build():
 
     def make_tools(system):
 
-        viscosityProj = uw.mesh.MeshVariable(system.mesh, 1)
-        viscosityProjector = uw.utils.MeshVariable_Projection(
-            viscosityProj,
-            system.viscosityFn,
-            )
-
-        projectors = {'viscosityProjector': viscosityProjector}
-        projections = {'viscosityProj': viscosityProj}
-        tools = {'projectors': projectors, 'projections': projections}
+        tools = {}
         return Grouper(tools)
 
     ### FIGURES ###
@@ -50,18 +42,9 @@ def build():
 
         figViscComponent = fig.Contours(
             system.mesh,
-            fn.math.log10(tools.projections['viscosityProj']),
+            fn.math.log10(system.viscosityFn),
             colours = "red black",
             interval = 0.5,
-            colourBar = False,
-            )
-
-        figMaterialComponent = fig.Points(
-            system.swarm,
-            fn_colour = system.materialVar,
-            fn_mask = system.materialVar,
-            fn_size = 4.,
-            colours = "purple",
             colourBar = False,
             )
 
@@ -96,13 +79,6 @@ def build():
                 system.viscosityFn,
                 system.mesh,
                 ),
-            'yielding': analysis.Analyse.ScalarFieldAverage(
-                fn.branching.conditional([
-                    (system.creepViscFn < system.plasticViscFn, 0.),
-                    (True, 1.),
-                    ]),
-                system.mesh
-                ),
             'step': analysis.Analyse.ArrayStripper(
                 system.step,
                 (0, 0),
@@ -125,10 +101,10 @@ def build():
             }
 
         zerodAnalyser = analysis.Analyser('zerodData', zerodDataDict, zerodFormatDict)
-        dataCollector = analysis.DataCollector([zerodAnalyser,])
+        collector = analysis.DataCollector([zerodAnalyser,])
         data = {
             'analysers': [zerodAnalyser,],
-            'collectors': [dataCollector,],
+            'collectors': [collector,],
             }
 
         return data

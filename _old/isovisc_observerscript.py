@@ -21,6 +21,7 @@ def build():
     def make_tools(system):
 
         tools = {}
+
         return Grouper(tools)
 
     ### FIGURES ###
@@ -40,14 +41,6 @@ def build():
             system.velocityField
             )
 
-        figViscComponent = fig.Contours(
-            system.mesh,
-            fn.math.log10(system.viscosityFn),
-            colours = "red black",
-            interval = 0.5,
-            colourBar = False,
-            )
-
         figs = {'fig': fig, }
 
         return figs
@@ -55,6 +48,7 @@ def build():
     ### DATA ###
 
     def make_data(system, tools):
+
         zerodDataDict = {
             'Nu': analysis.Analyse.DimensionlessGradient(
                 system.temperatureField,
@@ -75,17 +69,6 @@ def build():
                 system.mesh,
                 system.outer,
                 ),
-            'avVisc': analysis.Analyse.ScalarFieldAverage(
-                system.viscosityFn,
-                system.mesh,
-                ),
-            'yielding': analysis.Analyse.ScalarFieldAverage(
-                fn.branching.conditional([
-                    (system.creepViscFn < system.plasticViscFn, 0.),
-                    (True, 1.),
-                    ]),
-                system.mesh
-                ),
             'step': analysis.Analyse.ArrayStripper(
                 system.step,
                 (0, 0),
@@ -101,17 +84,15 @@ def build():
             'avTemp': "{:.2f}",
             'VRMS': "{:.2f}",
             'surfVRMS': "{:.2f}",
-            'avVisc': "{:.1E}",
-            'yielding': "{0:.0%}",
             'step': "{:.0f}",
             'modeltime': "{:.1E}",
             }
 
         zerodAnalyser = analysis.Analyser('zerodData', zerodDataDict, zerodFormatDict)
-        dataCollector = analysis.DataCollector([zerodAnalyser,])
+        collector = analysis.DataCollector([zerodAnalyser,])
         data = {
             'analysers': [zerodAnalyser,],
-            'collectors': [dataCollector,],
+            'collectors': [collector,],
             }
 
         return data

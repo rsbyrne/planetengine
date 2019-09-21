@@ -1,26 +1,40 @@
 import numpy as np
+from planetengine._IC import IC
 
-def build(*args, **kwargs):
-    return IC(*args, **kwargs)
+def build(*args, name = None, **kwargs):
+    built = Sinusoidal(*args, **kwargs)
+    if type(name) == str:
+        built.name = name
+    return built
 
-class IC:
+class Sinusoidal(IC):
+
+    script = __file__
 
     def __init__(
             self,
+            *args,
             pert = 0.2,
             freq = 1.,
-            phase = 0.
+            phase = 0.,
+            **kwargs
             ):
 
-        self.inputs = locals().copy()
-        del self.inputs['self']
-        self.scripts = [__file__,]
+        inputs = locals().copy()
 
         self.valRange = (0., 1.)
 
         self.freq = freq
         self.phase = phase
         self.pert = pert
+
+        super().__init__(
+            args = args,
+            kwargs = kwargs,
+            inputs = inputs,
+            script = self.script,
+            evaluate = self.evaluate
+            )
 
     def evaluate(self, coordArray):
         valMin, valMax = self.valRange

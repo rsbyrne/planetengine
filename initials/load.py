@@ -1,78 +1,88 @@
-import underworld as uw
-import numpy as np
 import os
 
-from .. import paths
-from .. import mapping
-from .. import model
+from planetengine import _frame as frame
+from planetengine import fieldops
+from planetengine import mapping
+from planetengine._IC import IC
 
-def build(*args, **kwargs):
-    return IC(*args, **kwargs)
+def build(*args, name = None, **kwargs):
+    built = Load(*args, **kwargs)
+    if type(name) == str:
+        built.name = name
+    return built
 
-class IC:
+class Load(IC):
+
+    script = __file__
 
     def __init__(
             self,
+            *args,
             inFrame = None,
-            sourceVarName = None,
-            loadStep = None,
-            hashID = None,
-            _outputPath = None,
-            _is_child = False,
+            varName = None,
+            _loadStep = None,
+            **kwargs
             ):
 
-        if _outputPath is None:
-            _outputPath = paths.defaultPath
+        assert not varName is None
+        if isinstance(inFrame, frame.Frame): # hence new
+            assert _loadStep is None
+            _loadStep = inFrame.step()
+        elif type(inFrame) == str: # hence loaded
+            assert type(_loadStep) == int
+            outputPath = os.path.dirname(self.script)
+            inFrame = frame.load_frame(
+                inFrame,
+                outputPath,
+                loadStep = _loadStep
+                )
+        else:
+            raise Exception
 
-        assert sourceVarName is not None, \
-            "sourceVarName input must be a string \
-            correlating to a varsOfState attribute \
-            on the input model."
-        assert inFrame is not None or type(hashID) == str, \
-            "Must provide a str or model instance \
-            for 'inFrame' keyword argument."
+        self.inFrame = inFrame
+        self.inVar = inFrame.saveVars[varName]
+        self.fullInField = fieldops.make_fullLocalMeshVar(self.inVar)
 
-        self.inputs = {
-            'sourceVarName': sourceVarName,
-            'loadStep': loadStep
+        inputs = {
+            'varName': varName,
+            '_loadStep': _loadStep,
+            'inFrame': inFrame.instanceID
             }
-        script = os.path.join(
-            os.path.dirname(__file__),
-            '_load_dummy.py'
+
+        super().__init__(
+            args = args,
+            kwargs = kwargs,
+            inputs = inputs,
+            script = self.script,
+            evaluate = self.evaluate
             )
-        self.scripts = [script]
 
-        self.sourceVarName = sourceVarName
-        if loadStep is None:
-            if type(inFrame) == model.Model:
-                self.loadStep = inFrame.step
-            else:
-                self.loadStep = 0
-            self.inputs['loadStep'] = self.loadStep
-        else:
-            self.loadStep = loadStep
+    def evaluate(self, coordArray):
+        tolerance = 0.
+        maxTolerance = 0.1
+        while tolerance < maxTolerance:
+            try:
+                evalCoords = mapping.unbox(
+                    self.fullInField.mesh,
+                    coordArray,
+                    tolerance = tolerance
+                    )
+                outArray = self.fullInField.evaluate(evalCoords)
+                break
+            except:
+                if tolerance == 0.:
+                    tolerance += 0.00001
+                else:
+                    tolerance *= 1.01
 
-        if inFrame is None and type(hashID) == str:
-            self.inFrame = model.load_model(
-                _outputPath,
-                hashID,
-                _is_child = _is_child
-                )
+        if tolerance > maxTolerance:
+            raise Exception("Acceptable tolerance for load IC could not be found.")
 
-        elif type(inFrame) == str:
-            self.inFrame = model.load_model(
-                os.path.dirname(inFrame),
-                os.path.basename(inFrame),
-                _is_child = _is_child
-                )
-        elif type(inFrame) == model.Model:
-            self.inFrame = inFrame
-            self.inFrame.load_checkpoint(self.loadStep)
-        else:
-            raise Exception("inFrame input not recognised.")
+        return outArray
 
-        self.inFrame.load_checkpoint(self.loadStep)
+    # def _apply(self, var, boxDims = None):
+    #     tolerance = fieldops.copyField(self.inVar, var)
 
-        self.inputs['hashID'] = self.inFrame.hashID
-
-        self.inVar = self.inFrame.system.varsOfState[self.sourceVarName]
+    def _pre_save_hook(self, path, name = None):
+        path = os.path.join(path, self.inFrame.instanceID)
+        self.inFrame.checkpoint(path, backup = False, archive = False)

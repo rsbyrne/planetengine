@@ -1,311 +1,132 @@
-import underworld as uw
-import tarfile
-import os
-import shutil
-import json
-import copy
-import glob
-
 from . import paths
 from . import utilities
-from . import disk
-from .wordhash import wordhash as wordhashFn
-from . import checkpoint
-from . import initials as initialModule
 from .utilities import message
-from .utilities import check_reqs
 from .visualisation import QuickFig
+from . import _frame as frame
+from .value import Value
+from . import _system
+from . import _observer
 
-from . import frame
-
-# def load_system(path):
-#     builtsDir = os.path.join(path, 'builts')
-#     params = frame.load_inputs('system', builtsDir)
-#     systemscript = utilities.local_import(os.path.join(builtsDir, 'system_0.py'))
-#     system = systemscript.build(**params['system_0'])
-#     return system, params
-
-# def load_initials(system, path):
-#     builtsDir = os.path.join(path, 'builts')
-#     configs = frame.load_inputs('initial', builtsDir)
-#     initials = {}
-#     for varName in sorted(system.varsOfState):
-#         initials[varName] = {**configs[varName]}
-#         initialsLoadName = varName + '_0.py'
-#         module = utilities.local_import(
-#             os.path.join(builtsDir, initialsLoadName)
-#             )
-#         # check if an identical 'initial' object already exists:
-#         if hasattr(module, 'LOADTYPE'):
-#             initials[varName] = initialModule.load.build(
-#                 **configs[varName], _outputPath = path, _is_child = True
-#                 )
-#         elif module.IC in [type(IC) for IC in initials.values()]:
-#             for priorVarName, IC in sorted(initials.items()):
-#                 if type(IC) == module.IC and configs[varName] == configs[priorVarName]:
-#                     initials[varName] = initials[priorVarName]
-#                     break
-#         else:
-#             initials[varName] = module.build(
-#                 **configs[varName]
-#                 )
-        # if module.IC in [type(IC) for IC in initials.values()]:
-        #     for priorVarName, IC in sorted(initials.items()):
-        #         if type(IC) == module.IC and configs[varName] == configs[priorVarName]:
-        #             initials[varName] = initials[priorVarName]
-        #             break
-        # else:
-        #     initials[varName] = module.build(
-        #         **configs[varName]
-        #         )
-    # return initials, configs
-
-def load_model(
-        outputPath = None,
-        instanceID = '',
-        loadStep = 0,
-        _is_child = False,
-        ):
-    '''
-    Creates a new 'model' instance attached to a pre-existing
-    model directory. LoadStep can be an integer corresponding
-    to a previous checkpoint step, or can be the string 'max'
-    which loads the highest stable checkpoint available.
-    '''
-
-    if outputPath is None:
-        outputPath = paths.defaultPath
-
-    # Check that target directory is not inside
-    # another planetengine directory:
-
-    if not _is_child:
-        if uw.mpi.rank == 0:
-            assert not os.path.isfile(
-                os.path.join(outputPath, 'stamps.json')
-                )
-
-    path = os.path.join(outputPath, instanceID)
-
-    frame.expose_tar(path)
-
-    builts = frame.load_builts(path)
-    system = builts['system']
-    initials = {
-        key: val for key, val in builts.items() \
-            if not key == 'system'
-        }
-
-    model = Model(
-        system = system,
-        initials = initials,
-        outputPath = outputPath,
-        instanceID = instanceID,
-        _is_child = _is_child
-        )
-
-    return model
+Frame = frame.Frame
 
 def make_model(
-        system,
-        initials,
-        outputPath = None,
+        system = None,
+        initials = None,
         instanceID = None,
+        outputPath = None
         ):
+    if initials is None:
+        initials = system.initials
+    return frame.make_frame(
+        Model,
+        system = system,
+        initials = initials,
+        instanceID = instanceID,
+        outputPath = outputPath
+        )
 
-    if outputPath is None:
-        outputPath = paths.defaultPath
+load_model = frame.load_frame
 
-    builts = {'system': system, **initials}
-    stamps = frame.make_stamps(builts)
+class Model(Frame):
 
-    if instanceID is None:
-        instanceID = 'pemod_' + stamps['all'][1]
+    prefix = 'pemod'
+    framescript = __file__
+    info = {'frameType': 'pemod'}
 
-    path = os.path.join(outputPath, instanceID)
-    tarpath = path + '.tar.gz'
-
-    directory_state = ''
-
-    if uw.mpi.rank == 0:
-
-        if os.path.isdir(path):
-            if os.path.isfile(tarpath):
-                raise Exception(
-                    "Cannot combine model directory and tar yet."
-                    )
-            else:
-                directory_state = 'directory'
-        elif os.path.isfile(tarpath):
-            directory_state = 'tar'
-        else:
-            directory_state = 'clean'
-
-    directory_state = uw.mpi.comm.bcast(directory_state, root = 0)
-
-    if directory_state == 'tar':
-        if uw.mpi.rank == 0:
-            with tarfile.open(tarpath) as tar:
-                tar.extract('stamps.json', path)
-            with open(os.path.join(path, 'stamps.json')) as json_file:
-                loadstamps = json.load(json_file)
-            shutil.rmtree(path)
-            assert loadstamps == stamps
-
-    if directory_state == 'clean':
-        message("Making a new model...")
-        model = Model(
-            system,
-            initials,
-            outputPath,
-            instanceID
-            )
-
-    else:
-        message("Preexisting model found! Loading...")
-        model = load_model(
-            outputPath,
-            instanceID
-            )
-
-    return model
-
-class Model(frame.Frame):
-
-    script = __file__
-
-    def __init__(self,
-            system,
-            initials,
+    def __init__(
+            self,
+            system = None,
+            initials = None,
             outputPath = None,
-            instanceID = 'test',
-            _autoarchive = True,
-            _parentFrame = None,
-            _is_child = False,
-            _autobackup = True,
+            instanceID = None
             ):
 
         if outputPath is None:
             outputPath = paths.defaultPath
 
+        if not isinstance(system, _system.System):
+            raise Exception(
+                "System must be an instance of 'system'; instead, type was " + str(type(system)) + "."
+                )
+
         assert system.varsOfState.keys() == initials.keys()
 
         message("Building model...")
 
-        builts = {'system': system, **initials}
+        step = system.step
+        modeltime = system.modeltime
 
-        step = 0
-        modeltime = 0.
-
-        inFrames = []
-        for IC in initials.values():
-            try:
-                inFrames.append(IC.inFrame)
-            except:
-                pass
-
-        analysers = []
-        collectors = []
-        fig = QuickFig(
-            system.varsOfState,
-            # style = 'smallblack',
-            )
-        figs = [fig]
         saveVars = system.varsOfState
 
         # SPECIAL TO MODEL
         self.system = system
-        self.observers = set()
+        self.observers = {}
         self.initials = initials
-        self.analysers = analysers
 
-        # NECESSARY FOR FRAME CLASS:
-        self.outputPath = outputPath
-        self.instanceID = instanceID
-        self.inFrames = inFrames
-        self.step = step
-        self.modeltime = modeltime
-        self.saveVars = saveVars
-        self.figs = figs
-        self.collectors = collectors
-        self.builts = builts
+        self.status = "idle"
 
-        # OVERRIDE FRAME CLASS:
-        self._autobackup = _autobackup
-        self._autoarchive = _autoarchive
-        self._is_child = _is_child
-        self._parentFrame = _parentFrame
+        builts = {'system': system, 'initials': initials}
 
-        super().__init__()
+        super().__init__(
+            outputPath, # must be str
+            instanceID, # must be str
+            step, # must be Value
+            modeltime, # must be Value
+            self.update,
+            self.initialise,
+            builts,
+            self.info,
+            self.framescript,
+            saveVars, # dict of vars
+            # figs, # figs to save
+            # collectors,
+            )
 
     # METHODS NECESSARY FOR FRAME CLASS:
 
     def initialise(self):
         message("Initialising...")
-        initialModule.apply(
-            self.initials,
-            self.system,
-            )
-        self.system.solve()
-        self.step = 0
-        self.modeltime = 0.
-        self.update()
+        self.system.initialise(self.initials)
         message("Initialisation complete!")
 
     def update(self):
-        self.system.solve()
+        message("Updating...")
+        self.system.update()
+        message("Updated.")
 
     # METHODS NOT NECESSARY:
 
     def _prompt_observers(self, prompt):
-        observerList = utilities.parallelise_set(
-            self.observers
-            )
-        for observer in observerList:
+        for observerName, observer \
+                in sorted(self.observers.items()):
             observer.prompt(prompt)
 
     def _post_checkpoint_hook(self):
         self._prompt_observers('checkpointing')
 
-    def all_analyse(self):
-        message("Analysing...")
-        for analyser in self.analysers:
-            analyser.analyse()
-        message("Analysis complete!")
-
     def report(self):
-        message(
-            '\n' \
-            + 'Step: ' + str(self.step) \
-            + ', modeltime: ' + '%.3g' % self.modeltime
-            )
-        for fig in self.figs:
-            fig.show()
+        for observerName, observer in sorted(observers.items()):
+            message(observerName + ':')
+            observer.report()
 
     def iterate(self):
-        assert not self._is_child, \
-            "Cannot iterate child models independently."
-        message("Iterating step " + str(self.step) + " ...")
-        dt = self.system.iterate()
-        self.step += 1
-        self.modeltime += dt
+        message("Iterating step " + str(self.step()) + " ...")
+        self.system.iterate()
         self._prompt_observers('iterated')
         message("Iteration complete!")
 
     def go(self, steps):
-        stopStep = self.step + steps
-        self.traverse(lambda: self.step >= stopStep)
+        stopStep = self.step() + steps
+        self.traverse(lambda: self.step() >= stopStep)
 
-    def traverse(self, stopCondition,
-            collectConditions = lambda: False,
+    def traverse(self,
+            stopCondition,
             checkpointCondition = lambda: False,
             reportCondition = lambda: False,
             forge_on = False,
             ):
 
-        if not type(collectConditions) is list:
-            collectConditions = [collectConditions,]
-            assert len(collectConditions) == len(self.collectors)
+        self.status = 'pre-traverse'
 
         if checkpointCondition():
             self.checkpoint()
@@ -314,17 +135,12 @@ class Model(frame.Frame):
 
         while not stopCondition():
 
+            self.status = 'traverse'
+
             try:
                 self.iterate()
                 if checkpointCondition():
                     self.checkpoint()
-                else:
-                    for collector, collectCondition in zip(
-                            self.collectors,
-                            collectConditions
-                            ):
-                        if collectCondition():
-                            collector.collect()
                 if reportCondition():
                     self.report()
 
@@ -336,6 +152,24 @@ class Model(frame.Frame):
                 else:
                     raise Exception("Something went wrong.")
 
+        self.status = 'post-traverse'
+
         message("Done!")
         if checkpointCondition():
             self.checkpoint()
+
+        self.status = 'idle'
+
+    def _post_load_hook(self):
+        self._load_observers()
+
+    def _load_observers(self):
+        loadObservers = _observer.load_observers(
+            self.path,
+            self.system
+            )
+        for loadObserver in loadObservers:
+            self.observers[loadObserver.instanceID] = loadObserver
+
+### IMPORTANT!!! ###
+frame.frameClasses[Model.prefix] = Model

@@ -3,22 +3,24 @@ import os
 import shutil
 import subprocess
 import traceback
-import underworld as uw
+
+from . import mpi
 
 workPath = '/home/jovyan/workspace'
-if not workPath in sys.path:
-    sys.path.append(workPath)
+# if not workPath in sys.path:
+#     sys.path.append(workPath)
 # ignoreme = subprocess.call(['chmod', '-R', '777', workPath])
-outPath = '/home/jovyan/workspace/out'
-if not os.path.isdir(outPath):
-    os.makedirs(outPath)
+outPath = os.path.join(workPath, 'out')
+# if not os.path.isdir(outPath):
+#     os.makedirs(outPath)
 # ignoreme = subprocess.call(['chmod', '-R', '777', outPath])
-testPath = '/home/jovyan/workspace/out/test'
-defaultPath = os.path.join(outPath, 'default')
-if not os.path.isdir(defaultPath):
-    os.makedirs(defaultPath)
+testPath = os.path.join(outPath, 'test')
+# defaultPath = os.path.join(outPath, 'default')
+# if not os.path.isdir(defaultPath):
+#     os.makedirs(defaultPath)
 # ignoreme = subprocess.call(['chmod', '-R', '777', defaultPath])
-ignoreme = subprocess.call(['chmod', '-R', '777', outPath])
+# ignoreme = subprocess.call(['chmod', '-R', '777', outPath])
+defaultPath = os.path.join(outPath, 'default')
 
 class TestDir:
 
@@ -39,22 +41,32 @@ class TestDir:
         delete_testdir()
         return True
 
+def liberate_paths():
+    subprocess.call(
+        ['chmod', '777', workPath]
+        )
+    subprocess.call(
+        ['chmod', '777', outPath]
+        )
+    subprocess.call(
+        ['chmod', '777', testPath]
+        )
+
 def make_testdir():
 
-    if uw.mpi.rank == 0:
-        if not workPath in sys.path:
-            sys.path.append(workPath)
-        delete_testdir()
+    delete_testdir()
+
+    if mpi.rank == 0:
         os.makedirs(testPath)
-        ignoreme = subprocess.call(
-            ['chmod', '-R', '777', testPath]
-            )
+        assert os.path.isdir(testPath)
+    # mpi.barrier()
+
     return testPath
 
 def delete_testdir():
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         if os.path.isdir(testPath):
-            subprocess.call(
-                ['chmod', '-R', '777', testPath]
-                )
             shutil.rmtree(testPath)
+        if os.path.isdir(testPath):
+            raise Exception
+    # mpi.barrier()

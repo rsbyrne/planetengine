@@ -2,18 +2,15 @@ from .. import initials
 from .. import systems
 from .. import functions as pfn
 from ..visualisation import quickShow
+from ..utilities import message
 import numpy as np
+import math
 from timeit import timeit
+from . import testsystems
 
 def testfn():
 
-    system = systems.arrhenius.build(res = 32)
-    ICs = {'temperatureField': initials.sinusoidal.build(freq = 1.)}
-    initials.apply(
-        ICs,
-        system,
-        )
-    system.solve()
+    system = testsystems.get_system()
 
     variable1 = pfn.convert(system.velocityField, 'velocity')
     variable2 = pfn.convert(system.temperatureField, 'temperature')
@@ -21,46 +18,48 @@ def testfn():
     shape = pfn.convert(np.array([[0.2, 0.1], [0.9, 0.3], [0.8, 0.7], [0.4, 0.9]]))
     vanilla = pfn.convert(system.viscosityFn, 'viscosity')
 
-    def makevar():
-        var = variable2
-        var = var ** constant
-        var = pfn.Region(var, shape)
-        var = var * variable1
-        var = pfn.Component.rad(var)
-        var = pfn.Gradient.mag(var)
-        var = pfn.HandleNaN.zero(var)
-        var = var + 1.
-        var = var * vanilla
-        var = pfn.Quantiles.terciles(var)
-        var = pfn.Substitute(var, 2., 20.)
-        var = pfn.Binarise(var)
-        var = var * variable1
-        var_a, var_b = pfn.Split.getall(var)
-        var_b = var_b ** -1
-        var = pfn.Merge(var_a, var_b)
-        var = pfn.Component.rad(var)
-        var = pfn.Gradient.ang(var)
-        var = pfn.Normalise(var, [1., 2.])
-        var = pfn.Clip.torange(var, [1.2, 1.8])
-        var = pfn.HandleNaN(var, 1.6)
-        var = pfn.Filter(var, 1.6)
-        var = pfn.Region(var, shape)
-        var = pfn.HandleNaN.zero(var)
-        var = pfn.Binarise(var)
-        return var
+    makeFns = [
+        lambda var: var ** constant,
+        lambda var: pfn.Region(var, shape),
+        lambda var: var * variable1,
+        lambda var: pfn.Component.rad(var),
+        lambda var: pfn.Operations.log(var),
+        lambda var: pfn.Gradient.mag(var),
+        lambda var: pfn.HandleNaN.zeroes(var),
+        lambda var: var + 1.,
+        lambda var: var * vanilla,
+        lambda var: pfn.Quantiles.terciles(var),
+        lambda var: pfn.Substitute(var, 2., 0.),
+        lambda var: pfn.Binarise(var),
+        lambda var: var * variable1,
+        lambda var: pfn.Merge(*[
+            compVar * -1. \
+                for compVar in pfn.Split.getall(var)
+            ]),
+        lambda var: pfn.Component.rad(var),
+        lambda var: pfn.Gradient.ang(var),
+        lambda var: pfn.Normalise(var, [1., 2.]),
+        lambda var: pfn.Clip.torange(var, [1.2, 1.8]),
+        lambda var: pfn.HandleNaN(var, 1.6),
+        lambda var: pfn.Filter(var, 1.6),
+        lambda var: pfn.Region(var, shape),
+        lambda var: pfn.HandleNaN.zeroes(var),
+        lambda var: pfn.Binarise(var)
+        ]
 
-    print(round(timeit(makevar, number = 3) / 3, 3))
-
-    var = makevar()
-
-    quickShow(var.mesh, var)
+    var = variable2
+    timings = []
+    for makeFn in makeFns:
+        timing = timeit(lambda: makeFn(var), number = 3) / 3.
+        timings.append(timing)
+        var = makeFn(var)
+        message(var.opTag, round(timing, 3))
+    message("All together: ", round(sum(timings), 3))
+    quickShow(var)
 
     def testfn(var, timings = '', layer = 1):
         def outer_timefn(var, timinglist = []):
-            initials.apply(
-                ICs,
-                system,
-                )
+            system.reset()
             var.update()
             system.iterate()
             timing = timeit(var.update, number = 1)
@@ -85,30 +84,28 @@ def testfn():
 
     timings = testfn(var)
 
-    print(timings)
+    message(timings)
 
     red = pfn.Integral(var)
 
-    initials.apply(
-        ICs,
-        system,
-        )
+    system.reset()
     red.update()
     system.iterate()
-    print(red.evaluate())
-    print(red.evaluate())
+    val = red.evaluate()
+    message(val)
+    val = red.evaluate()
+    message(val)
     system.iterate()
-    print(red.evaluate())
-    print(red.evaluate())
+    val = red.evaluate()
+    message(val)
+    val = red.evaluate()
+    message(val)
 
     def testfn():
         freshsteps = []
         stalesteps = []
         for i in range(3):
-            initials.apply(
-                ICs,
-                system,
-                )
+            system.reset()
             red.update
             system.iterate()
             freshsteps.append(timeit(red.update, number = 1))
@@ -119,4 +116,5 @@ def testfn():
         ratio = round(average_fresh / average_stale, 5)
         return(average_fresh, average_stale, ratio)
 
-    print(testfn())
+    output = testfn()
+    message(output)

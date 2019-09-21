@@ -2,6 +2,9 @@ import numpy as np
 import math
 import underworld as uw
 
+from . import meshutils
+get_meshUtils = meshutils.get_meshUtils
+
 def get_pureBoxDims(coordArray):
     pureBoxDims = ((0., 1.),) * coordArray.shape[1]
     return pureBoxDims
@@ -13,7 +16,7 @@ def get_pureFreqs(coordArray):
 def boundary_interpolate(fromData, toData, dim):
     # NOT PARALLEL SAFE
 
-    assert uw.mpi.size == 1
+    assert mpi.size == 1
 
     fromField, fromMesh, fromIndexSet = fromData
     comp = 0
@@ -97,6 +100,15 @@ def rescale_array(
         outScales,
         flip = None,
         ):
+
+    assert not any([
+        scale in ['.', '!'] \
+            for scale in inScales
+        ])
+    assert not any([
+        scale in ['.', '!'] \
+            for scale in outScales
+        ])
 
     transposed = inArray.transpose()
     outVals = []
@@ -238,6 +250,8 @@ def unbox(
         tolerance = 0.,
         ):
 
+    meshUtils = get_meshUtils(mesh)
+
     if coordArray is None:
         coordArray = mesh.data[:]
     pureBoxDims = get_pureBoxDims(coordArray)
@@ -258,7 +272,7 @@ def unbox(
             inBox,
             boxDims,
             outBoxDims,
-            flip = [True, True]
+            flip = meshUtils.flip
             ),
         inverse = True
         )

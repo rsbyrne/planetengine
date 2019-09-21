@@ -1,23 +1,30 @@
 from underworld import function as fn
 import numpy as np
+from planetengine._IC import IC
 
-def build(*args, **kwargs):
-    return IC(*args, **kwargs)
+def build(*args, name = None, **kwargs):
+    built = Extents(*args, **kwargs)
+    if type(name) == str:
+        built.name = name
+    return built
 
-class IC:
+class Extents(IC):
+
+    varDim = 1
+    meshDim = 2
 
     def __init__(
             self,
-            *args,
             shapes = None
             ):
 
         # HOUSEKEEPING: this should always be here
-        self.scripts = [__file__,]
+        self.script = __file__
         self.inputs = {}
 
         if shapes is None:
-            shapes = args
+            # shapes = args
+            raise Exception
         self.inputs['shapes'] = shapes
 
         self.polygons = [(0, fn.misc.constant(True))]
@@ -25,6 +32,8 @@ class IC:
             self.polygons.append(
                 (val, fn.shape.Polygon(vertices))
                 )
+
+        super().__init__()
 
     def evaluate(self, coordArray):
         outArray = np.zeros(

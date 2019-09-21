@@ -75,8 +75,8 @@ class OLDLoadField:
             mapper = None,
             ):
         self.field = field
-        for proc in range(uw.mpi.size):
-            if uw.mpi.rank == proc:
+        for proc in range(mpi.size):
+            if mpi.rank == proc:
                 inputMesh = uw.mesh.FeMesh_Cartesian(
                     elementRes = inputRes,
                     minCoord = inputCoords[0],
@@ -104,8 +104,8 @@ class LoadField:
             mapper = None,
             ):
         self.field = field
-        for proc in range(uw.mpi.size):
-            if uw.mpi.rank == proc:
+        for proc in range(mpi.size):
+            if mpi.rank == proc:
                 inputMesh = uw.mesh.FeMesh_Cartesian(
                     elementRes = inputRes,
                     minCoord = inputCoords[0],

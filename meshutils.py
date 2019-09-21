@@ -26,6 +26,8 @@ class MeshUtils:
 
         if type(mesh) == uw.mesh.FeMesh_Cartesian:
 
+            self.flip = [False, False]
+
             self.surfaces = {
                 'inner': mesh.specialSets['Bottom_VertexSet'],
                 'outer': mesh.specialSets['Top_VertexSet'],
@@ -52,11 +54,16 @@ class MeshUtils:
                 self.surfaces['front'] = mesh.specialSets['MinK_VertexSet']
                 self.surfaces['back'] = mesh.specialSets['MaxK_VertexSet']
         elif type(mesh) == uw.mesh.FeMesh_Annulus:
+
+            ### DEBUGGING ###
+            # self.flip = [True, False]
+            self.flip = [True, True]
+
             self.comps = {
                 'x': fn.misc.constant((1., 0.)),
                 'y': fn.misc.constant((0., 1.)),
                 'ang': -mesh.unitvec_theta_Fn, # left to right
-                'rad': -mesh.unitvec_r_Fn, # top to bottom
+                'rad': mesh.unitvec_r_Fn, # bottom to top
                 }
             self.surfaces = {
                 'inner': mesh.specialSets['inner'],

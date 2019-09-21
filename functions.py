@@ -18,6 +18,8 @@ from .meshutils import get_meshUtils
 from .mapping import unbox
 from .shapes import interp_shape
 
+from . import mpi
+
 _premade_fns = {}
 
 def update_opTag(opTag, stringVariants):
@@ -122,12 +124,12 @@ def _convert(var, varName = None):
     if isinstance(var, PlanetVar):
         # message("Already a PlanetVar! Returning.")
         return var
-    if hasattr(var, '_planetVar'):
-        outVar = var._planetVar()
-        if isinstance(outVar, PlanetVar):
-            # message("Premade PlanetVar found! Returning.")
-            return outVar
-    if type(var) == np.ndarray:
+    # elif hasattr(var, '_planetVar'):
+    #     outVar = var._planetVar()
+    #     if isinstance(outVar, PlanetVar):
+    #         # message("Premade PlanetVar found! Returning.")
+    #         return outVar
+    elif type(var) == np.ndarray:
         if len(var.shape) == 2:
             if varName is None:
                 varName = Shape.defaultName
@@ -219,30 +221,6 @@ def _dict_convert(inDict):
         all_converted[varName] = newVar
     return all_converted
 
-def get_projection(
-        inVar,
-        ):
-    inVar = convert(inVar)
-    if Projection.opTag in inVar.attached:
-        outVar = inVar.attached[Projection.opTag]
-    else:
-        outVar = Projection(
-            inVar,
-            )
-    return outVar
-
-def get_meshVar(
-        inVar
-        ):
-    inVar = convert(inVar)
-    if inVar.varType == 'meshVar':
-        outVar = inVar
-    else:
-        outVar = get_projection(
-            inVar
-            )
-    return outVar
-
 def get_dType(sample_data):
     if str(sample_data.dtype) == 'int32':
         dType = 'int'
@@ -275,32 +253,16 @@ class PlanetVar(UWFn):
     inVars = []
     opTag = 'None'
 
-    def __init__(self, *args, hide = False, attach = False, **kwargs):
+    def __init__(self, *args, hide = False, **kwargs):
 
         # Determing inVars:
 
-        # self.inVars = list(self.inVars)
         for index, inVar in enumerate(self.inVars):
             if type(inVar) == Parameter:
                 self.parameters.append(self.inVars.pop(index))
 
         if len(self.inVars) == 1:
             self.inVar = self.inVars[0]
-
-        # if not hasattr(self, '_hashVars'):
-        #     assert not isinstance(self, BaseTypes)
-        #     self._hashVars = self.inVars
-
-        # Attaching, if necessary:
-
-        self.attached = {}
-        if attach:
-            if len(self.inVars) > 1:
-                raise Exception
-            if self.opTag in self.inVar.attached:
-                raise Exception
-            # POSSIBLE CIRCULAR DEPENDENCY!!!
-            self.inVar.attached[self.opTag] = self
 
         # Naming the variable:
 
@@ -330,12 +292,16 @@ class PlanetVar(UWFn):
 
         self._set_rootVars()
 
-        self._set_summary_stats()
-
         self._update()
 
         if not self.__class__ is Constant:
             self._set_weakref(self) # is static
+
+    #     self._safety_checks()
+    #
+    # def _safety_checks(self):
+    #     if hasattr(self, 'varDim'):
+    #         assert self.varDim < 99
 
     def _set_rootVars(self):
         rootVars = set()
@@ -379,7 +345,7 @@ class PlanetVar(UWFn):
     def _has_changed(self, lazy = False):
         currenthash = self._check_hash(lazy = lazy)
         has_changed = bool(
-            uw.mpi.comm.allreduce(
+            mpi.comm.allreduce(
                 currenthash - self.lasthash
                 )
             )
@@ -404,8 +370,8 @@ class PlanetVar(UWFn):
                     )
             minFn = minmax.min_global
             maxFn = minmax.max_global
-            rangeFn = lambda: abs(minFn() - maxFn())
             self._minmax = minmax
+            rangeFn = lambda: abs(minFn() - maxFn())
         elif isinstance(self, Reduction) \
                 or type(self) == Constant:
             minFn = lambda: min(self.value)
@@ -416,16 +382,54 @@ class PlanetVar(UWFn):
         else:
             raise Exception
 
-        self.minFn = minFn
-        self.maxFn = maxFn
-        self.rangeFn = rangeFn
+        self._minFn = minFn
+        self._maxFn = maxFn
+        self._rangeFn = rangeFn
+
+    def minFn(self):
+        if not hasattr(self, '_minFn'):
+            self._set_summary_stats()
+        return self._minFn()
+    def maxFn(self):
+        if not hasattr(self, '_maxFn'):
+            self._set_summary_stats()
+        return self._maxFn()
+    def rangeFn(self):
+        if not hasattr(self, '_rangeFn'):
+            self._set_summary_stats()
+        return self._rangeFn()
 
     def _update_summary_stats(self):
-        if isinstance(self, Function) \
-                or type(self) == Variable:
+        if (isinstance(self, Function) or type(self) == Variable) \
+                and hasattr(self, '_minmax'):
             self._minmax.evaluate(self.substrate)
-        elif isinstance(self, Reduction):
+        if isinstance(self, Reduction):
             self.value = self.evaluate(lazy = True)[0]
+
+    def meshVar(self):
+        if not any([
+                isinstance(self, Function),
+                type(self) == Variable
+                ]):
+            raise Exception
+        if self.varType == 'constFn':
+            raise Exception
+        if self.varType == 'meshVar':
+            return self
+        else:
+            if not hasattr(self, '_meshVar'):
+                projVar = Projection(self)
+                # self._meshVar = weakref.ref(projVar)
+                # POSSIBLE CIRCULAR REFERENCE!
+                self._meshVar = lambda: projVar
+            return self._meshVar()
+    def gradient(self):
+        if not hasattr(self, '_fn_gradient'):
+            gradientVar = Gradient(self)
+            # self._fn_gradient = weakref.ref(gradientVar)
+            # POSSIBLE CIRCULAR REFERENCE!
+            self._fn_gradient = lambda: gradientVar
+        return self._fn_gradient()
 
     @staticmethod
     def _set_weakref(self):
@@ -614,12 +618,13 @@ class Variable(BaseTypes):
 
         if not type(var) in self.convertTypes:
             vanillaVar = Vanilla(var)
-            projVar = get_meshVar(vanillaVar)
+            projVar = vanillaVar.meshVar()
             var = projVar.var
             self._projUpdate = projVar.update
-
-        if hasattr(var, 'fn_gradient'):
-            self.fn_gradient = var.fn_gradient
+            if hasattr(vanillaVar, 'scales'):
+                var.scales = vanillaVar.scales
+            if hasattr(vanillaVar, 'bounds'):
+                var.bounds = vanillaVar.bounds
 
         self.data = var.data
 
@@ -644,12 +649,17 @@ class Variable(BaseTypes):
         self.var = var
 
         var._planetVar = weakref.ref(self)
-        self._set_meshdata
+        # self._set_meshdata()
 
         sample_data = self.data[0:1]
         self.dType = get_dType(sample_data)
         self.varDim = self.data.shape[1]
         self.meshUtils = get_meshUtils(self.mesh)
+
+        if hasattr(var, 'scales'):
+            self.scales = var.scales
+        if hasattr(var, 'bounds'):
+            self.bounds = var.bounds
 
         super().__init__(**kwargs)
 
@@ -715,9 +725,17 @@ class Function(PlanetVar):
 
     def __init__(self, *args, **kwargs):
 
+        self._detect_substrates()
+        self._detect_attributes()
+        if not self.varType == 'constFn':
+            self._detect_scales_bounds()
+        self._hashVars = self.inVars
+
+        super().__init__(**kwargs)
+
+    def _detect_substrates(self):
         meshes = set()
         substrates = set()
-
         for inVar in self.inVars:
             if hasattr(inVar, 'mesh'):
                 if not inVar.mesh is None:
@@ -739,6 +757,7 @@ class Function(PlanetVar):
         else:
             raise Exception
 
+    def _detect_attributes(self):
         if not self.mesh is None and self.substrate is self.mesh:
             self.meshbased = True
             self.varType = 'meshFn'
@@ -754,9 +773,61 @@ class Function(PlanetVar):
         self.dType = get_dType(sample_data)
         self.varDim = sample_data.shape[1]
 
-        self._hashVars = self.inVars
-
-        super().__init__(**kwargs)
+    def _detect_scales_bounds(self):
+        fields = []
+        for inVar in self.inVars:
+            if type(inVar) == Variable:
+                fields.append(inVar)
+            elif isinstance(inVar, Function):
+                fields.append(inVar)
+        inscales = []
+        inbounds = []
+        for inVar in fields:
+            if hasattr(inVar, 'scales'):
+                if inVar.varDim == self.varDim:
+                    inscales.append(inVar.scales)
+                else:
+                    inscales.append(inVar.scales * self.varDim)
+            else:
+                inscales.append(
+                    [['.', '.']] * self.varDim
+                    ) # i.e. perfectly free
+            if hasattr(inVar, 'bounds'):
+                if inVar.varDim == self.varDim:
+                    inbounds.append(inVar.bounds)
+                else:
+                    inbounds.append(inVar.bounds * self.varDim)
+            else:
+                inbounds.append(
+                    [['.'] * self.mesh.dim ** 2] * self.varDim
+                    ) # i.e. perfectly free
+        scales = []
+        for varDim in range(self.varDim):
+            fixed = not any([
+                inscale[varDim] == ['.', '.'] \
+                    for inscale in inscales
+                ])
+            if fixed:
+                scales.append('!')
+            else:
+                scales.append('.')
+        bounds = []
+        for varDim in range(self.varDim):
+            dimBounds = []
+            for index in range(self.mesh.dim ** 2):
+                fixed = not any([
+                    inbound[varDim][index] == '.' \
+                        for inbound in inbounds
+                    ])
+                if fixed:
+                    dimBounds.append('!')
+                else:
+                    dimBounds.append('.')
+            bounds.append(dimBounds)
+        if not hasattr(self, 'scales'):
+            self.scales = scales
+        if not hasattr(self, 'bounds'):
+            self.bounds = bounds
 
 class Vanilla(Function):
 
@@ -805,8 +876,6 @@ class Projection(Function):
         self.inVars = [inVar]
         self.parameters = []
         self.var = var
-
-        self.fn_gradient = var.fn_gradient
 
         super().__init__(**kwargs)
 
@@ -935,20 +1004,22 @@ class HandleNaN(Function):
         return HandleNaN(inVar, handleVal = handleVal, **kwargs)
 
     @staticmethod
-    def zero(inVar, **kwargs):
+    def zeroes(inVar, **kwargs):
         return HandleNaN._NaNFloat(inVar, 0., **kwargs)
 
     @staticmethod
-    def unit(inVar, **kwargs):
+    def units(inVar, **kwargs):
         return HandleNaN._NaNFloat(inVar, 1., **kwargs)
 
-    # @staticmethod
-    # def min()
-    #
-    # @staticmethod
-    # def max()
+    @staticmethod
+    def mins(inVar, **kwargs):
+        handleVal = GetStat.mins(inVar)
+        return HandleNaN._NaNFloat(inVar, handleVal, **kwargs)
 
-
+    @staticmethod
+    def maxs(inVar, **kwargs):
+        handleVal = GetStat.maxs(inVar)
+        return HandleNaN._NaNFloat(inVar, handleVal, **kwargs)
 
 class Clip(Function):
 
@@ -1407,17 +1478,19 @@ class Gradient(Function):
     def __init__(self, inVar, *args, **kwargs):
 
         inVar = convert(inVar)
+        inVar = inVar.meshVar()
+        # DEBUGGING
+        assert not inVar is None
 
-        if not hasattr(inVar, 'mesh'):
-            raise Exception
-
-        inVar = get_meshVar(inVar)
-        var = inVar.fn_gradient
+        var = inVar.var.fn_gradient
 
         self.stringVariants = {}
         self.inVars = [inVar]
         self.parameters = []
         self.var = var
+
+        self.scales = [['.', '.']] * inVar.mesh.dim ** 2
+        self.bounds = [['.'] * inVar.mesh.dim ** 2] * inVar.varDim
 
         super().__init__(**kwargs)
 
@@ -1528,7 +1601,7 @@ class Select(Function):
             outVar = inVar
         else:
             outVar = convert(outVar)
-            inVars.append(outVar)
+            inVars = tuple([*list(inVars), outVar])
         nullVal = [np.nan for dim in range(inVar.varDim)]
         var = fn.branching.conditional([
             (fn.math.abs(inVar - selectVal) < 1e-18, outVar),
@@ -1722,8 +1795,6 @@ class Surface(Function):
         self._surface = \
             inVar.mesh.meshUtils.surfaces[surface]
 
-        # var = get_meshVar(inVar)
-
         var = inVar.mesh.add_variable(
             inVar.varDim,
             inVar.dType
@@ -1747,6 +1818,34 @@ class Surface(Function):
                     ),
                 6
                 )
+
+    @staticmethod
+    def volume(*args, **kwargs):
+        return Surface(*args, surface = 'volume', **kwargs)
+
+    @staticmethod
+    def inner(*args, **kwargs):
+        return Surface(*args, surface = 'inner', **kwargs)
+
+    @staticmethod
+    def outer(*args, **kwargs):
+        return Surface(*args, surface = 'outer', **kwargs)
+
+    @staticmethod
+    def left(*args, **kwargs):
+        return Surface(*args, surface = 'left', **kwargs)
+
+    @staticmethod
+    def right(*args, **kwargs):
+        return Surface(*args, surface = 'right', **kwargs)
+
+    @staticmethod
+    def front(*args, **kwargs):
+        return Surface(*args, surface = 'front', **kwargs)
+
+    @staticmethod
+    def back(*args, **kwargs):
+        return Surface(*args, surface = 'back', **kwargs)
 
 class Normalise(Function):
 
@@ -1829,10 +1928,14 @@ class Integral(Reduction):
 
     def __init__(self, inVar, *args, surface = 'volume', **kwargs):
 
-        inVar = convert(inVar)
-
         if isinstance(inVar, Reduction):
             raise Exception
+        if type(inVar) == Surface:
+            raise Exception(
+                "Surface type not accepted; try Integral.auto method."
+                )
+
+        inVar = HandleNaN.zeroes(inVar)
 
         intMesh = inVar.meshUtils.integrals[surface]
         if surface == 'volume':
@@ -1889,3 +1992,13 @@ class Integral(Reduction):
     @staticmethod
     def back(*args, **kwargs):
         return Integral(*args, surface = 'back', **kwargs)
+
+    @staticmethod
+    def auto(*args, **kwargs):
+        inVar = convert(args[0])
+        if type(inVar) == Surface:
+            surface = inVar.stringVariants['surface']
+            inVar = inVar.inVar
+        else:
+            surface = 'volume'
+        return Integral(inVar, *args, surface = surface, **kwargs)

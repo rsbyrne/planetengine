@@ -1,18 +1,21 @@
 #!/bin/bash
 umask 0000
 SCRIPT=${1:-localscript.py}
-CHUNKS=${2:-1}
-CORESPERCHUNK=${3:-1}
+JOBS=${2:-1}
+CHUNKS=${3:-1}
+CORESPERCHUNK=${4:-1}
 CHUNKNO=0
+JOBSPERCHUNK=$((($JOBS+$CHUNKS-1)/$CHUNKS))
+echo $JOBSPERCHUNK
 rm -rf logs
 mkdir -p logs
+# SCRIPTSDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+SCRIPTSDIR=/home/jovyan/workspace/planetengine/linux
 while [ $CHUNKNO -lt $CHUNKS ]
 do
     touch logs/job$CHUNKNO.out
     touch logs/job$CHUNKNO.error
-    sudo docker run -v $PWD:/workspace/user_data -it underworldcode/uw2cylindrical:cylindrical \
-        mpirun -np $CORESPERCHUNK python /workspace/user_data/$SCRIPT $CHUNKS $CHUNKNO \
-        > logs/job$CHUNKNO.out 2> logs/job$CHUNKNO.error &
+    $SCRIPTSDIR/chunkrun.sh $SCRIPT $CHUNKS $CHUNKNO $JOBSPERCHUNK $CORESPERCHUNK &
     echo "Submitted chunk " $CHUNKNO
     CHUNKNO=$(($CHUNKNO+1))
 done

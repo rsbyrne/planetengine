@@ -7,23 +7,24 @@ import time
 import os
 import itertools
 import inspect
-import importlib
 import hashlib
 import random
 import io
 
 from . import paths
 
+from . import mpi
+
 def message(*args):
     for arg in args:
-        if uw.mpi.rank == 0:
+        if mpi.rank == 0:
             print(arg)
 
 def log(text, outputPath = None, outputName = 'diaglog.txt'):
     if outputPath == None:
         outputPath = paths.defaultPath
 
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         filename = os.path.join(outputPath, outputName)
         if not os.path.exists(outputPath):
             os.mkdir(outputPath)
@@ -34,6 +35,7 @@ def log(text, outputPath = None, outputName = 'diaglog.txt'):
         file.write(text)
         file.write('\n')
         file.close()
+    # mpi.barrier()
 
 def check_reqs(obj):
     for attrname in obj._required_attributes:
@@ -44,9 +46,10 @@ def check_reqs(obj):
 
 def parallelise_set(setobj):
     setlist = []
-    if uw.mpi.rank == 0:
+    if mpi.rank == 0:
         setlist = list(setobj)
-    setlist = uw.mpi.comm.bcast(setlist, root = 0)
+    setlist = mpi.comm.bcast(setlist, root = 0)
+    # mpi.barrier()
     return setlist
 
 def unpack_var(*args):
@@ -243,48 +246,11 @@ def hash_var(
     assert not hashVal == 0, \
         "Not a valid var for hashing!"
     if global_eval:
-        hashVal = sum(uw.mpi.comm.allgather(hashVal))
+        hashVal = sum(mpi.comm.allgather(hashVal))
     if return_checked:
         return hashVal, checked
     else:
         return hashVal
-
-    # hashVal = 0
-    # checked = [var]
-    # print(type(var))
-    # def hash_obj(obj):
-    #     if not obj in checked:
-    #         addVal, _checked = hash_var(
-    #             obj,
-    #             _check_redundancy = True
-    #             )
-    #         hashVal += addVal
-    #         checked.append(_checked)
-    # if type(var) == tuple:
-    #     for subVar in var:
-    #         hash_obj(subVar)
-    # if hasattr(var, 'value'):
-    #     hashVal += hash(str(var.value))
-    # if hasattr(var, 'data'):
-    #     hashVal += hash(str(var.data))
-    # if hasattr(var, 'mesh'):
-    #     hashVal += hash_var(var.mesh)
-    #     hash_obj(var.mesh)
-    # if hasattr(var, 'swarm'):
-    #     hashVal += hash_var(var.swarm)
-    #     hash_obj(var.swarm)
-    # if hasattr(var, '_underlyingDataItems'):
-    #     for subVar in var._underlyingDataItems:
-    #         if not var is subVar:
-    #             hashVal += hash_var(subVar)
-    #             hash_obj(subVar)
-    # assert not hashVal == 0, \
-    #     "Not a valid var for hashing!"
-    # global_hashVal = sum(uw.mpi.comm.allgather(hashVal))
-    # if _check_redundancy:
-    #     return global_hashVal, checked
-    # else:
-    #     return global_hashVal
 
 def get_valSets(array):
     valSets = []
@@ -294,7 +260,7 @@ def get_valSets(array):
         for item in list(localVals):
             if math.isnan(item):
                 localVals.remove(item)
-        allValsGathered = uw.mpi.comm.allgather(localVals)
+        allValsGathered = mpi.comm.allgather(localVals)
         valSet = {val.item() for localVals in allValsGathered for val in localVals}
         valSets.append(valSet)
     return valSets
@@ -307,8 +273,8 @@ def get_scales(array, valSets = None):
         for component in array:
             minVal = np.nanmin(component)
             maxVal = np.nanmax(component)
-            minVals = uw.mpi.comm.allgather(minVal)
-            maxVals = uw.mpi.comm.allgather(maxVal)
+            minVals = mpi.comm.allgather(minVal)
+            maxVals = mpi.comm.allgather(maxVal)
             minVals = [val for val in minVals if val < np.inf]
             maxVals = [val for val in maxVals if val < np.inf]
             assert len(minVals) > 0
@@ -405,19 +371,6 @@ def getDefaultKwargs(function):
     argbind.apply_defaults()
     argdict = dict(argbind.arguments)
     return argdict
-
-def local_import(filepath):
-
-    modname = os.path.basename(filepath)
-
-    spec = importlib.util.spec_from_file_location(
-        modname,
-        filepath,
-        )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    return module
 
 def stringify(*args):
     outStr = '{'

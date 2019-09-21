@@ -79,6 +79,13 @@ def build():
                 system.viscosityFn,
                 system.mesh,
                 ),
+            'yielding': analysis.Analyse.ScalarFieldAverage(
+                fn.branching.conditional([
+                    (system.creepViscFn < system.plasticViscFn, 0.),
+                    (True, 1.),
+                    ]),
+                system.mesh
+                ),
             'step': analysis.Analyse.ArrayStripper(
                 system.step,
                 (0, 0),
@@ -101,10 +108,10 @@ def build():
             }
 
         zerodAnalyser = analysis.Analyser('zerodData', zerodDataDict, zerodFormatDict)
-        dataCollector = analysis.DataCollector([zerodAnalyser,])
+        collector = analysis.DataCollector([zerodAnalyser,])
         data = {
             'analysers': [zerodAnalyser,],
-            'collectors': [dataCollector,],
+            'collectors': [collector,],
             }
 
         return data

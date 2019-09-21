@@ -1,92 +1,111 @@
-import underworld as uw
-from underworld import function as fn
-import math
-import time
-import glucifer
-import numpy as np
-import math
+import planetengine
+from planetengine import functions as pfn
+from planetengine.visualisation import QuickFig
+from planetengine import analysis
+from planetengine import _observer
+from planetengine.utilities import message
 
-from . import utilities
-from . import analysis
-from . import visualisation
-from .utilities import Grouper
+def build(*args, name = None, **kwargs):
+    built = Standard(*args, **kwargs)
+    if type(name) == str:
+        built.name = name
+    return built
 
-def build():
+class Standard(_observer.Observer):
 
-    ### HOUSEKEEPING: IMPORTANT! ###
+    script = __file__
+    name = 'standard'
 
-#     inputs = locals().copy()
-#     script = __file__
-#     name = 'standard'
-# #     hashID = utilities.hashstamp(script, inputs)
-#
-#     def attach(system):
-#
-#         step = system.step
-#         modeltime = system.modeltime
-#         if hasattr(system, 'obsVars'):
-#             obsVars = [
-#                 *sorted(system.varsOfState.items()),
-#                 *[varTuple for varTuple in sorted(system.obsVars.items()) \
-#                     if not varTuple in system.varsOfState.items()]
-#                 ]
-#         else:
-#             obsVars = sorted(system.varsOfState.items())
-#
-#         ### MAKE STATS ###
-#
-#         statsDict = {}
-#         formatDict = {}
-#
-#         for varName, var in obsVars:
-#
-#             pevar = standardise(var)
-#             var = pevar.var
-#
-#             standardIntegralSuite = {
-#                 'surface': ['volume', 'inner', 'outer'],
-#                 'comp': [None, 'ang', 'rad'],
-#                 'gradient': [None, 'ang', 'rad']
-#                 }
-#
-#             for inputDict in utilities.suite_list(standardIntegralSuite):
-#
-#                 try:
-#
-#                     anVar = analysis.Analyse.StandardIntegral(
-#                         var,
-#                         **inputDict
-#                         )
-#                     statsDict[varName + '_' + anVar.opTag] = anVar
-#
-#                     formatDict[varName + '_' + anVar.opTag] = "{:.2f}"
-#
-#                 except:
-#                     pass
-#
-#         analyser = analysis.Analyser(
-#             name,
-#             statsDict,
-#             formatDict,
-#             step,
-#             modeltime
-#             )
-#         analysers = [analyser,] # MAGIC NAME: MUST BE DEFINED
-#
-#         maincollector = analysis.DataCollector(analysers)
-#         collectors = [maincollector,] # MAGIC NAME: MUST BE DEFINED
-#
-#         ### FIGS ###
-#
-#         fig = visualisation.QuickFig(
-#             *obsVars,
-#             figname = name,
-#             colourBar = False
-#             )
-#         figs = [fig,] # MAGIC NAME: MUST BE DEFINED
-#
-#         return analysers, collectors, figs
-#
-#     ### HOUSEKEEPING: IMPORTANT! ###
+    def __init__(
+            self,
+            *args,
+            **kwargs
+            ):
 
-    return Grouper(locals())
+        inputs = locals().copy()
+
+        super().__init__(
+            args,
+            kwargs,
+            inputs,
+            self.script,
+            self._attach,
+            self._prompt
+            )
+
+    def _attach(self, system):
+
+        varDict = {}
+
+        keys = {'temperature', 'velocity', 'stress'}
+        obsVars = {key: system.obsVars[key] for key in keys}
+        obsVars = pfn.convert(obsVars)
+
+
+        temperature = obsVars['temperature']
+        velocity = obsVars['velocity']
+        stress = obsVars['stress']
+
+        saveVars = {'velocity': velocity, 'stress': stress}
+
+        stressMag = pfn.Component.mag(stress)
+        avStress = pfn.Integral(stressMag)
+        avTemp = pfn.Integral(temperature)
+        tempGrad = pfn.Gradient.rad(temperature)
+        Nu = pfn.Integral.outer(tempGrad) / pfn.Integral.inner(temperature) * -1.
+        velMag = pfn.Component.mag(velocity)
+        VRMS = pfn.Integral(velMag)
+        horizVel = pfn.Component.ang(velocity)
+        surfVRMS = pfn.Integral(horizVel)
+
+        statsDict = {
+            'avStress': avStress,
+            'avTemp': avTemp,
+            'Nu': Nu,
+            'VRMS': VRMS,
+            'surfVRMS': surfVRMS
+            }
+
+        formatDict = {
+            'Nu': "{:.2f}",
+            'avTemp': "{:.2f}",
+            'VRMS': "{:.2f}",
+            'surfVRMS': "{:.2f}",
+            'avStress': "{:.2f}"
+            }
+
+        mainAnalyser = analysis.Analyser(
+            'standard',
+            statsDict,
+            formatDict,
+            system.step,
+            system.modeltime
+            )
+        mainCollector = analysis.DataCollector([mainAnalyser,])
+
+        saveCollectors = [mainCollector,]
+
+        mainFig = QuickFig(
+            temperature,
+            velocity,
+            stressMag,
+            style = 'smallblack'
+            )
+
+        saveFigs = [mainFig]
+
+        self.mainAnalyser = mainAnalyser
+        self.mainCollector = mainCollector
+        self.mainFig = mainFig
+
+        return saveVars, saveFigs, saveCollectors
+
+    def _prompt(self):
+        if self.step() % 10 == 0:
+            message("Observer collecting...")
+            self.mainCollector.collect()
+            message("Observer collected.")
+
+    def report(self):
+        self.mainAnalyser.report()
+        self.mainFig.show()

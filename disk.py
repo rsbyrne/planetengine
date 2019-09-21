@@ -1,7 +1,95 @@
 import os
+import json
+import shutil
+import tarfile
+import importlib
 import underworld as uw
+from . import utilities
 from .utilities import message
 from .functions import Variable
+from . import paths
+
+from . import mpi
+
+import underworld as uw
+
+def disk_state(path):
+    path = os.path.splitext(path)[0]
+    tarpath = path + '.tar.gz'
+    diskstate = ''
+    if mpi.rank == 0:
+        isfile = os.path.isfile(tarpath)
+        isdir = os.path.isdir(path)
+        assert not (isfile and isdir)
+        if isfile:
+            diskstate = 'tar'
+        elif isdir:
+            diskstate = 'dir'
+        else:
+            diskstate = 'clean'
+    diskstate = mpi.comm.bcast(diskstate, root = 0)
+    return diskstate
+
+def save_json(jsonObj, name, path):
+    if mpi.rank == 0:
+        jsonFilename = os.path.join(path, name + '.json')
+        with open(jsonFilename, 'w') as file:
+             json.dump(jsonObj, file)
+    # mpi.barrier()
+
+def load_json(jsonName, path):
+    filename = jsonName + '.json'
+    jsonDict = {}
+    if mpi.rank == 0:
+        with open(os.path.join(path, filename)) as json_file:
+            jsonDict = json.load(json_file)
+    jsonDict = mpi.comm.bcast(jsonDict, root = 0)
+    return jsonDict
+
+def local_import(filepath):
+
+    modname = os.path.basename(filepath)
+
+    spec = importlib.util.spec_from_file_location(
+        modname,
+        filepath,
+        )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module
+
+def save_script(script, name, path):
+    if mpi.rank == 0:
+        tweakedPath = os.path.splitext(script)[0] + ".py"
+        newPath = os.path.join(path, name + ".py")
+        shutil.copyfile(tweakedPath, newPath)
+    # mpi.barrier()
+
+def load_script(name, path):
+    scriptPath = os.path.join(path, name) + '.py'
+    scriptModule = local_import(
+        scriptPath
+        )
+    return scriptModule
+
+def expose_tar(path):
+
+    assert disk_state(path) == 'tar'
+
+    tarpath = path + '.tar.gz'
+
+    message("Tar found - unarchiving...")
+    if mpi.rank == 0:
+        with tarfile.open(tarpath) as tar:
+            tar.extractall(path)
+        assert os.path.isdir(path), \
+            "Archive contained the wrong model file somehow."
+        os.remove(tarpath)
+
+    assert disk_state(path) == 'dir'
+
+    message("Unarchived.")
 
 def varsOnDisk(saveVars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     substrates = []
