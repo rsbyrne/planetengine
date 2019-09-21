@@ -229,17 +229,8 @@ class Frame:
             self,
             path = None,
             backup = True,
-            archive = None
+            archive = True
             ):
-
-        disk_state = self.disk_state()
-        if archive is None:
-            if disk_state == 'tar':
-                archive = True
-            elif disk_state == 'clean':
-                archive = True
-            else:
-                archive = False
 
         self.all_collect()
 
@@ -263,7 +254,7 @@ class Frame:
             # CHECKPOINT OBSERVERS!!!
             self._post_checkpoint_hook()
 
-            if was_archived:
+            if was_archived or ((self.disk_state() == 'clean') and archive):
                 self.try_archive()
 
             if backup:
