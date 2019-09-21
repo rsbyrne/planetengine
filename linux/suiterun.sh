@@ -6,7 +6,6 @@ CHUNKS=${3:-1}
 CORESPERCHUNK=${4:-1}
 CHUNKNO=0
 JOBSPERCHUNK=$((($JOBS+$CHUNKS-1)/$CHUNKS))
-echo $JOBSPERCHUNK
 rm -rf logs
 mkdir -p logs
 # SCRIPTSDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
