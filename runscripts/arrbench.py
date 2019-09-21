@@ -31,7 +31,7 @@ planetengine.log(
     )
 
 model = planetengine.model.make_model(
-    planetengine.systems.arrhenius.build(res = 64, **job),
+    planetengine.systems.arrhenius.build(res = 16, **job),
     {'temperatureField': planetengine.initials.sinusoidal.build(freq = 1.)},
     outputPath = outputPath
     )
@@ -43,8 +43,8 @@ observer = planetengine.observers.standard.build()
 observer.attach(model)
 
 conditions = {
-    'stopCondition': lambda: model.modeltime() > 0.3,
-    # 'stopCondition': lambda: model.step() > 25,
+    # 'stopCondition': lambda: model.modeltime() > 0.3,
+    'stopCondition': lambda: model.step() > 25,
     'checkpointCondition': lambda: any([
         model.status == 'pre-traverse',
         model.step() % 1000 == 0,

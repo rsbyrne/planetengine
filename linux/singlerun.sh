@@ -5,4 +5,10 @@ CHUNKS=${2:-1}
 CHUNKNO=${3:-0}
 ITERNO=${4:-0}
 CORES=${5:-1}
-mpirun -np $CORES python $SCRIPT $CHUNKS $CHUNKNO $ITERNO > logs/job$CHUNKNO.out 2> logs/job$CHUNKNO.error
+OUTFILE="logs/job"$CHUNKNO"_"$ITERNO".out"
+ERRORFILE="logs/job"$CHUNKNO"_"$ITERNO".error"
+touch $OUTFILE
+touch $ERRORFILE
+echo "Starting chunk " $CHUNKNO " job " $ITERNO
+mpirun -np $CORES python $SCRIPT $CHUNKS $CHUNKNO $ITERNO > $OUTFILE 2> $ERRORFILE
+echo "Finished chunk " $CHUNKNO " job " $ITERNO
