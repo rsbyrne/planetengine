@@ -528,7 +528,13 @@ class Frame:
             path = _path
             message("Unarchiving a remote archive...")
 
+        assert self.disk_state(path) == 'tar'
+
+        message("Unarchiving...")
+
         disk.expose_tar(path)
+
+        assert self.disk_state(path) == 'dir'
 
         message("Unarchived!")
 
