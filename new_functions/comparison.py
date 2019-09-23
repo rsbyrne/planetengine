@@ -2,6 +2,11 @@ from underworld import function as fn
 
 from . import _convert
 from . import _function
+from . import _construct
+
+def construct():
+    func = _construct(Comparison, *args, **kwargs)
+    return func
 
 class Comparison(_function.Function):
 
@@ -27,10 +32,8 @@ class Comparison(_function.Function):
 
         super().__init__(**kwargs)
 
-    @staticmethod
-    def isequal(*args, **kwargs):
-        return Comparison(*args, operation = 'equals', **kwargs)
+def isequal(*args, **kwargs):
+    return construct(*args, operation = 'equals', **kwargs)
 
-    @staticmethod
-    def isnotequal(*args, **kwargs):
-        return Comparison(*args, operation = 'notequals', **kwargs)
+def isnotequal(*args, **kwargs):
+    return construct(*args, operation = 'notequals', **kwargs)

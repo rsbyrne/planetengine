@@ -4,6 +4,11 @@ import underworld as uw
 
 from . import _function
 from . import _convert
+from . import _construct
+
+def construct():
+    func = _construct(Projection, *args, **kwargs)
+    return func
 
 class Projection(_function.Function):
 

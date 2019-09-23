@@ -4,6 +4,11 @@ from underworld import function as fn
 
 from . import _convert
 from . import _function
+from . import _construct
+
+def construct():
+    func = _construct(Filter, *args, **kwargs)
+    return func
 
 class Filter(_function.Function):
 

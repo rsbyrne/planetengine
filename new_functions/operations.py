@@ -2,6 +2,11 @@ from underworld import function as fn
 
 from . import _function
 from . import _convert
+from . import _construct
+
+def construct():
+    func = _construct(Operations, *args, **kwargs)
+    return func
 
 class Operations(_function.Function):
 
@@ -62,142 +67,107 @@ class Operations(_function.Function):
 
         super().__init__(**kwargs)
 
-    @staticmethod
-    def pow(*args, **kwargs):
-        return Operations(*args, uwop = 'pow', **kwargs)
+def pow(*args, **kwargs):
+    return construct(*args, uwop = 'pow', **kwargs)
 
-    @staticmethod
-    def abs(*args, **kwargs):
-        return Operations(*args, uwop = 'abs', **kwargs)
+def abs(*args, **kwargs):
+    return construct(*args, uwop = 'abs', **kwargs)
 
-    @staticmethod
-    def cosh(*args, **kwargs):
-        return Operations(*args, uwop = 'cosh', **kwargs)
+def cosh(*args, **kwargs):
+    return construct(*args, uwop = 'cosh', **kwargs)
 
-    @staticmethod
-    def acosh(*args, **kwargs):
-        return Operations(*args, uwop = 'acosh', **kwargs)
+def acosh(*args, **kwargs):
+    return construct(*args, uwop = 'acosh', **kwargs)
 
-    @staticmethod
-    def tan(*args, **kwargs):
-        return Operations(*args, uwop = 'tan', **kwargs)
+def tan(*args, **kwargs):
+    return construct(*args, uwop = 'tan', **kwargs)
 
-    @staticmethod
-    def asin(*args, **kwargs):
-        return Operations(*args, uwop = 'asin', **kwargs)
+def asin(*args, **kwargs):
+    return construct(*args, uwop = 'asin', **kwargs)
 
-    @staticmethod
-    def log(*args, **kwargs):
-        return Operations(*args, uwop = 'log', **kwargs)
+def log(*args, **kwargs):
+    return construct(*args, uwop = 'log', **kwargs)
 
-    @staticmethod
-    def atanh(*args, **kwargs):
-        return Operations(*args, uwop = 'atanh', **kwargs)
+def atanh(*args, **kwargs):
+    return construct(*args, uwop = 'atanh', **kwargs)
 
-    @staticmethod
-    def sqrt(*args, **kwargs):
-        return Operations(*args, uwop = 'sqrt', **kwargs)
+def sqrt(*args, **kwargs):
+    return construct(*args, uwop = 'sqrt', **kwargs)
 
-    @staticmethod
-    def abs(*args, **kwargs):
-        return Operations(*args, uwop = 'abs', **kwargs)
+def abs(*args, **kwargs):
+    return construct(*args, uwop = 'abs', **kwargs)
 
-    @staticmethod
-    def log10(*args, **kwargs):
-        return Operations(*args, uwop = 'log10', **kwargs)
+def log10(*args, **kwargs):
+    return construct(*args, uwop = 'log10', **kwargs)
 
-    @staticmethod
-    def sin(*args, **kwargs):
-        return Operations(*args, uwop = 'sin', **kwargs)
+def sin(*args, **kwargs):
+    return construct(*args, uwop = 'sin', **kwargs)
 
-    @staticmethod
-    def asinh(*args, **kwargs):
-        return Operations(*args, uwop = 'asinh', **kwargs)
+def asinh(*args, **kwargs):
+    return construct(*args, uwop = 'asinh', **kwargs)
 
-    @staticmethod
-    def log2(*args, **kwargs):
-        return Operations(*args, uwop = 'log2', **kwargs)
+def log2(*args, **kwargs):
+    return construct(*args, uwop = 'log2', **kwargs)
 
-    @staticmethod
-    def atan(*args, **kwargs):
-        return Operations(*args, uwop = 'atan', **kwargs)
+def atan(*args, **kwargs):
+    return construct(*args, uwop = 'atan', **kwargs)
 
-    @staticmethod
-    def sinh(*args, **kwargs):
-        return Operations(*args, uwop = 'sinh', **kwargs)
+def sinh(*args, **kwargs):
+    return construct(*args, uwop = 'sinh', **kwargs)
 
-    @staticmethod
-    def cos(*args, **kwargs):
-        return Operations(*args, uwop = 'cos', **kwargs)
+def cos(*args, **kwargs):
+    return construct(*args, uwop = 'cos', **kwargs)
 
-    @staticmethod
-    def tanh(*args, **kwargs):
-        return Operations(*args, uwop = 'tanh', **kwargs)
+def tanh(*args, **kwargs):
+    return construct(*args, uwop = 'tanh', **kwargs)
 
-    @staticmethod
-    def erf(*args, **kwargs):
-        return Operations(*args, uwop = 'erf', **kwargs)
+def erf(*args, **kwargs):
+    return construct(*args, uwop = 'erf', **kwargs)
 
-    @staticmethod
-    def erfc(*args, **kwargs):
-        return Operations(*args, uwop = 'erfc', **kwargs)
+def erfc(*args, **kwargs):
+    return construct(*args, uwop = 'erfc', **kwargs)
 
-    @staticmethod
-    def exp(*args, **kwargs):
-        return Operations(*args, uwop = 'exp', **kwargs)
+def exp(*args, **kwargs):
+    return construct(*args, uwop = 'exp', **kwargs)
 
-    @staticmethod
-    def acos(*args, **kwargs):
-        return Operations(*args, uwop = 'acos', **kwargs)
+def acos(*args, **kwargs):
+    return construct(*args, uwop = 'acos', **kwargs)
 
-    @staticmethod
-    def dot(*args, **kwargs):
-        return Operations(*args, uwop = 'dot', **kwargs)
+def dot(*args, **kwargs):
+    return construct(*args, uwop = 'dot', **kwargs)
 
-    @staticmethod
-    def add(*args, **kwargs):
-        return Operations(*args, uwop = 'add', **kwargs)
+def add(*args, **kwargs):
+    return construct(*args, uwop = 'add', **kwargs)
 
-    @staticmethod
-    def subtract(*args, **kwargs):
-        return Operations(*args, uwop = 'subtract', **kwargs)
+def subtract(*args, **kwargs):
+    return construct(*args, uwop = 'subtract', **kwargs)
 
-    @staticmethod
-    def multiply(*args, **kwargs):
-        return Operations(*args, uwop = 'multiply', **kwargs)
+def multiply(*args, **kwargs):
+    return construct(*args, uwop = 'multiply', **kwargs)
 
-    @staticmethod
-    def divide(*args, **kwargs):
-        return Operations(*args, uwop = 'divide', **kwargs)
+def divide(*args, **kwargs):
+    return construct(*args, uwop = 'divide', **kwargs)
 
-    @staticmethod
-    def greater(*args, **kwargs):
-        return Operations(*args, uwop = 'greater', **kwargs)
+def greater(*args, **kwargs):
+    return construct(*args, uwop = 'greater', **kwargs)
 
-    @staticmethod
-    def greater_equal(*args, **kwargs):
-        return Operations(*args, uwop = 'greater_equal', **kwargs)
+def greater_equal(*args, **kwargs):
+    return construct(*args, uwop = 'greater_equal', **kwargs)
 
-    @staticmethod
-    def less(*args, **kwargs):
-        return Operations(*args, uwop = 'less', **kwargs)
+def less(*args, **kwargs):
+    return construct(*args, uwop = 'less', **kwargs)
 
-    @staticmethod
-    def less_equal(*args, **kwargs):
-        return Operations(*args, uwop = 'less_equal', **kwargs)
+def less_equal(*args, **kwargs):
+    return construct(*args, uwop = 'less_equal', **kwargs)
 
-    @staticmethod
-    def logical_and(*args, **kwargs):
-        return Operations(*args, uwop = 'logical_and', **kwargs)
+def logical_and(*args, **kwargs):
+    return construct(*args, uwop = 'logical_and', **kwargs)
 
-    @staticmethod
-    def logical_or(*args, **kwargs):
-        return Operations(*args, uwop = 'logical_or', **kwargs)
+def logical_or(*args, **kwargs):
+    return construct(*args, uwop = 'logical_or', **kwargs)
 
-    @staticmethod
-    def logical_xor(*args, **kwargs):
-        return Operations(*args, uwop = 'logical_xor', **kwargs)
+def logical_xor(*args, **kwargs):
+    return construct(*args, uwop = 'logical_xor', **kwargs)
 
-    @staticmethod
-    def input(*args, **kwargs):
-        return Operations(*args, uwop = 'input', **kwargs)
+def input(*args, **kwargs):
+    return construct(*args, uwop = 'input', **kwargs)

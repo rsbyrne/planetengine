@@ -4,6 +4,11 @@ from underworld import function as fn
 
 from . import _function
 from . import _convert
+from . import _construct
+
+def construct():
+    func = _construct(Region, *args, **kwargs)
+    return func
 
 class Region(_function.Function):
 

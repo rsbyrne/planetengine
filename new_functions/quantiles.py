@@ -5,6 +5,11 @@ from underworld import function as fn
 from . import _function
 from . import _convert
 from . import _basetypes
+from . import _construct
+
+def construct():
+    func = _construct(Quantiles, *args, **kwargs)
+    return func
 
 class Quantiles(_function.Function):
 
@@ -49,26 +54,20 @@ class Quantiles(_function.Function):
 
         super().__init__(**kwargs)
 
-    @staticmethod
-    def median(*args, **kwargs):
-        return Quantiles(*args, ntiles = 2, **kwargs)
+def median(*args, **kwargs):
+    return construct(*args, ntiles = 2, **kwargs)
 
-    @staticmethod
-    def terciles(*args, **kwargs):
-        return Quantiles(*args, ntiles = 3, **kwargs)
+def terciles(*args, **kwargs):
+    return construct(*args, ntiles = 3, **kwargs)
 
-    @staticmethod
-    def quartiles(*args, **kwargs):
-        return Quantiles(*args, ntiles = 4, **kwargs)
+def quartiles(*args, **kwargs):
+    return construct(*args, ntiles = 4, **kwargs)
 
-    @staticmethod
-    def quintiles(*args, **kwargs):
-        return Quantiles(*args, ntiles = 5, **kwargs)
+def quintiles(*args, **kwargs):
+    return construct(*args, ntiles = 5, **kwargs)
 
-    @staticmethod
-    def deciles(*args, **kwargs):
-        return Quantiles(*args, ntiles = 10, **kwargs)
+def deciles(*args, **kwargs):
+    return construct(*args, ntiles = 10, **kwargs)
 
-    @staticmethod
-    def percentiles(*args, **kwargs):
-        return Quantiles(*args, ntiles = 100, **kwargs)
+def percentiles(*args, **kwargs):
+    return construct(*args, ntiles = 100, **kwargs)

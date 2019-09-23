@@ -2,6 +2,11 @@ from underworld import function as fn
 
 from . import _convert
 from . import _function
+from . import _construct
+
+def construct():
+    func = _construct(Component, *args, **kwargs)
+    return func
 
 class Component(_function.Function):
 
@@ -35,27 +40,24 @@ class Component(_function.Function):
 
         super().__init__(**kwargs)
 
-    @staticmethod
-    def mag(*args, **kwargs):
-        return Component(*args, component = 'mag', **kwargs)
 
-    def x(*args, **kwargs):
-        return Component(*args, component = 'x', **kwargs)
+def mag(*args, **kwargs):
+    return construct(*args, component = 'mag', **kwargs)
 
-    def y(*args, **kwargs):
-        return Component(*args, component = 'y', **kwargs)
+def x(*args, **kwargs):
+    return construct(*args, component = 'x', **kwargs)
 
-    def z(*args, **kwargs):
-        return Component(*args, component = 'z', **kwargs)
+def y(*args, **kwargs):
+    return construct(*args, component = 'y', **kwargs)
 
-    @staticmethod
-    def rad(*args, **kwargs):
-        return Component(*args, component = 'rad', **kwargs)
+def z(*args, **kwargs):
+    return construct(*args, component = 'z', **kwargs)
 
-    @staticmethod
-    def ang(*args, **kwargs):
-        return Component(*args, component = 'ang', **kwargs)
+def rad(*args, **kwargs):
+    return construct(*args, component = 'rad', **kwargs)
 
-    @staticmethod
-    def coang(*args, **kwargs):
-        return Component(*args, component = 'coang', **kwargs)
+def ang(*args, **kwargs):
+    return construct(*args, component = 'ang', **kwargs)
+
+def coang(*args, **kwargs):
+    return construct(*args, component = 'coang', **kwargs)

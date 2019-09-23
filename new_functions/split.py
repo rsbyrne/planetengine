@@ -1,5 +1,10 @@
 from . import _function
 from . import _convert
+from . import _construct
+
+def construct():
+    func = _construct(Split, *args, **kwargs)
+    return func
 
 class Split(_function.Function):
 
@@ -38,10 +43,9 @@ class Split(_function.Function):
         self.var.data[:, 0] = \
             self.inVar.evaluate()[:, self.column]
 
-    @staticmethod
-    def getall(inVar):
-        inVar = convert(inVar)
-        returnVars = []
-        for dim in range(inVar.varDim):
-            returnVars.append(Split(inVar, column = dim))
-        return tuple(returnVars)
+def getall(inVar):
+    inVar = convert(inVar)
+    returnVars = []
+    for dim in range(inVar.varDim):
+        returnVars.append(construct(inVar, column = dim))
+    return tuple(returnVars)

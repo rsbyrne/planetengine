@@ -3,6 +3,11 @@ from underworld import function as fn
 from . import _convert
 from . import _reduction
 from . import _basetypes
+from . import _construct
+
+def construct():
+    func = _construct(GetStat, *args, **kwargs)
+    return func
 
 class GetStat(_reduction.Reduction):
 
@@ -29,14 +34,11 @@ class GetStat(_reduction.Reduction):
 
         super().__init__(**kwargs)
 
-    @staticmethod
-    def mins(*args, **kwargs):
-        return GetStat(*args, stat = 'mins', **kwargs)
+def mins(*args, **kwargs):
+    return construct(*args, stat = 'mins', **kwargs)
 
-    @staticmethod
-    def maxs(*args, **kwargs):
-        return GetStat(*args, stat = 'maxs', **kwargs)
+def maxs(*args, **kwargs):
+    return construct(*args, stat = 'maxs', **kwargs)
 
-    @staticmethod
-    def ranges(*args, **kwargs):
-        return GetStat(*args, stat = 'ranges', **kwargs)
+def ranges(*args, **kwargs):
+    return construct(*args, stat = 'ranges', **kwargs)

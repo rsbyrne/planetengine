@@ -2,8 +2,13 @@ import underworld as uw
 
 from . import _convert
 from . import _reduction
-from . import _surface
 from . import _basetypes
+from . import _construct
+from . import surface
+
+def construct():
+    func = _construct(Integral, *args, **kwargs)
+    return func
 
 class Integral(_reduction.Reduction):
 
@@ -48,40 +53,32 @@ class Integral(_reduction.Reduction):
 
         super().__init__(**kwargs)
 
-    @staticmethod
-    def volume(*args, **kwargs):
-        return Integral(*args, surface = 'volume', **kwargs)
+def volume(*args, **kwargs):
+    return construct(*args, surface = 'volume', **kwargs)
 
-    @staticmethod
-    def inner(*args, **kwargs):
-        return Integral(*args, surface = 'inner', **kwargs)
+def inner(*args, **kwargs):
+    return construct(*args, surface = 'inner', **kwargs)
 
-    @staticmethod
-    def outer(*args, **kwargs):
-        return Integral(*args, surface = 'outer', **kwargs)
+def outer(*args, **kwargs):
+    return construct(*args, surface = 'outer', **kwargs)
 
-    @staticmethod
-    def left(*args, **kwargs):
-        return Integral(*args, surface = 'left', **kwargs)
+def left(*args, **kwargs):
+    return construct(*args, surface = 'left', **kwargs)
 
-    @staticmethod
-    def right(*args, **kwargs):
-        return Integral(*args, surface = 'right', **kwargs)
+def right(*args, **kwargs):
+    return construct(*args, surface = 'right', **kwargs)
 
-    @staticmethod
-    def front(*args, **kwargs):
-        return Integral(*args, surface = 'front', **kwargs)
+def front(*args, **kwargs):
+    return construct(*args, surface = 'front', **kwargs)
 
-    @staticmethod
-    def back(*args, **kwargs):
-        return Integral(*args, surface = 'back', **kwargs)
+def back(*args, **kwargs):
+    return construct(*args, surface = 'back', **kwargs)
 
-    @staticmethod
-    def auto(*args, **kwargs):
-        inVar = _convert.convert(args[0])
-        if type(inVar) == _surface.Surface:
-            surface = inVar.stringVariants['surface']
-            inVar = inVar.inVar
-        else:
-            surface = 'volume'
-        return Integral(inVar, *args, surface = surface, **kwargs)
+def auto(*args, **kwargs):
+    inVar = _convert.convert(args[0])
+    if type(inVar) == _surface.Surface:
+        surface = inVar.stringVariants['surface']
+        inVar = inVar.inVar
+    else:
+        surface = 'volume'
+    return construct(inVar, *args, surface = surface, **kwargs)

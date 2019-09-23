@@ -2,7 +2,12 @@ from underworld import function as fn
 
 from . import _convert
 from . import _function
+from . import _construct
 from . import component
+
+def construct():
+    func = _construct(Gradient, *args, **kwargs)
+    return func
 
 class Gradient(_function.Function):
 
@@ -27,22 +32,18 @@ class Gradient(_function.Function):
 
         super().__init__(**kwargs)
 
-    @staticmethod
-    def mag(*args, **kwargs):
-        gradVar = Gradient(*args, **kwargs)
-        return component.Component(gradVar, component = 'mag', **kwargs)
+def mag(*args, **kwargs):
+    gradVar = construct(*args, **kwargs)
+    return component.construct(gradVar, component = 'mag', **kwargs)
 
-    @staticmethod
-    def rad(*args, **kwargs):
-        gradVar = Gradient(*args, **kwargs)
-        return component.Component(gradVar, component = 'rad', **kwargs)
+def rad(*args, **kwargs):
+    gradVar = construct(*args, **kwargs)
+    return component.construct(gradVar, component = 'rad', **kwargs)
 
-    @staticmethod
-    def ang(*args, **kwargs):
-        gradVar = Gradient(*args, **kwargs)
-        return component.Component(gradVar, component = 'ang', **kwargs)
+def ang(*args, **kwargs):
+    gradVar = construct(*args, **kwargs)
+    return component.construct(gradVar, component = 'ang', **kwargs)
 
-    @staticmethod
-    def coang(*args, **kwargs):
-        gradVar = Gradient(*args, **kwargs)
-        return component.Component(gradVar, component = 'coang', **kwargs)
+def coang(*args, **kwargs):
+    gradVar = construct(*args, **kwargs)
+    return component.construct(gradVar, component = 'coang', **kwargs)

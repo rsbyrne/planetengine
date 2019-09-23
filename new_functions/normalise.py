@@ -1,6 +1,11 @@
 from . import _function
 from . import _convert
 from . import _basetypes
+from . import _construct
+
+def construct():
+    func = _construct(Normalise, *args, **kwargs)
+    return func
 
 class Normalise(_function.Function):
 

@@ -5,6 +5,11 @@ from underworld import function as fn
 from . import _convert
 from . import _function
 from . import _basetypes
+from . import _construct
+
+def construct():
+    func = _construct(Clip, *args, **kwargs)
+    return func
 
 class Clip(_function.Function):
 
@@ -79,12 +84,11 @@ class Clip(_function.Function):
 
         super().__init__(**kwargs)
 
-    @staticmethod
-    def torange(inVar, clipVar, **kwargs):
-        inVar, clipVar = _convert.convert(inVar, clipVar)
-        return Clip(
-            inVar,
-            lBnd = clipVar,
-            uBnd = clipVar,
-            **kwargs
-            )
+def torange(inVar, clipVar, **kwargs):
+    inVar, clipVar = _convert.convert(inVar, clipVar)
+    return construct(
+        inVar,
+        lBnd = clipVar,
+        uBnd = clipVar,
+        **kwargs
+        )

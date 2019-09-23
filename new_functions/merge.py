@@ -1,6 +1,11 @@
 from . import _function
 from . import _convert
+from . import _construct
 from . import component
+
+def construct():
+    func = _construct(Merge, *args, **kwargs)
+    return func
 
 class Merge(_function.Function):
 
@@ -48,24 +53,22 @@ class Merge(_function.Function):
             self.var.data[:, index] = \
                 inVar.evaluate()[:, 0]
 
-    @staticmethod
-    def annulise(inVar):
-        inVar = _convert.convert(inVar)
-        comps = []
-        comps.append(component.Component(inVar, component = 'ang'))
-        comps.append(component.Component(inVar, component = 'rad'))
-        if inVar.mesh.dim == 3:
-            comps.append(component.Component(inVar, component = 'coang'))
-        var = Merge(*comps)
-        return var
+def annulise(inVar):
+    inVar = _convert.convert(inVar)
+    comps = []
+    comps.append(component.construct(inVar, component = 'ang'))
+    comps.append(component.construct(inVar, component = 'rad'))
+    if inVar.mesh.dim == 3:
+        comps.append(component.construct(inVar, component = 'coang'))
+    var = construct(*comps)
+    return var
 
-    @staticmethod
-    def cartesianise(inVar):
-        inVar = _convert.convert(inVar)
-        comps = []
-        comps.append(component.Component(inVar, component = 'x'))
-        comps.append(component.Component(inVar, component = 'y'))
-        if inVar.mesh.dim == 3:
-            comps.append(component.Component(inVar, component = 'z'))
-        var = Merge(*comps)
-        return var
+def cartesianise(inVar):
+    inVar = _convert.convert(inVar)
+    comps = []
+    comps.append(component.construct(inVar, component = 'x'))
+    comps.append(component.construct(inVar, component = 'y'))
+    if inVar.mesh.dim == 3:
+        comps.append(component.construct(inVar, component = 'z'))
+    var = construct(*comps)
+    return var

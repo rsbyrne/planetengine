@@ -3,16 +3,6 @@ import weakref
 from underworld import function as fn
 UWFn = fn._function.Function
 
-from . import _convert
-from . import _basetypes
-from . import _function
-from . import _reduction
-from . import projection
-from . import gradient
-from . import operations
-from .. import utilities
-from .. import mpi
-
 def update_opTag(opTag, stringVariants):
     for key, val in sorted(stringVariants.items()):
         opTag += '_' + str(key) + '=' + str(val)
@@ -364,3 +354,13 @@ class PlanetVar(UWFn):
     #
     # def __ne__(self, other):
     #     return Comparison(self, other, uwop = 'notequals')
+
+from . import _convert
+from . import _basetypes
+from . import _function
+from . import _reduction
+from . import projection
+from . import gradient
+from . import operations
+from .. import utilities
+from .. import mpi

@@ -2,6 +2,11 @@ import numpy as np
 
 from . import _function
 from . import _convert
+from . import _construct
+
+def construct():
+    func = _construct(Surface, *args, **kwargs)
+    return func
 
 class Surface(_function.Function):
 
@@ -43,30 +48,23 @@ class Surface(_function.Function):
                 6
                 )
 
-    @staticmethod
-    def volume(*args, **kwargs):
-        return Surface(*args, surface = 'volume', **kwargs)
+def volume(*args, **kwargs):
+    return construct(*args, surface = 'volume', **kwargs)
 
-    @staticmethod
-    def inner(*args, **kwargs):
-        return Surface(*args, surface = 'inner', **kwargs)
+def inner(*args, **kwargs):
+    return construct(*args, surface = 'inner', **kwargs)
 
-    @staticmethod
-    def outer(*args, **kwargs):
-        return Surface(*args, surface = 'outer', **kwargs)
+def outer(*args, **kwargs):
+    return construct(*args, surface = 'outer', **kwargs)
 
-    @staticmethod
-    def left(*args, **kwargs):
-        return Surface(*args, surface = 'left', **kwargs)
+def left(*args, **kwargs):
+    return construct(*args, surface = 'left', **kwargs)
 
-    @staticmethod
-    def right(*args, **kwargs):
-        return Surface(*args, surface = 'right', **kwargs)
+def right(*args, **kwargs):
+    return construct(*args, surface = 'right', **kwargs)
 
-    @staticmethod
-    def front(*args, **kwargs):
-        return Surface(*args, surface = 'front', **kwargs)
+def front(*args, **kwargs):
+    return construct(*args, surface = 'front', **kwargs)
 
-    @staticmethod
-    def back(*args, **kwargs):
-        return Surface(*args, surface = 'back', **kwargs)
+def back(*args, **kwargs):
+    return construct(*args, surface = 'back', **kwargs)

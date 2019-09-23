@@ -4,6 +4,12 @@ from underworld import function as fn
 
 from . import _function
 from . import _basetypes
+from . import _convert
+from . import _construct
+
+def construct():
+    func = _construct(Range, *args, **kwargs)
+    return func
 
 class Range(_function.Function):
 
@@ -39,10 +45,8 @@ class Range(_function.Function):
 
         super().__init__(**kwargs)
 
-    @staticmethod
-    def inrange(*args, **kwargs):
-        return Range(*args, operation = 'in', **kwargs)
+def inrange(*args, **kwargs):
+    return construct(*args, operation = 'in', **kwargs)
 
-    @staticmethod
-    def outrange(*args, **kwargs):
-        return Range(*args, operation = 'out', **kwargs)
+def outrange(*args, **kwargs):
+    return construct(*args, operation = 'out', **kwargs)

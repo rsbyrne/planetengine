@@ -2,6 +2,11 @@ from underworld.function._function import Function as UWFn
 
 from . import _function
 from . import _convert
+from . import _construct
+
+def construct():
+    func = _construct(Vanilla, *args, **kwargs)
+    return func
 
 class Vanilla(_function.Function):
 
