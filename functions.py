@@ -37,10 +37,6 @@ def update_opTag(opTag, stringVariants):
 
 def get_opHash(varClass, *hashVars, **stringVariants):
 
-    print("Elephant!")
-    print(type(hashVars))
-    print(hashVars)
-
     hashList = []
 
     if varClass is Shape:
@@ -216,15 +212,17 @@ def _convert(var, varName = None):
 
     return var
 
-def convert(*args, _return_type = None):
+def convert(*args):
     if len(args) == 1:
         arg = args[0]
         if type(arg) == dict:
             converted = _dict_convert(arg)
-        elif type(arg) == list:
-            converted = convert(*arg, _return_type = 'list')
+        # elif type(arg) == list:
+        #     converted = convert(*arg, _return_type = 'list')
+        # elif type(arg) == tuple:
+        #     converted = convert(*arg, _return_type = 'tuple')
         elif type(arg) == tuple:
-            converted = convert(*arg, _return_type = 'tuple')
+            converted = tuple([convert(subArg) for subArg in arg])
         else:
             converted = _convert(arg)
     elif len(args) == 2:
@@ -233,30 +231,12 @@ def convert(*args, _return_type = None):
         elif type(args[1]) == str:
             converted = _convert(args[0], args[1])
         else:
-            converted = _multi_convert(*args)
+            converted = tuple([convert(arg) for arg in args])
     else:
-        converted = _multi_convert(*args)
-    if _return_type == None:
-        return converted
-    else:
-        if not type(converted) in {list, tuple}:
-            converted = [converted,]
-        if _return_type == 'list':
-            return converted
-        elif _return_type == 'tuple':
-            return tuple(converted)
+        converted = tuple([convert(arg) for arg in args])
+    return converted
 
 get_planetVar = convert
-
-def _multi_convert(*args):
-    all_converted = []
-    for arg in args:
-        all_converted.append(convert(arg))
-    return tuple(all_converted)
-
-def _tuple_convert(inTuple):
-    var, varName = inTuple
-    return _convert(var, varName)
 
 def _dict_convert(inDict):
     all_converted = {}
@@ -307,6 +287,12 @@ class PlanetVar(UWFn):
 
         if len(self.inVars) == 1:
             self.inVar = self.inVars[0]
+
+        for inVar in self.inVars:
+            if not isinstance(inVar, PlanetVar):
+                raise Exception(
+                    "Type " + str(type(inVar)) + " is not PlanetVar."
+                    )
 
         # Naming the variable:
 
@@ -773,6 +759,12 @@ class Function(PlanetVar):
 
     def __init__(self, *args, **kwargs):
 
+        for inVar in self.inVars:
+            if not isinstance(inVar, PlanetVar):
+                raise Exception(
+                    "Type " + str(type(inVar)) + " is not PlanetVar."
+                    )
+
         self._detect_substrates()
         self._detect_attributes()
         if not self.varType == 'constFn':
@@ -890,9 +882,7 @@ class Vanilla(Function):
         if not len(var._underlyingDataItems) > 0:
             raise Exception
 
-        inVars = []
-        for underlying in sorted(var._underlyingDataItems):
-            inVars.append(convert(underlying))
+        inVars = convert(tuple(sorted(var._underlyingDataItems)))
 
         self.stringVariants = {'UWhash': var.__hash__()}
         self.inVars = inVars
@@ -955,7 +945,7 @@ class Substitute(Function):
             ])
 
         self.stringVariants = {}
-        self.inVars = inVars
+        self.inVars = list(inVars)
         self.parameters = []
         self.var = var
 
@@ -1035,7 +1025,7 @@ class HandleNaN(Function):
             ])
 
         self.stringVariants = {}
-        self.inVars = inVars
+        self.inVars = list(inVars)
         self.parameters = []
         self.var = var
 
@@ -1134,7 +1124,7 @@ class Clip(Function):
         var = fn.branching.conditional(clauses)
 
         self.stringVariants = stringVariants
-        self.inVars = inVars
+        self.inVars = list(inVars)
         self.parameters = parameters
         self.var = var
 
@@ -1200,8 +1190,10 @@ class Operations(Function):
 
         var = opFn(*args)
 
+        inVars = convert(args)
+
         self.stringVariants = {'uwop': uwop}
-        self.inVars = [convert(arg) for arg in args]
+        self.inVars = list(inVars)
         self.parameters = []
         self.var = var
 
@@ -1410,7 +1402,7 @@ class Merge(Function):
 
     def __init__(self, *args, **kwargs):
 
-        inVars = convert(*args)
+        inVars = convert(args)
 
         for inVar in inVars:
             if not inVar.varDim == 1:
@@ -1439,7 +1431,7 @@ class Merge(Function):
             var = substrate.add_variable(dType, dimension)
 
         self.stringVariants = {}
-        self.inVars = inVars
+        self.inVars = list(inVars)
         self.parameters = []
         self.var = var
 
@@ -1578,7 +1570,7 @@ class Comparison(Function):
             ])
 
         self.stringVariants = {'operation': operation}
-        self.inVars = inVars
+        self.inVars = list(inVars)
         self.parameters = []
         self.var = var
 
@@ -1619,7 +1611,7 @@ class Range(Function):
             ])
 
         self.stringVariants = {'operation': operation}
-        self.inVars = inVars
+        self.inVars = list(inVars)
         self.parameters = [lowerBounds, upperBounds]
         self.var = var
 
@@ -1655,7 +1647,7 @@ class Select(Function):
             ])
 
         self.stringVariants = {}
-        self.inVars = inVars
+        self.inVars = list(inVars)
         self.parameters = []
         self.var = var
 
@@ -1683,7 +1675,7 @@ class Filter(Function):
             ])
 
         self.stringVariants = {}
-        self.inVars = inVars
+        self.inVars = list(inVars)
         self.parameters = []
         self.var = var
 
@@ -1819,7 +1811,7 @@ class Region(Function):
             ])
 
         self.stringVariants = {}
-        self.inVars = inVars
+        self.inVars = list(inVars)
         self.parameters = []
         self.var = var
 
@@ -1909,7 +1901,7 @@ class Normalise(Function):
         var = (baseVar - inMins) / inRanges * normRanges + normMins
 
         self.stringVariants = {}
-        self.inVars = inVars
+        self.inVars = list(inVars)
         self.parameters = [inMins, inRanges, normMins, normRanges]
         self.var = var
 
