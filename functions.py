@@ -27,13 +27,24 @@ def update_opTag(opTag, stringVariants):
         opTag += '_' + str(key) + '=' + str(val)
     return opTag
 
-def get_opHash(varClass, *hashVars, stringVariants = {}):
+# def get_makerTag(varClass, *args, **kwargs):
+#     makerTag = varClass.opTag
+#     for arg in args:
+#         makerTag += ";" + arg.varName
+#     for kwargName, kwarg in sorted(kwargs.items()):
+#         makerTag += ";" + kwargName + ":" + kwarg
+#     return makerTag
+
+def get_opHash(varClass, *hashVars, **stringVariants):
+
     hashList = []
+
     if varClass is Shape:
         assert len(hashVars) == 1
         vertices = hashVars[0]
         assert type(vertices) == np.ndarray
         hashList.append(vertices)
+
     elif varClass is Constant:
         assert len(hashVars) == 1
         var = UWFn.convert(hashVars[0])
@@ -46,16 +57,33 @@ def get_opHash(varClass, *hashVars, stringVariants = {}):
             value
             )
         stringVariants = {'val': valString}
+
     elif varClass is Variable:
         assert len(hashVars) == 1
         var = UWFn.convert(hashVars[0])
         hashList.append(var.__hash__())
+
     elif varClass is Parameter:
         assert len(hashVars) == 0
         pass
         # random_hash = random.randint(0, 1e18)
         # hashList.append(random_hash)
+
     else:
+
+        if varClass is Vanilla:
+            assert len(hashVars) == 1
+            var = UWFn.convert(hashVars[0])
+            if not hasattr(var, '_underlyingDataItems'):
+                raise Exception
+            if not len(var._underlyingDataItems) > 0:
+                raise Exception
+            inVars = []
+            for underlying in sorted(var._underlyingDataItems):
+                inVars.append(convert(underlying))
+            hashVars = inVars
+            stringVariants = {'UWhash': var.__hash__()}
+
         rootVars = set()
         for hashVar in hashVars:
             assert isinstance(hashVar, PlanetVar)
@@ -65,71 +93,76 @@ def get_opHash(varClass, *hashVars, stringVariants = {}):
                 )
         for rootVar in rootVars:
             hashList.append(rootVar.__hash__())
+
     fulltag = update_opTag(varClass.opTag, stringVariants)
     hashList.append(fulltag)
     hashVal = hasher(hashList)
+
     return hashVal
 
-# def _construct(
-#         *inVars,
-#         varClass = None,
-#         stringVariants = {},
-#         **kwargs
-#         ):
-#
-#     if not varClass in {Constant, Variable, Shape, Parameter}:
-#         inVars = [convert(inVar) for inVar in inVars]
-#
-#     # if varClass is Constant:
-#     #     # constants don't get saved!!!
-#     #     outObj = varClass(
-#     #         *inVars,
-#     #         **kwargs
-#     #         )
-#     # else:
-#     opHash = get_opHash(
-#         varClass,
-#         *inVars,
-#         stringVariants = stringVariants
-#         )
-#     outObj = None
-#     if opHash in _premade_fns:
-#         print("Returning premade!")
-#         outObj = _premade_fns[opHash]() # is weakref
-#     if outObj is None:
-#         print("Making a new one!")
-#         outObj = varClass(
-#             *inVars,
-#             **stringVariants,
-#             **kwargs
-#             )
-#
-#     assert not outObj is None
-#     return outObj
-
 def _construct(
-        *inVars,
-        varClass = None,
-        stringVariants = {}
-        ):
-
-    outObj = varClass(
+        varClass,
         *inVars,
         **stringVariants
-        )
+        ):
 
-    return outObj
+    if issubclass(varClass, BaseTypes):
+
+        outObj = varClass(
+            *inVars,
+            **stringVariants
+            )
+
+        return outObj
+
+    else:
+
+        makerTag = get_opHash(varClass, *inVars, **stringVariants)
+
+        outObj = None
+        for inVar in inVars:
+            if hasattr(inVar, '_planetVars'):
+                if makerTag in inVar._planetVars:
+                    outObj = inVar._planetVars[makerTag]()
+                    if isinstance(outObj, PlanetVar):
+                        break
+                    else:
+                        outObj = None
+
+        if outObj is None:
+            message('Building new object...')
+            outObj = varClass(
+                *inVars,
+                **stringVariants
+                )
+        else:
+            message('Old object found - reusing.')
+
+        for inVar in inVars:
+            try:
+                if not hasattr(inVar, '_planetVars'):
+                    inVar._planetVars = {}
+                weak_reference = weakref.ref(outObj)
+                inVar._planetVars[makerTag] = weak_reference
+            except:
+                pass
+
+        return outObj
 
 def _convert(var, varName = None):
+
     if isinstance(var, PlanetVar):
         # message("Already a PlanetVar! Returning.")
         return var
-    # elif hasattr(var, '_planetVar'):
-    #     outVar = var._planetVar()
-    #     if isinstance(outVar, PlanetVar):
-    #         # message("Premade PlanetVar found! Returning.")
-    #         return outVar
-    elif type(var) == np.ndarray:
+
+    if hasattr(var, '_planetVar'):
+        outVar  = var._planetVar()
+        if isinstance(outVar, PlanetVar):
+            if (outVar.stringVariants['varName'] == varName) \
+                    or (varName is None):
+                return outVar
+
+    if type(var) == np.ndarray:
         if len(var.shape) == 2:
             if varName is None:
                 varName = Shape.defaultName
@@ -141,6 +174,7 @@ def _convert(var, varName = None):
             varClass = Constant
         else:
             raise Exception
+
     else:
         var = UWFn.convert(var)
         if var is None:
@@ -166,12 +200,13 @@ def _convert(var, varName = None):
                 varClass = Vanilla
         else:
             raise Exception
+
     var = _construct(
+        varClass,
         var,
-        varClass = varClass,
-        stringVariants = stringVariants
+        **stringVariants
         )
-    # message("New PlanetVar made! Returning.")
+
     return var
 
 def convert(*args, return_tuple = False):
@@ -452,7 +487,7 @@ class PlanetVar(UWFn):
         hashVal = get_opHash(
             self.__class__,
             *self._hashVars,
-            stringVariants = self.stringVariants
+            **self.stringVariants
             )
         return hashVal
 
@@ -606,15 +641,18 @@ class Variable(BaseTypes):
 
     def __init__(self, inVar, varName = None, *args, **kwargs):
 
-        if varName is None:
-            varName = self.defaultName
-
         var = UWFn.convert(inVar)
 
         if var is None:
             raise Exception
         if len(list(var._underlyingDataItems)) == 0:
             raise Exception
+
+        if varName is None:
+            if hasattr(var, 'name'):
+                varName = var.name
+            else:
+                varName = self.defaultName
 
         if not type(var) in self.convertTypes:
             vanillaVar = Vanilla(var)
@@ -648,7 +686,8 @@ class Variable(BaseTypes):
         self.parameters = []
         self.var = var
 
-        var._planetVar = weakref.ref(self)
+        if not varName == self.defaultName:
+            var._planetVar = weakref.ref(self)
         # self._set_meshdata()
 
         sample_data = self.data[0:1]
@@ -846,12 +885,10 @@ class Vanilla(Function):
         for underlying in sorted(var._underlyingDataItems):
             inVars.append(convert(underlying))
 
-        self.stringVariants = {}
+        self.stringVariants = {'UWhash': var.__hash__()}
         self.inVars = inVars
         self.parameters = []
         self.var = var
-
-        self._hashID = random.randint(1, 1e18)
 
         super().__init__(**kwargs)
 
