@@ -37,6 +37,10 @@ def update_opTag(opTag, stringVariants):
 
 def get_opHash(varClass, *hashVars, **stringVariants):
 
+    print("Elephant!")
+    print(type(hashVars))
+    print(hashVars)
+
     hashList = []
 
     if varClass is Shape:
@@ -83,6 +87,9 @@ def get_opHash(varClass, *hashVars, **stringVariants):
                 inVars.append(convert(underlying))
             hashVars = inVars
             stringVariants = {'UWhash': var.__hash__()}
+
+        else:
+            hashVars = convert(hashVars)
 
         rootVars = set()
         for hashVar in hashVars:
@@ -209,15 +216,15 @@ def _convert(var, varName = None):
 
     return var
 
-def convert(*args, return_tuple = False):
+def convert(*args, _return_type = None):
     if len(args) == 1:
         arg = args[0]
-        # if type(arg) == tuple:
-        #     converted = _tuple_convert(arg)
-        # elif type(arg) == list:
-        #     converted = _multi_convert(*arg)
         if type(arg) == dict:
             converted = _dict_convert(arg)
+        elif type(arg) == list:
+            converted = convert(*arg, _return_type = 'list')
+        elif type(arg) == tuple:
+            converted = convert(*arg, _return_type = 'tuple')
         else:
             converted = _convert(arg)
     elif len(args) == 2:
@@ -229,13 +236,15 @@ def convert(*args, return_tuple = False):
             converted = _multi_convert(*args)
     else:
         converted = _multi_convert(*args)
-    if type(converted) == tuple:
+    if _return_type == None:
         return converted
     else:
-        if return_tuple:
-            return (converted,)
-        else:
+        if not type(converted) in {list, tuple}:
+            converted = [converted,]
+        if _return_type == 'list':
             return converted
+        elif _return_type == 'tuple':
+            return tuple(converted)
 
 get_planetVar = convert
 
