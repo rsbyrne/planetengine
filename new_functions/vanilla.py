@@ -1,4 +1,9 @@
-class Vanilla(Function):
+from underworld.function._function import Function as UWFn
+
+from . import _function
+from . import _convert
+
+class Vanilla(_function.Function):
 
     opTag = 'Vanilla'
 
@@ -11,7 +16,13 @@ class Vanilla(Function):
         if not len(var._underlyingDataItems) > 0:
             raise Exception
 
-        inVars = convert(tuple(sorted(var._underlyingDataItems)))
+        inVars = _convert.convert(
+            tuple(
+                sorted(
+                    var._underlyingDataItems
+                    )
+                )
+            )
 
         self.stringVariants = {'UWhash': var.__hash__()}
         self.inVars = inVars

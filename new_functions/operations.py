@@ -1,4 +1,9 @@
-class Operations(Function):
+from underworld import function as fn
+
+from . import _function
+from . import _convert
+
+class Operations(_function.Function):
 
     opTag = 'Operation'
 
@@ -48,7 +53,7 @@ class Operations(Function):
 
         var = opFn(*args)
 
-        inVars = convert(args)
+        inVars = _convert.convert(args)
 
         self.stringVariants = {'uwop': uwop}
         self.inVars = list(inVars)

@@ -1,10 +1,15 @@
-class Surface(Function):
+import numpy as np
+
+from . import _function
+from . import _convert
+
+class Surface(_function.Function):
 
     opTag = 'Surface'
 
     def __init__(self, inVar, *args, surface = 'inner', **kwargs):
 
-        inVar = convert(inVar)
+        inVar = _convert.convert(inVar)
 
         if inVar.substrate is None:
             raise Exception

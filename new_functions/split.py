@@ -1,10 +1,13 @@
-class Split(Function):
+from . import _function
+from . import _convert
+
+class Split(_function.Function):
 
     opTag = 'Split'
 
     def __init__(self, inVar, *args, column = 0, **kwargs):
 
-        inVar = convert(inVar)
+        inVar = _convert.convert(inVar)
 
         if not inVar.varDim > 1:
             raise Exception

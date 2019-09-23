@@ -1,10 +1,15 @@
-class Component(Function):
+from underworld import function as fn
+
+from . import _convert
+from . import _function
+
+class Component(_function.Function):
 
     opTag = 'Component'
 
     def __init__(self, inVar, *args, component = 'mag', **kwargs):
 
-        inVar = convert(inVar)
+        inVar = _convert.convert(inVar)
 
         if not inVar.varDim == inVar.mesh.dim:
             # hence is not a vector and so has no components:

@@ -1,4 +1,12 @@
-class Clip(Function):
+import numpy as np
+
+from underworld import function as fn
+
+from . import _convert
+from . import _function
+from . import _basetypes
+
+class Clip(_function.Function):
 
     opTag = 'Clip'
 
@@ -12,7 +20,7 @@ class Clip(Function):
             **kwargs
             ):
 
-        inVar = convert(inVar)
+        inVar = _convert.convert(inVar)
         inVars = [inVar]
         stringVariants = {}
         parameters = []
@@ -22,10 +30,10 @@ class Clip(Function):
         if lBnd is None:
             stringVariants['lower'] = 'open'
         else:
-            lBnd = convert(lBnd)
+            lBnd = _convert.convert(lBnd)
             if not lBnd in inVars:
                 inVars.append(lBnd)
-            lBnd = Parameter(lBnd.minFn)
+            lBnd = _basetypes.Parameter(lBnd.minFn)
             parameters.append(lBnd)
             if lClipVal is 'null':
                 lClipVal = nullVal
@@ -40,10 +48,10 @@ class Clip(Function):
         if uBnd is None:
             stringVariants['lower'] = 'open'
         else:
-            uBnd = convert(uBnd)
+            uBnd = _convert.convert(uBnd)
             if not uBnd in inVars:
                 inVars.append(uBnd)
-            uBnd = Parameter(uBnd.maxFn)
+            uBnd = _basetypes.Parameter(uBnd.maxFn)
             parameters.append(uBnd)
             if uClipVal is 'null':
                 uClipVal = nullVal
@@ -73,7 +81,7 @@ class Clip(Function):
 
     @staticmethod
     def torange(inVar, clipVar, **kwargs):
-        inVar, clipVar = convert(inVar, clipVar)
+        inVar, clipVar = _convert.convert(inVar, clipVar)
         return Clip(
             inVar,
             lBnd = clipVar,

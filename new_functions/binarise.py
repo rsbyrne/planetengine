@@ -1,10 +1,15 @@
-class Binarise(Function):
+from underworld import function as fn
+
+from . import _convert
+from . import _function
+
+class Binarise(_function.Function):
 
     opTag = 'Binarise'
 
     def __init__(self, inVar, *args, **kwargs):
 
-        inVar = convert(inVar)
+        inVar = _convert.convert(inVar)
 
         if not inVar.varDim == 1:
             raise Exception

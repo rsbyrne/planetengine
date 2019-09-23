@@ -1,4 +1,9 @@
-class Comparison(Function):
+from underworld import function as fn
+
+from . import _convert
+from . import _function
+
+class Comparison(_function.Function):
 
     opTag = 'Comparison'
 
@@ -7,7 +12,7 @@ class Comparison(Function):
         if not operation in {'equals', 'notequals'}:
             raise Exception
 
-        inVar0, inVar1 = inVars = convert(inVar0, inVar1)
+        inVar0, inVar1 = inVars = _convert.convert(inVar0, inVar1)
         boolOut = operation == 'equals'
         var = fn.branching.conditional([
             (inVar0 < inVar1 - 1e-18, not boolOut),

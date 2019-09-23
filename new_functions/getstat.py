@@ -1,4 +1,10 @@
-class GetStat(Reduction):
+from underworld import function as fn
+
+from . import _convert
+from . import _reduction
+from . import _basetypes
+
+class GetStat(_reduction.Reduction):
 
     opTag = 'GetStat'
 
@@ -7,14 +13,14 @@ class GetStat(Reduction):
         if not stat in {'mins', 'maxs', 'ranges'}:
             raise Exception
 
-        inVar = convert(inVar)
+        inVar = _convert.convert(inVar)
 
         if stat == 'mins':
-            var = Parameter(inVar.minFn)
+            var = _basetypes.Parameter(inVar.minFn)
         elif stat == 'maxs':
-            var = Parameter(inVar.maxFn)
+            var = _basetypes.Parameter(inVar.maxFn)
         elif stat == 'ranges':
-            var = Parameter(inVar.rangeFn)
+            var = _basetypes.Parameter(inVar.rangeFn)
 
         self.stringVariants = {'stat': stat}
         self.inVars = [inVar]

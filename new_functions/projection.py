@@ -1,10 +1,17 @@
-class Projection(Function):
+import numpy as np
+
+import underworld as uw
+
+from . import _function
+from . import _convert
+
+class Projection(_function.Function):
 
     opTag = 'Projection'
 
     def __init__(self, inVar, *args, **kwargs):
 
-        inVar = convert(inVar)
+        inVar = _convert.convert(inVar)
 
         var = uw.mesh.MeshVariable(
             inVar.mesh,

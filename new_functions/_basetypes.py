@@ -1,4 +1,19 @@
-class BaseTypes(PlanetVar):
+import random
+import numpy as np
+
+import underworld as uw
+fn = uw.function
+UWFn = fn._function.Function
+
+from . import _planetvar
+from . import vanilla
+from .. import utilities
+hasher = utilities.hashToInt
+from .. import meshutils
+from .. import shapes
+from .. import mapping
+
+class BaseTypes(_planetvar.PlanetVar):
 
     def __init__(self, *args, **kwargs):
         super().__init__(**kwargs)
@@ -36,7 +51,7 @@ class Constant(BaseTypes):
         # self.data = np.array([[val,] for val in self.value])
 
         sample_data = np.array([[val,] for val in self.value])
-        self.dType = get_dType(sample_data)
+        self.dType = _planetvar.get_dType(sample_data)
         self.varType = 'const'
 
         self.stringVariants = {'val': valString}
@@ -75,7 +90,7 @@ class Parameter(BaseTypes):
 
         self._update_attributes()
         sample_data = np.array([[val,] for val in self.value])
-        self.dType = get_dType(sample_data)
+        self.dType = _planetvar.get_dType(sample_data)
 
         super().__init__(**kwargs)
 
@@ -120,7 +135,7 @@ class Variable(BaseTypes):
                 varName = self.defaultName
 
         if not type(var) in self.convertTypes:
-            vanillaVar = Vanilla(var)
+            vanillaVar = vanilla.Vanilla(var)
             projVar = vanillaVar.meshVar()
             var = projVar.var
             self._projUpdate = projVar.update
@@ -156,9 +171,9 @@ class Variable(BaseTypes):
         # self._set_meshdata()
 
         sample_data = self.data[0:1]
-        self.dType = get_dType(sample_data)
+        self.dType = _planetvar.get_dType(sample_data)
         self.varDim = self.data.shape[1]
-        self.meshUtils = get_meshUtils(self.mesh)
+        self.meshUtils = meshutils.get_meshUtils(self.mesh)
 
         if hasattr(var, 'scales'):
             self.scales = var.scales
@@ -220,7 +235,7 @@ class Shape(BaseTypes):
         try:
             morphpoly = self.morphs[mesh]
         except:
-            morphverts = unbox(mesh, self.richvertices)
+            morphverts = mapping.unbox(mesh, self.richvertices)
             morphpoly = fn.shape.Polygon(morphverts)
             self.morphs[mesh] = morphpoly
         return morphpoly

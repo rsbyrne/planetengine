@@ -1,12 +1,22 @@
+import numpy as np
+
+from underworld import function as fn
+UWFn = fn._function.Function
+
+from . import _planetvar
+from . import _basetypes
+from . import vanilla
+from .. import utilities
+
 def _convert(var, varName = None):
 
-    if isinstance(var, PlanetVar):
-        # message("Already a PlanetVar! Returning.")
+    if isinstance(var, _planetvar.PlanetVar):
+        # message("Already a _planetvar.PlanetVar! Returning.")
         return var
 
     if hasattr(var, '_planetVar'):
         outVar  = var._planetVar()
-        if isinstance(outVar, PlanetVar):
+        if isinstance(outVar, _planetvar.PlanetVar):
             if (outVar.stringVariants['varName'] == varName) \
                     or (varName is None):
                 return outVar
@@ -14,13 +24,13 @@ def _convert(var, varName = None):
     if type(var) == np.ndarray:
         if len(var.shape) == 2:
             if varName is None:
-                varName = Shape.defaultName
+                varName = _basetypes.Shape.defaultName
             stringVariants = {'varName': varName}
             varClass = Shape
         elif len(var.shape) == 1:
             valString = utilities.stringify(var)
             stringVariants = {'val': valString}
-            varClass = Constant
+            varClass = _basetypes.Constant
         else:
             raise Exception
 
@@ -34,19 +44,19 @@ def _convert(var, varName = None):
                 var.evaluate()[0]
                 )
             stringVariants = {'val': valString}
-            varClass = Constant
-        elif type(var) in Variable.convertTypes:
+            varClass = _basetypes.Constant
+        elif type(var) in _basetypes.Variable.convertTypes:
             if varName is None:
-                varName = Variable.defaultName
+                varName = _basetypes.Variable.defaultName
             stringVariants = {'varName': varName}
-            varClass = Variable
+            varClass = _basetypes.Variable
         elif isinstance(var, UWFn):
             if not varName is None:
                 stringVariants = {'varName': varName}
-                varClass = Variable
+                varClass = _basetypes.Variable
             else:
                 stringVariants = {}
-                varClass = Vanilla
+                varClass = vanilla.Vanilla
         else:
             raise Exception
 

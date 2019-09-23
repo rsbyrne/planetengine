@@ -1,10 +1,14 @@
-class Merge(Function):
+from . import _function
+from . import _convert
+from . import component
+
+class Merge(_function.Function):
 
     opTag = 'Merge'
 
     def __init__(self, *args, **kwargs):
 
-        inVars = convert(args)
+        inVars = _convert.convert(args)
 
         for inVar in inVars:
             if not inVar.varDim == 1:
@@ -46,22 +50,22 @@ class Merge(Function):
 
     @staticmethod
     def annulise(inVar):
-        inVar = convert(inVar)
+        inVar = _convert.convert(inVar)
         comps = []
-        comps.append(Component(inVar, component = 'ang'))
-        comps.append(Component(inVar, component = 'rad'))
+        comps.append(component.Component(inVar, component = 'ang'))
+        comps.append(component.Component(inVar, component = 'rad'))
         if inVar.mesh.dim == 3:
-            comps.append(Component(inVar, component = 'coang'))
+            comps.append(component.Component(inVar, component = 'coang'))
         var = Merge(*comps)
         return var
 
     @staticmethod
     def cartesianise(inVar):
-        inVar = convert(inVar)
+        inVar = _convert.convert(inVar)
         comps = []
-        comps.append(Component(inVar, component = 'x'))
-        comps.append(Component(inVar, component = 'y'))
+        comps.append(component.Component(inVar, component = 'x'))
+        comps.append(component.Component(inVar, component = 'y'))
         if inVar.mesh.dim == 3:
-            comps.append(Component(inVar, component = 'z'))
+            comps.append(component.Component(inVar, component = 'z'))
         var = Merge(*comps)
         return var

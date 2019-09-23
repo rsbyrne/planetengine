@@ -1,4 +1,11 @@
-class Range(Function):
+import numpy as np
+
+from underworld import function as fn
+
+from . import _function
+from . import _basetypes
+
+class Range(_function.Function):
 
     opTag = 'Range'
 
@@ -7,7 +14,8 @@ class Range(Function):
         if not operation in {'in', 'out'}:
             raise Exception
 
-        inVar0, inVar1 = inVars = convert(inVar0), convert(inVar1)
+        inVar0, inVar1 = inVars = \
+            _convert.convert(inVar0), _convert.convert(inVar1)
 
         nullVal = [np.nan for dim in range(inVar0.varDim)]
         if operation == 'in':
@@ -16,8 +24,8 @@ class Range(Function):
         else:
             inVal = nullVal
             outVal = inVar0
-        lowerBounds = Parameter(inVars[1].minFn)
-        upperBounds = Parameter(inVars[1].maxFn)
+        lowerBounds = _basetypes.Parameter(inVars[1].minFn)
+        upperBounds = _basetypes.Parameter(inVars[1].maxFn)
         var = fn.branching.conditional([
             (inVar0 < lowerBounds, outVal),
             (inVar0 > upperBounds, outVal),

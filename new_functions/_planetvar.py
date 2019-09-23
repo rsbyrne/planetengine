@@ -1,5 +1,8 @@
+import weakref
+
 from underworld import function as fn
 UWFn = fn._function.Function
+
 from . import _convert
 from . import _basetypes
 from . import _function

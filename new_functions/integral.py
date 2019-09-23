@@ -1,65 +1,19 @@
-class Reduction(PlanetVar):
+import underworld as uw
 
-    def __init__(self, *args, **kwargs):
+from . import _convert
+from . import _reduction
+from . import _surface
+from . import _basetypes
 
-        self.mesh = self.substrate = None
-
-        sample_data = self.var.evaluate()
-        self.dType = get_dType(sample_data)
-        self.varType = 'red'
-        self.meshUtils = None
-        self.meshbased = False
-
-        self._hashVars = self.inVars
-
-        super().__init__(**kwargs)
-
-class GetStat(Reduction):
-
-    opTag = 'GetStat'
-
-    def __init__(self, inVar, *args, stat = 'mins', **kwargs):
-
-        if not stat in {'mins', 'maxs', 'ranges'}:
-            raise Exception
-
-        inVar = convert(inVar)
-
-        if stat == 'mins':
-            var = Parameter(inVar.minFn)
-        elif stat == 'maxs':
-            var = Parameter(inVar.maxFn)
-        elif stat == 'ranges':
-            var = Parameter(inVar.rangeFn)
-
-        self.stringVariants = {'stat': stat}
-        self.inVars = [inVar]
-        self.parameters = [var]
-        self.var = var
-
-        super().__init__(**kwargs)
-
-    @staticmethod
-    def mins(*args, **kwargs):
-        return GetStat(*args, stat = 'mins', **kwargs)
-
-    @staticmethod
-    def maxs(*args, **kwargs):
-        return GetStat(*args, stat = 'maxs', **kwargs)
-
-    @staticmethod
-    def ranges(*args, **kwargs):
-        return GetStat(*args, stat = 'ranges', **kwargs)
-
-class Integral(Reduction):
+class Integral(_reduction.Reduction):
 
     opTag = 'Integral'
 
     def __init__(self, inVar, *args, surface = 'volume', **kwargs):
 
-        if isinstance(inVar, Reduction):
+        if isinstance(inVar, _reduction.Reduction):
             raise Exception
-        if type(inVar) == Surface:
+        if type(inVar) == _surface.Surface:
             raise Exception(
                 "Surface type not accepted; try Integral.auto method."
                 )
@@ -85,7 +39,7 @@ class Integral(Reduction):
             val = intField.evaluate()[0]
             val /= intMesh()
             return val
-        var = Parameter(int_eval)
+        var = _basetypes.Parameter(int_eval)
 
         self.stringVariants = {'surface': surface}
         self.inVars = [inVar]
@@ -124,8 +78,8 @@ class Integral(Reduction):
 
     @staticmethod
     def auto(*args, **kwargs):
-        inVar = convert(args[0])
-        if type(inVar) == Surface:
+        inVar = _convert.convert(args[0])
+        if type(inVar) == _surface.Surface:
             surface = inVar.stringVariants['surface']
             inVar = inVar.inVar
         else:

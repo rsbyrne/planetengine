@@ -1,3 +1,5 @@
+import weakref
+
 from . import _planetvar
 from . import _basetypes
 

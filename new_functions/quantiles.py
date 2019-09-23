@@ -1,18 +1,26 @@
-class Quantiles(Function):
+import numpy as np
+
+from underworld import function as fn
+
+from . import _function
+from . import _convert
+from . import _basetypes
+
+class Quantiles(_function.Function):
 
     opTag = 'Quantiles'
 
     def __init__(self, inVar, *args, ntiles = 5, **kwargs):
 
-        inVar = convert(inVar)
+        inVar = _convert.convert(inVar)
 
         # if not inVar.varDim == 1:
         #     raise Exception
 
-        interval = Parameter(
+        interval = _basetypes.Parameter(
             lambda: inVar.rangeFn() / ntiles
             )
-        minVal = Parameter(
+        minVal = _basetypes.Parameter(
             inVar.minFn
             )
 

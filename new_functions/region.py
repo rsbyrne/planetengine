@@ -1,10 +1,20 @@
-class Region(Function):
+import numpy as np
+
+from underworld import function as fn
+
+from . import _function
+from . import _convert
+
+class Region(_function.Function):
 
     opTag = 'Region'
 
     def __init__(self, inVar, inShape, *args, **kwargs):
 
-        inVar, inShape = inVars = convert(inVar, inShape)
+        inVar, inShape = inVars = _convert.convert(
+            inVar,
+            inShape
+            )
 
         regionVar = inVar.mesh.add_variable(1)
         polygon = inShape.morph(inVar.mesh)

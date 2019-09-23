@@ -1,10 +1,15 @@
-class Substitute(Function):
+from underworld import function as fn
+
+from . import _function
+from . import _convert
+
+class Substitute(_function.Function):
 
     opTag = 'Substitute'
 
     def __init__(self, inVar, fromVal, toVal, *args, **kwargs):
 
-        inVar, fromVal, toVal = inVars = convert(
+        inVar, fromVal, toVal = inVars = _convert.convert(
             inVar, fromVal, toVal
             )
 

@@ -1,10 +1,16 @@
-class Gradient(Function):
+from underworld import function as fn
+
+from . import _convert
+from . import _function
+from . import component
+
+class Gradient(_function.Function):
 
     opTag = 'Gradient'
 
     def __init__(self, inVar, *args, **kwargs):
 
-        inVar = convert(inVar)
+        inVar = _convert.convert(inVar)
         inVar = inVar.meshVar()
         # DEBUGGING
         assert not inVar is None
@@ -24,19 +30,19 @@ class Gradient(Function):
     @staticmethod
     def mag(*args, **kwargs):
         gradVar = Gradient(*args, **kwargs)
-        return Component(gradVar, component = 'mag', **kwargs)
+        return component.Component(gradVar, component = 'mag', **kwargs)
 
     @staticmethod
     def rad(*args, **kwargs):
         gradVar = Gradient(*args, **kwargs)
-        return Component(gradVar, component = 'rad', **kwargs)
+        return component.Component(gradVar, component = 'rad', **kwargs)
 
     @staticmethod
     def ang(*args, **kwargs):
         gradVar = Gradient(*args, **kwargs)
-        return Component(gradVar, component = 'ang', **kwargs)
+        return component.Component(gradVar, component = 'ang', **kwargs)
 
     @staticmethod
     def coang(*args, **kwargs):
         gradVar = Gradient(*args, **kwargs)
-        return Component(gradVar, component = 'coang', **kwargs)
+        return component.Component(gradVar, component = 'coang', **kwargs)
