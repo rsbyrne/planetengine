@@ -59,19 +59,19 @@ def default(*args, **kwargs):
 def annulise(inVar):
     inVar = _convert.convert(inVar)
     comps = []
-    comps.append(component.construct(inVar, component = 'ang'))
-    comps.append(component.construct(inVar, component = 'rad'))
+    comps.append(component.ang(inVar))
+    comps.append(component.rad(inVar))
     if inVar.mesh.dim == 3:
-        comps.append(component.construct(inVar, component = 'coang'))
+        comps.append(component.coang(inVar))
     var = construct(*comps)
     return var
 
 def cartesianise(inVar):
     inVar = _convert.convert(inVar)
     comps = []
-    comps.append(component.construct(inVar, component = 'x'))
-    comps.append(component.construct(inVar, component = 'y'))
+    comps.append(component.x(inVar))
+    comps.append(component.y(inVar))
     if inVar.mesh.dim == 3:
-        comps.append(component.construct(inVar, component = 'z'))
+        comps.append(component.z(inVar))
     var = construct(*comps)
     return var

@@ -10,7 +10,7 @@ hasher = utilities.hashToInt
 # MOST IMPORTS ARE AT THE BOTTOM
 # DUE TO CIRCULAR IMPORTS PROBLEM
 
-_premade_fns = {}
+# _premade_fns = {}
 
 def update_opTag(opTag, stringVariants):
     for key, val in sorted(stringVariants.items()):
@@ -154,8 +154,8 @@ class PlanetVar(UWFn):
 
         self._update()
 
-        if not self.__class__ is _basetypes.Constant:
-            self._set_weakref(self) # is static
+        # if not self.__class__ is _basetypes.Constant:
+        #     self._set_weakref(self) # is static
 
     #     self._safety_checks()
     #
@@ -297,11 +297,11 @@ class PlanetVar(UWFn):
             self._fn_gradient = lambda: gradientVar
         return self._fn_gradient()
 
-    @staticmethod
-    def _set_weakref(self):
-        weak_reference = weakref.ref(self)
-        hashKey = self.__hash__()
-        _premade_fns[hashKey] = weak_reference
+    # @staticmethod
+    # def _set_weakref(self):
+    #     weak_reference = weakref.ref(self)
+    #     hashKey = self.__hash__()
+    #     _premade_fns[hashKey] = weak_reference
 
     def evaluate(self, evalInput = None, lazy = False):
         if not lazy:

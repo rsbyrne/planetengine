@@ -56,21 +56,21 @@ class Standard(_observer.Observer):
         velMag = pfn.component.mag(velocity)
         VRMS = pfn.integral.default(velMag)
         horizVel = pfn.component.ang(velocity)
-        surfVRMS = pfn.integral.default(horizVel)
+        surfAngVel = pfn.integral.default(horizVel)
 
         statsDict = {
             'avStress': avStress,
             'avTemp': avTemp,
             'Nu': Nu,
             'VRMS': VRMS,
-            'surfVRMS': surfVRMS
+            'surfAngVel': surfAngVel
             }
 
         formatDict = {
             'Nu': "{:.2f}",
             'avTemp': "{:.2f}",
             'VRMS': "{:.2f}",
-            'surfVRMS': "{:.2f}",
+            'surfAngVel': "{:.2f}",
             'avStress': "{:.2f}"
             }
 

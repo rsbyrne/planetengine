@@ -37,16 +37,16 @@ def default(*args, **kwargs):
 
 def mag(*args, **kwargs):
     gradVar = construct(*args, **kwargs)
-    return component.construct(gradVar, component = 'mag', **kwargs)
+    return component.mag(gradVar, **kwargs)
 
 def rad(*args, **kwargs):
     gradVar = construct(*args, **kwargs)
-    return component.construct(gradVar, component = 'rad', **kwargs)
+    return component.rad(gradVar, **kwargs)
 
 def ang(*args, **kwargs):
     gradVar = construct(*args, **kwargs)
-    return component.construct(gradVar, component = 'ang', **kwargs)
+    return component.ang(gradVar, **kwargs)
 
 def coang(*args, **kwargs):
     gradVar = construct(*args, **kwargs)
-    return component.construct(gradVar, component = 'coang', **kwargs)
+    return component.coang(gradVar, **kwargs)

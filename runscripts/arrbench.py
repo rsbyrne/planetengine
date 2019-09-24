@@ -32,7 +32,7 @@ planetengine.log(
 
 model = planetengine.model.make_model(
     planetengine.systems.arrhenius.build(res = 16, **job),
-    {'temperatureField': planetengine.initials.sinusoidal.build(freq = 1.)},
+    {'temperatureField': planetengine.initials.sinusoidal.build()},
     outputPath = outputPath
     )
 

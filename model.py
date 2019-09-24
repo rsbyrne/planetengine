@@ -105,7 +105,8 @@ class Model(Frame):
         self._prompt_observers('checkpointing')
 
     def report(self):
-        for observerName, observer in sorted(observers.items()):
+        for observerName, observer \
+                in sorted(self.observers.items()):
             message(observerName + ':')
             observer.report()
 

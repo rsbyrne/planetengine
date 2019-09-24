@@ -136,7 +136,7 @@ class Variable(BaseTypes):
                 varName = self.defaultName
 
         if not type(var) in self.convertTypes:
-            vanillaVar = vanilla.Vanilla(var)
+            vanillaVar = vanilla.default(var)
             projVar = vanillaVar.meshVar()
             var = projVar.var
             self._projUpdate = projVar.update

@@ -35,7 +35,7 @@ def _construct(
                         outObj = None
 
         if outObj is None:
-            message('Building new object...')
+            # message('Building new object...')
             outObj = varClass(
                 *inVars,
                 **stringVariants
