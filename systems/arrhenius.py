@@ -174,10 +174,10 @@ class Arrhenius(System):
                 False
                 )
 
-        def update():
+        def _update():
             solve()
 
-        def integrate():
+        def _integrate():
             dt = advDiff.get_max_dt()
             advDiff.integrate(dt)
             return dt

@@ -6,14 +6,14 @@ import numpy as np
 from planetengine._system import System
 
 def build(*args, name = None, **kwargs):
-    built = Isovisc(*args, **kwargs)
+    built = DEV(*args, **kwargs)
     if type(name) == str:
         built.name = name
     return built
 
-class Isovisc(System):
+class DEV(System):
 
-    name = "isovisc"
+    name = "DEV"
     script = __file__
 
     def __init__(
@@ -79,6 +79,8 @@ class Isovisc(System):
 
         temperatureField.scales = [[0., 1.]]
         temperatureField.bounds = [[0., 1., '.', '.']]
+
+        timeVarOfState = fn.misc.constant(0.)
 
         ### BOUNDARIES ###
 
@@ -178,8 +180,17 @@ class Isovisc(System):
             advDiff.integrate(dt)
             return dt
 
+        def _iterate():
+            dt = _integrate()
+            timeVarOfState.value += dt
+            _update()
+            return dt
+
         super().__init__(
-            varsOfState = {'temperatureField': temperatureField},
+            varsOfState = {
+                'temperatureField': temperatureField,
+                'timeVarOfState': timeVarOfState
+                },
             obsVars = {
                 'temperature': temperatureField,
                 'velocity': velocityField

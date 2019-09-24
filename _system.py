@@ -76,15 +76,22 @@ class System(Built):
     def update(self):
         self._update()
 
-    def integrate(self):
+    def integrate(self, _skipClips = False):
         dt = self._integrate()
-        self.clipVals()
-        self.setBounds()
+        if not _skipClips:
+            self.clipVals()
+            self.setBounds()
+        return dt
+
+    def _iterate(self):
+        dt = self.integrate(_skipClips = _skipClips)
+        self.update()
         return dt
 
     def iterate(self):
-        dt = self.integrate()
-        self.update()
+        dt = self._iterate()
+        self.clipVals()
+        self.setBounds()
         self.modeltime.value += dt
         self.step.value += 1
 
