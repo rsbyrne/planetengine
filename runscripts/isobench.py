@@ -41,7 +41,7 @@ model = planetengine.model.make_model(
 if len(model.checkpoints) > 0:
     model.load_checkpoint('max')
 
-observer = planetengine.observers.arrbench.build()
+observer = planetengine.observers.isobench.build()
 observer.attach(model)
 
 conditions = {

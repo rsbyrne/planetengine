@@ -6,7 +6,7 @@ from planetengine import _observer
 from planetengine.utilities import message
 
 def build(*args, name = None, **kwargs):
-    built = Standard(*args, **kwargs)
+    built = Isobench(*args, **kwargs)
     if type(name) == str:
         built.name = name
     return built
