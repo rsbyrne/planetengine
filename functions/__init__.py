@@ -20,3 +20,5 @@ from . import split
 from . import substitute
 from . import surface
 from . import vanilla
+
+from ._convert import convert

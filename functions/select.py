@@ -2,33 +2,33 @@ import numpy as np
 
 from underworld import function as fn
 
-from . import _convert
 from . import _function
-from . import _construct
+from . import _convert
+from ._construct import _construct
 
-def construct():
-    func = _construct(Filter, *args, **kwargs)
+def construct(*args, **kwargs):
+    func = _construct(Select, *args, **kwargs)
     return func
 
-class Filter(_function.Function):
+class Select(_function.Function):
 
-    opTag = 'Filter'
+    opTag = 'Select'
 
-    def __init__(self, inVar, filterVal, outVar = None, **kwargs):
+    def __init__(self, inVar, selectVal, outVar = None, **kwargs):
 
-        inVar, filterVal = inVars = _convert.convert(
-            inVar, filterVal
+        inVar, selectVal = inVars = _convert.convert(
+            inVar, selectVal
             )
 
         if outVar is None:
             outVar = inVar
         else:
             outVar = _convert.convert(outVar)
-            inVars.append(outVar)
+            inVars = tuple([*list(inVars), outVar])
         nullVal = [np.nan for dim in range(inVar.varDim)]
         var = fn.branching.conditional([
-            (fn.math.abs(inVar - filterVal) < 1e-18, nullVal),
-            (True, outVar)
+            (fn.math.abs(inVar - selectVal) < 1e-18, outVar),
+            (True, nullVal)
             ])
 
         self.stringVariants = {}

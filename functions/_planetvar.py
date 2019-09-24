@@ -1,7 +1,16 @@
 import weakref
+import numpy as np
 
 from underworld import function as fn
 UWFn = fn._function.Function
+
+from .. import utilities
+hasher = utilities.hashToInt
+
+# MOST IMPORTS ARE AT THE BOTTOM
+# DUE TO CIRCULAR IMPORTS PROBLEM
+
+_premade_fns = {}
 
 def update_opTag(opTag, stringVariants):
     for key, val in sorted(stringVariants.items()):
@@ -44,7 +53,7 @@ def get_opHash(varClass, *hashVars, **stringVariants):
 
     else:
 
-        if varClass is _basetypes.Vanilla:
+        if varClass is vanilla.Vanilla:
             assert len(hashVars) == 1
             var = UWFn.convert(hashVars[0])
             if not hasattr(var, '_underlyingDataItems'):
@@ -145,7 +154,7 @@ class PlanetVar(UWFn):
 
         self._update()
 
-        if not self.__class__ is Constant:
+        if not self.__class__ is _basetypes.Constant:
             self._set_weakref(self) # is static
 
     #     self._safety_checks()
@@ -223,7 +232,7 @@ class PlanetVar(UWFn):
             maxFn = minmax.max_global
             self._minmax = minmax
             rangeFn = lambda: abs(minFn() - maxFn())
-        elif isinstance(self, _basetypes.Reduction) \
+        elif isinstance(self, _reduction.Reduction) \
                 or type(self) == _basetypes.Constant:
             minFn = lambda: min(self.value)
             maxFn = lambda: max(self.value)
@@ -355,6 +364,9 @@ class PlanetVar(UWFn):
     # def __ne__(self, other):
     #     return Comparison(self, other, uwop = 'notequals')
 
+# IMPORTS AT BOTTOM
+# DUE TO CIRCULAR IMPORTS PROBLEM
+from . import vanilla
 from . import _convert
 from . import _basetypes
 from . import _function

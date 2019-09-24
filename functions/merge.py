@@ -1,9 +1,9 @@
 from . import _function
 from . import _convert
-from . import _construct
+from ._construct import _construct
 from . import component
 
-def construct():
+def construct(*args, **kwargs):
     func = _construct(Merge, *args, **kwargs)
     return func
 

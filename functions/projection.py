@@ -4,9 +4,9 @@ import underworld as uw
 
 from . import _function
 from . import _convert
-from . import _construct
+from ._construct import _construct
 
-def construct():
+def construct(*args, **kwargs):
     func = _construct(Projection, *args, **kwargs)
     return func
 

@@ -4,10 +4,10 @@ from underworld import function as fn
 
 from . import _convert
 from . import _function
-from . import _construct
+from ._construct import _construct
 from . import getstat
 
-def construct():
+def construct(*args, **kwargs):
     func = _construct(HandleNaN, *args, **kwargs)
     return func
 

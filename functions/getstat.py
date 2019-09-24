@@ -3,9 +3,9 @@ from underworld import function as fn
 from . import _convert
 from . import _reduction
 from . import _basetypes
-from . import _construct
+from ._construct import _construct
 
-def construct():
+def construct(*args, **kwargs):
     func = _construct(GetStat, *args, **kwargs)
     return func
 

@@ -2,9 +2,9 @@ from underworld import function as fn
 
 from . import _convert
 from . import _function
-from . import _construct
+from ._construct import _construct
 
-def construct():
+def construct(*args, **kwargs):
     func = _construct(Booleanise, *args, **kwargs)
     return func
 

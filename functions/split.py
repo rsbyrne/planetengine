@@ -1,8 +1,8 @@
 from . import _function
 from . import _convert
-from . import _construct
+from ._construct import _construct
 
-def construct():
+def construct(*args, **kwargs):
     func = _construct(Split, *args, **kwargs)
     return func
 
@@ -44,7 +44,7 @@ class Split(_function.Function):
             self.inVar.evaluate()[:, self.column]
 
 def getall(inVar):
-    inVar = convert(inVar)
+    inVar = _convert.convert(inVar)
     returnVars = []
     for dim in range(inVar.varDim):
         returnVars.append(construct(inVar, column = dim))

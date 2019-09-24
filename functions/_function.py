@@ -1,4 +1,5 @@
 from . import _planetvar
+from . import _basetypes
 from .. import meshutils
 
 class Function(_planetvar.PlanetVar):

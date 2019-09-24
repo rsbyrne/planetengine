@@ -6,7 +6,9 @@ UWFn = fn._function.Function
 from . import _planetvar
 from . import _basetypes
 from . import vanilla
+from ._construct import _construct
 from .. import utilities
+message = utilities.message
 
 def _convert(var, varName = None):
 
@@ -26,7 +28,7 @@ def _convert(var, varName = None):
             if varName is None:
                 varName = _basetypes.Shape.defaultName
             stringVariants = {'varName': varName}
-            varClass = Shape
+            varClass = _basetypes.Shape
         elif len(var.shape) == 1:
             valString = utilities.stringify(var)
             stringVariants = {'val': valString}

@@ -2,6 +2,8 @@ import weakref
 
 from . import _planetvar
 from . import _basetypes
+from .. import utilities
+message = utilities.message
 
 def _construct(
         varClass,
@@ -27,7 +29,7 @@ def _construct(
             if hasattr(inVar, '_planetVars'):
                 if makerTag in inVar._planetVars:
                     outObj = inVar._planetVars[makerTag]()
-                    if isinstance(outObj, PlanetVar):
+                    if isinstance(outObj, _planetvar.PlanetVar):
                         break
                     else:
                         outObj = None

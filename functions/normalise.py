@@ -1,9 +1,9 @@
 from . import _function
 from . import _convert
 from . import _basetypes
-from . import _construct
+from ._construct import _construct
 
-def construct():
+def construct(*args, **kwargs):
     func = _construct(Normalise, *args, **kwargs)
     return func
 

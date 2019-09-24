@@ -1,4 +1,5 @@
 import random
+import weakref
 import numpy as np
 
 import underworld as uw
@@ -213,7 +214,7 @@ class Shape(BaseTypes):
         shape = fn.shape.Polygon(vertices)
         self.vertices = vertices
         self.richvertices = vertices
-        self.richvertices = interp_shape(self.vertices, num = 1000)
+        self.richvertices = shapes.interp_shape(self.vertices, num = 1000)
         self.morphs = {}
         self._currenthash = hasher(self.vertices)
 

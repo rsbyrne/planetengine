@@ -3,10 +3,10 @@ import underworld as uw
 from . import _convert
 from . import _reduction
 from . import _basetypes
-from . import _construct
+from ._construct import _construct
 from . import surface
 
-def construct():
+def construct(*args, **kwargs):
     func = _construct(Integral, *args, **kwargs)
     return func
 
