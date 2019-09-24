@@ -18,7 +18,7 @@ class Integral(_reduction.Reduction):
 
         if isinstance(inVar, _reduction.Reduction):
             raise Exception
-        if type(inVar) == _surface.Surface:
+        if type(inVar) == surface.Surface:
             raise Exception(
                 "Surface type not accepted; try Integral.auto method."
                 )
@@ -76,7 +76,7 @@ def back(*args, **kwargs):
 
 def auto(*args, **kwargs):
     inVar = _convert.convert(args[0])
-    if type(inVar) == _surface.Surface:
+    if type(inVar) == surface.Surface:
         surface = inVar.stringVariants['surface']
         inVar = inVar.inVar
     else:
