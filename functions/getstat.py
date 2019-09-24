@@ -34,6 +34,9 @@ class GetStat(_reduction.Reduction):
 
         super().__init__(**kwargs)
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
+
 def mins(*args, **kwargs):
     return construct(*args, stat = 'mins', **kwargs)
 

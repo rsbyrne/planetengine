@@ -48,15 +48,15 @@ class Standard(_observer.Observer):
 
         saveVars = {'velocity': velocity, 'stress': stress}
 
-        stressMag = pfn.Component.mag(stress)
-        avStress = pfn.Integral(stressMag)
-        avTemp = pfn.Integral(temperature)
-        tempGrad = pfn.Gradient.rad(temperature)
-        Nu = pfn.Integral.outer(tempGrad) / pfn.Integral.inner(temperature) * -1.
-        velMag = pfn.Component.mag(velocity)
-        VRMS = pfn.Integral(velMag)
-        horizVel = pfn.Component.ang(velocity)
-        surfVRMS = pfn.Integral(horizVel)
+        stressMag = pfn.component.mag(stress)
+        avStress = pfn.integral.default(stressMag)
+        avTemp = pfn.integral.default(temperature)
+        tempGrad = pfn.gradient.rad(temperature)
+        Nu = pfn.integral.outer(tempGrad) / pfn.integral.inner(temperature) * -1.
+        velMag = pfn.component.mag(velocity)
+        VRMS = pfn.integral.default(velMag)
+        horizVel = pfn.component.ang(velocity)
+        surfVRMS = pfn.integral.default(horizVel)
 
         statsDict = {
             'avStress': avStress,

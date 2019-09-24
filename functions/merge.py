@@ -53,6 +53,9 @@ class Merge(_function.Function):
             self.var.data[:, index] = \
                 inVar.evaluate()[:, 0]
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
+
 def annulise(inVar):
     inVar = _convert.convert(inVar)
     comps = []

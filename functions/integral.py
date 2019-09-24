@@ -54,6 +54,9 @@ class Integral(_reduction.Reduction):
 
         super().__init__(**kwargs)
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
+
 def volume(*args, **kwargs):
     return construct(*args, surface = 'volume', **kwargs)
 

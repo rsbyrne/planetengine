@@ -35,3 +35,6 @@ class Vanilla(_function.Function):
         self.var = var
 
         super().__init__(**kwargs)
+
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)

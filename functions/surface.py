@@ -48,6 +48,9 @@ class Surface(_function.Function):
                 6
                 )
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
+
 def volume(*args, **kwargs):
     return construct(*args, surface = 'volume', **kwargs)
 

@@ -40,6 +40,8 @@ class Component(_function.Function):
 
         super().__init__(**kwargs)
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
 
 def mag(*args, **kwargs):
     return construct(*args, component = 'mag', **kwargs)

@@ -67,6 +67,9 @@ class Operations(_function.Function):
 
         super().__init__(**kwargs)
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
+
 def pow(*args, **kwargs):
     return construct(*args, uwop = 'pow', **kwargs)
 

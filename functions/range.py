@@ -45,6 +45,9 @@ class Range(_function.Function):
 
         super().__init__(**kwargs)
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
+
 def inrange(*args, **kwargs):
     return construct(*args, operation = 'in', **kwargs)
 

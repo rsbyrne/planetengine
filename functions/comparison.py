@@ -32,6 +32,9 @@ class Comparison(_function.Function):
 
         super().__init__(**kwargs)
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
+
 def isequal(*args, **kwargs):
     return construct(*args, operation = 'equals', **kwargs)
 

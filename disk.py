@@ -4,14 +4,14 @@ import shutil
 import tarfile
 import importlib
 import underworld as uw
+from underworld import function as fn
+
 from . import utilities
 from .utilities import message
 from .functions import _basetypes
 from . import paths
 
 from . import mpi
-
-import underworld as uw
 
 def disk_state(path):
     path = os.path.splitext(path)[0]
@@ -98,6 +98,13 @@ def varsOnDisk(saveVars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
     extension = '.h5'
 
     for varName, var in sorted(saveVars.items()):
+
+        if type(var) == fn.misc.constant:
+            if mode == 'save':
+                save_json(var.value, varName, checkpointDir)
+            elif mode == 'load':
+                var.value = load_json(varName, checkpointDir)
+            break
 
         if type(var) == _basetypes.Variable:
             var.update()

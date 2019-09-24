@@ -43,6 +43,9 @@ class Split(_function.Function):
         self.var.data[:, 0] = \
             self.inVar.evaluate()[:, self.column]
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
+
 def getall(inVar):
     inVar = _convert.convert(inVar)
     returnVars = []

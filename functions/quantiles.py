@@ -54,6 +54,9 @@ class Quantiles(_function.Function):
 
         super().__init__(**kwargs)
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
+
 def median(*args, **kwargs):
     return construct(*args, ntiles = 2, **kwargs)
 

@@ -47,3 +47,6 @@ class Projection(_function.Function):
             self.var.data,
             rounding
             )
+
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)

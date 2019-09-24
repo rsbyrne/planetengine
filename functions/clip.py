@@ -84,6 +84,9 @@ class Clip(_function.Function):
 
         super().__init__(**kwargs)
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
+
 def torange(inVar, clipVar, **kwargs):
     inVar, clipVar = _convert.convert(inVar, clipVar)
     return construct(

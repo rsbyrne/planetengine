@@ -32,6 +32,9 @@ class Gradient(_function.Function):
 
         super().__init__(**kwargs)
 
+def default(*args, **kwargs):
+    return construct(*args, **kwargs)
+
 def mag(*args, **kwargs):
     gradVar = construct(*args, **kwargs)
     return component.construct(gradVar, component = 'mag', **kwargs)
