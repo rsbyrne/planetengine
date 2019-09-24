@@ -1,2 +1,2 @@
-from . import standard
+from . import arrbench
 from . import isobench
