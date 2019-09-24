@@ -9,9 +9,7 @@ import planetengine
 
 outDir = planetengine.paths.defaultPath
 
-projName = 'arrbench'
-projBranch = 'res16'
-outputPath = os.path.join(outDir, projName, projBranch)
+projName = 'isobench'
 
 chunks = int(sys.argv[1])
 chunkno = int(sys.argv[2])
@@ -19,11 +17,15 @@ iterno = int(sys.argv[3])
 
 suitelist = planetengine.utilities.suite_list({
     'f': [round(x / 10., 1) for x in range(1, 11)],
-    'eta0': [round(10.**(x / 2.), 0) for x in range(2, 12)],
     'Ra': [round(10.**(x / 2.), 0) for x in range(6, 16)],
+    'aspect': [1. * (x / 4.) for x in range(4, 14)],
+    'res': [16, 32, 64]
     }, shuffle = True, chunks = chunks)
 
 job = suitelist[chunkno][iterno]
+
+projBranch = 'res' + str(job['res'])
+outputPath = os.path.join(outDir, projName, projBranch)
 
 planetengine.log(
     "Starting chunk no# " + str(chunkno) + ", iter no# " + str(iterno),
@@ -31,8 +33,8 @@ planetengine.log(
     )
 
 model = planetengine.model.make_model(
-    planetengine.systems.arrhenius.build(res = 16, **job),
-    {'temperatureField': planetengine.initials.sinusoidal.build()},
+    planetengine.systems.isovisc.build(**job),
+    {'temperatureField': planetengine.initials.sinusoidal.build(freq = job['aspect'])},
     outputPath = outputPath
     )
 
