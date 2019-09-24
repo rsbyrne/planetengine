@@ -11,10 +11,10 @@ def build(*args, name = None, **kwargs):
         built.name = name
     return built
 
-class Isobench(_observer.Observer):
+class Standard(_observer.Observer):
 
     script = __file__
-    name = 'isobench'
+    name = 'standard'
 
     def __init__(
             self,
@@ -35,15 +35,18 @@ class Isobench(_observer.Observer):
 
     def _attach(self, system):
 
-        keys = {'temperature', 'velocity'}
+        keys = {'temperature', 'velocity', 'stress'}
         obsVars = {key: system.obsVars[key] for key in keys}
         obsVars = pfn.convert(obsVars)
 
         temperature = obsVars['temperature']
         velocity = obsVars['velocity']
+        stress = obsVars['stress']
 
-        saveVars = {'velocity': velocity}
+        saveVars = {'velocity': velocity, 'stress': stress}
 
+        stressMag = pfn.component.mag(stress)
+        avStress = pfn.integral.default(stressMag)
         avTemp = pfn.integral.default(temperature)
         tempGrad = pfn.gradient.rad(temperature)
         Nu = pfn.integral.outer(tempGrad) / pfn.integral.inner(temperature) * -1.
@@ -53,6 +56,7 @@ class Isobench(_observer.Observer):
         surfAngVel = pfn.integral.default(horizVel)
 
         statsDict = {
+            'avStress': avStress,
             'avTemp': avTemp,
             'Nu': Nu,
             'VRMS': VRMS,
@@ -64,6 +68,7 @@ class Isobench(_observer.Observer):
             'avTemp': "{:.2f}",
             'VRMS': "{:.2f}",
             'surfAngVel': "{:.2f}",
+            'avStress': "{:.2f}"
             }
 
         mainAnalyser = analysis.Analyser(
@@ -80,6 +85,7 @@ class Isobench(_observer.Observer):
         mainFig = QuickFig(
             temperature,
             velocity,
+            stressMag,
             style = 'smallblack'
             )
 
