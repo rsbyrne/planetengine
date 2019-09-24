@@ -181,9 +181,9 @@ class DEV(System):
             return dt
 
         def iterate():
-            dt = _integrate()
+            dt = integrate()
             timeVarOfState.value += dt
-            _update()
+            update()
             return dt
 
         super().__init__(
