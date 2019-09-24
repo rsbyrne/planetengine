@@ -35,12 +35,9 @@ class Standard(_observer.Observer):
 
     def _attach(self, system):
 
-        varDict = {}
-
         keys = {'temperature', 'velocity', 'stress'}
         obsVars = {key: system.obsVars[key] for key in keys}
         obsVars = pfn.convert(obsVars)
-
 
         temperature = obsVars['temperature']
         velocity = obsVars['velocity']
