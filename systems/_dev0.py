@@ -172,15 +172,15 @@ class DEV(System):
                 False
                 )
 
-        def _update():
+        def update():
             solve()
 
-        def _integrate():
+        def integrate():
             dt = advDiff.get_max_dt()
             advDiff.integrate(dt)
             return dt
 
-        def _iterate():
+        def iterate():
             dt = _integrate()
             timeVarOfState.value += dt
             _update()
@@ -197,6 +197,7 @@ class DEV(System):
                 },
             _update = update,
             _integrate = integrate,
+            _iterate = iterate,
             _locals = locals(),
             args = args,
             kwargs = kwargs,

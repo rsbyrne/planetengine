@@ -170,10 +170,10 @@ class Isovisc(System):
                 False
                 )
 
-        def _update():
+        def update():
             solve()
 
-        def _integrate():
+        def integrate():
             dt = advDiff.get_max_dt()
             advDiff.integrate(dt)
             return dt

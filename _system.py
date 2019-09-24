@@ -19,12 +19,15 @@ class System(Built):
             kwargs,
             inputs,
             script,
+            _iterate = None
             ):
 
         self.varsOfState = varsOfState
         self.obsVars = obsVars
         self._update = _update
         self._integrate = _integrate
+        if not _iterate is None:
+            self._iterate = _iterate
 
         self.step = value.Value(0)
         self.modeltime = value.Value(0.)
@@ -84,7 +87,7 @@ class System(Built):
         return dt
 
     def _iterate(self):
-        dt = self.integrate(_skipClips = _skipClips)
+        dt = self.integrate(_skipClips = True)
         self.update()
         return dt
 
