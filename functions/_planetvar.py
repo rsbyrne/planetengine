@@ -65,7 +65,6 @@ def get_opHash(varClass, *hashVars, **stringVariants):
                 inVars.append(_convert.convert(underlying))
             hashVars = inVars
             stringVariants = {'UWhash': var.__hash__()}
-
         else:
             hashVars = _convert.convert(hashVars)
 
