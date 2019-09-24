@@ -5,7 +5,7 @@ import os
 
 from . import functions as pfn
 from .utilities import message
-from .functions import get_planetVar
+from .functions import convert
 from . import functions as pfn
 from .meshutils import get_meshUtils
 
@@ -75,10 +75,10 @@ class QuickFig:
         for arg in args:
             if type(arg) == tuple:
                 varName, var = arg
-                planetVar = pfn._convert(var, varName = varName)
+                planetVar = convert(var, varName)
             else:
                 var = arg
-                planetVar = pfn._convert(var)
+                planetVar = convert(var)
             self.planetVars.append(planetVar)
             self.updateFuncs.append(planetVar.update)
 
@@ -119,7 +119,7 @@ class QuickFig:
             )
 
     def add_stipple(self, arg, **kwargs):
-        planetVar = get_planetVar(arg)
+        planetVar = convert(arg)
         if not planetVar.valSets == [{0., 1.}]:
             raise Exception
         if not planetVar.varDim == 1:
@@ -138,7 +138,7 @@ class QuickFig:
         self.fig.append(drawing)
 
     def add_surface(self, arg, **kwargs):
-        planetVar = get_planetVar(arg)
+        planetVar = convert(arg)
         if not planetVar.varDim == 1:
             raise Exception
         self.fig.append(
@@ -150,7 +150,7 @@ class QuickFig:
             )
 
     def add_contours(self, arg, **kwargs):
-        planetVar = get_planetVar(arg)
+        planetVar = convert(arg)
         normed = pfn.Normalise(
             planetVar, [2., 1024.]
             )
@@ -170,7 +170,7 @@ class QuickFig:
             )
 
     def add_arrows(self, arg, **kwargs):
-        planetVar = get_planetVar(arg)
+        planetVar = convert(arg)
         if not planetVar.varDim == planetVar.mesh.dim:
             raise Exception
         self.fig.append(
@@ -182,7 +182,7 @@ class QuickFig:
             )
 
     def add_points(self, arg, **kwargs):
-        planetVar = get_planetVar(arg)
+        planetVar = convert(arg)
         # if not planetVar.varType in {'swarmVar' or 'swarmFn'}:
         #     raise Exception
         if not planetVar.varDim == 1:

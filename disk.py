@@ -6,7 +6,7 @@ import importlib
 import underworld as uw
 from . import utilities
 from .utilities import message
-from .functions import Variable
+from .functions import _basetypes
 from . import paths
 
 from . import mpi
@@ -99,7 +99,7 @@ def varsOnDisk(saveVars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
 
     for varName, var in sorted(saveVars.items()):
 
-        if type(var) == Variable:
+        if type(var) == _basetypes.Variable:
             var.update()
             var = var.var
 

@@ -21,7 +21,6 @@ from . import paths
 from . import generic
 from . import model
 from . import value
-from . import new_functions
 
 from .utilities import message
 from .utilities import log
