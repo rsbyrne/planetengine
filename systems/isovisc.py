@@ -14,6 +14,7 @@ def build(*args, name = None, **kwargs):
 class Isovisc(System):
 
     name = "isovisc"
+    script = __file__
 
     def __init__(
         self,
@@ -28,7 +29,6 @@ class Isovisc(System):
         ### HOUSEKEEPING: IMPORTANT! ###
 
         inputs = locals().copy()
-        script = __file__
 
         ### MESH & MESH VARIABLES ###
 
@@ -190,5 +190,5 @@ class Isovisc(System):
             args = args,
             kwargs = kwargs,
             inputs = inputs,
-            script = script
+            script = self.script
             )
