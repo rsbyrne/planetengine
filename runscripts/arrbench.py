@@ -10,7 +10,7 @@ import planetengine
 outDir = planetengine.paths.defaultPath
 
 projName = 'arrbench'
-projBranch = ''
+projBranch = 'res16'
 outputPath = os.path.join(outDir, projName, projBranch)
 
 chunks = int(sys.argv[1])
@@ -18,9 +18,9 @@ chunkno = int(sys.argv[2])
 iterno = int(sys.argv[3])
 
 suitelist = planetengine.utilities.suite_list({
-    'f': [0.2, 0.4, 0.6, 0.8, 1.],
-    'eta0': [1., 10., 100., 1000., 10000.],
-    'Ra': [1e3, 1e4, 1e5, 1e6, 1e7],
+    'f': [round(x / 10., 1) for x in range(1, 11)],
+    'eta0': [round(10.**(x / 2.), 0) for x in range(2, 12)],
+    'Ra': [round(10.**(x / 2.), 0) for x in range(6, 16)],
     }, shuffle = True, chunks = chunks)
 
 job = suitelist[chunkno][iterno]
@@ -43,8 +43,8 @@ observer = planetengine.observers.standard.build()
 observer.attach(model)
 
 conditions = {
-    # 'stopCondition': lambda: model.modeltime() > 0.3,
-    'stopCondition': lambda: model.step() > 25,
+    'stopCondition': lambda: model.modeltime() > 0.3,
+    # 'stopCondition': lambda: model.step() > 25,
     'checkpointCondition': lambda: any([
         model.status == 'pre-traverse',
         model.step() % 1000 == 0,
