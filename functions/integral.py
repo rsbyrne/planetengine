@@ -4,7 +4,8 @@ from . import _convert
 from . import _reduction
 from . import _basetypes
 from ._construct import _construct
-from . import surface
+from . import surface as _surface
+from . import handlenan as _handlenan
 
 def construct(*args, **kwargs):
     func = _construct(Integral, *args, **kwargs)
@@ -18,12 +19,12 @@ class Integral(_reduction.Reduction):
 
         if isinstance(inVar, _reduction.Reduction):
             raise Exception
-        if type(inVar) == surface.Surface:
+        if type(inVar) == _surface.Surface:
             raise Exception(
                 "Surface type not accepted; try Integral.auto method."
                 )
 
-        inVar = HandleNaN.zeroes(inVar)
+        inVar = _handlenan.zeroes(inVar)
 
         intMesh = inVar.meshUtils.integrals[surface]
         if surface == 'volume':
@@ -76,7 +77,7 @@ def back(*args, **kwargs):
 
 def auto(*args, **kwargs):
     inVar = _convert.convert(args[0])
-    if type(inVar) == surface.Surface:
+    if type(inVar) == _surface.Surface:
         surface = inVar.stringVariants['surface']
         inVar = inVar.inVar
     else:
