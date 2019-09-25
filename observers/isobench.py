@@ -79,8 +79,7 @@ class Isobench(_observer.Observer):
 
         mainFig = QuickFig(
             temperature,
-            velocity,
-            style = 'smallblack'
+            velocity
             )
 
         saveFigs = [mainFig]

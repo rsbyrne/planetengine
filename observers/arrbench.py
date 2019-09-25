@@ -85,8 +85,7 @@ class Standard(_observer.Observer):
         mainFig = QuickFig(
             temperature,
             velocity,
-            stressMag,
-            style = 'smallblack'
+            stressMag
             )
 
         saveFigs = [mainFig]

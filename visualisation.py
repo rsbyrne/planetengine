@@ -16,28 +16,11 @@ def quickShow(*args, **kwargs):
     quickFig = QuickFig(*args, **kwargs)
     quickFig.show()
 
-styles = {
-    'smallblack': {
-        'colourBar': False,
-        'facecolour': 'black',
-        'quality': 2,
-        'figsize': (300, 300)
-        }
-    }
-
 class QuickFig:
 
-    def __init__(self, *args, figname = 'default', style = {}):
+    def __init__(self, *args, figname = 'default', **kwargs):
 
-        if type(style) == str:
-            style = styles[style]
-        elif not type(style) == dict:
-            raise Exception
-
-        if not style == {}:
-            self.fig = glucifer.Figure(**style)
-        else:
-            self.fig = glucifer.Figure()
+        self.fig = glucifer.Figure(**kwargs)
 
         self.figname = figname
         self.features = set()
@@ -50,16 +33,18 @@ class QuickFig:
         self.inventory = [
             self.add_surface,
             self.add_contours,
-            self.add_arrows,
+            self.add_stipple,
             self.add_points,
-            self.add_stipple
+            self.add_arrows,
+            self.add_arrows_red,
+            self.add_arrows_blue,
             ]
 
         self.functions_used = []
 
-        self.add_vars(args)
+        self.add_vars(args, **kwargs)
 
-    def add_vars(self, args):
+    def add_vars(self, args, **kwargs):
 
         args = list(args)
 
@@ -68,10 +53,10 @@ class QuickFig:
         for arg in args:
             if hasattr(arg, 'subMesh'):
                 args.remove(arg)
-                self.add_grid(arg)
+                self.add_grid(arg, **kwargs)
             elif hasattr(arg, 'particleCoordinates'):
                 args.remove(arg)
-                self.add_swarm(arg)
+                self.add_swarm(arg, **kwargs)
         for arg in args:
             if type(arg) == tuple:
                 varName, var = arg
@@ -88,10 +73,11 @@ class QuickFig:
                 if not function in self.functions_used:
                     if not found:
                         try:
-                            function(planetVar)
+                            function(planetVar, **kwargs)
                             found = True
                             self.functions_used.append(function)
-                        except:
+                        except Exception as e:
+                            message(function, e)
                             continue
             if found:
                 self.fittedvars.append(planetVar)
@@ -120,8 +106,6 @@ class QuickFig:
 
     def add_stipple(self, arg, **kwargs):
         planetVar = convert(arg)
-        if not planetVar.valSets == [{0., 1.}]:
-            raise Exception
         if not planetVar.varDim == 1:
             raise Exception
         drawing = glucifer.objects.Drawing(
@@ -151,12 +135,10 @@ class QuickFig:
 
     def add_contours(self, arg, **kwargs):
         planetVar = convert(arg)
-        normed = pfn.Normalise(
+        normed = pfn.normalise.default(
             planetVar, [2., 1024.]
             )
         self.updateFuncs.append(normed.update)
-        if 0. in planetVar.valSets:
-            raise Exception
         if not planetVar.varDim == 1:
             raise Exception
         self.fig.append(
@@ -169,17 +151,31 @@ class QuickFig:
                 )
             )
 
-    def add_arrows(self, arg, **kwargs):
+    def add_arrows(self, arg, colour = 'black', **kwargs):
         planetVar = convert(arg)
         if not planetVar.varDim == planetVar.mesh.dim:
             raise Exception
+        kwargs = {**kwargs}
+        topop = {'colourBar', 'colour'}
+        for val in topop:
+            try:
+                kwargs.pop(val)
+            except:
+                pass
         self.fig.append(
             glucifer.objects.VectorArrows(
                 planetVar.mesh,
                 planetVar,
+                colour = colour,
                 **kwargs
                 )
             )
+
+    def add_arrows_red(self, arg, **kwargs):
+        self.add_arrows(arg, colour = 'red', **kwargs)
+
+    def add_arrows_blue(self, arg, **kwargs):
+        self.add_arrows(arg, colour = 'blue', **kwargs)
 
     def add_points(self, arg, **kwargs):
         planetVar = convert(arg)
@@ -215,7 +211,7 @@ class QuickFig:
             name = self.figname
         if mpi.rank == 0:
             if not os.path.isdir(path):
-                os.mkdir(path)
+                os.makedirs(path)
             assert os.path.isdir(path)
         # mpi.barrier()
         self.fig.save(os.path.join(path, name))

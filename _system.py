@@ -33,7 +33,6 @@ class System(Built):
         self.modeltime = value.Value(0.)
 
         self.initials = None
-        self.fig = QuickFig(varsOfState, style = 'smallblack')
 
         super().__init__(
             args = args,
@@ -60,7 +59,9 @@ class System(Built):
         if ICdict.keys() == self.varsOfState.keys():
             self.initials = ICdict
         else:
-            raise Exception
+            raise Exception(
+                "Must provide an initial condition for every variable of state."
+                )
 
     def initialise(self, ICdict = None):
         if ICdict is None:
@@ -102,5 +103,12 @@ class System(Built):
         for step in range(steps):
             self.iterate()
 
+    def makefig(self):
+        self.fig = QuickFig(self.varsOfState)
+
     def show(self):
+        if not hasattr(self, 'fig'):
+            self.makefig()
+        else:
+            self.fig.update()
         self.fig.show()
