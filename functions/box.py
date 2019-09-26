@@ -23,7 +23,6 @@ class Box(_function.Function):
         inMesh = unitVar.mesh
 
         coordFns = []
-        print(unitVar)
         if type(inMesh) == uw.mesh.FeMesh_Annulus:
             ang = normalise.unit(unitVar.var * (1. - inMesh.thetaFn))
             rad = normalise.unit(unitVar.var * inMesh.radiusFn)

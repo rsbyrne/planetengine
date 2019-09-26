@@ -215,7 +215,7 @@ class PlanetVar(UWFn):
         if isinstance(self, _function.Function) \
                 or type(self) == _basetypes.Variable:
             if self.varDim == 1:
-                minmax = fn.view.min_max(self)
+                minmax = fn.view.min_max(self.var)
             else:
                 fn_norm = fn.math.sqrt(
                     fn.math.dot(
@@ -262,10 +262,9 @@ class PlanetVar(UWFn):
         return self._rangeFn()
 
     def _update_summary_stats(self):
-        if (
-                isinstance(self, _function.Function) \
-                    or type(self) == _basetypes.Variable
-                    ) \
+        if (isinstance(self, _function.Function) \
+                or type(self) == _basetypes.Variable
+                ) \
                 and hasattr(self, '_minmax'):
             self._minmax.evaluate(self.substrate)
         if isinstance(self, _reduction.Reduction):
