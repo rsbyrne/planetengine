@@ -5,6 +5,7 @@ import underworld as uw
 from underworld import function as fn
 
 import numpy as np
+import weakref
 
 def get_meshUtils(var):
     try:
@@ -135,3 +136,11 @@ class MeshUtils:
         xs = np.linspace(mesh.data[:,0].min(), mesh.data[:,0].max(), 100)
         ys = np.linspace(mesh.data[:,1].min(), mesh.data[:,1].max(), 100)
         self.cartesianScope = np.array(np.meshgrid(xs, ys)).T.reshape([-1, 2])
+
+        self.mesh = weakref.ref(mesh)
+
+    def get_unitVar(self):
+        if not hasattr(self, 'unitVar'):
+            self.unitVar = self.mesh().add_variable(1)
+            self.unitVar.data[:] = 1.
+        return self.unitVar

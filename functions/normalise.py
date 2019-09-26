@@ -31,3 +31,6 @@ class Normalise(_function.Function):
 
 def default(*args, **kwargs):
     return construct(*args, **kwargs)
+
+def unit(baseVar, *args, **kwargs):
+    return construct(baseVar, [0., 1.], **kwargs)

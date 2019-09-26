@@ -1,5 +1,6 @@
 from . import binarise
 from . import booleanise
+from . import box
 from . import clip
 from . import comparison
 from . import component

@@ -307,7 +307,7 @@ class PlanetVar(UWFn):
             self.update()
         if evalInput is None:
             evalInput = self.substrate
-        evalInput = _input_processing(evalInput)
+        evalInput = self._input_processing(evalInput)
         return self.var.evaluate(evalInput)
 
     def __call__(self):
