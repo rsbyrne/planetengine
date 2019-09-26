@@ -29,6 +29,8 @@ class Surface(_function.Function):
             inVar.dType
             )
 
+        self._meshVar = lambda: var
+
         self.stringVariants = {'surface': surface}
         self.inVars = [inVar]
         self.parameters = []

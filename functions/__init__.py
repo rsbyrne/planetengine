@@ -19,6 +19,7 @@ from . import select
 from . import split
 from . import substitute
 from . import surface
+from . import tile
 from . import vanilla
 
 from ._convert import convert

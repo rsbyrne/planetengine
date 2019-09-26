@@ -26,6 +26,7 @@ class Projection(_function.Function):
             var,
             inVar,
             )
+        self._meshVar = lambda: var
 
         self.stringVariants = {}
         self.inVars = [inVar]

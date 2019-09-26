@@ -432,6 +432,8 @@ def hashToInt(inputObj):
     stamp = hashstamp(inputObj)
     hashVal = 0
     for char in stamp:
+        addval = ord(char)
+        hashVal *= 10 ** int(math.log10(addval))
         hashVal += ord(char)
     return hashVal
 

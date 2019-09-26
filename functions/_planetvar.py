@@ -68,15 +68,15 @@ def get_opHash(varClass, *hashVars, **stringVariants):
         else:
             hashVars = _convert.convert(hashVars)
 
-        rootVars = set()
+        rootVarHashes = []
         for hashVar in hashVars:
             assert isinstance(hashVar, PlanetVar)
-            rootVars = rootVars.union(
-                rootVars,
-                hashVar.rootVars
-                )
-        for rootVar in rootVars:
-            hashList.append(rootVar.__hash__())
+            if len(hashVar.rootVars) == 0:
+                rootVarHashes.append(hashVar.__hash__())
+            else:
+                for rootVar in hashVar.rootVars:
+                    rootVarHashes.append(rootVar.__hash__())
+        hashList.extend(list(sorted(set(rootVarHashes))))
 
     fulltag = update_opTag(varClass.opTag, stringVariants)
     hashList.append(fulltag)
@@ -272,6 +272,7 @@ class PlanetVar(UWFn):
             self.value = self.evaluate(lazy = True)[0]
 
     def meshVar(self):
+        self.update()
         if not any([
                 isinstance(self, _function.Function),
                 type(self) == _basetypes.Variable
@@ -279,15 +280,12 @@ class PlanetVar(UWFn):
             raise Exception
         if self.varType == 'constFn':
             raise Exception
-        if self.varType == 'meshVar':
-            return self
-        else:
-            if not hasattr(self, '_meshVar'):
-                projVar = projection.Projection(self)
-                # self._meshVar = weakref.ref(projVar)
-                # POSSIBLE CIRCULAR REFERENCE!
-                self._meshVar = lambda: projVar
-            return self._meshVar()
+        if not hasattr(self, '_meshVar'):
+            projVar = projection.Projection(self)
+            # self._meshVar = weakref.ref(projVar)
+            # POSSIBLE CIRCULAR REFERENCE!
+            self._meshVar = lambda: projVar
+        return self._meshVar()
     def gradient(self):
         if not hasattr(self, '_fn_gradient'):
             gradientVar = gradient.Gradient(self)
@@ -301,12 +299,15 @@ class PlanetVar(UWFn):
     #     weak_reference = weakref.ref(self)
     #     hashKey = self.__hash__()
     #     _premade_fns[hashKey] = weak_reference
+    def _input_processing(self, evalInput):
+        return evalInput
 
     def evaluate(self, evalInput = None, lazy = False):
         if not lazy:
             self.update()
         if evalInput is None:
             evalInput = self.substrate
+        evalInput = _input_processing(evalInput)
         return self.var.evaluate(evalInput)
 
     def __call__(self):
