@@ -19,16 +19,13 @@ with planetengine.paths.TestDir() as testPath:
         diskmate.save_module(system.script)
         diskmate.save_json({'Hello': 'World'}, 'info')
         diskmate.save_vars(system.varsOfState, 'vars')
-        if mpi.rank == 0:
-            os.mkdir(os.path.join(diskmate.path, 'testtar1'))
+        diskmate.mkdir('testtar1')
         disk.make_tar(os.path.join(diskmate.path, 'testtar1'))
-        if mpi.rank == 0:
-            os.mkdir(os.path.join(diskmate.path, 'testdir1'))
-            os.mkdir(os.path.join(os.path.join(diskmate.path, 'testdir1'), 'testtar2'))
+        diskmate.mkdir('testdir1')
+        diskmate.mkdir(os.path.join('testdir1', 'testtar2'))
         disk.make_tar(os.path.join(os.path.join(diskmate.path, 'testdir1'), 'testtar2'))
-        if mpi.rank == 0:
-            os.mkdir(os.path.join(diskmate.path, 'testdir2'))
-            os.mkdir(os.path.join(os.path.join(diskmate.path, 'testdir2'), 'testtar3'))
+        diskmate.mkdir('testdir2')
+        diskmate.mkdir(os.path.join('testdir2', 'testtar3'))
         diskmate.save_json({'Foo': 'Bar'}, 'subinfo', subPath = os.path.join('testdir2', 'testtar3'))
         disk.make_tar(os.path.join(os.path.join(diskmate.path, 'testdir2'), 'testtar3'))
         disk.make_tar(os.path.join(diskmate.path, 'testdir2'))
@@ -41,8 +38,7 @@ with planetengine.paths.TestDir() as testPath:
         mymodule = diskmate.load_module('arrhenius')
         myjson = diskmate.load_json('info')
         myjson2 = diskmate.load_json('subinfo', subPath = os.path.join('testdir2', 'testtar3'))
-        if mpi.rank == 0:
-            os.mkdir(os.path.join(diskmate.path, 'newdir'))
+        diskmate.mkdir('newdir')
         myjson3 = diskmate.save_json([0, 1, 2, 3], 'newjson', subPath = os.path.join(diskmate.path, 'newdir'))
         diskmate.load_vars(system.varsOfState, 'vars')
 

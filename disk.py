@@ -104,7 +104,9 @@ def expose_tar(path, recursive = False):
 
 def make_tar(path, was_tarred = []):
 
-    assert disk_state(path) == 'dir'
+    diskstate = disk_state(path)
+    assert diskstate == 'dir', \
+        "Diskstate should be 'dir', not " + diskstate
 
     tarpath = path + '.tar.gz'
 
@@ -181,16 +183,15 @@ def makedirs(path, exist_ok = False):
 
 def explore_tree(path):
     directories = {}
-    if mpi.rank == 0:
-        path = os.path.abspath(path)
-        for file in os.listdir(path):
-            if not file[:2] == '__':
-                filePath = os.path.join(path, file)
-                if os.path.isfile(filePath):
-                    directories[file] = '.'
-                elif os.path.isdir(filePath):
-                    directories[file] = explore_tree(filePath)
-    directories = mpi.comm.bcast(directories, root = 0)
+    path = os.path.abspath(path)
+    files = listdir(path)
+    for file in files:
+        if not file[:2] == '__':
+            filePath = os.path.join(path, file)
+            if os.path.isfile(filePath):
+                directories[file] = '.'
+            elif os.path.isdir(filePath):
+                directories[file] = explore_tree(filePath)
     return directories
 
 def is_jsonable(x):
@@ -373,6 +374,7 @@ class DiskMate:
 
     def _update(self):
         self._get_directories()
+        # pass
 
     def mkdir(self, subPath, **kwargs):
         if mpi.rank == 0:
@@ -437,6 +439,10 @@ class DiskMate:
             **kwargs
             )
         self._update()
+
+    def listdir(self, subPath = ''):
+        path = os.path.join(self.path, subPath)
+        return listdir(path)
 
     # def save_tree(self, saveDict):
     #     pass
