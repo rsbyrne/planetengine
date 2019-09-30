@@ -5,5 +5,6 @@ if not workpath in sys.path:
 
 from planetengine import tests
 
+tests.archivertest.testfn()
 tests.framestest.testfn()
 tests.functionstest.testfn()

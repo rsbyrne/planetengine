@@ -14,6 +14,11 @@ from . import paths
 
 from . import mpi
 
+def expose(name, outputPath = '.', archive = None, recursive = True):
+    return _FileContextManager(name, outputPath, archive, recursive)
+
+from . import _built
+
 def disk_state(path):
     path = os.path.splitext(path)[0]
     tarpath = path + '.tar.gz'
@@ -102,6 +107,12 @@ def expose_tar(path, recursive = False):
         was_tarred = expose_sub_tars(path)
         return was_tarred
 
+def try_expose_tar(path, **kwargs):
+    if disk_state(path) == 'tar':
+        expose_tar(path)
+        return True
+    return False
+
 def make_tar(path, was_tarred = []):
 
     diskstate = disk_state(path)
@@ -127,6 +138,12 @@ def make_tar(path, was_tarred = []):
     assert disk_state(path) == 'tar'
 
     message("Archived.")
+
+def try_make_tar(path, **kwargs):
+    if disk_state(path) == 'dir':
+        make_tar(path)
+        return True
+    return False
 
 def expose_sub_tars(path):
     message("Exposing sub tars...")
@@ -305,7 +322,7 @@ def varsOnDisk(
         else:
             raise Exception("Disk mode not recognised.")
 
-class Archiver:
+class _FileContextManager:
 
     def __init__(
             self,
@@ -336,7 +353,7 @@ class Archiver:
         if self.recursive:
             self.subtars = expose_sub_tars(self.path)
         self.was_archived = was_archived
-        return DiskMate(self.name, self.outputPath)
+        return FileManager(self.name, self.outputPath)
 
     def __exit__(self, *args):
         if self.recursive:
@@ -356,7 +373,7 @@ class Archiver:
             return False
         return True
 
-class DiskMate:
+class FileManager:
 
     def __init__(self, name, outputPath = '.'):
         self.name = name
@@ -463,7 +480,6 @@ class DiskMate:
             objName,
             self._get_path(subPath)
             )
-        self._update()
 
     def save_module(self, script, name = None, subPath = ''):
         save_script(
@@ -478,7 +494,6 @@ class DiskMate:
             name,
             self._get_path(subPath)
             )
-        self._update()
 
     def save_vars(self, varDict, subPath = ''):
         varsOnDisk(
@@ -494,4 +509,31 @@ class DiskMate:
             self._get_path(subPath),
             mode = 'load'
             )
+
+    def save_built(self, built, name, subPath = ''):
+        _built.save_built(
+            built,
+            name,
+            self._get_path(subPath)
+            )
         self._update()
+
+    def load_built(self, name, subPath = ''):
+        return _built.load_built(
+            name,
+            self._get_path(subPath)
+            )
+
+    def save_builtsDir(self, builts, subPath = ''):
+        _built.save_builtsDir(
+            builts,
+            self.path,
+            subPath
+            )
+        self._update()
+
+    def load_builtsDir(self, subPath = ''):
+        return _built.load_builtsDir(
+            self.path,
+            subPath
+            )

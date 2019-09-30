@@ -6,6 +6,7 @@ from . import _frame as frame
 from .value import Value
 from . import _system
 from . import _observer
+from . import disk
 
 Frame = frame.Frame
 
@@ -132,8 +133,6 @@ class Model(Frame):
         if checkpointCondition():
             self.checkpoint()
 
-        was_archived = self.disk_state() == 'tar'
-
         message("Running...")
 
         while not stopCondition():
@@ -150,7 +149,8 @@ class Model(Frame):
             except:
                 if forge_on:
                     message("Something went wrong...loading last checkpoint.")
-                    assert type(self.most_recent_checkpoint) == int, "No most recent checkpoint logged."
+                    assert type(self.most_recent_checkpoint) == int, \
+                        "No most recent checkpoint logged."
                     self.load_checkpoint(self.most_recent_checkpoint)
                 else:
                     raise Exception("Something went wrong.")
@@ -161,19 +161,17 @@ class Model(Frame):
         if checkpointCondition():
             self.checkpoint()
 
-        if was_archived:
-            assert self.disk_state() == 'tar'
-
         self.status = 'idle'
 
     def _post_load_hook(self):
         self._load_observers()
 
     def _load_observers(self):
-        loadObservers = _observer.load_observers(
-            self.path,
-            self.system
-            )
+        with disk.expose(self.instanceID, self.outputPath) as filemanager:
+            loadObservers = _observer.load_observers(
+                filemanager.path,
+                self.system
+                )
         for loadObserver in loadObservers:
             self.observers[loadObserver.instanceID] = loadObserver
 

@@ -10,7 +10,7 @@ from . import testsystems
 
 def testfn():
 
-    system = testsystems.get_system()
+    system = testsystems.get_system(res = 16, Ra = 1e4)
 
     variable1 = pfn.convert(system.velocityField, 'velocity')
     variable2 = pfn.convert(system.temperatureField, 'temperature')
@@ -50,7 +50,7 @@ def testfn():
     var = variable2
     timings = []
     for makeFn in makeFns:
-        timing = timeit(lambda: makeFn(var), number = 3) / 3.
+        timing = timeit(lambda: makeFn(var), number = 1) / 1.
         timings.append(timing)
         var = makeFn(var)
         message(var.opTag, round(timing, 3))
@@ -66,7 +66,7 @@ def testfn():
             timinglist.append(timing)
             return timinglist
         var_timings = []
-        for i in range(3):
+        for i in range(1):
             var_timings = outer_timefn(var, var_timings)
         var_timing = sum(var_timings) / len(var_timings)
         var_timing = round(var_timing, 6)
@@ -104,12 +104,12 @@ def testfn():
     def testfn():
         freshsteps = []
         stalesteps = []
-        for i in range(3):
+        for i in range(1):
             system.reset()
             red.update
             system.iterate()
             freshsteps.append(timeit(red.update, number = 1))
-        for i in range(3):
+        for i in range(1):
             stalesteps.append(timeit(red.update, number = 1))
         average_fresh = round(sum(freshsteps) / len(freshsteps), 5)
         average_stale = round(sum(stalesteps) / len(stalesteps), 5)

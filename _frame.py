@@ -40,52 +40,23 @@ def make_frame(
         instanceID = prefix + '_' + stamps['all'][1]
 
     path = os.path.join(outputPath, instanceID)
-    tarpath = path + '.tar.gz'
+    diskstate = disk.disk_state(path)
 
-    directory_state = ''
-
-    if mpi.rank == 0:
-
-        if os.path.isdir(path) and os.path.isfile(tarpath):
-                raise Exception(
-                    "Cannot combine model directory and tar yet."
-                    )
-        if os.path.isdir(path):
-            directory_state = 'directory'
-        elif os.path.isfile(tarpath):
-            directory_state = 'tar'
-        else:
-            directory_state = 'clean'
-
-    directory_state = mpi.comm.bcast(directory_state, root = 0)
-    # mpi.comm.barrier()
-
-    if directory_state == 'tar':
-        if mpi.rank == 0:
-            with tarfile.open(tarpath) as tar:
-                tar.extract('stamps.json', path)
-            assert os.path.isfile(os.path.join(path, 'stamps.json'))
-        loadstamps = disk.load_json('stamps', path)
-        if mpi.rank == 0:
-            shutil.rmtree(path)
-            assert not os.path.isdir(path)
-        assert loadstamps == stamps
-
-    if not directory_state == 'clean':
-        message("Preexisting model found! Loading...")
-        frame = load_frame(
-            instanceID,
-            outputPath
-            )
-    else:
+    if diskstate == 'clean':
         message("Making a new frame...")
         frame = subFrameClass(
             outputPath = outputPath,
             instanceID = instanceID,
             **builts
             )
-
-        frame._post_init_hook()
+    else:
+        with disk.expose(instanceID, outputPath) as filemanager:
+            assert stamps == filemanager.load_json('stamps')
+        message("Preexisting model found! Loading...")
+        frame = load_frame(
+            instanceID,
+            outputPath
+            )
 
     return frame
 
@@ -94,50 +65,21 @@ def load_frame(
         outputPath = None,
         loadStep = 0
         ):
-    '''
-    Creates a new 'model' instance attached to a pre-existing
-    model directory. LoadStep can be an integer corresponding
-    to a previous checkpoint step, or can be the string 'max'
-    which loads the highest stable checkpoint available.
-    '''
 
     if outputPath is None:
         outputPath = paths.defaultPath
 
-    # Check that target directory is not inside
-    # another planetengine directory:
-
-    if mpi.rank == 0:
-        if os.path.isfile(
-                os.path.join(outputPath, 'stamps.json')
-                ):
-            raise Exception
-    # mpi.barrier()
-
-    path = os.path.join(outputPath, instanceID)
-
-    if disk.disk_state(path) == 'tar':
-        expose_tar(path)
-        was_archived = True
-    else:
-        was_archived = False
-
-    builts = builtModule.load_builtsDir(path)
-
-    info = disk.load_json('info', path)
+    with disk.expose(instanceID, outputPath) as filemanager:
+        builts = filemanager.load_builtsDir('builts')
+        info = filemanager.load_json('info')
 
     frameClass = frameClasses[info['frameType']]
-
     frame = frameClass(
         outputPath = outputPath,
         instanceID = instanceID,
         **builts
         )
-
     frame._post_load_hook()
-
-    if was_archived:
-        frame.archive()
 
     return frame
 
@@ -202,6 +144,8 @@ class Frame:
 
         self.find_checkpoints()
 
+        self._post_init_hook()
+
         message("Frame built!")
 
     def reset(self):
@@ -225,6 +169,42 @@ class Frame:
             path = self.path
         return disk.disk_state(path)
 
+    def expose(self, **kwargs):
+        return disk.expose(
+            self.instanceID,
+            self.outputPath,
+            **kwargs
+            )
+
+    def local_checkpoint(self, backup = True, archive = True):
+
+        self._pre_checkpoint_hook()
+
+        if self.step() in self.checkpoints:
+            message("Checkpoint already exists! Skipping.")
+        else:
+            with self.expose(archive = archive) as filemanager:
+                self.checkpointer.checkpoint(filemanager.path)
+
+        self.most_recent_checkpoint = self.step()
+        self.checkpoints.append(self.step())
+        self.checkpoints = sorted(set(self.checkpoints))
+
+        # CHECKPOINT OBSERVERS!!!
+        self._post_checkpoint_hook()
+
+        if backup:
+            self.backup()
+
+    def remote_checkpoint(self, path, backup = True, archive = True):
+        with disk.expose(
+                    os.path.basename(path),
+                    os.path.dirname(path),
+                    archive = archive
+                    ) \
+                as filemanager:
+            self.checkpointer.checkpoint(filemanager.path, clear = False)
+
     def checkpoint(
             self,
             path = None,
@@ -234,39 +214,10 @@ class Frame:
 
         self.all_collect()
 
-        clean = self.disk_state() == 'clean'
-
         if path is None or path == self.path:
-
-            self._pre_checkpoint_hook()
-
-            was_archived = self.try_unarchive()
-
-            path = self.path
-
-            if self.step() in self.checkpoints:
-                message("Checkpoint already exists! Skipping.")
-            else:
-                self.checkpointer.checkpoint(path)
-
-            self.most_recent_checkpoint = self.step()
-            self.checkpoints.append(self.step())
-            self.checkpoints = sorted(set(self.checkpoints))
-
-            # CHECKPOINT OBSERVERS!!!
-            self._post_checkpoint_hook()
-
-            if was_archived or (clean and archive):
-                self.try_archive()
-
-            if backup:
-                self.backup()
-
+            self.local_checkpoint(backup, archive)
         else:
-
-            self.checkpointer.checkpoint(path, clear = False)
-            if archive:
-                self.archive(path)
+            self.remote_checkpoint(path, backup, archive)
 
     def load_checkpoint(self, loadStep):
 
@@ -278,69 +229,39 @@ class Frame:
             loadStep = min(self.checkpoints)
         elif loadStep == 'latest':
             loadStep = self.most_recent_checkpoint
+        else:
+            if not type(loadStep) == int:
+                raise Exception
 
         if loadStep == self.step():
             message(
                 "Already at step " + str(loadStep) + ": aborting load_checkpoint."
                 )
-
         elif loadStep == 0:
             self.reset()
-
         else:
-
-            was_archived = self.try_unarchive()
-
             stepStr = str(loadStep).zfill(8)
-
-            checkpointFile = os.path.join(self.path, stepStr)
-
-            disk.varsOnDisk(
-                self.saveVars,
-                checkpointFile,
-                'load',
-                self.blackhole
-                )
-
+            with self.expose() as filemanager:
+                filemanager.load_vars(self.saveVars, subPath = stepStr)
             self.step.value = loadStep
-
             self.modeltime.value = disk.load_json('modeltime', checkpointFile)
-
             self.update()
-
-            if was_archived:
-                self.try_archive()
 
             message("Checkpoint successfully loaded!")
 
     def find_checkpoints(self):
 
-        was_archived = self.try_unarchive()
-
-        path = os.path.join(self.outputPath, self.instanceID)
-        stamps = make_stamps(self.builts)
         checkpoints_found = []
+        with self.expose() as filemanager:
+            for directory in filemanager.directories:
+                if (directory.isdigit() and len(directory) == 8):
+                    loadstamps = filemanager.load_json('stamps', directory)
+                    assert loadstamps == self.stamps, \
+                        "Bad checkpoint found! Aborting."
+                    message("Found checkpoint: " + directory)
+                    checkpoints_found.append(int(directory))
 
-        directories = []
-        if mpi.rank == 0:
-            directories = glob.glob(path + '/*/')
-        directories = mpi.comm.bcast(directories, root = 0)
-        mpi.comm.barrier()
-
-        for directory in directories:
-            basename = os.path.basename(directory[:-1])
-            if (basename.isdigit() and len(basename) == 8):
-                loadstamps = disk.load_json('stamps', directory)
-                assert loadstamps == stamps, \
-                    "Bad checkpoint found! Aborting."
-                message("Found checkpoint: " + basename)
-                checkpoints_found.append(int(basename))
         checkpoints_found = sorted(list(set(checkpoints_found)))
-
-        self.checkpoints = checkpoints_found
-
-        if was_archived:
-            self.archive()
 
     def _pre_checkpoint_hook(self):
         pass
@@ -350,87 +271,53 @@ class Frame:
 
     def fork(self, extPath, return_frame = False):
 
-        message("Forking model to new directory...")
-
-        hardFork = False
-
-        if mpi.rank == 0:
-            os.makedirs(extPath, exist_ok = True)
-            assert os.path.isdir(extPath)
-        # mpi.barrier()
-
         disk_state = self.disk_state()
 
-        if disk_state == 'tar':
+        message("Forking model to new directory...")
 
-            newpath = os.path.join(
-                extPath,
-                self.tarname
-                )
-
+        if disk_state == 'clean':
+            message("No files to fork yet.")
+            if return_frame:
+                newframe = copy.deepcopy(self)
+                newframe.outputPath = extPath
+                return newframe
+        else:
             if mpi.rank == 0:
-                if os.path.isfile(newpath):
-                    os.remove(newpath)
-                shutil.copyfile(
-                    self.tarpath,
-                    newpath
-                    )
-                assert os.path.isfile(newpath)
-            # mpi.barrier()
-
-            message(
-                "Model forked to directory: " + extPath
-                )
-
-            hardFork = True
-
-        elif disk_state == 'dir':
-
+                os.makedirs(extPath, exist_ok = True)
+                assert os.path.isdir(extPath)
             newpath = os.path.join(
                 extPath,
                 self.instanceID
                 )
-
-            if mpi.rank == 0:
-                if os.path.isdir(newpath):
-                    shutil.rmtree(newpath)
-                shutil.copytree(
-                    self.path,
-                    newpath
-                    )
-                assert os.path.isdir(newpath)
-
-            message(
-                "Model forked to directory: " + os.path.join(extPath, self.instanceID)
-                )
-
-            hardFork = True
-
-        else:
-
-            message("No files to fork yet.")
-
-            hardFork = False
-
-        if return_frame:
-
-            if hardFork:
-                message(
-                    "Loading newly forked frame at current model step: "
-                    )
-                newframe = load_frame(self.instanceID, extPath, loadStep = self.step())
-                message(
-                    "Loaded newly forked frame."
-                    )
+            if disk_state == 'tar':
+                if mpi.rank == 0:
+                    if os.path.isfile(newpath):
+                        os.remove(newpath)
+                    shutil.copyfile(
+                        self.tarpath,
+                        newpath
+                        )
+                    assert os.path.isfile(newpath)
+                if return_frame:
+                    newframe = load_frame(
+                        self.instanceID,
+                        extPath,
+                        loadStep = self.step()
+                        )
+                    return newframe
             else:
-                message(
-                    "Returning a copy of the current class object \
-                    with a new outputPath."
-                    )
-                newframe = copy.deepcopy(self)
-                newframe.outputPath = extPath
+                if mpi.rank == 0:
+                    if os.path.isdir(newpath):
+                        shutil.rmtree(newpath)
+                    shutil.copytree(
+                        self.path,
+                        newpath
+                        )
+                    assert os.path.isdir(newpath)
 
-            return newframe
+        message(
+            "Model forked to directory: " + extPath
+            )
 
     def backup(self):
         message("Making a backup...")
@@ -442,7 +329,6 @@ class Frame:
 
         # Should make this robust: force it to do a stamp check first
 
-        backup_archived = False
         disk_state = self.disk_state()
 
         if mpi.rank == 0:
@@ -458,33 +344,15 @@ class Frame:
                 shutil.rmtree(self.path)
 
             if os.path.exists(self.backuptarpath):
-                backup_archived = True
                 shutil.copyfile(self.backuptarpath, self.tarpath)
             else:
                 shutil.copytree(self.backuppath, self.path)
-
-        backup_archived = mpi.comm.bcast(backup_archived, root = 0)
-
-        was_archived = disk_state == 'tar'
-        if backup_archived:
-            self.try_unarchive()
 
         self.checkpoints = self.find_checkpoints()
 
         self.load_checkpoint(min(self.checkpoints, key=lambda x:abs(x - self.step())))
 
-        if was_archived:
-            self.try_archive()
-
         message("Reverted to backup.")
-
-    def branch(self, extPath, return_frame = False, archive_remote = True):
-        newpath = os.path.join(extPath, self.instanceID)
-        self.checkpoint(newpath)
-        self.archive(newpath)
-        if return_frame:
-            newframe = load_frame(self.instanceID, extPath)
-            return newframe
 
     def archive(self, _path = None):
 
@@ -495,22 +363,7 @@ class Frame:
             path = _path
             message("Making a remote archive...")
 
-        assert self.disk_state(path) == 'dir'
-
-        message("Archiving...")
-
-        if mpi.rank == 0:
-            with tarfile.open(path + '.tar.gz', 'w:gz') as tar:
-                tar.add(path, arcname = '')
-            assert os.path.isfile(path + '.tar.gz'), \
-                "The archive should have been created, but it wasn't!"
-            shutil.rmtree(path)
-            assert not os.path.isdir(path), \
-                "The directory should have been deleted, but it's still there!"
-
-        assert self.disk_state(path) == 'tar'
-
-        message("Archived!")
+        disk.make_tar(path)
 
     def unarchive(self, _path = None):
 
@@ -521,15 +374,7 @@ class Frame:
             path = _path
             message("Unarchiving a remote archive...")
 
-        assert self.disk_state(path) == 'tar'
-
-        message("Unarchiving...")
-
         disk.expose_tar(path)
-
-        assert self.disk_state(path) == 'dir'
-
-        message("Unarchived!")
 
     def try_archive(self):
         if self.disk_state() == 'dir':
