@@ -176,6 +176,51 @@ def listdir(path):
     dirs = mpi.comm.bcast(dirs, root = 0)
     return dirs
 
+def makedirs(path, exist_ok = False):
+    os.makedirs(path, exist_ok = exist_ok)
+
+def explore_tree(path):
+    directories = {}
+    if mpi.rank == 0:
+        path = os.path.abspath(path)
+        for file in os.listdir(path):
+            if not file[:2] == '__':
+                filePath = os.path.join(path, file)
+                if os.path.isfile(filePath):
+                    directories[file] = '.'
+                elif os.path.isdir(filePath):
+                    directories[file] = explore_tree(filePath)
+    directories = mpi.comm.bcast(directories, root = 0)
+    return directories
+
+def is_jsonable(x):
+    try:
+        json.dumps(x)
+        return True
+    except (TypeError, OverflowError):
+        return False
+
+# def save_tree(objDict, path):
+
+def load_tree(path):
+    path = os.path.abspath(path)
+    directories = explore_tree(path)
+    loaded = {}
+    for key, val in sorted(directories.items()):
+        if type(val) == dict:
+            subtree = os.path.join(path, key)
+            loaded[key] = load_tree(subtree)
+        else:
+            name, ext = os.path.splitext(key)
+            if ext == '.json':
+                obj = load_json(name, path)
+            elif ext == '.py' or ext == '.pyc':
+                obj = load_script(name, path)
+            else:
+                obj = None
+            loaded[name] = obj
+    return loaded
+
 def varsOnDisk(
         saveVars,
         checkpointDir,
@@ -265,11 +310,11 @@ class Archiver:
             self,
             name,
             outputPath = '.',
-            archive = None,
-            recursive = False
+            archive = True,
+            recursive = True
             ):
         self.name = name
-        self.outputPath = outputPath
+        self.outputPath = os.path.abspath(outputPath)
         self.path = os.path.join(outputPath, name)
         self.tarPath = self.path + '.tar.gz'
         self.archive = archive
@@ -314,13 +359,90 @@ class DiskMate:
 
     def __init__(self, name, outputPath = '.'):
         self.name = name
-        self.outputPath = outputPath
+        self.outputPath = os.path.abspath(outputPath)
         self.path = os.path.join(outputPath, name)
+        self._update()
 
     def _get_path(self, subPath):
         path = os.path.join(self.path, subPath)
         make_dir(path, exist_ok = True)
         return path
+
+    def _get_directories(self):
+        self.directories = explore_tree(self.path)
+
+    def _update(self):
+        self._get_directories()
+
+    def mkdir(self, subPath, **kwargs):
+        if mpi.rank == 0:
+            os.mkdir(
+                os.path.join(self.path, subPath),
+                **kwargs
+                )
+        self._update()
+
+    def rmdir(self, subPath, **kwargs):
+        if mpi.rank == 0:
+            os.rmdir(
+                os.path.join(self.path, subPath),
+                **kwargs
+                )
+        self._update()
+
+    def makedirs(self, subPath, **kwargs):
+        if mpi.rank == 0:
+            os.makedirs(
+                os.path.join(self.path, subPath),
+                **kwargs
+                )
+        self._update()
+
+    def removedirs(self, subPath, **kwargs):
+        if mpi.rank == 0:
+            os.removedirs(
+                os.path.join(self.path, subPath),
+                **kwargs
+                )
+        self._update()
+
+    def rmtree(self, subPath, **kwargs):
+        if mpi.rank == 0:
+            shutil.rmtree(
+                os.path.join(self.path, subPath),
+                **kwargs
+                )
+        self._update()
+
+    def copytree(self, *args, **kwargs):
+        if mpi.rank == 0:
+            shutil.copytree(
+                *args,
+                **kwargs
+                )
+        self._update()
+
+    def copyfrom(self, src, subPath = '', **kwargs):
+        self.copytree(
+            src,
+            os.path.join(self.path, subPath),
+            **kwargs
+            )
+        self._update()
+
+    def copyto(self, dst, subPath = '', **kwargs):
+        self.copytree(
+            os.path.join(self.path, subPath),
+            dst,
+            **kwargs
+            )
+        self._update()
+
+    # def save_tree(self, saveDict):
+    #     pass
+    #
+    # def load_tree(self):
+    #     pass
 
     def save_json(self, object, objName, subPath = ''):
         save_json(
@@ -328,12 +450,14 @@ class DiskMate:
             objName,
             self._get_path(subPath)
             )
+        self._update()
 
     def load_json(self, objName, subPath = ''):
         return load_json(
             objName,
             self._get_path(subPath)
             )
+        self._update()
 
     def save_module(self, script, name = None, subPath = ''):
         save_script(
@@ -341,12 +465,14 @@ class DiskMate:
             name,
             self._get_path(subPath)
             )
+        self._update()
 
     def load_module(self, name, subPath = ''):
         return load_script(
             name,
             self._get_path(subPath)
             )
+        self._update()
 
     def save_vars(self, varDict, subPath = ''):
         varsOnDisk(
@@ -354,6 +480,7 @@ class DiskMate:
             self._get_path(subPath),
             mode = 'save'
             )
+        self._update()
 
     def load_vars(self, varDict, subPath = ''):
         varsOnDisk(
@@ -361,3 +488,4 @@ class DiskMate:
             self._get_path(subPath),
             mode = 'load'
             )
+        self._update()
