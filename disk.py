@@ -3,6 +3,7 @@ import json
 import shutil
 import tarfile
 import importlib
+import traceback
 import underworld as uw
 from underworld import function as fn
 
@@ -59,7 +60,13 @@ def local_import(filepath):
 
     return module
 
-def save_script(script, name, path):
+def save_script(script, name = None, path = '.'):
+    if name is None:
+        name = os.path.splitext(
+            os.path.basename(
+                script
+                )
+            )[0]
     if mpi.rank == 0:
         tweakedPath = os.path.splitext(script)[0] + ".py"
         newPath = os.path.join(path, name + ".py")
@@ -73,7 +80,7 @@ def load_script(name, path):
         )
     return scriptModule
 
-def expose_tar(path):
+def expose_tar(path, recursive = False):
 
     assert disk_state(path) == 'tar'
 
@@ -91,11 +98,97 @@ def expose_tar(path):
 
     message("Unarchived.")
 
-def varsOnDisk(saveVars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
+    if recursive:
+        was_tarred = expose_sub_tars(path)
+        return was_tarred
+
+def make_tar(path, was_tarred = []):
+
+    assert disk_state(path) == 'dir'
+
+    tarpath = path + '.tar.gz'
+
+    message("Archiving...")
+
+    if len(was_tarred) > 0:
+        un_expose_sub_tars(was_tarred)
+
+    if mpi.rank == 0:
+        with tarfile.open(tarpath, 'w:gz') as tar:
+            tar.add(path, arcname = '')
+        assert os.path.isfile(tarpath), \
+            "The archive should have been created, but it wasn't!"
+        shutil.rmtree(path)
+        assert not os.path.isdir(path), \
+            "The directory should have been deleted, but it's still there!"
+
+    assert disk_state(path) == 'tar'
+
+    message("Archived.")
+
+def expose_sub_tars(path):
+    message("Exposing sub tars...")
+    subDirs = listdir(path)
+    was_tarred = []
+    for file in subDirs:
+        filePath = os.path.join(path, file)
+        if file[-7:] == '.tar.gz':
+            dirName = os.path.splitext(
+                os.path.splitext(
+                    file
+                    )[0]
+                )[0]
+            dirPath = os.path.join(path, dirName)
+            expose_tar(dirPath)
+            was_tarred.append(dirPath)
+            was_tarred.extend(expose_sub_tars(dirPath))
+        elif os.path.isdir(filePath):
+            was_tarred.extend(expose_sub_tars(filePath))
+    message("Sub tars exposed.")
+    return was_tarred
+
+def un_expose_sub_tars(was_tarred):
+    if len(was_tarred) > 0:
+        message("Re-tarring exposed sub tars...")
+        for path in was_tarred[::-1]:
+            make_tar(path)
+        message("Re-tarred exposed sub tars.")
+    else:
+        message("No sub-tars to unexpose!")
+
+def make_dir(path, exist_ok = True):
+
+    assert not disk_state(path) == 'tar'
+
+    if mpi.rank == 0:
+        if not os.path.isdir(path):
+            os.makedirs(path)
+        else:
+            if not exist_ok:
+                raise Exception("Dir already exists.")
+
+    assert disk_state(path) == 'dir'
+
+def listdir(path):
+    dirs = []
+    if mpi.rank == 0:
+        dirs = os.listdir(path)
+    dirs = mpi.comm.bcast(dirs, root = 0)
+    return dirs
+
+def varsOnDisk(
+        saveVars,
+        checkpointDir,
+        mode = 'save',
+        blackhole = [0., 0.]
+        ):
+
     substrates = []
     substrateNames = []
     substrateHandles = {}
     extension = '.h5'
+
+    assert disk_state(checkpointDir) == 'dir'
 
     for varName, var in sorted(saveVars.items()):
 
@@ -165,3 +258,106 @@ def varsOnDisk(saveVars, checkpointDir, mode = 'save', blackhole = [0., 0.]):
             var.load(os.path.join(checkpointDir, varName + extension))
         else:
             raise Exception("Disk mode not recognised.")
+
+class Archiver:
+
+    def __init__(
+            self,
+            name,
+            outputPath = '.',
+            archive = None,
+            recursive = False
+            ):
+        self.name = name
+        self.outputPath = outputPath
+        self.path = os.path.join(outputPath, name)
+        self.tarPath = self.path + '.tar.gz'
+        self.archive = archive
+        self.recursive = recursive
+
+    def __enter__(self):
+        diskState = disk_state(self.path)
+        if diskState == 'clean':
+            make_dir(self.path, exist_ok = False)
+            was_archived = None
+        elif diskState == 'dir':
+            was_archived = False
+        elif diskState == 'tar':
+            expose_tar(self.path)
+            was_archived = True
+        else:
+            assert False
+        if self.recursive:
+            self.subtars = expose_sub_tars(self.path)
+        self.was_archived = was_archived
+        return DiskMate(self.name, self.outputPath)
+
+    def __exit__(self, *args):
+        if self.recursive:
+            if len(self.subtars) > 0:
+                un_expose_sub_tars(self.subtars)
+        archiveConditions = [
+            (self.archive == True),
+            (self.archive is None and self.was_archived)
+            ]
+        if any(archiveConditions):
+            make_tar(self.path)
+        else:
+            pass
+        exc_type, exc_value, tb = args
+        if exc_type is not None:
+            traceback.print_exception(exc_type, exc_value, tb)
+            return False
+        return True
+
+class DiskMate:
+
+    def __init__(self, name, outputPath = '.'):
+        self.name = name
+        self.outputPath = outputPath
+        self.path = os.path.join(outputPath, name)
+
+    def _get_path(self, subPath):
+        path = os.path.join(self.path, subPath)
+        make_dir(path, exist_ok = True)
+        return path
+
+    def save_json(self, object, objName, subPath = ''):
+        save_json(
+            object,
+            objName,
+            self._get_path(subPath)
+            )
+
+    def load_json(self, objName, subPath = ''):
+        return load_json(
+            objName,
+            self._get_path(subPath)
+            )
+
+    def save_module(self, script, name = None, subPath = ''):
+        save_script(
+            script,
+            name,
+            self._get_path(subPath)
+            )
+
+    def load_module(self, name, subPath = ''):
+        return load_script(
+            name,
+            self._get_path(subPath)
+            )
+
+    def save_vars(self, varDict, subPath = ''):
+        varsOnDisk(
+            varDict,
+            self._get_path(subPath),
+            mode = 'save'
+            )
+
+    def load_vars(self, varDict, subPath = ''):
+        varsOnDisk(
+            varDict,
+            self._get_path(subPath),
+            mode = 'load'
+            )
