@@ -4,6 +4,7 @@ import shutil
 import tarfile
 import importlib
 import traceback
+import random
 import underworld as uw
 from underworld import function as fn
 
@@ -85,11 +86,17 @@ def load_script(name, path):
         )
     return scriptModule
 
-def expose_tar(path, recursive = False):
-
-    assert disk_state(path) == 'tar'
+def expose_tar(path, recursive = False, rmtar = True, outName = None):
 
     tarpath = path + '.tar.gz'
+    if not outName is None:
+        path = outName
+
+    if mpi.rank == 0:
+        if not os.path.isfile(tarpath):
+            raise Exception("No tar by that name found.")
+        if os.path.isdir(path):
+            raise Exception("Output dir already exists.")
 
     message("Tar found - unarchiving...")
     if mpi.rank == 0:
@@ -97,9 +104,9 @@ def expose_tar(path, recursive = False):
             tar.extractall(path)
         assert os.path.isdir(path), \
             "Archive contained the wrong model file somehow."
-        os.remove(tarpath)
-
-    assert disk_state(path) == 'dir'
+        if rmtar:
+            os.remove(tarpath)
+            assert not os.path.isfile(tarpath)
 
     message("Unarchived.")
 
@@ -113,13 +120,27 @@ def try_expose_tar(path, **kwargs):
         return True
     return False
 
-def make_tar(path, was_tarred = []):
+def make_tar(
+        path,
+        was_tarred = [],
+        rmdir = True,
+        outName = None,
+        compression = 'gz'
+        ):
 
-    diskstate = disk_state(path)
-    assert diskstate == 'dir', \
-        "Diskstate should be 'dir', not " + diskstate
+    if outName is None:
+        tarpath = path + '.tar'
+        if not compression is None:
+            tarpath += '.' + compression
 
-    tarpath = path + '.tar.gz'
+    else:
+        tarpath = outName
+
+    if mpi.rank == 0:
+        if os.path.isfile(tarpath):
+            raise Exception("Output tar already exists.")
+        if not os.path.isdir(path):
+            raise Exception("Input dir not found.")
 
     message("Archiving...")
 
@@ -127,15 +148,17 @@ def make_tar(path, was_tarred = []):
         un_expose_sub_tars(was_tarred)
 
     if mpi.rank == 0:
-        with tarfile.open(tarpath, 'w:gz') as tar:
+        mode = 'w'
+        if not compression is None:
+            mode += ':' + compression
+        with tarfile.open(tarpath, mode) as tar:
             tar.add(path, arcname = '')
         assert os.path.isfile(tarpath), \
             "The archive should have been created, but it wasn't!"
-        shutil.rmtree(path)
-        assert not os.path.isdir(path), \
-            "The directory should have been deleted, but it's still there!"
-
-    assert disk_state(path) == 'tar'
+        if rmdir:
+            shutil.rmtree(path)
+            assert not os.path.isdir(path), \
+                "The directory should have been deleted, but it's still there!"
 
     message("Archived.")
 
@@ -331,15 +354,78 @@ class _FileContextManager:
             archive = True,
             recursive = True
             ):
+
         self.name = name
         self.outputPath = os.path.abspath(outputPath)
         self.path = os.path.join(outputPath, name)
-        self.tarPath = self.path + '.tar.gz'
+        self.tarpath = self.path + '.tar.gz'
         self.archive = archive
         self.recursive = recursive
+        self._initial_diskState = disk_state(self.path)
+
+        while True:
+            self._backupfile = os.path.join(
+                self.outputPath,
+                '.' + str(random.randint(1e18, 1e19 - 1)) + '.tar'
+                )
+            if mpi.rank == 0:
+                if not os.path.isfile(self._backupfile):
+                    break
+
+    def _save_backup(self):
+        if self._initial_diskState == 'clean':
+            pass
+        else:
+            if self._initial_diskState == 'dir':
+                path = self.path
+            else:
+                path = self.tarpath
+            if mpi.rank == 0:
+                assert not os.path.isfile(self._backupfile)
+                with tarfile.open(self._backupfile, 'w') as tar:
+                    tar.add(path, arcname = '')
+                assert os.path.isfile(self._backupfile)
+
+    def _load_backup(self):
+        if self._initial_diskState == 'clean':
+            pass
+        else:
+            if mpi.rank == 0:
+                if os.path.isfile(self.tarpath):
+                    os.remove(self.tarpath)
+                if os.path.isdir(self.path):
+                    shutil.rmtree(self.path)
+                assert os.path.isfile(self._backupfile)
+                if self._initial_diskState == 'dir':
+                    extractPath = self.path
+                else:
+                    extractPath = self.tarpath
+                with tarfile.open(self._backupfile) as tar:
+                    tar.extractall(extractPath)
+                if self._initial_diskState == 'dir':
+                    assert os.path.isdir(self.path)
+                else:
+                    assert os.path.isfile(self.tarpath)
+
+    def _remove_backup(self):
+        if mpi.rank == 0:
+            if os.path.isfile(self._backupfile):
+                os.remove(self._backupfile)
+
+    def _try_archive(self):
+        archiveConditions = [
+            (self.archive == True),
+            (self.archive is None and self.was_archived)
+            ]
+        if any(archiveConditions):
+            make_tar(self.path)
+            assert disk_state(self.path) == 'tar'
+        else:
+            assert disk_state(self.path) == 'dir'
 
     def __enter__(self):
-        diskState = disk_state(self.path)
+        self._save_backup()
+        diskState = self._initial_diskState
         if diskState == 'clean':
             make_dir(self.path, exist_ok = False)
             was_archived = None
@@ -348,30 +434,28 @@ class _FileContextManager:
         elif diskState == 'tar':
             expose_tar(self.path)
             was_archived = True
-        else:
-            assert False
         if self.recursive:
             self.subtars = expose_sub_tars(self.path)
         self.was_archived = was_archived
         return FileManager(self.name, self.outputPath)
 
     def __exit__(self, *args):
-        if self.recursive:
-            if len(self.subtars) > 0:
-                un_expose_sub_tars(self.subtars)
-        archiveConditions = [
-            (self.archive == True),
-            (self.archive is None and self.was_archived)
-            ]
-        if any(archiveConditions):
-            make_tar(self.path)
-        else:
-            pass
         exc_type, exc_value, tb = args
-        if exc_type is not None:
+        if exc_type is None:
+            if self.recursive:
+                if len(self.subtars) > 0:
+                    un_expose_sub_tars(self.subtars)
+            self._try_archive()
+            self._remove_backup()
+            return True
+        else:
+            message("Failed! Reverting to backup.")
             traceback.print_exception(exc_type, exc_value, tb)
+            self._load_backup()
+            if not self._initial_diskState == 'tar':
+                self._try_archive()
+            self._remove_backup()
             return False
-        return True
 
 class FileManager:
 
@@ -391,7 +475,6 @@ class FileManager:
 
     def _update(self):
         self._get_directories()
-        # pass
 
     def mkdir(self, subPath, **kwargs):
         if mpi.rank == 0:
