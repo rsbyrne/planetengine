@@ -274,7 +274,7 @@ def varsOnDisk(
     substrateHandles = {}
     extension = '.h5'
 
-    assert disk_state(checkpointDir) == 'dir'
+    # assert disk_state(checkpointDir) == 'dir'
 
     for varName, var in sorted(saveVars.items()):
 
@@ -363,14 +363,16 @@ class _FileContextManager:
         self.recursive = recursive
         self._initial_diskState = disk_state(self.path)
 
-        while True:
+        _backupdir_found = False
+        while not _backupdir_found:
             self._backupfile = os.path.join(
                 self.outputPath,
                 '.' + str(random.randint(1e18, 1e19 - 1)) + '.tar'
                 )
             if mpi.rank == 0:
                 if not os.path.isfile(self._backupfile):
-                    break
+                    _backupdir_found = True
+            _backupdir_found = mpi.comm.bcast(_backupdir_found, root = 0)
 
     def _save_backup(self):
         if self._initial_diskState == 'clean':
