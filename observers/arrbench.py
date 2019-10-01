@@ -82,17 +82,20 @@ class Standard(_observer.Observer):
 
         saveCollectors = [mainCollector,]
 
-        mainFig = QuickFig(
-            temperature,
-            velocity,
-            stressMag
+        fig = planetengine.visualisation.QuickFig(
+            facecolour = 'black',
+            figsize = (600, 600),
+            quality = 3
             )
+        fig.add_surface(temperature, colourBar = False)
+        fig.add_contours(stressMag, colourBar = False)
+        fig.add_arrows(velocity)
 
-        saveFigs = [mainFig]
+        saveFigs = [fig]
 
         self.mainAnalyser = mainAnalyser
         self.mainCollector = mainCollector
-        self.mainFig = mainFig
+        self.mainFig = fig
 
         return saveVars, saveFigs, saveCollectors
 

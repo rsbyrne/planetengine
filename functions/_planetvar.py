@@ -283,7 +283,7 @@ class PlanetVar(UWFn):
             projVar = projection.Projection(self)
             # self._meshVar = weakref.ref(projVar)
             # POSSIBLE CIRCULAR REFERENCE!
-            self._meshVar = lambda: projVar
+            self._meshVar = lambda: projVar.var
         return self._meshVar()
     def gradient(self):
         if not hasattr(self, '_fn_gradient'):

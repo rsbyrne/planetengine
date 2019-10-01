@@ -176,7 +176,7 @@ class Frame:
             **kwargs
             )
 
-    def local_checkpoint(self, backup = True, archive = True):
+    def local_checkpoint(self, backup = False, archive = True):
 
         self._pre_checkpoint_hook()
 
@@ -185,18 +185,16 @@ class Frame:
         else:
             with self.expose(archive = archive) as filemanager:
                 self.checkpointer.checkpoint(filemanager.path)
+                self._post_checkpoint_hook()
 
         self.most_recent_checkpoint = self.step()
         self.checkpoints.append(self.step())
         self.checkpoints = sorted(set(self.checkpoints))
 
-        # CHECKPOINT OBSERVERS!!!
-        self._post_checkpoint_hook()
-
         if backup:
             self.backup()
 
-    def remote_checkpoint(self, path, backup = True, archive = True):
+    def remote_checkpoint(self, path, backup = False, archive = True):
         with disk.expose(
                     os.path.basename(path),
                     os.path.dirname(path),
@@ -208,7 +206,7 @@ class Frame:
     def checkpoint(
             self,
             path = None,
-            backup = True,
+            backup = False,
             archive = True
             ):
 
@@ -252,16 +250,17 @@ class Frame:
     def find_checkpoints(self):
 
         checkpoints_found = []
-        with self.expose() as filemanager:
-            for directory in filemanager.directories:
-                if (directory.isdigit() and len(directory) == 8):
-                    loadstamps = filemanager.load_json('stamps', directory)
-                    assert loadstamps == self.stamps, \
-                        "Bad checkpoint found! Aborting."
-                    message("Found checkpoint: " + directory)
-                    checkpoints_found.append(int(directory))
+        if not self.disk_state() == 'clean':
+            with self.expose() as filemanager:
+                for directory in filemanager.directories:
+                    if (directory.isdigit() and len(directory) == 8):
+                        loadstamps = filemanager.load_json('stamps', directory)
+                        assert loadstamps == self.stamps, \
+                            "Bad checkpoint found! Aborting."
+                        message("Found checkpoint: " + directory)
+                        checkpoints_found.append(int(directory))
 
-        checkpoints_found = sorted(list(set(checkpoints_found)))
+            checkpoints_found = sorted(list(set(checkpoints_found)))
 
     def _pre_checkpoint_hook(self):
         pass

@@ -16,11 +16,7 @@ class Gradient(_function.Function):
     def __init__(self, inVar, *args, **kwargs):
 
         inVar = _convert.convert(inVar)
-        inVar = inVar.meshVar()
-        # DEBUGGING
-        assert not inVar is None
-
-        var = inVar.var.fn_gradient
+        var = inVar.meshVar().fn_gradient
 
         self.stringVariants = {}
         self.inVars = [inVar]
