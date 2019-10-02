@@ -54,7 +54,7 @@ class Variable(_basetypes.BaseTypes):
             self.meshdata = self.data
             self.meshbased = True
             self.varType = 'meshVar'
-            self._meshVar = lambda: var
+            self._meshVar = lambda: self
         elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
             self.substrate = var.swarm
             self.mesh = var.swarm.mesh
