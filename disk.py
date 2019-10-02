@@ -169,7 +169,6 @@ def try_make_tar(path, **kwargs):
     return False
 
 def expose_sub_tars(path):
-    message("Exposing sub tars...")
     subDirs = listdir(path)
     was_tarred = []
     for file in subDirs:
@@ -186,17 +185,14 @@ def expose_sub_tars(path):
             was_tarred.extend(expose_sub_tars(dirPath))
         elif os.path.isdir(filePath):
             was_tarred.extend(expose_sub_tars(filePath))
-    message("Sub tars exposed.")
     return was_tarred
 
 def un_expose_sub_tars(was_tarred):
     if len(was_tarred) > 0:
-        message("Re-tarring exposed sub tars...")
         for path in was_tarred[::-1]:
             make_tar(path)
-        message("Re-tarred exposed sub tars.")
     else:
-        message("No sub-tars to unexpose!")
+        pass
 
 def make_dir(path, exist_ok = True):
 

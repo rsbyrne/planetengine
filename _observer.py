@@ -19,7 +19,7 @@ def load_observer(name, path, system = None):
             raise Exception
         loadSystem = system
     loadObserver.attach(loadSystem)
-    loadObserver.path = path
+    loadObserver.outputPath = path
     return loadObserver
 
 def load_observers(path, system = None, return_dict = False):
@@ -78,11 +78,11 @@ class Observer(_built.Built):
 
         if isinstance(attachee, _frame.Frame):
             frame = attachee
-            path = frame.path
+            outputPath = frame.path
             system = frame.system
             initials = frame.initials
         elif isinstance(attachee, _system.System):
-            path = None
+            outputPath = None
             frame = None
             system = attachee
             if not hasattr(system, 'initials'):
@@ -115,7 +115,8 @@ class Observer(_built.Built):
             saveVars = saveVars,
             figs = saveFigs,
             collectors = saveCollectors,
-            builts = builts
+            builts = builts,
+            instanceID = self.instanceID
             )
 
         if isinstance(attachee, _frame.Frame):
@@ -132,7 +133,7 @@ class Observer(_built.Built):
         self.step = system.step
         self.modeltime = system.modeltime
         self.instanceID = instanceID
-        self.path = path
+        self.outputPath = outputPath
 
         self.attached = True
 
@@ -144,17 +145,11 @@ class Observer(_built.Built):
         if status == 'checkpointing':
             self.checkpoint()
 
-    def checkpoint(self, path = None, clear = True):
+    def checkpoint(self):
         message("Observer checkpointing...")
         if not self.attached:
             raise Exception("Not yet attached.")
-        if path is None:
-            if self.path is None:
-                raise Exception
-            path = self.path
-        checkpointPath = os.path.join(path, self.instanceID)
         self.checkpointer.checkpoint(
-            checkpointPath,
-            clear = path == self.path
+            outputPath = self.outputPath
             )
         message("Observer checkpointed.")

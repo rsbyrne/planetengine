@@ -23,6 +23,10 @@ class Checkpointer:
             modeltime = None,
             info = {},
             framescript = None,
+            instanceID = None,
+            prefix = 'pe',
+            preFn = None,
+            postFn = None
             ):
 
         self.figs = figs
@@ -34,18 +38,48 @@ class Checkpointer:
         self.stamps = built.make_stamps(builts)
         self.info = info
         self.framescript = framescript
+        self.preFn = preFn
+        self.postFn = postFn
+        if instanceID is None:
+            self.instanceID = prefix + '_' + self.stamps['all'][1]
+        else:
+            self.instanceID = instanceID
 
     def checkpoint(
             self,
-            path = None,
+            outputPath = None,
             collect = True,
-            clear = True
+            clear = True,
+            archive = None,
+            preFn = None,
+            postFn = None
             ):
 
-        message("Attempting to checkpoint...")
+        if outputPath is None:
+            outputPath = paths.defaultPath
 
-        if path is None:
-            path = paths.defaultPath
+        with disk.expose(
+                    self.instanceID,
+                    outputPath,
+                    archive
+                    ) \
+                as filemanager:
+
+            if not preFn is None:
+                preFn()
+            if not self.preFn is None:
+                self.preFn()
+
+            self._checkpoint(filemanager.path, collect, clear)
+
+            if not self.postFn is None:
+                self.postFn()
+            if not postFn is None:
+                postFn()
+
+    def _checkpoint(self, path, collect, clear):
+
+        message("Attempting to checkpoint...")
 
         step = self.step()
         modeltime = self.modeltime()

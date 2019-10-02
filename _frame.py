@@ -86,6 +86,7 @@ def load_frame(
 class Frame:
 
     blackhole = [0., 0.]
+    prefix = 'pe'
 
     def __init__(
             self,
@@ -137,7 +138,8 @@ class Frame:
             collectors = self.collectors,
             builts = self.builts,
             info = self.info,
-            framescript = self.framescript
+            framescript = self.framescript,
+            instanceID = self.instanceID
             )
 
         self.initialise()
@@ -183,9 +185,11 @@ class Frame:
         if self.step() in self.checkpoints:
             message("Checkpoint already exists! Skipping.")
         else:
-            with self.expose(archive = archive) as filemanager:
-                self.checkpointer.checkpoint(filemanager.path)
-                self._post_checkpoint_hook()
+            self.checkpointer.checkpoint(
+                outputPath = self.outputPath,
+                archive = archive,
+                postFn = self._post_checkpoint_hook
+                )
 
         self.most_recent_checkpoint = self.step()
         self.checkpoints.append(self.step())
@@ -195,13 +199,11 @@ class Frame:
             self.backup()
 
     def remote_checkpoint(self, path, backup = False, archive = True):
-        with disk.expose(
-                    os.path.basename(path),
-                    os.path.dirname(path),
-                    archive = archive
-                    ) \
-                as filemanager:
-            self.checkpointer.checkpoint(filemanager.path, clear = False)
+        self.checkpointer.checkpoint(
+            outputPath = path,
+            clear = False,
+            archive = archive
+            )
 
     def checkpoint(
             self,
