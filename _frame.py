@@ -52,11 +52,11 @@ def make_frame(
     else:
         with disk.expose(instanceID, outputPath) as filemanager:
             assert stamps == filemanager.load_json('stamps')
-        message("Preexisting model found! Loading...")
-        frame = load_frame(
-            instanceID,
-            outputPath
-            )
+            message("Preexisting model found! Loading...")
+            frame = load_frame(
+                instanceID,
+                outputPath
+                )
 
     return frame
 
@@ -70,16 +70,17 @@ def load_frame(
         outputPath = paths.defaultPath
 
     with disk.expose(instanceID, outputPath) as filemanager:
+
         builts = filemanager.load_builtsDir('builts')
         info = filemanager.load_json('info')
 
-    frameClass = frameClasses[info['frameType']]
-    frame = frameClass(
-        outputPath = outputPath,
-        instanceID = instanceID,
-        **builts
-        )
-    frame._post_load_hook()
+        frameClass = frameClasses[info['frameType']]
+        frame = frameClass(
+            outputPath = outputPath,
+            instanceID = instanceID,
+            **builts
+            )
+        frame._post_load_hook()
 
     return frame
 

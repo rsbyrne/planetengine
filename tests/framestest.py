@@ -3,6 +3,7 @@ from .. import model
 from .. import systems
 from ..utilities import message
 from .. import paths
+from .. import observers
 
 def testfn():
 
@@ -24,6 +25,8 @@ def testfn():
             initials = IC0,
             outputPath = outputPath
             )
+        observer0 = observers.arrbench.build()
+        observer0.attach(model0)
 
         model0.iterate()
 
@@ -43,6 +46,7 @@ def testfn():
             initials = IC1,
             outputPath = outputPath
             )
+        observer0.attach(model1)
 
         model1.checkpoint()
 
