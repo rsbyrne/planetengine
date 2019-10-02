@@ -16,9 +16,7 @@ touch $OUTFILE
 touch $ERRORFILE
 while [ $ITERNO -lt $MAXITER ]
 do
-    echo "Starting chunk " $CHUNKNO " job " $ITERNO
     $SCRIPTSDIR/singlerun.sh $SCRIPT $CHUNKS $SHUFFLESEED $CHUNKNO $ITERNO $CORES >> $OUTFILE 2>> $ERRORFILE
     ITERNO=$(($ITERNO+1))
-    echo "Finishing chunk " $CHUNKNO " job " $ITERNO
 done
 echo "Finished chunk " $CHUNKNO

@@ -10,6 +10,6 @@ OUTFILE="logs/job"$CHUNKNO"_"$ITERNO".out"
 ERRORFILE="logs/job"$CHUNKNO"_"$ITERNO".error"
 touch $OUTFILE
 touch $ERRORFILE
-echo "Starting chunk " $CHUNKNO " job " $ITERNO
+echo "Starting job " $ITERNO
 mpirun -np $CORES python $SCRIPT $CHUNKS $SHUFFLESEED $CHUNKNO $ITERNO > $OUTFILE 2> $ERRORFILE
-echo "Finished chunk " $CHUNKNO " job " $ITERNO
+echo "Finished job " $ITERNO
