@@ -9,7 +9,7 @@ CORES=${6:-1}
 ITERNO=0
 MAXITER=$JOBSPERCHUNK
 SCRIPTSDIR=/home/jovyan/workspace/planetengine/linux
-echo "Starting chunk " $CHUNKNO
+echo "Started chunk " $CHUNKNO
 OUTFILE="logs/chunk"$CHUNKNO".out"
 ERRORFILE="logs/chunk"$CHUNKNO".error"
 touch $OUTFILE
