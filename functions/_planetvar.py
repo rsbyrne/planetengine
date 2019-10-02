@@ -285,19 +285,7 @@ class PlanetVar(UWFn):
             # POSSIBLE CIRCULAR REFERENCE!
             self._meshVar = lambda: projVar
         return self._meshVar()
-    def gradient(self):
-        if not hasattr(self, '_fn_gradient'):
-            gradientVar = gradient.Gradient(self)
-            # self._fn_gradient = weakref.ref(gradientVar)
-            # POSSIBLE CIRCULAR REFERENCE!
-            self._fn_gradient = lambda: gradientVar
-        return self._fn_gradient()
 
-    # @staticmethod
-    # def _set_weakref(self):
-    #     weak_reference = weakref.ref(self)
-    #     hashKey = self.__hash__()
-    #     _premade_fns[hashKey] = weak_reference
     def _input_processing(self, evalInput):
         return evalInput
 
