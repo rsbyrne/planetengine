@@ -84,5 +84,8 @@ class Load(IC):
     #     tolerance = fieldops.copyField(self.inVar, var)
 
     def _pre_save_hook(self, path, name = None):
-        path = os.path.join(path, self.inFrame.instanceID)
-        self.inFrame.checkpoint(path, backup = False, archive = False)
+        self.inFrame.checkpoint(
+            path = path,
+            backup = False,
+            archive = False
+            )
