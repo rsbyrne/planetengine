@@ -116,7 +116,7 @@ class Observer(_built.Built):
             figs = saveFigs,
             collectors = saveCollectors,
             builts = builts,
-            instanceID = self.instanceID
+            instanceID = instanceID
             )
 
         if isinstance(attachee, _frame.Frame):

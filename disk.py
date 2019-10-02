@@ -225,7 +225,7 @@ def explore_tree(path):
         if not file[:2] == '__':
             filePath = os.path.join(path, file)
             if os.path.isfile(filePath):
-                directories[file] = '.'
+                directories[file] = None
             elif os.path.isdir(filePath):
                 directories[file] = explore_tree(filePath)
     return directories
