@@ -14,14 +14,15 @@ projBranch = 'res16'
 outputPath = os.path.join(outDir, projName, projBranch)
 
 chunks = int(sys.argv[1])
-chunkno = int(sys.argv[2])
-iterno = int(sys.argv[3])
+shuffleseed = int(sys.argv[2])
+chunkno = int(sys.argv[3])
+iterno = int(sys.argv[4])
 
 suitelist = planetengine.utilities.suite_list({
     'f': [round(x / 10., 1) for x in range(1, 11)],
     'eta0': [round(10.**(x / 2.), 0) for x in range(2, 12)],
     'Ra': [round(10.**(x / 2.), 0) for x in range(6, 16)],
-    }, shuffle = True, chunks = chunks)
+    }, shuffle = True, chunks = chunks, shuffleseed = shuffleseed)
 
 job = suitelist[chunkno][iterno]
 

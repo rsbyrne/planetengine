@@ -12,15 +12,16 @@ outDir = planetengine.paths.defaultPath
 projName = 'isobench'
 
 chunks = int(sys.argv[1])
-chunkno = int(sys.argv[2])
-iterno = int(sys.argv[3])
+shuffleseed = int(sys.argv[2])
+chunkno = int(sys.argv[3])
+iterno = int(sys.argv[4])
 
 suitelist = planetengine.utilities.suite_list({
     'f': [round(x / 10., 1) for x in range(1, 11)],
     'Ra': [round(10.**(x / 2.), 0) for x in range(6, 16)],
     'aspect': [1. * (x / 4.) for x in range(4, 14)],
     'res': [16, 32, 64]
-    }, shuffle = True, chunks = chunks)
+    }, shuffle = True, chunks = chunks, shuffleseed = shuffleseed)
 
 job = suitelist[chunkno][iterno]
 
