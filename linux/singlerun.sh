@@ -12,4 +12,6 @@ touch $OUTFILE
 touch $ERRORFILE
 echo "Started job " $ITERNO
 mpirun -np $CORES python $SCRIPT $CHUNKS $SHUFFLESEED $CHUNKNO $ITERNO > $OUTFILE 2> $ERRORFILE
+echo "$(tail -1000 $OUTFILE)" > $OUTFILE
+echo "$(tail -1000 $ERRORFILE)" > $ERRORFILE
 echo "Finished job " $ITERNO
