@@ -351,12 +351,10 @@ def suite_list(listDict, shuffle = False, chunks = None, shuffleseed = 1066):
         random.seed(shuffleseed)
         random.shuffle(listOfDicts)
         random.seed()
-    if chunks == None:
+    if chunks is None or chunks == 0:
         outList = listOfDicts
-    elif chunks > 0:
-        outList = split_list(listOfDicts, chunks)
     else:
-        outList = [[thing] for thing in listOfDicts]
+        outList = split_list(listOfDicts, chunks)
     return outList
 
 def split_list(a, n):
