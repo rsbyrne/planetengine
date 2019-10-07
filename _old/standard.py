@@ -49,7 +49,7 @@
 #                 'gradient': [None, 'ang', 'rad']
 #                 }
 #
-#             for inputDict in utilities.suite_list(standardIntegralSuite):
+#             for inputDict in suite.suite_list(standardIntegralSuite):
 #
 #                 try:
 #
@@ -128,7 +128,7 @@
 #             'gradient': [None, 'ang', 'rad']
 #             }
 #
-#         for inputDict in planetengine.utilities.suite_list(standardIntegralSuite):
+#         for inputDict in planetengine.suite.suite_list(standardIntegralSuite):
 #
 #             anVar = analysis.Analyse.StandardIntegral(
 #                 var,

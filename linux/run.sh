@@ -1,27 +1,19 @@
 #!/bin/bash
 umask 0000
-CORES=${1:-1}
-DIR=${2:-$(dirname "$(readlink -f "$0")")}
-RUNSCRIPT=${3:-$DIR"/run.py"}
-JOBDIR=$DIR"/job/"
-LOGSDIR=$DIR"/logs/"
-# RUNNINGDIR=$JOBSDIR"/running"
-# DONEDIR=$JOBSDIR"/done"
-mkdir -p $JOBDIR
+SCRIPT=${1:-'run.py'}
+JOBID=${2:-'None'}
+CORES=${3:-1}
+DIR=$(dirname "$(readlink -f "$0")")
+LOGSDIR=$DIR"/logs"
 mkdir -p $LOGSDIR
-# mkdir -p $RUNNINGDIR
-# mkdir -p $DONEDIR
-chmod -R 777 $JOBDIR
 chmod -R 777 $LOGSDIR
-# chmod -R 777 $RUNNINGDIR
-# chmod -R 777 $DONEDIR
-OUTFILE=$LOGSDIR"/run.out"
-ERRORFILE=$LOGSDIR"/run.error"
-SCRIPTSDIR="/home/jovyan/workspace/planetengine/_runsh"
-SINGLERUNSH=$SCRIPTSDIR"/singlerun.sh"
-if [ "$(ls -A $JOBDIR)" ]; then
-  JOBFILE=$(ls $JOBDIR"job"*".json" | sort -n | head -1)
-  sh $SINGLERUNSH $RUNSCRIPT $JOBFILE $CORES >> $OUTFILE 2>> $ERRORFILE &
-else
-  echo "No jobs to do!"
-fi
+OUTFILE=$LOGSDIR"/"$JOBID".out"
+ERRORFILE=$LOGSDIR"/"$JOBID".error"
+touch $OUTFILE
+touch $ERRORFILE
+echo $DIR
+echo "Started job " $JOBID
+mpirun -np $CORES python $SCRIPT $JOBID > $OUTFILE 2> $ERRORFILE
+echo "$(tail -1000 $OUTFILE)" > $OUTFILE
+echo "$(tail -1000 $ERRORFILE)" > $ERRORFILE
+echo "Finished job " $JOBID

@@ -5,6 +5,7 @@ import tarfile
 import importlib
 import traceback
 import random
+import subprocess
 import underworld as uw
 from underworld import function as fn
 
@@ -19,6 +20,10 @@ def expose(name, outputPath = '.', archive = None, recursive = True):
     return _FileContextManager(name, outputPath, archive, recursive)
 
 from . import _built
+
+def liberate_path(path):
+    if mpi.rank == 0:
+        ignoreme = subprocess.call(['chmod', '-R', '777', path])
 
 def disk_state(path):
     path = os.path.splitext(path)[0]
@@ -38,6 +43,7 @@ def disk_state(path):
     return diskstate
 
 def save_json(jsonObj, name, path):
+    name = os.path.splitext(os.path.basename(name))[0]
     if mpi.rank == 0:
         jsonFilename = os.path.join(path, name + '.json')
         with open(jsonFilename, 'w') as file:
@@ -45,6 +51,7 @@ def save_json(jsonObj, name, path):
     # mpi.barrier()
 
 def load_json(jsonName, path):
+    jsonName = os.path.splitext(os.path.basename(jsonName))[0]
     filename = jsonName + '.json'
     jsonDict = {}
     if mpi.rank == 0:
@@ -204,6 +211,7 @@ def make_dir(path, exist_ok = True):
         else:
             if not exist_ok:
                 raise Exception("Dir already exists.")
+        liberate_path(path)
 
     assert disk_state(path) == 'dir'
 
@@ -216,6 +224,7 @@ def listdir(path):
 
 def makedirs(path, exist_ok = False):
     os.makedirs(path, exist_ok = exist_ok)
+    liberate_path(path)
 
 def explore_tree(path):
     directories = {}
@@ -229,6 +238,22 @@ def explore_tree(path):
             elif os.path.isdir(filePath):
                 directories[file] = explore_tree(filePath)
     return directories
+
+def make_subdirectory(parentPath, childPath):
+    subpath = os.path.join(parentPath, childPath)
+    if mpi.rank == 0:
+        os.mkdir(subpath)
+    return subpath
+
+def make_directory_tree(path, directoryStructure, exist_ok = False):
+    if mpi.rank == 0:
+        os.makedirs(path, exist_ok = exist_ok)
+        liberate_path(path)
+    for entry in directoryStructure:
+        make_subdirectory(path, entry[0])
+        make_directory_tree(os.path.join(path, entry[0]), entry[1], exist_ok = True)
+    if mpi.rank == 0:
+        liberate_path(path)
 
 def is_jsonable(x):
     try:
@@ -421,7 +446,12 @@ class _FileContextManager:
         else:
             assert disk_state(self.path) == 'dir'
 
+    def _liberate_paths(self):
+        liberate_path(self.path)
+        liberate_path(self.tarpath)
+
     def __enter__(self):
+        self._liberate_paths()
         self._save_backup()
         diskState = self._initial_diskState
         if diskState == 'clean':
@@ -435,6 +465,7 @@ class _FileContextManager:
         if self.recursive:
             self.subtars = expose_sub_tars(self.path)
         self.was_archived = was_archived
+        self._liberate_paths()
         return FileManager(self.name, self.outputPath)
 
     def __exit__(self, *args):
@@ -445,6 +476,7 @@ class _FileContextManager:
                     un_expose_sub_tars(self.subtars)
             self._try_archive()
             self._remove_backup()
+            self._liberate_paths()
             return True
         else:
             message("Failed! Reverting to backup.")
@@ -453,6 +485,7 @@ class _FileContextManager:
             if not self._initial_diskState == 'tar':
                 self._try_archive()
             self._remove_backup()
+            self._liberate_paths()
             return False
 
 class FileManager:
@@ -461,7 +494,13 @@ class FileManager:
         self.name = name
         self.outputPath = os.path.abspath(outputPath)
         self.path = os.path.join(outputPath, name)
+        if mpi.rank == 0:
+            if not os.path.isdir(self.path):
+                os.makedirs(self.path, exist_ok = True)
         self._update()
+
+    def liberate_path(self, path = ''):
+        liberate_path(os.path.join(self.path, path))
 
     def _get_path(self, subPath):
         path = os.path.join(self.path, subPath)
@@ -472,7 +511,11 @@ class FileManager:
         self.directories = explore_tree(self.path)
 
     def _update(self):
+        self.liberate_path()
         self._get_directories()
+
+    def update(self):
+        self._update()
 
     def mkdir(self, subPath, **kwargs):
         if mpi.rank == 0:
@@ -541,6 +584,30 @@ class FileManager:
     def listdir(self, subPath = ''):
         path = os.path.join(self.path, subPath)
         return listdir(path)
+
+    def copyfile(self, src, dst):
+        if mpi.rank == 0:
+            os.copyfile(
+                os.path.join(self.path, src),
+                os.path.join(self.path, dst)
+                )
+        self._update()
+
+    def remove(self, src):
+        if mpi.rank == 0:
+            os.remove(
+                os.path.join(self.path, src)
+                )
+        self._update()
+
+    def move(self, src, dst):
+        self.copyfile(src, dst)
+        self.rm(src)
+
+    def make_directory_tree(self, structure, subPath = '', **kwargs):
+        path = os.path.join(self.path, subPath)
+        make_directory_tree(path, structure, **kwargs)
+        self._update()
 
     # def save_tree(self, saveDict):
     #     pass

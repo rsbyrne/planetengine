@@ -98,7 +98,7 @@ class VarUtils:
                     scalarIntegralSuite['comp'] += \
                         self.pemesh.comps.keys()
 
-            for inputDict in utilities.suite_list(scalarIntegralSuite):
+            for inputDict in suite.suite_list(scalarIntegralSuite):
                 anVar = ScalarIntegral(
                     self.stInp,
                     **inputDict

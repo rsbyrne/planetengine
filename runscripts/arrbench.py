@@ -1,35 +1,21 @@
-import sys
-workPath = '/home/jovyan/workspace'
-if not workPath in sys.path:
-    sys.path.append(workPath)
-
 import os
+import sys
 
 import planetengine
 
-outDir = planetengine.paths.defaultPath
+JOBID = str(sys.argv[1])
 
-projName = 'arrbench'
-projBranch = 'res16'
-outputPath = os.path.join(outDir, projName, projBranch)
-
-chunks = int(sys.argv[1])
-shuffleseed = int(sys.argv[2])
-chunkno = int(sys.argv[3])
-iterno = int(sys.argv[4])
-
-suitelist = planetengine.utilities.suite_list({
-    'f': [round(x / 10., 1) for x in range(1, 11)],
-    'eta0': [round(10.**(x / 2.), 0) for x in range(2, 12)],
-    'Ra': [round(10.**(x / 2.), 0) for x in range(6, 16)],
-    }, shuffle = True, chunks = chunks, shuffleseed = shuffleseed)
-
-job = suitelist[chunkno][iterno]
-
-planetengine.log(
-    "Starting chunk no# " + str(chunkno) + ", iter no# " + str(iterno),
-    'logs'
+localDir = os.path.dirname(__file__)
+campaign = planetengine.campaign.Campaign(
+    os.path.basename(localDir),
+    os.path.dirname(localDir),
+    __file__
     )
+
+jobFilename = planetengine.campaign.JOBPREFIX + JOBID
+job = campaign.fm.load_json(jobFilename, 'jobs')
+
+outputPath = os.path.join(campaign.fm.path, 'out')
 
 model = planetengine.model.make_model(
     planetengine.systems.arrhenius.build(res = 16, **job),
@@ -44,8 +30,8 @@ observer = planetengine.observers.arrbench.build()
 observer.attach(model)
 
 conditions = {
-    'stopCondition': lambda: model.modeltime() > 0.3,
-    # 'stopCondition': lambda: model.step() > 25,
+    # 'stopCondition': lambda: model.modeltime() > 0.3,
+    'stopCondition': lambda: model.step() > 25,
     'checkpointCondition': lambda: any([
         model.status == 'pre-traverse',
         model.step() % 1000 == 0,
@@ -54,8 +40,3 @@ conditions = {
     }
 
 model.traverse(**conditions)
-
-planetengine.log(
-    "Finishing chunk no# " + str(chunkno) + ", iter no# " + str(iterno),
-    'logs'
-    )

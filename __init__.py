@@ -1,3 +1,6 @@
+import os
+planetengineDir = os.path.abspath(os.path.dirname(__file__))
+
 from . import utilities
 from . import analysis
 from . import checkpoint
@@ -21,6 +24,9 @@ from . import paths
 from . import generic
 from . import model
 from . import value
+from . import suite
+from . import campaign
+from . import runscripts
 
 from .utilities import message
 from .utilities import log

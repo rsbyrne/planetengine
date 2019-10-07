@@ -59,6 +59,7 @@ def make_testdir():
     if mpi.rank == 0:
         os.makedirs(testPath)
         assert os.path.isdir(testPath)
+        ignoreme = subprocess.call(['chmod', '-R', '777', testPath])
     # mpi.barrier()
 
     return testPath
