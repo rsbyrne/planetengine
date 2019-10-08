@@ -19,10 +19,7 @@ _campaignStructure = (
         ('failed', ()),
         ('available', ())
         )),
-    ('out', (
-        ('completed', ()),
-        ('failed', ())
-        )),
+    ('out', ()),
     ('logs', (
         ('completed', ()),
         ('failed', ())
@@ -97,20 +94,12 @@ class Campaign(_built.Built):
                     )
         self.planetengine = planetenginePath
 
-        self._systemoutfile = os.path.join(self.fm.path, 'logs', 'system.out')
-        self._systemerrorfile = os.path.join(self.fm.path, 'logs', 'system.error')
-        if mpi.rank == 0:
-            if not os.path.isfile(self._systemoutfile):
-                os.mknod(self._systemoutfile)
-            if not os.path.isfile(self._systemerrorfile):
-                os.mknod(self._systemerrorfile)
-
         if not _pre_update is None:
             self._pre_update = _pre_update
         if not _post_update is None:
             self._post_update = _post_update
-        if not _run is None:
-            self._run = _run
+
+        self._run = _run
 
         self.update()
 
@@ -147,8 +136,8 @@ class Campaign(_built.Built):
         self.fm.update()
         self._post_update()
 
-    def _pre_run(self, job):
-        jobID = get_jobID(job)
+    def _pre_run(self, jobID):
+        self.update()
         self.fm.move(
             os.path.join(
                 self.fm.directories['jobs']['available']['.'],
@@ -159,14 +148,10 @@ class Campaign(_built.Built):
                 jobID + '.json'
                 )
             )
+        self.update()
 
-    def run(self, job):
-        self._pre_run(job)
-        job, out, completed = self._run(job)
-        self._post_run(job, out, completed)
-
-    def _post_run(self, job, out, completed):
-        jobID = get_jobID(job)
+    def _post_run(self, jobID, completed):
+        self.update()
         jobFilename = jobID + '.json'
         self.fm.move(
             os.path.join(
@@ -179,20 +164,18 @@ class Campaign(_built.Built):
                 jobFilename
                 )
             )
-        for outName in out:
-            self.fm.move(
-                os.path.join(
-                    'out',
-                    outName
-                    ),
-                os.path.join(
-                    'out',
-                    {True: 'completed', False: 'failed'}[completed],
-                    outName
-                    )
-                )
         stderrFile = jobID + '.error'
         stdoutFile = jobID + '.out'
+        stderrFilepath = os.path.abspath(os.path.join(self.fm.path, 'logs', stderrFile))
+        stdoutFilepath = os.path.abspath(os.path.join(self.fm.path, 'logs', stdoutFile))
+        if mpi.rank == 0:
+            subprocess.call(
+                ['sh', os.path.join(planetengineDir, 'linux', 'cliplogs.sh'), stderrFilepath]
+                )
+            subprocess.call(
+                ['sh', os.path.join(planetengineDir, 'linux', 'cliplogs.sh'), stdoutFilepath]
+                )
+        mpi.comm.barrier()
         self.fm.move(
             os.path.join(
                 'logs',
@@ -215,19 +198,42 @@ class Campaign(_built.Built):
                 stdoutFile
                 )
             )
+        self.update()
+
+    def choose_job(self):
+        random.seed()
+        jobID = random.choice(tuple(self.jobs_available))
+        return jobID
+
+    def _master_run(self, jobID = None):
+        if jobID is None:
+            jobID = self.choose_job()
+        self._pre_run(jobID)
+        job = self.fm.load_json(
+            jobID,
+            'jobs'
+            )
+        completed = self._run(**job)
+        self._post_run(jobID, completed)
 
     def subrun(self, jobID = None, cores = 1):
         if jobID is None:
-            jobID = random.choice(tuple(self.jobs_available))
+            jobID = self.choose_job()
         stderrFilepath = os.path.join(self.fm.path, 'logs', jobID + '.error')
         stdoutFilepath = os.path.join(self.fm.path, 'logs', jobID + '.out')
         with open(stdoutFilepath, 'w') as outfile:
             with open(stderrFilepath, 'w') as errorfile:
-                ignoreme = subprocess.Popen(
+                process = subprocess.Popen(
                     ['mpirun', '-np', str(cores), 'python', self.runpy, jobID],
                     stdout = outfile,
                     stderr = errorfile
                     )
+        # if wait:
+        #     process.wait()
+
+    def autorun(self, cores = 1):
+        while len(self.jobs_available) > 0:
+            self.subrun(cores = cores, wait = False)
 
     def _make_directory_structure(self):
         campaignStructCheck = ([

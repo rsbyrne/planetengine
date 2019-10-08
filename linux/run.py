@@ -11,6 +11,4 @@ path = os.path.dirname(__file__)
 
 my_campaign = _built.load_built('campaign', path)
 
-job = disk.load_json(JOBID, my_campaign.fm.directories['jobs']['available']['.'])
-
-my_campaign.run(job)
+my_campaign._master_run(JOBID)

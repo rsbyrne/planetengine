@@ -172,6 +172,8 @@ def make_tar(
             assert not os.path.isdir(path), \
                 "The directory should have been deleted, but it's still there!"
 
+    liberate_path(tarpath)
+
     message("Archived.")
 
 def try_make_tar(path, **kwargs):
@@ -454,10 +456,8 @@ class _FileContextManager:
 
     def _liberate_paths(self):
         liberate_path(self.path)
-        liberate_path(self.tarpath)
 
     def __enter__(self):
-        self._liberate_paths()
         self._save_backup()
         diskState = self._initial_diskState
         if diskState == 'clean':
@@ -471,7 +471,6 @@ class _FileContextManager:
         if self.recursive:
             self.subtars = expose_sub_tars(self.path)
         self.was_archived = was_archived
-        self._liberate_paths()
         return FileManager(self.name, self.outputPath)
 
     def __exit__(self, *args):
@@ -482,7 +481,6 @@ class _FileContextManager:
                     un_expose_sub_tars(self.subtars)
             self._try_archive()
             self._remove_backup()
-            self._liberate_paths()
             return True
         else:
             message("Failed! Reverting to backup.")
@@ -491,7 +489,6 @@ class _FileContextManager:
             if not self._initial_diskState == 'tar':
                 self._try_archive()
             self._remove_backup()
-            self._liberate_paths()
             return False
 
 class FileManager:

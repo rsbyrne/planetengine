@@ -6,6 +6,21 @@ def build(*args, **kwargs):
     built = ArrBench(*args, **kwargs)
     return built
 
+suites = {
+    'light': lambda: planetengine.suite.suite_list({
+        'f': [0.1, 0.5, 0.9],
+        'eta0': [1., 1e2, 1e4],
+        'Ra': [1e4, 1e5, 1e6],
+        'res': 16
+        }),
+    'default': lambda: planetengine.suite.suite_list({
+        'f': [round(x / 10., 1) for x in range(1, 10)],
+        'eta0': [round(10.**(x / 2.), 0) for x in range(2, 12)],
+        'Ra': [round(10.**(x / 2.), 0) for x in range(6, 16)],
+        'res': 32
+        })
+    }
+
 class ArrBench(campaign.Campaign):
 
     name = 'arrbench'
@@ -16,16 +31,20 @@ class ArrBench(campaign.Campaign):
             *args,
             name = None,
             path = None,
+            suite = [],
             **kwargs
             ):
+
+        if type(suite) == str:
+            suite = suites[suite]()
 
         ### HOUSEKEEPING: IMPORTANT! ###
 
         inputs = locals().copy()
 
-        def _run(job):
+        def _run(**kwargs):
             model = planetengine.model.make_model(
-                planetengine.systems.arrhenius.build(res = 16, **job),
+                planetengine.systems.arrhenius.build(**kwargs),
                 {'temperatureField': planetengine.initials.sinusoidal.build()},
                 outputPath = self.fm.directories['out']['.']
                 )
@@ -42,12 +61,11 @@ class ArrBench(campaign.Campaign):
                     model.status == 'post-traverse',
                     ]),
                 }
-            out = [model.tarpath,]
             try:
                 model.traverse(**conditions)
-                return (job, out, True)
+                return True
             except:
-                return (job, out, False)
+                return False
 
         super().__init__(
             args = args,
@@ -60,3 +78,6 @@ class ArrBench(campaign.Campaign):
             # _pre_update = _pre_update,
             # _post_update = _post_update,
             )
+
+
+        self.add_jobs(suite)
