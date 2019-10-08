@@ -1,3 +1,4 @@
+import sys
 import os
 import shutil
 import subprocess
@@ -8,6 +9,7 @@ from . import mpi
 from . import disk
 from . import utilities
 from . import planetengineDir
+from . import _built
 
 JOBPREFIX = 'pejob_'
 
@@ -29,11 +31,40 @@ _campaignStructure = (
         )),
     )
 
-class Campaign:
+def load_job():
+    JOBFILENAME = str(sys.argv[1])
+    job = disk.load_json(JOBFILENAME)
+    return job
 
-    def __init__(self, name, path, runpy):
+class Campaign(_built.Built):
 
-        self.fm = disk.FileManager(name, path)
+    name = 'campaign'
+
+    def __init__(
+            self,
+            args,
+            kwargs,
+            inputs,
+            script,
+            _run,
+            name = None,
+            path = None,
+            _pre_update = None,
+            _post_update = None,
+            ):
+
+        if name is None:
+            name = self.name
+        if path is None:
+            path = os.path.abspath(
+                os.path.dirname(
+                    script
+                    )
+                )
+        del inputs['name']
+        del inputs['path']
+
+        self.fm = disk.FileManager(self.name, path)
 
         self._make_directory_structure()
 
@@ -47,6 +78,7 @@ class Campaign:
                 self.fm.liberate_path('run.sh')
         self.runsh = runshPath
 
+        runpy = script
         runpyPath = os.path.join(self.fm.path, 'run.py')
         if mpi.rank == 0:
             if not os.path.isfile(runpyPath):
@@ -74,9 +106,30 @@ class Campaign:
             if not os.path.isfile(self._systemerrorfile):
                 os.mknod(self._systemerrorfile)
 
+        if not _pre_update is None:
+            self._pre_update = _pre_update
+        if not _post_update is None:
+            self._post_update = _post_update
+        if not _run is None:
+            self._run = _run
+
         self.update()
 
-    def _update(self):
+        super().__init__(
+            args = args,
+            kwargs = kwargs,
+            inputs = inputs,
+            script = script
+            )
+
+    def _pre_update(self):
+        pass
+    def _post_update(self):
+        pass
+
+    def update(self):
+        self._pre_update()
+        self.fm.update()
         self.jobs_available = {
             key[6:-5] for key in self.fm.directories['jobs'] \
                 if key[:6] == 'pejob_'
@@ -99,9 +152,13 @@ class Campaign:
             *self.jobs_completed,
             *self.jobs_failed
             }
+        self.fm.update()
+        self._post_update()
 
-    def update(self):
-        self._update()
+    def run(self, jobID = None, cores = 1):
+        print("Running!")
+        self._run()
+        print("Done!")
 
     def _make_directory_structure(self):
         campaignStructCheck = ([
@@ -129,10 +186,16 @@ class Campaign:
     def run_job(self, jobID = None, cores = 1):
         if jobID is None:
             jobID = random.choice(tuple(self.jobs_available))
+        jobFilename = os.path.abspath(
+            os.path.join(
+                self.fm.directories['jobs']['.'],
+                JOBPREFIX + jobID + '.json'
+                )
+            )
         with open(self._systemoutfile, 'a') as outfile:
             with open(self._systemerrorfile, 'a') as errorfile:
                 ignoreme = subprocess.call(
-                    ['sh', self.runsh, self.runpy, jobID],
+                    ['sh', self.runsh, self.runpy, jobFilename],
                     stdout = outfile,
                     stderr = errorfile
                     )

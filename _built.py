@@ -269,11 +269,3 @@ class Built:
 
     def _post_load_hook(self, name, path):
         pass
-
-# class Aggregate:
-#
-#     def __init__(self, **kwargs):
-#
-#         for key, val in kwargs:
-#             if not type(key) == str and isinstance(val, Built):
-#                 raise Exception

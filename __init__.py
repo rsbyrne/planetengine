@@ -26,7 +26,7 @@ from . import model
 from . import value
 from . import suite
 from . import campaign
-from . import runscripts
+from . import campaigns
 
 from .utilities import message
 from .utilities import log

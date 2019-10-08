@@ -50,7 +50,9 @@ def save_json(jsonObj, name, path):
              json.dump(jsonObj, file)
     # mpi.barrier()
 
-def load_json(jsonName, path):
+def load_json(jsonName, path = None):
+    if path is None:
+        path = os.path.dirname(jsonName)
     jsonName = os.path.splitext(os.path.basename(jsonName))[0]
     filename = jsonName + '.json'
     jsonDict = {}
@@ -86,8 +88,11 @@ def save_script(script, name = None, path = '.'):
         shutil.copyfile(tweakedPath, newPath)
     # mpi.barrier()
 
-def load_script(name, path):
-    scriptPath = os.path.join(path, name) + '.py'
+def load_script(scriptName, path = None):
+    if path is None:
+        path = os.path.dirname(scriptName)
+    scriptName = os.path.splitext(os.path.basename(scriptName))[0]
+    scriptPath = os.path.join(path, scriptName) + '.py'
     scriptModule = local_import(
         scriptPath
         )
@@ -229,12 +234,13 @@ def makedirs(path, exist_ok = False):
 def explore_tree(path):
     directories = {}
     path = os.path.abspath(path)
+    directories['.'] = path
     files = listdir(path)
     for file in files:
         if not file[:2] == '__':
             filePath = os.path.join(path, file)
             if os.path.isfile(filePath):
-                directories[file] = None
+                directories[file] = filePath
             elif os.path.isdir(filePath):
                 directories[file] = explore_tree(filePath)
     return directories
