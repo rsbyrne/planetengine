@@ -111,12 +111,12 @@ class Campaign(_built.Built):
     def update(self):
         self._pre_update()
         self.fm.update()
-        self.jobs_available = {
-            key[:-5] for key in self.fm.directories['jobs']['available'] \
-                if key[:6] == 'pejob_'
-            }
         self.jobs_running = {
             key[:-5] for key in self.fm.directories['jobs'] \
+                if key[:6] == 'pejob_'
+            }
+        self.jobs_available = {
+            key[:-5] for key in self.fm.directories['jobs']['available'] \
                 if key[:6] == 'pejob_'
             }
         self.jobs_completed = {
