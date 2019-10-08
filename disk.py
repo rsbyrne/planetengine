@@ -593,7 +593,7 @@ class FileManager:
 
     def copyfile(self, src, dst):
         if mpi.rank == 0:
-            os.copyfile(
+            shutil.copyfile(
                 os.path.join(self.path, src),
                 os.path.join(self.path, dst)
                 )
@@ -608,7 +608,7 @@ class FileManager:
 
     def move(self, src, dst):
         self.copyfile(src, dst)
-        self.rm(src)
+        self.remove(src)
 
     def make_directory_tree(self, structure, subPath = '', **kwargs):
         path = os.path.join(self.path, subPath)

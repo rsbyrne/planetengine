@@ -1,5 +1,6 @@
-from planetengine import campaign
-from planetengine import disk
+import planetengine
+campaign = planetengine.campaign
+disk = planetengine.disk
 
 def build(*args, **kwargs):
     built = ArrBench(*args, **kwargs)
@@ -41,7 +42,12 @@ class ArrBench(campaign.Campaign):
                     model.status == 'post-traverse',
                     ]),
                 }
-            model.traverse(**conditions)
+            out = [model.tarpath,]
+            try:
+                model.traverse(**conditions)
+                return (job, out, True)
+            except:
+                return (job, out, False)
 
         super().__init__(
             args = args,
@@ -54,13 +60,3 @@ class ArrBench(campaign.Campaign):
             # _pre_update = _pre_update,
             # _post_update = _post_update,
             )
-
-### CORE FUNCTIONALITY: IMPORTANT! ###
-import sys
-if len(sys.argv) > 1:
-    if campaign.JOBPREFIX in str(sys.argv[1]):
-        JOBFILENAME = str(sys.argv[1])
-        job = disk.load_json(JOBFILENAME)
-        print(job)
-        campaignObj = build()
-        campaignObj.run(job)

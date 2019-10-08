@@ -16,7 +16,7 @@ touch $OUTFILE
 touch $ERRORFILE
 echo $DIR
 echo "Started job " $JOBNAME
-mpirun -np $CORES python $SCRIPT $JOBFILENAME > $OUTFILE 2> $ERRORFILE
+mpirun -np $CORES python $SCRIPT $JOBNAME > $OUTFILE 2> $ERRORFILE
 echo "$(tail -1000 $OUTFILE)" > $OUTFILE
 echo "$(tail -1000 $ERRORFILE)" > $ERRORFILE
 echo "Finished job " $JOBNAME

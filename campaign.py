@@ -16,25 +16,23 @@ JOBPREFIX = 'pejob_'
 _campaignStructure = (
     ('jobs', (
         ('completed', ()),
-        ('running', ()),
-        ('failed', ())
+        ('failed', ()),
+        ('available', ())
         )),
     ('out', (
         ('completed', ()),
-        ('running', ()),
         ('failed', ())
         )),
     ('logs', (
         ('completed', ()),
-        ('running', ()),
         ('failed', ())
         )),
     )
 
-def load_job():
-    JOBFILENAME = str(sys.argv[1])
-    job = disk.load_json(JOBFILENAME)
-    return job
+def get_jobID(job):
+    jobString = utilities.stringify(job)
+    jobID = JOBPREFIX + wordhash.get_random_phrase(jobString)
+    return jobID
 
 class Campaign(_built.Built):
 
@@ -58,32 +56,33 @@ class Campaign(_built.Built):
         if path is None:
             path = os.path.abspath(
                 os.path.dirname(
-                    script
+                    os.path.dirname(
+                        script
+                        )
                     )
                 )
         del inputs['name']
         del inputs['path']
 
+        super().__init__(
+            args = args,
+            kwargs = kwargs,
+            inputs = inputs,
+            script = script
+            )
+
         self.fm = disk.FileManager(self.name, path)
+
+        if not 'campaign_0.py' in self.fm.directories:
+            self.save(path = self.fm.path, name = 'campaign')
 
         self._make_directory_structure()
 
-        runshPath = os.path.join(self.fm.path, 'run.sh')
-        if mpi.rank == 0:
-            if not os.path.isfile(runshPath):
-                shutil.copyfile(
-                    os.path.join(planetengineDir, 'linux', 'run.sh'),
-                    runshPath
-                    )
-                self.fm.liberate_path('run.sh')
-        self.runsh = runshPath
-
-        runpy = script
         runpyPath = os.path.join(self.fm.path, 'run.py')
         if mpi.rank == 0:
             if not os.path.isfile(runpyPath):
                 shutil.copyfile(
-                    runpy,
+                    os.path.join(planetengineDir, 'linux', 'run.py'),
                     runpyPath
                     )
                 self.fm.liberate_path('run.py')
@@ -115,13 +114,6 @@ class Campaign(_built.Built):
 
         self.update()
 
-        super().__init__(
-            args = args,
-            kwargs = kwargs,
-            inputs = inputs,
-            script = script
-            )
-
     def _pre_update(self):
         pass
     def _post_update(self):
@@ -131,19 +123,19 @@ class Campaign(_built.Built):
         self._pre_update()
         self.fm.update()
         self.jobs_available = {
-            key[6:-5] for key in self.fm.directories['jobs'] \
+            key[:-5] for key in self.fm.directories['jobs']['available'] \
                 if key[:6] == 'pejob_'
             }
         self.jobs_running = {
-            key[6:-5] for key in self.fm.directories['jobs']['running'] \
+            key[:-5] for key in self.fm.directories['jobs'] \
                 if key[:6] == 'pejob_'
             }
         self.jobs_completed = {
-            key[6:-5] for key in self.fm.directories['jobs']['completed'] \
+            key[:-5] for key in self.fm.directories['jobs']['completed'] \
                 if key[:6] == 'pejob_'
             }
         self.jobs_failed = {
-            key[6:-5] for key in self.fm.directories['jobs']['failed'] \
+            key[:-5] for key in self.fm.directories['jobs']['failed'] \
                 if key[:6] == 'pejob_'
             }
         self.jobs = {
@@ -155,10 +147,87 @@ class Campaign(_built.Built):
         self.fm.update()
         self._post_update()
 
-    def run(self, jobID = None, cores = 1):
-        print("Running!")
-        self._run()
-        print("Done!")
+    def _pre_run(self, job):
+        jobID = get_jobID(job)
+        self.fm.move(
+            os.path.join(
+                self.fm.directories['jobs']['available']['.'],
+                jobID + '.json'
+                ),
+            os.path.join(
+                self.fm.directories['jobs']['.'],
+                jobID + '.json'
+                )
+            )
+
+    def run(self, job):
+        self._pre_run(job)
+        job, out, completed = self._run(job)
+        self._post_run(job, out, completed)
+
+    def _post_run(self, job, out, completed):
+        jobID = get_jobID(job)
+        jobFilename = jobID + '.json'
+        self.fm.move(
+            os.path.join(
+                'jobs',
+                jobFilename
+                ),
+            os.path.join(
+                'jobs',
+                {True: 'completed', False: 'failed'}[completed],
+                jobFilename
+                )
+            )
+        for outName in out:
+            self.fm.move(
+                os.path.join(
+                    'out',
+                    outName
+                    ),
+                os.path.join(
+                    'out',
+                    {True: 'completed', False: 'failed'}[completed],
+                    outName
+                    )
+                )
+        stderrFile = jobID + '.error'
+        stdoutFile = jobID + '.out'
+        self.fm.move(
+            os.path.join(
+                'logs',
+                stderrFile
+                ),
+            os.path.join(
+                'logs',
+                {True: 'completed', False: 'failed'}[completed],
+                stderrFile
+                )
+            )
+        self.fm.move(
+            os.path.join(
+                'logs',
+                stdoutFile
+                ),
+            os.path.join(
+                'logs',
+                {True: 'completed', False: 'failed'}[completed],
+                stdoutFile
+                )
+            )
+
+    def subrun(self, jobID = None, cores = 1):
+        if jobID is None:
+            jobID = random.choice(tuple(self.jobs_available))
+        stderrFilepath = os.path.join(self.fm.path, 'logs', jobID + '.error')
+        stdoutFilepath = os.path.join(self.fm.path, 'logs', jobID + '.out')
+        with open(stdoutFilepath, 'w') as outfile:
+            with open(stderrFilepath, 'w') as errorfile:
+                ignoreme = subprocess.Popen(
+                    ['mpirun', '-np', str(cores), 'python', self.runpy, jobID],
+                    stdout = outfile,
+                    stderr = errorfile
+                    )
 
     def _make_directory_structure(self):
         campaignStructCheck = ([
@@ -171,31 +240,16 @@ class Campaign(_built.Built):
                 raise Exception
 
     def add_job(self, job):
-        jobString = utilities.stringify(job)
-        jobID = wordhash.get_random_phrase(jobString)
+        jobID = get_jobID(job)
         if not jobID in self.jobs:
             self.jobs_available.add(jobID)
-            jobFile = JOBPREFIX + jobID
-            self.fm.save_json(job, jobFile, 'jobs')
+            self.fm.save_json(
+                job,
+                jobID,
+                self.fm.directories['jobs']['available']['.']
+                )
         self.update()
 
     def add_jobs(self, joblist):
         for job in joblist:
             self.add_job(job)
-
-    def run_job(self, jobID = None, cores = 1):
-        if jobID is None:
-            jobID = random.choice(tuple(self.jobs_available))
-        jobFilename = os.path.abspath(
-            os.path.join(
-                self.fm.directories['jobs']['.'],
-                JOBPREFIX + jobID + '.json'
-                )
-            )
-        with open(self._systemoutfile, 'a') as outfile:
-            with open(self._systemerrorfile, 'a') as errorfile:
-                ignoreme = subprocess.call(
-                    ['sh', self.runsh, self.runpy, jobFilename],
-                    stdout = outfile,
-                    stderr = errorfile
-                    )
