@@ -246,21 +246,23 @@ def isdir(path):
     return boolean
 
 def makedirs(path, exist_ok = False):
-    os.makedirs(path, exist_ok = exist_ok)
+    if mpi.rank == 0:
+        os.makedirs(path, exist_ok = exist_ok)
     liberate_path(path)
 
-def explore_tree(path):
+def explore_tree(path, ignore_strs = []):
     directories = {}
     path = os.path.abspath(path)
     directories['.'] = path
     files = listdir(path)
     for file in files:
-        if not file[:2] == '__':
-            filePath = os.path.join(path, file)
-            if isfile(filePath):
-                directories[file] = filePath
-            elif isdir(filePath):
-                directories[file] = explore_tree(filePath)
+        if not any([ignore_string in file for ignore_string in ignore_strs]):
+            if not file[:2] == '__':
+                filePath = os.path.join(path, file)
+                if isfile(filePath):
+                    directories[file] = filePath
+                elif isdir(filePath):
+                    directories[file] = explore_tree(filePath)
     return directories
 
 def make_subdirectory(parentPath, childPath):
@@ -397,7 +399,8 @@ class _FileContextManager:
             name,
             outputPath = '.',
             archive = True,
-            recursive = True
+            recursive = True,
+            **kwargs
             ):
 
         self.name = name
@@ -407,6 +410,7 @@ class _FileContextManager:
         self.archive = archive
         self.recursive = recursive
         self._initial_diskState = disk_state(self.path)
+        self.kwargs = kwargs
 
         _backupdir_found = False
         while not _backupdir_found:
@@ -487,7 +491,7 @@ class _FileContextManager:
         if self.recursive:
             self.subtars = expose_sub_tars(self.path)
         self.was_archived = was_archived
-        return FileManager(self.name, self.outputPath)
+        return FileManager(self.name, self.outputPath, **self.kwargs)
 
     def __exit__(self, *args):
         exc_type, exc_value, tb = args
@@ -509,14 +513,37 @@ class _FileContextManager:
 
 class FileManager:
 
-    def __init__(self, name, outputPath = '.'):
+    def __init__(
+            self,
+            name,
+            outputPath = '.',
+            load_fmopts = True,
+            save_fmopts = True,
+            ignore_strs = [],
+            **kwargs
+            ):
+
         self.name = name
         self.outputPath = os.path.abspath(outputPath)
         self.path = os.path.join(outputPath, name)
-        if mpi.rank == 0:
-            if not os.path.isdir(self.path):
-                os.makedirs(self.path, exist_ok = True)
+        makedirs(self.path, exist_ok = True)
+        # self._handle_kwargs(load_fmopts, save_fmopts, **kwargs)
+        self.ignore_strs = ignore_strs
         self._update()
+
+    # def _handle_kwargs(self, load_fmopts, save_fmopts, **kwargs):
+    #     if load_fmopts and isfile(os.path.join(self.path, '_fmopts.json')):
+    #         fmopts = self.load_json('_fmopts')
+    #     else:
+    #         fmopts = {}
+    #         fmopts['ignore_strs'] = []
+    #         fmopts.update(**kwargs)
+    #     if save_fmopts:
+    #         if isfile(os.path.join(self.path, '_fmopts.json')):
+    #             self.remove('_fmopts.json')
+    #         self.save_json(fmopts, '_fmopts')
+    #     print(fmopts)
+    #     self.__dict__.update(**fmopts)
 
     def liberate_path(self, path = ''):
         liberate_path(os.path.join(self.path, path))
@@ -527,7 +554,7 @@ class FileManager:
         return path
 
     def _get_directories(self):
-        self.directories = explore_tree(self.path)
+        self.directories = explore_tree(self.path, self.ignore_strs)
 
     def _update(self):
         self.liberate_path()

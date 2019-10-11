@@ -78,7 +78,11 @@ class Campaign(_built.Built):
             script = script
             )
 
-        self.fm = disk.FileManager(self.name, path)
+        ignore_strs = [
+            'pemod_',
+            'planetengine',
+            ]
+        self.fm = disk.FileManager(self.name, path, ignore_strs = ignore_strs)
 
         if not 'campaign_0.py' in self.fm.directories:
             self.save(path = self.fm.path, name = 'campaign')
