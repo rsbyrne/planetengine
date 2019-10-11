@@ -229,6 +229,22 @@ def listdir(path):
     dirs = mpi.comm.bcast(dirs, root = 0)
     return dirs
 
+def isfile(path):
+    boolean = False
+    if mpi.rank == 0:
+        if os.path.isfile(path):
+            boolean = True
+    boolean = mpi.comm.bcast(boolean)
+    return boolean
+
+def isdir(path):
+    boolean = False
+    if mpi.rank == 0:
+        if os.path.isdir(path):
+            boolean = True
+    boolean = mpi.comm.bcast(boolean)
+    return boolean
+
 def makedirs(path, exist_ok = False):
     os.makedirs(path, exist_ok = exist_ok)
     liberate_path(path)
@@ -241,9 +257,9 @@ def explore_tree(path):
     for file in files:
         if not file[:2] == '__':
             filePath = os.path.join(path, file)
-            if os.path.isfile(filePath):
+            if isfile(filePath):
                 directories[file] = filePath
-            elif os.path.isdir(filePath):
+            elif isdir(filePath):
                 directories[file] = explore_tree(filePath)
     return directories
 

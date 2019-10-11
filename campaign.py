@@ -10,6 +10,7 @@ from . import disk
 from . import utilities
 from . import planetengineDir
 from . import _built
+message = utilities.message
 
 JOBPREFIX = 'pejob_'
 
@@ -201,6 +202,7 @@ class Campaign(_built.Built):
         self.update()
 
     def choose_job(self):
+        self.update()
         random.seed()
         jobID = random.choice(tuple(self.jobs_available))
         return jobID
@@ -216,7 +218,7 @@ class Campaign(_built.Built):
         completed = self._run(**job)
         self._post_run(jobID, completed)
 
-    def subrun(self, jobID = None, cores = 1):
+    def subrun(self, jobID = None, cores = 1, wait = False):
         if jobID is None:
             jobID = self.choose_job()
         stderrFilepath = os.path.join(self.fm.path, 'logs', jobID + '.error')
@@ -224,16 +226,34 @@ class Campaign(_built.Built):
         with open(stdoutFilepath, 'w') as outfile:
             with open(stderrFilepath, 'w') as errorfile:
                 process = subprocess.Popen(
-                    ['mpirun', '-np', str(cores), 'python', self.runpy, jobID],
+                    ['mpirun', '-np', str(cores), 'python', self.runpy, 'single', jobID],
                     stdout = outfile,
                     stderr = errorfile
                     )
-        # if wait:
-        #     process.wait()
+                if wait:
+                    message("Running " + jobID + "...")
+                    process.wait()
+                    message("Completed " + jobID)
 
     def autorun(self, cores = 1):
-        while len(self.jobs_available) > 0:
-            self.subrun(cores = cores, wait = False)
+        message("Autorun engaged on " + str(cores) + " cores...")
+        while True:
+            self.update()
+            if len(self.jobs_available) > 0:
+                self.subrun(cores = cores, wait = True)
+            else:
+                break
+        message("Jobs exhausted: autorun complete.")
+
+    def multirun(self, threads = 1, cores = 1):
+        message("Running in multirun mode...")
+        for i in range(threads):
+            message("Launching thread #" + str(i) + '...')
+            process = subprocess.Popen(
+                ['python', self.runpy, 'auto', str(cores)],
+                )
+            message("Launched thread #" + str(i) + '.')
+        message("All threads commissioned.")
 
     def _make_directory_structure(self):
         campaignStructCheck = ([
