@@ -1,19 +1,24 @@
 import sys
 import os
+import json
 
-import planetengine
-disk = planetengine.disk
-_built = planetengine._built
-campaign = planetengine.campaign
+from planetengine import _built
 
-path = os.path.dirname(__file__)
-
-my_campaign = _built.load_built('campaign', path)
+my_campaign = _built.load_built(
+    'campaign',
+    os.path.abspath(os.path.dirname(__file__))
+    )
 
 MODE = sys.argv[1] # single or auto
 if MODE == 'single':
-    JOBID = sys.argv[2]
+    JOBID = str(sys.argv[2])
     my_campaign._master_run(JOBID)
 elif MODE == 'auto':
-    CORES = sys.argv[2]
+    CORES = int(sys.argv[2])
     my_campaign.autorun(cores = CORES)
+elif MODE == 'multi':
+    THREADS = int(sys.argv[2])
+    CORES = int(sys.argv[3])
+    my_campaign.multirun(threads = THREADS, cores = CORES)
+else:
+    raise Exception("'Mode' not recognised!")

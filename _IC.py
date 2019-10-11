@@ -11,6 +11,9 @@ from ._built import Built
 
 from types import ModuleType
 
+def load(name, path):
+    return _built.load_built(name, path)
+
 class IC(Built):
 
     def __init__(

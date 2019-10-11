@@ -83,8 +83,9 @@ def get_substrate(var):
         except:
             subVars = []
             for subVar in var._underlyingDataItems:
-                try: subVars.append(get_varInfo(subVar, return_var = True))
-                except: pass
+                if not var is subVar:
+                    try: subVars.append(get_substrate(var))
+                    except: pass
             if len(subVars) == 0:
                 substrate = None
             else:
@@ -129,67 +130,67 @@ def get_substrates(var):
         mesh = substrate
     return mesh, substrate
 
-def get_varInfo(*args, detailed = False, return_var = False):
-
-    var, varName, substrate = unpack_var(*args)
-
-    var = UWFn.convert(var)
-    if var is None:
-        raise Exception
-
-    if substrate == 'notprovided':
-        substrate = get_substrate(var)
-
-    data = var.evaluate(substrate)
-
-    varDim = data.shape[1]
-
-    try:
-        mesh = substrate.mesh
-    except:
-        mesh = substrate
-
-    if type(var) == fn.misc.constant:
-        varType = 'constant'
-    elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
-        varType = 'swarmVar'
-    elif type(var) == uw.mesh._meshvariable.MeshVariable:
-        varType = 'meshVar'
-    else:
-        if substrate is mesh:
-            varType = 'meshFn'
-        else:
-            varType = 'swarmFn'
-
-    if str(data.dtype) == 'int32':
-        dType = 'int'
-    elif str(data.dtype) == 'float64':
-        dType = 'double'
-    elif str(data.dtype) == 'bool':
-        dType = 'boolean'
-    else:
-        raise Exception(
-            "Input data type not acceptable."
-            )
-
-    if detailed:
-        outDict = {
-            'varType': varType,
-            'mesh': mesh,
-            'substrate': substrate,
-            'dType': dType,
-            'varDim': varDim,
-            'varName': varName,
-            }
-        if return_var:
-            return var, outDict
-        else:
-            return outDict
-    else:
-        if return_var:
-            return var, varType, mesh, substrate, dType, varDim
-        else:
-            return varType, mesh, substrate, dType, varDim
+# def get_varInfo(*args, detailed = False, return_var = False):
+#
+#     var, varName, substrate = unpack_var(*args)
+#
+#     var = UWFn.convert(var)
+#     if var is None:
+#         raise Exception
+#
+#     if substrate == 'notprovided':
+#         substrate = get_substrate(var)
+#
+#     data = var.evaluate(substrate)
+#
+#     varDim = data.shape[1]
+#
+#     try:
+#         mesh = substrate.mesh
+#     except:
+#         mesh = substrate
+#
+#     if type(var) == fn.misc.constant:
+#         varType = 'constant'
+#     elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
+#         varType = 'swarmVar'
+#     elif type(var) == uw.mesh._meshvariable.MeshVariable:
+#         varType = 'meshVar'
+#     else:
+#         if substrate is mesh:
+#             varType = 'meshFn'
+#         else:
+#             varType = 'swarmFn'
+#
+#     if str(data.dtype) == 'int32':
+#         dType = 'int'
+#     elif str(data.dtype) == 'float64':
+#         dType = 'double'
+#     elif str(data.dtype) == 'bool':
+#         dType = 'boolean'
+#     else:
+#         raise Exception(
+#             "Input data type not acceptable."
+#             )
+#
+#     if detailed:
+#         outDict = {
+#             'varType': varType,
+#             'mesh': mesh,
+#             'substrate': substrate,
+#             'dType': dType,
+#             'varDim': varDim,
+#             'varName': varName,
+#             }
+#         if return_var:
+#             return var, outDict
+#         else:
+#             return outDict
+#     else:
+#         if return_var:
+#             return var, varType, mesh, substrate, dType, varDim
+#         else:
+#             return varType, mesh, substrate, dType, varDim
 
 def splitter(filename):
     name, ext = os.path.splitext(filename)

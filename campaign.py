@@ -23,7 +23,8 @@ _campaignStructure = (
     ('out', ()),
     ('logs', (
         ('completed', ()),
-        ('failed', ())
+        ('failed', ()),
+        ('threads', ())
         )),
     )
 
@@ -31,6 +32,14 @@ def get_jobID(job):
     jobString = utilities.stringify(job)
     jobID = JOBPREFIX + wordhash.get_random_phrase(jobString)
     return jobID
+
+def get_threadID():
+    threadID = 'thread_' + wordhash.get_random_phrase()
+    return threadID
+
+def load(name, path):
+    campaignDir = os.path.join(path, name)
+    return _built.load_built('campaign', campaignDir)
 
 class Campaign(_built.Built):
 
@@ -76,15 +85,8 @@ class Campaign(_built.Built):
 
         self._make_directory_structure()
 
-        runpyPath = os.path.join(self.fm.path, 'run.py')
-        if mpi.rank == 0:
-            if not os.path.isfile(runpyPath):
-                shutil.copyfile(
-                    os.path.join(planetengineDir, 'linux', 'run.py'),
-                    runpyPath
-                    )
-                self.fm.liberate_path('run.py')
-        self.runpy = runpyPath
+        self.runpy = self._make_copy_of_planetengine_file('run.py', 'linux')
+        self.runsh = self._make_copy_of_planetengine_file('run.sh', 'linux')
 
         planetenginePath = os.path.join(self.fm.path, 'planetengine')
         if mpi.rank == 0:
@@ -103,6 +105,17 @@ class Campaign(_built.Built):
         self._run = _run
 
         self.update()
+
+    def _make_copy_of_planetengine_file(self, fileName, pepath = 'linux'):
+        filePath = os.path.join(self.fm.path, fileName)
+        if mpi.rank == 0:
+            if not os.path.isfile(filePath):
+                shutil.copyfile(
+                    os.path.join(planetengineDir, pepath, fileName),
+                    filePath
+                    )
+                self.fm.liberate_path(fileName)
+        return filePath
 
     def _pre_update(self):
         pass
@@ -221,19 +234,23 @@ class Campaign(_built.Built):
     def subrun(self, jobID = None, cores = 1, wait = False):
         if jobID is None:
             jobID = self.choose_job()
-        stderrFilepath = os.path.join(self.fm.path, 'logs', jobID + '.error')
         stdoutFilepath = os.path.join(self.fm.path, 'logs', jobID + '.out')
-        with open(stdoutFilepath, 'w') as outfile:
-            with open(stderrFilepath, 'w') as errorfile:
-                process = subprocess.Popen(
-                    ['mpirun', '-np', str(cores), 'python', self.runpy, 'single', jobID],
-                    stdout = outfile,
-                    stderr = errorfile
-                    )
-                if wait:
-                    message("Running " + jobID + "...")
-                    process.wait()
-                    message("Completed " + jobID)
+        stderrFilepath = os.path.join(self.fm.path, 'logs', jobID + '.error')
+        if wait:
+            message("Running " + jobID + "...")
+        if mpi.rank == 0:
+            with open(stdoutFilepath, 'w') as outfile:
+                with open(stderrFilepath, 'w') as errorfile:
+                    process = subprocess.Popen(
+                        ['mpirun', '-np', str(cores), 'python', self.runpy, 'single', jobID],
+                        stdout = outfile,
+                        stderr = errorfile
+                        )
+                    if wait:
+                        process.wait()
+        mpi.comm.barrier()
+        if wait:
+            message("Completed " + jobID)
 
     def autorun(self, cores = 1):
         message("Autorun engaged on " + str(cores) + " cores...")
@@ -249,9 +266,22 @@ class Campaign(_built.Built):
         message("Running in multirun mode...")
         for i in range(threads):
             message("Launching thread #" + str(i) + '...')
-            process = subprocess.Popen(
-                ['python', self.runpy, 'auto', str(cores)],
-                )
+            if mpi.rank == 0:
+                threadID = get_threadID()
+                threadOut = os.path.join(
+                    self.fm.path, 'logs', 'threads', threadID + '.out'
+                    )
+                threadErr = os.path.join(
+                    self.fm.path, 'logs', 'threads', threadID + '.error'
+                    )
+                with open(threadOut, 'w') as outfile:
+                    with open(threadErr, 'w') as errorfile:
+                        process = subprocess.Popen(
+                            ['python', self.runpy, 'auto', str(cores)],
+                            stdout = outfile,
+                            stderr = errorfile
+                            )
+            mpi.comm.barrier()
             message("Launched thread #" + str(i) + '.')
         message("All threads commissioned.")
 

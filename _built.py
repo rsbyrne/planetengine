@@ -78,6 +78,9 @@ def load_built(name, path):
 
     return built
 
+def load(name, path):
+    return _built.load_built(name, path)
+
 def load_builtsDir(path, name = 'builts'):
 
     builtsDir = os.path.join(path, name)

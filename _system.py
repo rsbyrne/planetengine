@@ -1,10 +1,13 @@
 # from ..utilities import check_reqs
-from ._built import Built
+from . import _built
 from . import fieldops
 from . import value
 from .visualisation import QuickFig
 
-class System(Built):
+def load(name, path):
+    return _built.load_built(name, path)
+
+class System(_built.Built):
 
     name = 'system'
 

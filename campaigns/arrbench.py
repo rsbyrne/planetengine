@@ -14,7 +14,7 @@ suites = {
         'res': 16
         }),
     'default': lambda: planetengine.suite.suite_list({
-        'f': [round(x / 10., 1) for x in range(1, 10)],
+        'f': [round(x / 10., 1) for x in range(1, 11)],
         'eta0': [round(10.**(x / 2.), 0) for x in range(2, 12)],
         'Ra': [round(10.**(x / 2.), 0) for x in range(6, 16)],
         'res': 32
