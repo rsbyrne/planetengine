@@ -53,8 +53,8 @@ class ArrBench(campaign.Campaign):
             observer = planetengine.observers.arrbench.build()
             observer.attach(model)
             conditions = {
-                # 'stopCondition': lambda: model.modeltime() > 0.3,
-                'stopCondition': lambda: model.step() > 25,
+                'stopCondition': lambda: model.modeltime() > 0.3,
+                'stopCondition': lambda: model.step() > 3,
                 'checkpointCondition': lambda: any([
                     model.status == 'pre-traverse',
                     model.step() % 1000 == 0,
