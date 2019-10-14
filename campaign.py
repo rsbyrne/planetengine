@@ -127,7 +127,7 @@ class Campaign(_built.Built):
                     os.path.join(planetengineDir, pepath, fileName),
                     filePath
                     )
-                self.fm.liberate_path(fileName)
+        self.fm.liberate_path(fileName)
         return filePath
 
     def _pre_update(self):
