@@ -13,6 +13,11 @@ from . import _built
 from . import paths
 message = utilities.message
 
+import time
+import random
+def random_sleep():
+    time.sleep(random.random())
+
 JOBPREFIX = 'pejob_'
 
 _campaignStructure = (
@@ -268,35 +273,15 @@ class Campaign(_built.Built):
     def autorun(self, cores = 1):
         message("Autorun engaged on " + str(cores) + " cores...")
         while True:
-            self.update()
-            if len(self.jobs_available) > 0:
-                self.subrun(cores = cores, wait = True)
-            else:
-                break
+            try:
+                self.update()
+                if len(self.jobs_available) > 0:
+                    self.subrun(cores = cores, wait = True)
+                else:
+                    break
+            except:
+                random_sleep()
         message("Jobs exhausted: autorun complete.")
-
-    def multirun(self, threads = 1, cores = 1):
-        message("Running in multirun mode...")
-        for i in range(threads):
-            message("Launching thread #" + str(i) + '...')
-            if mpi.rank == 0:
-                threadID = get_threadID()
-                threadOut = os.path.join(
-                    self.fm.path, 'logs', 'threads', threadID + '.out'
-                    )
-                threadErr = os.path.join(
-                    self.fm.path, 'logs', 'threads', threadID + '.error'
-                    )
-                with open(threadOut, 'w') as outfile:
-                    with open(threadErr, 'w') as errorfile:
-                        process = subprocess.Popen(
-                            ['python', self.runpy, 'auto', str(cores)],
-                            stdout = outfile,
-                            stderr = errorfile
-                            )
-            mpi.comm.barrier()
-            message("Launched thread #" + str(i) + '.')
-        message("All threads commissioned.")
 
     def _make_directory_structure(self):
         campaignStructCheck = ([
