@@ -273,14 +273,12 @@ class Campaign(_built.Built):
     def autorun(self, cores = 1):
         message("Autorun engaged on " + str(cores) + " cores...")
         while True:
-            try:
-                self.update()
-                if len(self.jobs_available) > 0:
-                    self.subrun(cores = cores, wait = True)
-                else:
-                    break
-            except:
-                random_sleep()
+            self.update()
+            if len(self.jobs_available) > 0:
+                try: self.subrun(cores = cores, wait = True)
+                except: random_sleep()
+            else:
+                break
         message("Jobs exhausted: autorun complete.")
 
     def _make_directory_structure(self):
