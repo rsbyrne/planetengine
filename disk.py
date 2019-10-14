@@ -22,8 +22,9 @@ def expose(name, outputPath = '.', archive = None, recursive = True):
 from . import _built
 
 def liberate_path(path):
-    if mpi.rank == 0:
-        ignoreme = subprocess.call(['chmod', '-R', '777', path])
+    if path_exists(path):
+        if mpi.rank == 0:
+            ignoreme = subprocess.call(['chmod', '-R', '777', path])
 
 def disk_state(path):
     path = os.path.splitext(path)[0]
@@ -218,7 +219,7 @@ def make_dir(path, exist_ok = True):
         else:
             if not exist_ok:
                 raise Exception("Dir already exists.")
-        liberate_path(path)
+    liberate_path(path)
 
     assert disk_state(path) == 'dir'
 
@@ -244,6 +245,11 @@ def isdir(path):
             boolean = True
     boolean = mpi.comm.bcast(boolean)
     return boolean
+
+def path_exists(path):
+    if isfile(path) or isdir(path):
+        return True
+    return False
 
 def makedirs(path, exist_ok = False):
     if mpi.rank == 0:
@@ -281,12 +287,11 @@ def make_subdirectory(parentPath, childPath):
 def make_directory_tree(path, directoryStructure, exist_ok = False):
     if mpi.rank == 0:
         os.makedirs(path, exist_ok = exist_ok)
-        liberate_path(path)
+    liberate_path(path)
     for entry in directoryStructure:
         make_subdirectory(path, entry[0])
         make_directory_tree(os.path.join(path, entry[0]), entry[1], exist_ok = True)
-    if mpi.rank == 0:
-        liberate_path(path)
+    liberate_path(path)
 
 def is_jsonable(x):
     try:
@@ -567,8 +572,8 @@ class FileManager:
             )
 
     def _update(self):
-        self.liberate_path()
         self._get_directories()
+        self.liberate_path()
 
     def update(self):
         self._update()
