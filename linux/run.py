@@ -2,11 +2,11 @@ import sys
 import os
 import json
 
-from planetengine import _built
+from planetengine import campaign
 
-my_campaign = _built.load_built(
-    'campaign',
-    os.path.abspath(os.path.dirname(__file__))
+my_campaign = campaign.load(
+    os.path.basename(os.path.dirname(__file__)),
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     )
 
 MODE = sys.argv[1] # single or auto

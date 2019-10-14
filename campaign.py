@@ -10,6 +10,7 @@ from . import disk
 from . import utilities
 from . import planetengineDir
 from . import _built
+from . import paths
 message = utilities.message
 
 JOBPREFIX = 'pejob_'
@@ -44,6 +45,7 @@ def load(name, path):
 class Campaign(_built.Built):
 
     name = 'campaign'
+    path = paths.defaultPath
 
     def __init__(
             self,
@@ -59,7 +61,11 @@ class Campaign(_built.Built):
             ):
 
         if name is None:
-            name = self.name
+            if os.path.basename(self.script) == 'campaign_0.py':
+                name = os.path.basename(os.path.dirname(script))
+            else:
+                name = os.path.splitext(os.path.basename(self.script))[0]
+        self.name = name
         if path is None:
             path = os.path.abspath(
                 os.path.dirname(
@@ -68,8 +74,11 @@ class Campaign(_built.Built):
                         )
                     )
                 )
+        self.path = path
+
         del inputs['name']
         del inputs['path']
+        del inputs['suite']
 
         super().__init__(
             args = args,
@@ -82,7 +91,7 @@ class Campaign(_built.Built):
             'pemod_',
             'planetengine',
             ]
-        self.fm = disk.FileManager(self.name, path, ignore_strs = ignore_strs)
+        self.fm = disk.FileManager(name, path, ignore_strs = ignore_strs)
 
         if not 'campaign_0.py' in self.fm.directories:
             self.save(path = self.fm.path, name = 'campaign')
@@ -313,3 +322,6 @@ class Campaign(_built.Built):
     def add_jobs(self, joblist):
         for job in joblist:
             self.add_job(job)
+
+    # def _post_load_hook(self, name, path):
+    #

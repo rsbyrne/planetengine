@@ -256,13 +256,20 @@ def explore_tree(path, ignore_strs = []):
     directories['.'] = path
     files = listdir(path)
     for file in files:
-        if not any([ignore_string in file for ignore_string in ignore_strs]):
+        ignoreFile = False
+        for ignore_str in ignore_strs:
+            if ignore_str in file:
+                ignoreFile = True
+        if not any([ignore_str in file for ignore_str in ignore_strs]):
             if not file[:2] == '__':
                 filePath = os.path.join(path, file)
                 if isfile(filePath):
                     directories[file] = filePath
                 elif isdir(filePath):
-                    directories[file] = explore_tree(filePath)
+                    directories[file] = explore_tree(
+                    filePath,
+                    ignore_strs
+                    )
     return directories
 
 def make_subdirectory(parentPath, childPath):
@@ -554,7 +561,10 @@ class FileManager:
         return path
 
     def _get_directories(self):
-        self.directories = explore_tree(self.path, self.ignore_strs)
+        self.directories = explore_tree(
+            self.path,
+            ignore_strs = self.ignore_strs
+            )
 
     def _update(self):
         self.liberate_path()

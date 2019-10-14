@@ -13,7 +13,7 @@ suites = {
         'Ra': [1e4, 1e5, 1e6],
         'res': 16
         }),
-    'default': lambda: planetengine.suite.suite_list({
+    'heavy': lambda: planetengine.suite.suite_list({
         'f': [round(x / 10., 1) for x in range(1, 11)],
         'eta0': [round(10.**(x / 2.), 0) for x in range(2, 12)],
         'Ra': [round(10.**(x / 2.), 0) for x in range(6, 16)],
@@ -55,11 +55,12 @@ class ArrBench(campaign.Campaign):
             conditions = {
                 'stopCondition': lambda: model.modeltime() > 0.3,
                 'stopCondition': lambda: model.step() > 3,
-                'checkpointCondition': lambda: any([
-                    model.status == 'pre-traverse',
-                    model.step() % 1000 == 0,
-                    model.status == 'post-traverse',
-                    ]),
+                'checkpointCondition': lambda: True
+                # 'checkpointCondition': lambda: any([
+                #     model.status == 'pre-traverse',
+                #     model.step() % 1000 == 0,
+                #     model.status == 'post-traverse',
+                #     ]),
                 }
             try:
                 model.traverse(**conditions)
@@ -78,6 +79,5 @@ class ArrBench(campaign.Campaign):
             # _pre_update = _pre_update,
             # _post_update = _post_update,
             )
-
 
         self.add_jobs(suite)
