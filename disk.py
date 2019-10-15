@@ -22,9 +22,10 @@ def expose(name, outputPath = '.', archive = None, recursive = True):
 from . import _built
 
 def liberate_path(path):
-    if path_exists(path):
-        if mpi.rank == 0:
-            ignoreme = subprocess.call(['chmod', '-R', '777', path])
+    pass
+    # if path_exists(path):
+    #     if mpi.rank == 0:
+    #         ignoreme = subprocess.call(['chmod', '-R', '777', path])
 
 def disk_state(path):
     path = os.path.splitext(path)[0]

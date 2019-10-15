@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import random
+import time
 
 from . import wordhash
 from . import mpi
@@ -13,10 +14,46 @@ from . import _built
 from . import paths
 message = utilities.message
 
-import time
-import random
 def random_sleep():
     time.sleep(random.random())
+def gen_primes():
+    """ Generate an infinite sequence of prime numbers.
+    """
+    D = {}
+    q = 2
+    while True:
+        if q not in D:
+            yield q
+            D[q * q] = [q]
+        else:
+            for p in D[q]:
+                D.setdefault(p + q, []).append(p)
+            del D[q]
+        q += 1
+primenos = []
+for i in gen_primes():
+    if i < 10000:
+        primenos.append(i)
+    else:
+        break
+PRIMEFREQSEED = random.random()
+def get_prime_freq():
+    random.seed(PRIMEFREQSEED)
+    choice = random.choice(primenos)
+    random.seed()
+    return choice
+def millinow():
+    timenow = 0
+    if mpi.rank == 0:
+        timenow = round(time.time() * 1e3)
+    timenow = mpi.comm.bcast(timenow, root = 0)
+    return timenow
+def prime_window():
+    while True:
+        if millinow() % get_prime_freq() == 0:
+            break
+        else:
+            time.sleep(0.001)
 
 JOBPREFIX = 'pejob_'
 
@@ -273,10 +310,13 @@ class Campaign(_built.Built):
     def autorun(self, cores = 1):
         message("Autorun engaged on " + str(cores) + " cores...")
         while True:
+            prime_window()
             self.update()
             if len(self.jobs_available) > 0:
-                try: self.subrun(cores = cores, wait = True)
-                except: random_sleep()
+                try:
+                    self.subrun(cores = cores, wait = True)
+                except:
+                    random_sleep()
             else:
                 break
         message("Jobs exhausted: autorun complete.")
