@@ -133,7 +133,7 @@ class QuickFig:
                 )
             )
 
-    def add_contours(self, arg, **kwargs):
+    def add_contours(self, arg, colours = "red black", **kwargs):
         planetVar = convert(arg)
         normed = pfn.normalise.default(
             planetVar, [2., 1024.]
@@ -145,7 +145,7 @@ class QuickFig:
             glucifer.objects.Contours(
                 planetVar.mesh,
                 fn.math.log2(normed),
-                colours = "red black",
+                colours = colours,
                 interval = 1.,
                 **kwargs
                 )
