@@ -18,9 +18,22 @@ def quickShow(*args, **kwargs):
 
 class QuickFig:
 
-    def __init__(self, *args, figname = 'default', onMesh = True, **kwargs):
+    def __init__(
+            self,
+            *args,
+            figname = 'default',
+            onMesh = True,
+            facecolour = 'black',
+            colourBar = False,
+            quality = 3.,
+            **kwargs
+            ):
 
-        self.fig = glucifer.Figure(**kwargs)
+        self.fig = glucifer.Figure(
+            facecolour = facecolour,
+            quality = 3.,
+            **kwargs
+            )
 
         self.figname = figname
         self.features = set()
@@ -42,7 +55,12 @@ class QuickFig:
 
         self.functions_used = []
 
-        self.add_vars(args, onMesh = onMesh, **kwargs)
+        self.add_vars(
+            args,
+            onMesh = onMesh,
+            colourBar = colourBar,
+            **kwargs
+            )
 
     def add_vars(self, args, **kwargs):
 

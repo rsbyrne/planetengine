@@ -148,7 +148,7 @@ def make_fullLocalMeshVar(field1):
         inField = field1
         inMesh = field1.mesh
         inDim = field1.nodeDofCount
-    else:
+    elif type(field1) == uw.swarm._swarmvariable.SwarmVariable:
         inMesh = field1.swarm.mesh
         field1Proj = uw.mesh.MeshVariable(
             inMesh,
@@ -161,6 +161,8 @@ def make_fullLocalMeshVar(field1):
         field1Projector.solve()
         inField = field1Proj
         inDim = field1.count
+    else:
+        raise Exception("Input not a field.")
 
     localAnnulus = makeLocalAnnulus(inMesh)
     fullInField = localAnnulus.add_variable(inDim)
@@ -199,6 +201,25 @@ def copyField(field1, field2,
         assert np.max(np.array(boxDims)) <= 1., "Max boxdim is 1."
         assert np.min(np.array(boxDims)) >= 0., "Min boxdim is 0."
 
+    if type(field1) == uw.mesh._meshvariable.MeshVariable:
+        pass
+    elif type(field1) == uw.swarm._swarmvariable.SwarmVariable:
+        pass
+    else:
+        raise Exception("Input 1 not a field.")
+
+    if type(field2) == uw.mesh._meshvariable.MeshVariable:
+        outMesh = field2.mesh
+        outCoords = outMesh.data
+        outDim = field2.nodeDofCount
+    elif type(field2) == uw.swarm._swarmvariable.SwarmVariable:
+        outMesh = field2.swarm.mesh
+        outCoords = field2.swarm.particleCoordinates.data
+        outDim = field2.count
+    else:
+        raise Exception("Input 2 not a field.")
+    outField = field2
+
     if _fullLocalMeshVar is None:
         fullInField = make_fullLocalMeshVar(field1)
     else:
@@ -206,16 +227,6 @@ def copyField(field1, field2,
         fullInField.update()
     inDim = fullInField.nodeDofCount
     inMesh = fullInField.mesh
-
-    outField = field2
-    if type(field2) == uw.mesh._meshvariable.MeshVariable:
-        outMesh = field2.mesh
-        outCoords = outMesh.data
-        outDim = field2.nodeDofCount
-    else:
-        outMesh = field2.swarm.mesh
-        outCoords = field2.swarm.particleCoordinates.data
-        outDim = field2.count
 
     assert outDim == inDim, \
         "In and Out fields have different dimensions!"
