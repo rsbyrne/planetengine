@@ -144,3 +144,42 @@ class MeshUtils:
             self.unitVar = self.mesh().add_variable(1)
             self.unitVar.data[:] = 1.
         return self.unitVar
+
+    # def meshify(self, inVar, vector = False):
+    #     if not vector:
+    #         projector = self.get_scalarProjector()
+    #
+    #
+    # def get_scalarProjector(self):
+    #     if not hasattr(self, 'scalarProjector'):
+    #         self._make_scalarProjector()
+    #     return self.scalarProjector
+    #
+    # def get_vectorProjector(self):
+    #     if not hasattr(self, 'vectorProjector'):
+    #         self._make_vectorProjector()
+    #     return self.vectorProjector
+    #
+    # def _make_scalarProjector(self):
+    #     fromVar = self._make_scalarVar()
+    #     toVar = self._make_scalarVar()
+    #     projector = uw.utils.MeshVariable_Projection(
+    #         toVar,
+    #         fromVar,
+    #         )
+    #     self.scalarProjector = projector
+    #
+    # def _make_vectorProjector(self):
+    #     fromVar = self._make_vectorVar()
+    #     toVar = self._make_vectorVar()
+    #     projector = uw.utils.MeshVariable_Projection(
+    #         toVar,
+    #         fromVar,
+    #         )
+    #     self.vectorProjector = projector
+    #
+    # def _make_scalarVar(self):
+    #     return self.mesh().add_variable(1)
+    #
+    # def _make_vectorVar(self):
+    #     return self.mesh().add_variable(self.mesh().dim)
