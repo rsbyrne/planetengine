@@ -1,6 +1,6 @@
 import underworld as uw
-fn = uw.function
-UWFn = fn._function.Function
+_fn = uw.function
+UWFn = _fn._function.Function
 
 from . import _basetypes
 from . import _planetvar
@@ -20,7 +20,7 @@ class Shape(_basetypes.BaseTypes):
         if varName is None:
             varName = self.defaultName
 
-        shape = fn.shape.Polygon(vertices)
+        shape = _fn.shape.Polygon(vertices)
         self.vertices = vertices
         self.richvertices = vertices
         self.richvertices = shapes.interp_shape(self.vertices, num = 1000)
@@ -46,6 +46,6 @@ class Shape(_basetypes.BaseTypes):
             morphpoly = self.morphs[mesh]
         except:
             morphverts = mapping.unbox(mesh, self.richvertices)
-            morphpoly = fn.shape.Polygon(morphverts)
+            morphpoly = _fn.shape.Polygon(morphverts)
             self.morphs[mesh] = morphpoly
         return morphpoly

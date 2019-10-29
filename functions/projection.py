@@ -4,10 +4,10 @@ import underworld as uw
 
 from . import _function
 from . import _convert
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Projection, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Projection, *args, **kwargs)
     return func
 
 class Projection(_function.Function):
@@ -50,4 +50,4 @@ class Projection(_function.Function):
             )
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)

@@ -6,7 +6,7 @@ import random
 
 import numpy as np
 import underworld as uw
-from underworld import function as fn
+from underworld import function as _fn
 from underworld.function._function import Function as UWFn
 
 from . import utilities
@@ -103,7 +103,7 @@ def get_opHash(varClass, *hashVars, **stringVariants):
 
     return hashVal
 
-def _construct(
+def _master_construct(
         varClass,
         *inVars,
         **stringVariants
@@ -204,7 +204,7 @@ def _convert(var, varName = None):
         else:
             raise Exception
 
-    var = _construct(
+    var = _master_construct(
         varClass,
         var,
         **stringVariants
@@ -386,15 +386,15 @@ class PlanetVar(UWFn):
         if isinstance(self, Function) \
                 or type(self) == Variable:
             if self.varDim == 1:
-                minmax = fn.view.min_max(self)
+                minmax = _fn.view.min_max(self)
             else:
-                fn_norm = fn.math.sqrt(
-                    fn.math.dot(
+                fn_norm = _fn.math.sqrt(
+                    _fn.math.dot(
                         self,
                         self
                         )
                     )
-                minmax = fn.view.min_max(
+                minmax = _fn.view.min_max(
                     self,
                     fn_norm = fn_norm
                     )
@@ -589,7 +589,7 @@ class Parameter(BaseTypes):
     def __init__(self, inFn, **kwargs):
 
         initialVal = inFn()
-        var = fn.misc.constant(initialVal)
+        var = _fn.misc.constant(initialVal)
         if not len(list(var._underlyingDataItems)) == 0:
             raise Exception
 
@@ -725,7 +725,7 @@ class Shape(BaseTypes):
         if varName is None:
             varName = self.defaultName
 
-        shape = fn.shape.Polygon(vertices)
+        shape = _fn.shape.Polygon(vertices)
         self.vertices = vertices
         self.richvertices = vertices
         self.richvertices = interp_shape(self.vertices, num = 1000)
@@ -751,7 +751,7 @@ class Shape(BaseTypes):
             morphpoly = self.morphs[mesh]
         except:
             morphverts = unbox(mesh, self.richvertices)
-            morphpoly = fn.shape.Polygon(morphverts)
+            morphpoly = _fn.shape.Polygon(morphverts)
             self.morphs[mesh] = morphpoly
         return morphpoly
 
@@ -939,8 +939,8 @@ class Substitute(Function):
             inVar, fromVal, toVal
             )
 
-        var = fn.branching.conditional([
-            (fn.math.abs(inVar - fromVal) < 1e-18, toVal),
+        var = _fn.branching.conditional([
+            (_fn.math.abs(inVar - fromVal) < 1e-18, toVal),
             (True, inVar),
             ])
 
@@ -963,17 +963,17 @@ class Binarise(Function):
             raise Exception
 
         if inVar.dType == 'double':
-            var = 0. * inVar + fn.branching.conditional([
-                (fn.math.abs(inVar) > 1e-18, 1.),
+            var = 0. * inVar + _fn.branching.conditional([
+                (_fn.math.abs(inVar) > 1e-18, 1.),
                 (True, 0.),
                 ])
         elif inVar.dType == 'boolean':
-            var = 0. * inVar + fn.branching.conditional([
+            var = 0. * inVar + _fn.branching.conditional([
                 (inVar, 1.),
                 (True, 0.),
                 ])
         elif inVar.dType == 'int':
-            var = 0 * inVar + fn.branching.conditional([
+            var = 0 * inVar + _fn.branching.conditional([
                 (inVar, 1),
                 (True, 0),
                 ])
@@ -996,8 +996,8 @@ class Booleanise(Function):
         if not inVar.varDim == 1:
             raise Exception
 
-        var = fn.branching.conditional([
-            (fn.math.abs(inVar) < 1e-18, False),
+        var = _fn.branching.conditional([
+            (_fn.math.abs(inVar) < 1e-18, False),
             (True, True),
             ])
 
@@ -1019,7 +1019,7 @@ class HandleNaN(Function):
         compareVal = [
             np.inf for dim in range(inVar.varDim)
             ]
-        var = fn.branching.conditional([
+        var = _fn.branching.conditional([
             (inVar < compareVal, inVar),
             (True, handleVal),
             ])
@@ -1121,7 +1121,7 @@ class Clip(Function):
             del stringVariants['lower']
             del stringVariants['upper']
 
-        var = fn.branching.conditional(clauses)
+        var = _fn.branching.conditional(clauses)
 
         self.stringVariants = stringVariants
         self.inVars = list(inVars)
@@ -1145,41 +1145,41 @@ class Operations(Function):
     opTag = 'Operation'
 
     uwNamesToFns = {
-        'pow': fn.math.pow,
-        'abs': fn.math.abs,
-        'cosh': fn.math.cosh,
-        'acosh': fn.math.acosh,
-        'tan': fn.math.tan,
-        'asin': fn.math.asin,
-        'log': fn.math.log,
-        'atanh': fn.math.atanh,
-        'sqrt': fn.math.sqrt,
-        'abs': fn.math.abs,
-        'log10': fn.math.log10,
-        'sin': fn.math.sin,
-        'asinh': fn.math.asinh,
-        'log2': fn.math.log2,
-        'atan': fn.math.atan,
-        'sinh': fn.math.sinh,
-        'cos': fn.math.cos,
-        'tanh': fn.math.tanh,
-        'erf': fn.math.erf,
-        'erfc': fn.math.erfc,
-        'exp': fn.math.exp,
-        'acos': fn.math.acos,
-        'dot': fn.math.dot,
-        'add': fn._function.add,
-        'subtract': fn._function.subtract,
-        'multiply': fn._function.multiply,
-        'divide': fn._function.divide,
-        'greater': fn._function.greater,
-        'greater_equal': fn._function.greater_equal,
-        'less': fn._function.less,
-        'less_equal': fn._function.less_equal,
-        'logical_and': fn._function.logical_and,
-        'logical_or': fn._function.logical_or,
-        'logical_xor': fn._function.logical_xor,
-        'input': fn._function.input,
+        'pow': _fn.math.pow,
+        'abs': _fn.math.abs,
+        'cosh': _fn.math.cosh,
+        'acosh': _fn.math.acosh,
+        'tan': _fn.math.tan,
+        'asin': _fn.math.asin,
+        'log': _fn.math.log,
+        'atanh': _fn.math.atanh,
+        'sqrt': _fn.math.sqrt,
+        'abs': _fn.math.abs,
+        'log10': _fn.math.log10,
+        'sin': _fn.math.sin,
+        'asinh': _fn.math.asinh,
+        'log2': _fn.math.log2,
+        'atan': _fn.math.atan,
+        'sinh': _fn.math.sinh,
+        'cos': _fn.math.cos,
+        'tanh': _fn.math.tanh,
+        'erf': _fn.math.erf,
+        'erfc': _fn.math.erfc,
+        'exp': _fn.math.exp,
+        'acos': _fn.math.acos,
+        'dot': _fn.math.dot,
+        'add': _fn._function.add,
+        'subtract': _fn._function.subtract,
+        'multiply': _fn._function.multiply,
+        'divide': _fn._function.divide,
+        'greater': _fn._function.greater,
+        'greater_equal': _fn._function.greater_equal,
+        'less': _fn._function.less,
+        'less_equal': _fn._function.less_equal,
+        'logical_and': _fn._function.logical_and,
+        'logical_or': _fn._function.logical_or,
+        'logical_xor': _fn._function.logical_xor,
+        'input': _fn._function.input,
         }
 
     def __init__(self, *args, uwop = None, **kwargs):
@@ -1351,15 +1351,15 @@ class Component(Function):
             # hence is not a vector and so has no components:
             raise Exception
         if component == 'mag':
-            var = fn.math.sqrt(
-                fn.math.dot(
+            var = _fn.math.sqrt(
+                _fn.math.dot(
                     inVar,
                     inVar
                     )
                 )
         else:
             compVec = inVar.meshUtils.comps[component]
-            var = fn.math.dot(
+            var = _fn.math.dot(
                 inVar,
                 compVec
                 )
@@ -1563,7 +1563,7 @@ class Comparison(Function):
 
         inVar0, inVar1 = inVars = convert(inVar0, inVar1)
         boolOut = operation == 'equals'
-        var = fn.branching.conditional([
+        var = _fn.branching.conditional([
             (inVar0 < inVar1 - 1e-18, not boolOut),
             (inVar0 > inVar1 + 1e-18, not boolOut),
             (True, boolOut),
@@ -1604,7 +1604,7 @@ class Range(Function):
             outVal = inVar0
         lowerBounds = Parameter(inVars[1].minFn)
         upperBounds = Parameter(inVars[1].maxFn)
-        var = fn.branching.conditional([
+        var = _fn.branching.conditional([
             (inVar0 < lowerBounds, outVal),
             (inVar0 > upperBounds, outVal),
             (True, inVal),
@@ -1641,8 +1641,8 @@ class Select(Function):
             outVar = convert(outVar)
             inVars = tuple([*list(inVars), outVar])
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var = fn.branching.conditional([
-            (fn.math.abs(inVar - selectVal) < 1e-18, outVar),
+        var = _fn.branching.conditional([
+            (_fn.math.abs(inVar - selectVal) < 1e-18, outVar),
             (True, nullVal)
             ])
 
@@ -1669,8 +1669,8 @@ class Filter(Function):
             outVar = convert(outVar)
             inVars.append(outVar)
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var = fn.branching.conditional([
-            (fn.math.abs(inVar - filterVal) < 1e-18, nullVal),
+        var = _fn.branching.conditional([
+            (_fn.math.abs(inVar - filterVal) < 1e-18, nullVal),
             (True, outVar)
             ])
 
@@ -1709,8 +1709,8 @@ class Quantiles(Function):
         clauses.append(
             (True, float(ntiles))
             )
-        rawvar = fn.branching.conditional(clauses)
-        var = fn.branching.conditional([
+        rawvar = _fn.branching.conditional(clauses)
+        var = _fn.branching.conditional([
             (inVar < np.inf, rawvar),
             (True, np.nan)
             ])
@@ -1772,7 +1772,7 @@ class Quantile(Function):
             u_adj = 1e-18
 
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var = fn.branching.conditional([
+        var = _fn.branching.conditional([
             (inVar < lowerBound + l_adj, nullVal),
             (inVar > upperBound + u_adj, nullVal),
             (True, inVar),
@@ -1798,14 +1798,14 @@ class Region(Function):
 
         regionVar = inVar.mesh.add_variable(1)
         polygon = inShape.morph(inVar.mesh)
-        boolFn = fn.branching.conditional([
+        boolFn = _fn.branching.conditional([
             (polygon, 1),
             (True, 0),
             ])
         regionVar.data[:] = boolFn.evaluate(inVar.mesh)
 
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var = fn.branching.conditional([
+        var = _fn.branching.conditional([
             (regionVar > 0., inVar),
             (True, nullVal),
             ])

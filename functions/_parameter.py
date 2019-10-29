@@ -2,8 +2,8 @@ import random
 import numpy as np
 
 import underworld as uw
-fn = uw.function
-UWFn = fn._function.Function
+_fn = uw.function
+UWFn = _fn._function.Function
 
 from . import _basetypes
 from . import _planetvar
@@ -17,7 +17,7 @@ class Parameter(_basetypes.BaseTypes):
     def __init__(self, inFn, **kwargs):
 
         initialVal = inFn()
-        var = fn.misc.constant(initialVal)
+        var = _fn.misc.constant(initialVal)
         if not len(list(var._underlyingDataItems)) == 0:
             raise Exception
 

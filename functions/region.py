@@ -1,13 +1,13 @@
 import numpy as np
 
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _function
 from . import _convert
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Region, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Region, *args, **kwargs)
     return func
 
 class Region(_function.Function):
@@ -23,14 +23,14 @@ class Region(_function.Function):
 
         regionVar = inVar.mesh.add_variable(1)
         polygon = inShape.morph(inVar.mesh)
-        boolFn = fn.branching.conditional([
+        boolFn = _fn.branching.conditional([
             (polygon, 1),
             (True, 0),
             ])
         regionVar.data[:] = boolFn.evaluate(inVar.mesh)
 
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var = fn.branching.conditional([
+        var = _fn.branching.conditional([
             (regionVar > 0., inVar),
             (True, nullVal),
             ])
@@ -43,4 +43,4 @@ class Region(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)

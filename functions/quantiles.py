@@ -1,14 +1,14 @@
 import numpy as np
 
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _function
 from . import _convert
 from . import _basetypes
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Quantiles, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Quantiles, *args, **kwargs)
     return func
 
 class Quantiles(_function.Function):
@@ -39,8 +39,8 @@ class Quantiles(_function.Function):
         clauses.append(
             (True, float(ntiles))
             )
-        rawvar = fn.branching.conditional(clauses)
-        var = fn.branching.conditional([
+        rawvar = _fn.branching.conditional(clauses)
+        var = _fn.branching.conditional([
             (inVar < np.inf, rawvar),
             (True, np.nan)
             ])
@@ -55,22 +55,22 @@ class Quantiles(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)
 
 def median(*args, **kwargs):
-    return construct(*args, ntiles = 2, **kwargs)
+    return _construct(*args, ntiles = 2, **kwargs)
 
 def terciles(*args, **kwargs):
-    return construct(*args, ntiles = 3, **kwargs)
+    return _construct(*args, ntiles = 3, **kwargs)
 
 def quartiles(*args, **kwargs):
-    return construct(*args, ntiles = 4, **kwargs)
+    return _construct(*args, ntiles = 4, **kwargs)
 
 def quintiles(*args, **kwargs):
-    return construct(*args, ntiles = 5, **kwargs)
+    return _construct(*args, ntiles = 5, **kwargs)
 
 def deciles(*args, **kwargs):
-    return construct(*args, ntiles = 10, **kwargs)
+    return _construct(*args, ntiles = 10, **kwargs)
 
 def percentiles(*args, **kwargs):
-    return construct(*args, ntiles = 100, **kwargs)
+    return _construct(*args, ntiles = 100, **kwargs)

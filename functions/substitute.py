@@ -1,11 +1,11 @@
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _function
 from . import _convert
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Substitute, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Substitute, *args, **kwargs)
     return func
 
 class Substitute(_function.Function):
@@ -18,8 +18,8 @@ class Substitute(_function.Function):
             inVar, fromVal, toVal
             )
 
-        var = fn.branching.conditional([
-            (fn.math.abs(inVar - fromVal) < 1e-18, toVal),
+        var = _fn.branching.conditional([
+            (_fn.math.abs(inVar - fromVal) < 1e-18, toVal),
             (True, inVar),
             ])
 
@@ -31,4 +31,4 @@ class Substitute(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)

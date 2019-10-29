@@ -3,12 +3,12 @@ import underworld as uw
 from . import _convert
 from . import _reduction
 from . import _basetypes
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 from . import surface as _surface
 from . import handlenan as _handlenan
 
-def construct(*args, **kwargs):
-    func = _construct(Integral, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Integral, *args, **kwargs)
     return func
 
 class Integral(_reduction.Reduction):
@@ -55,28 +55,28 @@ class Integral(_reduction.Reduction):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)
 
 def volume(*args, **kwargs):
-    return construct(*args, surface = 'volume', **kwargs)
+    return _construct(*args, surface = 'volume', **kwargs)
 
 def inner(*args, **kwargs):
-    return construct(*args, surface = 'inner', **kwargs)
+    return _construct(*args, surface = 'inner', **kwargs)
 
 def outer(*args, **kwargs):
-    return construct(*args, surface = 'outer', **kwargs)
+    return _construct(*args, surface = 'outer', **kwargs)
 
 def left(*args, **kwargs):
-    return construct(*args, surface = 'left', **kwargs)
+    return _construct(*args, surface = 'left', **kwargs)
 
 def right(*args, **kwargs):
-    return construct(*args, surface = 'right', **kwargs)
+    return _construct(*args, surface = 'right', **kwargs)
 
 def front(*args, **kwargs):
-    return construct(*args, surface = 'front', **kwargs)
+    return _construct(*args, surface = 'front', **kwargs)
 
 def back(*args, **kwargs):
-    return construct(*args, surface = 'back', **kwargs)
+    return _construct(*args, surface = 'back', **kwargs)
 
 def auto(*args, **kwargs):
     inVar = _convert.convert(args[0])
@@ -85,4 +85,4 @@ def auto(*args, **kwargs):
         inVar = inVar.inVar
     else:
         surface = 'volume'
-    return construct(inVar, *args, surface = surface, **kwargs)
+    return _construct(inVar, *args, surface = surface, **kwargs)

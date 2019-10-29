@@ -1,5 +1,5 @@
 import underworld as uw
-from underworld import function as fn
+from underworld import function as _fn
 import math
 import time
 import glucifer

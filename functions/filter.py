@@ -1,13 +1,13 @@
 import numpy as np
 
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _convert
 from . import _function
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Filter, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Filter, *args, **kwargs)
     return func
 
 class Filter(_function.Function):
@@ -26,8 +26,8 @@ class Filter(_function.Function):
             outVar = _convert.convert(outVar)
             inVars.append(outVar)
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var = fn.branching.conditional([
-            (fn.math.abs(inVar - filterVal) < 1e-18, nullVal),
+        var = _fn.branching.conditional([
+            (_fn.math.abs(inVar - filterVal) < 1e-18, nullVal),
             (True, outVar)
             ])
 
@@ -39,4 +39,4 @@ class Filter(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)

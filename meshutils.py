@@ -2,7 +2,7 @@ from .utilities import get_scales
 from .utilities import get_mesh
 
 import underworld as uw
-from underworld import function as fn
+from underworld import function as _fn
 
 import numpy as np
 import weakref
@@ -38,19 +38,19 @@ class MeshUtils:
                 }
             if mesh.dim == 2:
                 self.comps = {
-                    'x': fn.misc.constant((1., 0.)),
-                    'y': fn.misc.constant((0., 1.)),
-                    'ang': fn.misc.constant((1., 0.)),
-                    'rad': fn.misc.constant((0., -1.)),
+                    'x': _fn.misc.constant((1., 0.)),
+                    'y': _fn.misc.constant((0., 1.)),
+                    'ang': _fn.misc.constant((1., 0.)),
+                    'rad': _fn.misc.constant((0., -1.)),
                     }
             elif mesh.dim == 3:
                 self.comps = {
-                    'x': fn.misc.constant((1., 0., 0.)),
-                    'y': fn.misc.constant((0., 1., 0.)),
-                    'z': fn.misc.constant((0., 0., 1.)),
-                    'ang': fn.misc.constant((1., 0., 0.)),
-                    'coang': fn.misc.constant((0., 1., 0.)),
-                    'rad': fn.misc.constant((0., 0., -1.)),
+                    'x': _fn.misc.constant((1., 0., 0.)),
+                    'y': _fn.misc.constant((0., 1., 0.)),
+                    'z': _fn.misc.constant((0., 0., 1.)),
+                    'ang': _fn.misc.constant((1., 0., 0.)),
+                    'coang': _fn.misc.constant((0., 1., 0.)),
+                    'rad': _fn.misc.constant((0., 0., -1.)),
                     }
                 self.surfaces['front'] = mesh.specialSets['MinK_VertexSet']
                 self.surfaces['back'] = mesh.specialSets['MaxK_VertexSet']
@@ -61,8 +61,8 @@ class MeshUtils:
             self.flip = [True, True]
 
             self.comps = {
-                'x': fn.misc.constant((1., 0.)),
-                'y': fn.misc.constant((0., 1.)),
+                'x': _fn.misc.constant((1., 0.)),
+                'y': _fn.misc.constant((0., 1.)),
                 'ang': -mesh.unitvec_theta_Fn, # left to right
                 'rad': mesh.unitvec_r_Fn, # bottom to top
                 }

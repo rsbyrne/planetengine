@@ -1,14 +1,14 @@
 import numpy as np
 
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _function
 from . import _convert
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 from .. import fieldops
 
-def construct(*args, **kwargs):
-    func = _construct(Tile, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Tile, *args, **kwargs)
     return func
 
 class Tile(_function.Function):
@@ -48,4 +48,4 @@ class Tile(_function.Function):
             )
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)

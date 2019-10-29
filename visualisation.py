@@ -1,4 +1,4 @@
-from underworld import function as fn
+from underworld import function as _fn
 import glucifer
 import numpy as np
 import os
@@ -18,7 +18,7 @@ def quickShow(*args, **kwargs):
 
 class QuickFig:
 
-    def __init__(self, *args, figname = 'default', **kwargs):
+    def __init__(self, *args, figname = 'default', onMesh = True, **kwargs):
 
         self.fig = glucifer.Figure(**kwargs)
 
@@ -42,7 +42,7 @@ class QuickFig:
 
         self.functions_used = []
 
-        self.add_vars(args, **kwargs)
+        self.add_vars(args, onMesh = onMesh, **kwargs)
 
     def add_vars(self, args, **kwargs):
 
@@ -144,7 +144,7 @@ class QuickFig:
         self.fig.append(
             glucifer.objects.Contours(
                 planetVar.mesh,
-                fn.math.log2(normed),
+                _fn.math.log2(normed),
                 colours = colours,
                 interval = 1.,
                 **kwargs

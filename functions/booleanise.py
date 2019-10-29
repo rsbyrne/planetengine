@@ -1,11 +1,11 @@
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _convert
 from . import _function
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Booleanise, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Booleanise, *args, **kwargs)
     return func
 
 class Booleanise(_function.Function):
@@ -19,8 +19,8 @@ class Booleanise(_function.Function):
         if not inVar.varDim == 1:
             raise Exception
 
-        var = fn.branching.conditional([
-            (fn.math.abs(inVar) < 1e-18, False),
+        var = _fn.branching.conditional([
+            (_fn.math.abs(inVar) < 1e-18, False),
             (True, True),
             ])
 
@@ -32,4 +32,4 @@ class Booleanise(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)

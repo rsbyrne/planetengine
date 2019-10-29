@@ -1,10 +1,10 @@
 from . import _function
 from . import _convert
 from . import _basetypes
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Normalise, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Normalise, *args, **kwargs)
     return func
 
 class Normalise(_function.Function):
@@ -30,7 +30,7 @@ class Normalise(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)
 
 def unit(baseVar, *args, **kwargs):
-    return construct(baseVar, [0., 1.], **kwargs)
+    return _construct(baseVar, [0., 1.], **kwargs)

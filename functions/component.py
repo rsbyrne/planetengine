@@ -1,11 +1,11 @@
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _convert
 from . import _function
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Component, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Component, *args, **kwargs)
     return func
 
 class Component(_function.Function):
@@ -20,15 +20,15 @@ class Component(_function.Function):
             # hence is not a vector and so has no components:
             raise Exception
         if component == 'mag':
-            var = fn.math.sqrt(
-                fn.math.dot(
+            var = _fn.math.sqrt(
+                _fn.math.dot(
                     inVar,
                     inVar
                     )
                 )
         else:
             compVec = inVar.meshUtils.comps[component]
-            var = fn.math.dot(
+            var = _fn.math.dot(
                 inVar,
                 compVec
                 )
@@ -41,25 +41,25 @@ class Component(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)
 
 def mag(*args, **kwargs):
-    return construct(*args, component = 'mag', **kwargs)
+    return _construct(*args, component = 'mag', **kwargs)
 
 def x(*args, **kwargs):
-    return construct(*args, component = 'x', **kwargs)
+    return _construct(*args, component = 'x', **kwargs)
 
 def y(*args, **kwargs):
-    return construct(*args, component = 'y', **kwargs)
+    return _construct(*args, component = 'y', **kwargs)
 
 def z(*args, **kwargs):
-    return construct(*args, component = 'z', **kwargs)
+    return _construct(*args, component = 'z', **kwargs)
 
 def rad(*args, **kwargs):
-    return construct(*args, component = 'rad', **kwargs)
+    return _construct(*args, component = 'rad', **kwargs)
 
 def ang(*args, **kwargs):
-    return construct(*args, component = 'ang', **kwargs)
+    return _construct(*args, component = 'ang', **kwargs)
 
 def coang(*args, **kwargs):
-    return construct(*args, component = 'coang', **kwargs)
+    return _construct(*args, component = 'coang', **kwargs)

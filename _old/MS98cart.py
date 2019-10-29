@@ -1,5 +1,5 @@
 import underworld as uw
-from underworld import function as fn
+from underworld import function as _fn
 import math
 
 from planetengine.utilities import Grouper
@@ -61,13 +61,13 @@ def build(
     if isoviscous:
         viscosityFn = creepViscFn = plasticViscFn = 1.
     else:
-        magnitude = fn.math.sqrt(fn.coord()[0]**2 + fn.coord()[1]**2)
+        magnitude = _fn.math.sqrt(_fn.coord()[0]**2 + _fn.coord()[1]**2)
         depthFn = mesh.maxCoord[1] - magnitude
         yieldStressFn = tau0 + (tau1 * depthFn)
-        secInvFn = fn.tensor.second_invariant(fn.tensor.symmetric(velocityField.fn_gradient))
+        secInvFn = _fn.tensor.second_invariant(_fn.tensor.symmetric(velocityField.fn_gradient))
         plasticViscFn = yieldStressFn / (2. * secInvFn + 1e-18)
-        creepViscFn = fn.math.pow(fn.misc.constant(maxVisc), -1. * (temperatureField - 1.))
-        viscosityFn = fn.misc.min(maxVisc, fn.misc.max(1., fn.misc.min(creepViscFn, plasticViscFn)))
+        creepViscFn = _fn.math.pow(_fn.misc.constant(maxVisc), -1. * (temperatureField - 1.))
+        viscosityFn = _fn.misc.min(maxVisc, _fn.misc.max(1., _fn.misc.min(creepViscFn, plasticViscFn)))
 
     ### SYSTEMS ###
 

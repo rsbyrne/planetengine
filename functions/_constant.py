@@ -1,8 +1,8 @@
 import numpy as np
 
 import underworld as uw
-fn = uw.function
-UWFn = fn._function.Function
+_fn = uw.function
+UWFn = _fn._function.Function
 
 from . import _basetypes
 from . import _planetvar

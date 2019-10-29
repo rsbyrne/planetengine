@@ -1,13 +1,13 @@
 import numpy as np
 
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _function
 from . import _convert
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Select, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Select, *args, **kwargs)
     return func
 
 class Select(_function.Function):
@@ -26,8 +26,8 @@ class Select(_function.Function):
             outVar = _convert.convert(outVar)
             inVars = tuple([*list(inVars), outVar])
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var = fn.branching.conditional([
-            (fn.math.abs(inVar - selectVal) < 1e-18, outVar),
+        var = _fn.branching.conditional([
+            (_fn.math.abs(inVar - selectVal) < 1e-18, outVar),
             (True, nullVal)
             ])
 
@@ -39,4 +39,4 @@ class Select(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)

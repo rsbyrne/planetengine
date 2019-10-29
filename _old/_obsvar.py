@@ -5,7 +5,7 @@ from planetengine import mapping
 from planetengine import meshutils
 
 import underworld as uw
-from underworld import function as fn
+from underworld import function as _fn
 
 # import numpy as np
 # from planetengine.utilities import Grouper
@@ -124,27 +124,27 @@ class VarUtils:
         recursionFuncs = {}
 
         if self.dim == 1:
-            recursionFuncs['radGrad'] = fn.math.dot(
+            recursionFuncs['radGrad'] = _fn.math.dot(
                 self.pemesh.rad,
                 self.gradient
                 )
-            recursionFuncs['magGrad'] = fn.math.sqrt(
-                fn.math.dot(
+            recursionFuncs['magGrad'] = _fn.math.sqrt(
+                _fn.math.dot(
                     self.gradient,
                     self.gradient
                     )
                 )
             if self.mesh.dim == 2:
-                recursionFuncs['angGrad'] = fn.math.dot(
+                recursionFuncs['angGrad'] = _fn.math.dot(
                     self.pemesh.ang,
                     self.gradient
                     )
             elif self.mesh.dim == 3:
-                recursionFuncs['angGrad1'] = fn.math.dot(
+                recursionFuncs['angGrad1'] = _fn.math.dot(
                     self.pemesh.ang1,
                     self.gradient
                     )
-                recursionFuncs['angGrad2'] = fn.math.dot(
+                recursionFuncs['angGrad2'] = _fn.math.dot(
                     self.pemesh.ang1,
                     self.gradient
                     )
@@ -160,31 +160,31 @@ class VarUtils:
                 spatially referenced components \
                 are currently supported.'
 
-            recursionFuncs['mag'] = fn.math.sqrt(
-                fn.math.dot(
+            recursionFuncs['mag'] = _fn.math.sqrt(
+                _fn.math.dot(
                     self.var,
                     self.var
                     )
                 )
-            recursionFuncs['radComp'] = fn.math.dot(
+            recursionFuncs['radComp'] = _fn.math.dot(
                 self.pemesh.rad,
                 self.meshVar
                 )
 
             if self.dim == 2:
 
-                recursionFuncs['angComp'] = fn.math.dot(
+                recursionFuncs['angComp'] = _fn.math.dot(
                     self.pemesh.ang,
                     self.meshVar
                     )
 
             elif self.dim == 3:
 
-                recursionFuncs['angComp1'] = fn.math.dot(
+                recursionFuncs['angComp1'] = _fn.math.dot(
                     self.pemesh.ang1,
                     self.meshVar
                     )
-                recursionFuncs['angComp2'] = fn.math.dot(
+                recursionFuncs['angComp2'] = _fn.math.dot(
                     self.pemesh.ang2,
                     self.meshVar
                     )

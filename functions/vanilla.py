@@ -2,10 +2,10 @@ from underworld.function._function import Function as UWFn
 
 from . import _function
 from . import _convert
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Vanilla, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Vanilla, *args, **kwargs)
     return func
 
 class Vanilla(_function.Function):
@@ -37,4 +37,4 @@ class Vanilla(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)

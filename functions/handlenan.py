@@ -1,14 +1,14 @@
 import numpy as np
 
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _convert
 from . import _function
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 from . import getstat
 
-def construct(*args, **kwargs):
-    func = _construct(HandleNaN, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(HandleNaN, *args, **kwargs)
     return func
 
 class HandleNaN(_function.Function):
@@ -25,7 +25,7 @@ class HandleNaN(_function.Function):
         compareVal = [
             np.inf for dim in range(inVar.varDim)
             ]
-        var = fn.branching.conditional([
+        var = _fn.branching.conditional([
             (inVar < compareVal, inVar),
             (True, handleVal),
             ])
@@ -38,14 +38,14 @@ class HandleNaN(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)
 
 def _NaNFloat(inVar, handleFloat, **kwargs):
     inVar = _convert.convert(inVar)
     handleVal = [
         handleFloat for dim in range(inVar.varDim)
         ]
-    return construct(inVar, handleVal = handleVal, **kwargs)
+    return _construct(inVar, handleVal = handleVal, **kwargs)
 
 def zeroes(inVar, **kwargs):
     return _NaNFloat(inVar, 0., **kwargs)

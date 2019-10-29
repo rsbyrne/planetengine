@@ -1,8 +1,8 @@
 import weakref
 import numpy as np
 
-from underworld import function as fn
-UWFn = fn._function.Function
+from underworld import function as _fn
+UWFn = _fn._function.Function
 
 from .. import utilities
 hasher = utilities.hashToInt
@@ -215,15 +215,15 @@ class PlanetVar(UWFn):
         if isinstance(self, _function.Function) \
                 or type(self) == _basetypes.Variable:
             if self.varDim == 1:
-                minmax = fn.view.min_max(self.var)
+                minmax = _fn.view.min_max(self.var)
             else:
-                fn_norm = fn.math.sqrt(
-                    fn.math.dot(
+                fn_norm = _fn.math.sqrt(
+                    _fn.math.dot(
                         self,
                         self
                         )
                     )
-                minmax = fn.view.min_max(
+                minmax = _fn.view.min_max(
                     self,
                     fn_norm = fn_norm
                     )

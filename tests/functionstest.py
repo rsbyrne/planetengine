@@ -20,7 +20,7 @@ def testfn():
 
     makeFns = [
         lambda var: var ** constant,
-        lambda var: pfn.region.construct(var, shape),
+        lambda var: pfn.region._construct(var, shape),
         lambda var: var * variable1,
         lambda var: pfn.component.rad(var),
         lambda var: pfn.operations.log(var),
@@ -29,22 +29,22 @@ def testfn():
         lambda var: var + 1.,
         lambda var: var * vanilla,
         lambda var: pfn.quantiles.terciles(var),
-        lambda var: pfn.substitute.construct(var, 2., 0.),
-        lambda var: pfn.binarise.construct(var),
+        lambda var: pfn.substitute._construct(var, 2., 0.),
+        lambda var: pfn.binarise._construct(var),
         lambda var: var * variable1,
-        lambda var: pfn.merge.construct(*[
+        lambda var: pfn.merge._construct(*[
             compVar * -1. \
                 for compVar in pfn.split.getall(var)
             ]),
         lambda var: pfn.component.rad(var),
         lambda var: pfn.gradient.ang(var),
-        lambda var: pfn.normalise.construct(var, [1., 2.]),
+        lambda var: pfn.normalise._construct(var, [1., 2.]),
         lambda var: pfn.clip.torange(var, [1.2, 1.8]),
-        lambda var: pfn.handlenan.construct(var, 1.6),
-        lambda var: pfn.filter.construct(var, 1.6),
-        lambda var: pfn.region.construct(var, shape),
+        lambda var: pfn.handlenan._construct(var, 1.6),
+        lambda var: pfn.filter._construct(var, 1.6),
+        lambda var: pfn.region._construct(var, shape),
         lambda var: pfn.handlenan.zeroes(var),
-        lambda var: pfn.binarise.construct(var)
+        lambda var: pfn.binarise._construct(var)
         ]
 
     var = variable2
@@ -86,7 +86,7 @@ def testfn():
 
     message(timings)
 
-    red = pfn.integral.construct(var)
+    red = pfn.integral._construct(var)
 
     system.reset()
     red.update()

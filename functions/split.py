@@ -1,9 +1,9 @@
 from . import _function
 from . import _convert
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Split, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Split, *args, **kwargs)
     return func
 
 class Split(_function.Function):
@@ -46,11 +46,11 @@ class Split(_function.Function):
             self.inVar.evaluate()[:, self.column]
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)
 
 def getall(inVar):
     inVar = _convert.convert(inVar)
     returnVars = []
     for dim in range(inVar.varDim):
-        returnVars.append(construct(inVar, column = dim))
+        returnVars.append(_construct(inVar, column = dim))
     return tuple(returnVars)

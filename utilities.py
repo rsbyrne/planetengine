@@ -1,6 +1,6 @@
 import numpy as np
 import underworld as uw
-from underworld import function as fn
+from underworld import function as _fn
 from underworld.function._function import Function as UWFn
 import math
 import time
@@ -150,7 +150,7 @@ def get_substrates(var):
 #     except:
 #         mesh = substrate
 #
-#     if type(var) == fn.misc.constant:
+#     if type(var) == _fn.misc.constant:
 #         varType = 'constant'
 #     elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
 #         varType = 'swarmVar'

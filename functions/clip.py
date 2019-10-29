@@ -1,14 +1,14 @@
 import numpy as np
 
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _convert
 from . import _function
 from . import _basetypes
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Clip, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Clip, *args, **kwargs)
     return func
 
 class Clip(_function.Function):
@@ -75,7 +75,7 @@ class Clip(_function.Function):
             del stringVariants['lower']
             del stringVariants['upper']
 
-        var = fn.branching.conditional(clauses)
+        var = _fn.branching.conditional(clauses)
 
         self.stringVariants = stringVariants
         self.inVars = list(inVars)
@@ -85,11 +85,11 @@ class Clip(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)
 
 def torange(inVar, clipVar, **kwargs):
     inVar, clipVar = _convert.convert(inVar, clipVar)
-    return construct(
+    return _construct(
         inVar,
         lBnd = clipVar,
         uBnd = clipVar,

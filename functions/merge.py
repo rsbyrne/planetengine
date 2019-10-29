@@ -1,10 +1,10 @@
 from . import _function
 from . import _convert
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 from . import component
 
-def construct(*args, **kwargs):
-    func = _construct(Merge, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Merge, *args, **kwargs)
     return func
 
 class Merge(_function.Function):
@@ -54,7 +54,7 @@ class Merge(_function.Function):
                 inVar.evaluate()[:, 0]
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)
 
 def annulise(inVar):
     inVar = _convert.convert(inVar)
@@ -63,7 +63,7 @@ def annulise(inVar):
     comps.append(component.rad(inVar))
     if inVar.mesh.dim == 3:
         comps.append(component.coang(inVar))
-    var = construct(*comps)
+    var = _construct(*comps)
     return var
 
 def cartesianise(inVar):
@@ -73,5 +73,5 @@ def cartesianise(inVar):
     comps.append(component.y(inVar))
     if inVar.mesh.dim == 3:
         comps.append(component.z(inVar))
-    var = construct(*comps)
+    var = _construct(*comps)
     return var

@@ -1,12 +1,12 @@
 import numpy as np
 
-from underworld import function as fn
-UWFn = fn._function.Function
+from underworld import function as _fn
+UWFn = _fn._function.Function
 
 from . import _planetvar
 from . import _basetypes
 from . import vanilla
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 from .. import utilities
 message = utilities.message
 
@@ -62,7 +62,7 @@ def _convert(var, varName = None):
         else:
             raise Exception
 
-    var = _construct(
+    var = _master_construct(
         varClass,
         var,
         **stringVariants

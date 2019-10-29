@@ -1,4 +1,4 @@
-from underworld import function as fn
+from underworld import function as _fn
 import numpy as np
 from planetengine._IC import IC
 
@@ -27,10 +27,10 @@ class Extents(IC):
             raise Exception
         self.inputs['shapes'] = shapes
 
-        self.polygons = [(0, fn.misc.constant(True))]
+        self.polygons = [(0, _fn.misc.constant(True))]
         for val, vertices in shapes:
             self.polygons.append(
-                (val, fn.shape.Polygon(vertices))
+                (val, _fn.shape.Polygon(vertices))
                 )
 
         super().__init__()

@@ -1,12 +1,12 @@
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _convert
 from . import _reduction
 from . import _basetypes
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(GetStat, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(GetStat, *args, **kwargs)
     return func
 
 class GetStat(_reduction.Reduction):
@@ -35,13 +35,13 @@ class GetStat(_reduction.Reduction):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)
 
 def mins(*args, **kwargs):
-    return construct(*args, stat = 'mins', **kwargs)
+    return _construct(*args, stat = 'mins', **kwargs)
 
 def maxs(*args, **kwargs):
-    return construct(*args, stat = 'maxs', **kwargs)
+    return _construct(*args, stat = 'maxs', **kwargs)
 
 def ranges(*args, **kwargs):
-    return construct(*args, stat = 'ranges', **kwargs)
+    return _construct(*args, stat = 'ranges', **kwargs)

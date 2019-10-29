@@ -1,7 +1,7 @@
 import numpy as np
 
 import underworld as uw
-from underworld import function as fn
+from underworld import function as _fn
 
 from .meshutils import get_meshUtils
 from . import mapping

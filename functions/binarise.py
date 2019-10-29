@@ -1,11 +1,11 @@
-from underworld import function as fn
+from underworld import function as _fn
 
 from . import _convert
 from . import _function
-from ._construct import _construct
+from ._construct import _construct as _master_construct
 
-def construct(*args, **kwargs):
-    func = _construct(Binarise, *args, **kwargs)
+def _construct(*args, **kwargs):
+    func = _master_construct(Binarise, *args, **kwargs)
     return func
 
 class Binarise(_function.Function):
@@ -20,17 +20,17 @@ class Binarise(_function.Function):
             raise Exception
 
         if inVar.dType == 'double':
-            var = 0. * inVar + fn.branching.conditional([
-                (fn.math.abs(inVar) > 1e-18, 1.),
+            var = 0. * inVar + _fn.branching.conditional([
+                (_fn.math.abs(inVar) > 1e-18, 1.),
                 (True, 0.),
                 ])
         elif inVar.dType == 'boolean':
-            var = 0. * inVar + fn.branching.conditional([
+            var = 0. * inVar + _fn.branching.conditional([
                 (inVar, 1.),
                 (True, 0.),
                 ])
         elif inVar.dType == 'int':
-            var = 0 * inVar + fn.branching.conditional([
+            var = 0 * inVar + _fn.branching.conditional([
                 (inVar, 1),
                 (True, 0),
                 ])
@@ -43,4 +43,4 @@ class Binarise(_function.Function):
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):
-    return construct(*args, **kwargs)
+    return _construct(*args, **kwargs)
