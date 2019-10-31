@@ -12,17 +12,13 @@ class Data:
         self.var = mesh.add_variable(1)
         self.var.scales = [[-128., 127.]]
         self.inVar = pfn.convert(inVar)
-        self.fullLocalMeshVar = fieldops.make_fullLocalMeshVar(
-            self.inVar.meshVar().var
-            )
         self.size = size
         self.data = np.zeros((size, size)).astype('int8')
         self.update()
     def update(self):
         tolerance = fieldops.copyField(
-            self.inVar.meshVar().var,
-            self.var,
-            _fullLocalMeshVar = self.fullLocalMeshVar
+            self.inVar.meshVar(),
+            self.var
             )
         data = self.var.data
         data = data.reshape([self.size, self.size])

@@ -25,8 +25,6 @@ class Tile(_function.Function):
 
         var = inVar.mesh.add_variable(inVar.varDim)
 
-        self._meshVar = lambda: var
-
         self.stringVariants = {}
         self.inVars = list(inVars)
         self.parameters = []
@@ -37,11 +35,10 @@ class Tile(_function.Function):
     def _partial_update(self):
 
         inVar, freqs, mirrored = self.inVars
-        inVar = inVar.meshVar()
         freqs = tuple(*freqs.evaluate())
         mirrored = tuple(*mirrored.evaluate())
         fieldops.copyField(
-            inVar,
+            inVar.meshVar(),
             self.var,
             freqs = freqs,
             mirrored = mirrored

@@ -30,8 +30,6 @@ class Split(_function.Function):
                 1
                 )
 
-        self._meshVar = lambda: var
-
         self.column = column
 
         self.stringVariants = {'column': str(column)}

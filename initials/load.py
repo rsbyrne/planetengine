@@ -41,7 +41,7 @@ class Load(IC):
 
         self.inFrame = inFrame
         self.inVar = inFrame.saveVars[varName]
-        self.fullInField = fieldops.make_fullLocalMeshVar(self.inVar)
+        self.fullInField = fieldops.get_fullLocalMeshVar(self.inVar)
 
         inputs = {
             'varName': varName,
@@ -60,6 +60,7 @@ class Load(IC):
     def evaluate(self, coordArray):
         tolerance = 0.
         maxTolerance = 0.1
+        self.fullInField.update()
         while tolerance < maxTolerance:
             try:
                 evalCoords = mapping.unbox(

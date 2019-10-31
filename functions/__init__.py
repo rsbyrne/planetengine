@@ -12,7 +12,7 @@ from . import integral
 from . import merge
 from . import normalise
 from . import operations
-from . import projection
+# from . import projection
 from . import quantiles
 from . import range
 from . import region

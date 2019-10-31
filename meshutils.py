@@ -1,5 +1,6 @@
 from .utilities import get_scales
-from .utilities import get_mesh
+# from .utilities import get_mesh
+from .utilities import var_check_hash
 
 import underworld as uw
 from underworld import function as _fn
@@ -7,6 +8,8 @@ from underworld import function as _fn
 import numpy as np
 import weakref
 import random
+
+from . import mpi
 
 def get_meshUtils(var):
     try:
@@ -16,8 +19,37 @@ def get_meshUtils(var):
             mesh.meshUtils = MeshUtils(mesh)
         return mesh.meshUtils
     except:
-        mesh = get_mesh(var)
-        return get_meshUtils(mesh)
+        raise Exception("Not supported yet: provide mesh.")
+        # mesh = get_mesh(var)
+        # return get_meshUtils(mesh)
+
+def makeLocalAnnulus(mesh):
+    for proc in range(mpi.size):
+        if mpi.rank == proc:
+            localAnn = uw.mesh.FeMesh_Annulus(
+                elementType = mesh.elementType,
+                elementRes = mesh.elementRes,
+                radialLengths = mesh.radialLengths,
+                angularExtent = mesh.angularExtent,
+                periodic = mesh.periodic,
+                partitioned = False,
+                )
+    # mpi.barrier()
+    return localAnn
+
+def makeLocalCart(mesh):
+    for proc in range(mpi.size):
+        if mpi.rank == proc:
+            localMesh = uw.mesh.FeMesh_Cartesian(
+                elementType = mesh.elementType,
+                elementRes = mesh.elementRes,
+                minCoord = mesh.minCoord,
+                maxCoord = mesh.maxCoord,
+                periodic = mesh.periodic,
+                partitioned = False,
+                )
+    # mpi.barrier()
+    return localMesh
 
 class MeshUtils:
 
@@ -140,6 +172,11 @@ class MeshUtils:
 
         self.mesh = weakref.ref(mesh)
 
+    def get_full_local_mesh(self):
+        if not hasattr(self, 'fullLocalMesh'):
+            self.fullLocalMesh = makeLocalAnnulus(self.mesh())
+        return self.fullLocalMesh
+
     def get_unitVar(self):
         if not hasattr(self, 'unitVar'):
             self.unitVar = self.mesh().add_variable(1)
@@ -152,45 +189,62 @@ class MeshUtils:
             self,
             inVar,
             vector = False,
-            solve = True,
+            update = True,
             rounding = 6
             ):
-        random.seed(inVar.__hash__() + rounding)
-        in_hash = random.randint(1e18, 1e19 - 1)
-        random.seed()
-        try:
-            outVar = self.meshifieds[in_hash]()
-            assert not outVar is None
-        except:
-            if vector:
-                outVar = self._make_vectorVar()
-            else:
-                outVar = self._make_scalarVar()
-            self.meshifieds[in_hash] = weakref.ref(outVar)
-            outVar.project = lambda: self.project(
-                outVar,
-                inVar,
-                rounding
-                )
-        if solve:
-            outVar.project()
+        if type(inVar) == uw.mesh._meshvariable.MeshVariable:
+            outVar = inVar
+        else:
+            random.seed(inVar.__hash__() + rounding)
+            in_hash = random.randint(1e18, 1e19 - 1)
+            random.seed()
+            try:
+                outVar = self.meshifieds[in_hash]()
+                assert not outVar is None
+            except:
+                if vector:
+                    outVar = self._make_vectorVar()
+                else:
+                    outVar = self._make_scalarVar()
+                self.meshifieds[in_hash] = weakref.ref(outVar)
+                outVar.lasthash = 0
+                outVar.project = lambda: self.project(
+                    outVar,
+                    inVar,
+                    rounding,
+                    _lasthash = outVar.lasthash,
+                    _update_lasthash = True
+                    )
+            if update:
+                outVar.project()
         return outVar
 
-    def project(self, meshVar, inFn, rounding = 6):
-        if meshVar.nodeDofCount == meshVar.mesh.dim:
-            projector = self.get_vectorProjector()
-        else:
-            projector = self.get_scalarProjector()
-        projector.fn = inFn
-        projector.solve()
-        meshVar.data[:] = projector._meshVariable.data
-        allwalls = self.surfaces['all']
-        meshVar.data[allwalls.data] = \
-            self.inFn.evaluate(allwalls)
-        meshVar.data[:] = np.round(
-            meshVar.data,
-            rounding
-            )
+    def project(
+            self,
+            meshVar,
+            inFn,
+            rounding = 6,
+            _lasthash = 0,
+            _update_lasthash = False
+            ):
+        currenthash = var_check_hash(inFn)
+        if not currenthash == _lasthash:
+            if meshVar.nodeDofCount == meshVar.mesh.dim:
+                projector = self.get_vectorProjector()
+            else:
+                projector = self.get_scalarProjector()
+            projector.fn = inFn
+            projector.solve()
+            meshVar.data[:] = projector._meshVariable.data
+            allwalls = self.surfaces['all']
+            meshVar.data[allwalls.data] = \
+                inFn.evaluate(allwalls)
+            meshVar.data[:] = np.round(
+                meshVar.data,
+                rounding
+                )
+            if _update_lasthash:
+                meshVar.lasthash = currenthash
 
     def get_scalarProjector(self):
         if not hasattr(self, 'scalarProjector'):

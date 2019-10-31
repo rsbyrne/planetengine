@@ -39,9 +39,9 @@ class Variable(_basetypes.BaseTypes):
 
         if not type(var) in self.convertTypes:
             vanillaVar = vanilla.default(var)
-            projVar = vanillaVar.meshVar()
+            projVar = vanillaVar.meshVar(update = False)
             var = projVar.var
-            self._projUpdate = projVar.update
+            self._projUpdate = projVar.project
             if hasattr(vanillaVar, 'scales'):
                 var.scales = vanillaVar.scales
             if hasattr(vanillaVar, 'bounds'):
@@ -54,7 +54,6 @@ class Variable(_basetypes.BaseTypes):
             self.meshdata = self.data
             self.meshbased = True
             self.varType = 'meshVar'
-            self._meshVar = lambda: self
         elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
             self.substrate = var.swarm
             self.mesh = var.swarm.mesh

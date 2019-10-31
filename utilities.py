@@ -73,124 +73,71 @@ def unpack_var(*args):
 
     return var, varName, substrate
 
-def get_substrate(var):
-    # CLUNKY AND SLOW - SHOULD BE FIXED
-    try:
-        substrate = var.swarm
-    except:
-        try:
-            substrate = var.mesh
-        except:
-            subVars = []
-            for subVar in var._underlyingDataItems:
-                if not var is subVar:
-                    try: subVars.append(get_substrate(var))
-                    except: pass
-            if len(subVars) == 0:
-                substrate = None
-            else:
-                subSwarms = list(set([
-                    subVar[3] for subVar in subVars \
-                        if subVar[1] in ('swarmVar', 'swarmFn')
-                    ]))
-                if len(subSwarms) > 0:
-                    assert len(subSwarms) < 2, \
-                        "Multiple swarm dependencies detected: \
-                        try providing a substrate manually."
-                    substrate = subSwarms[0]
-                else:
-                    subMeshes = list(set([
-                        subVar[3] for subVar in subVars \
-                            if subVar[1] in ('meshVar', 'meshFn')
-                        ]))
-                    for a, b in itertools.combinations(subMeshes, 2):
-                        if a is b.subMesh:
-                            subMeshes.pop(a)
-                        elif b is a.subMesh:
-                            subMeshes.pop(b)
-                    assert len(subMeshes) < 2, \
-                        "Multiple mesh dependencies detected: \
-                        try providing a substrate manually."
-                    substrate = subMeshes[0]
+def get_substrates(var):
+    if type(var) == uw.mesh._meshvariable.MeshVariable:
+        meshes = [var.mesh,]
+        swarms = []
+    elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
+        swarm = var.swarm
+        mesh = swarm.mesh
+        meshes = [mesh,]
+        swarms = [swarm,]
+    elif isinstance(var, UWFn):
+        underlying = list(var._underlyingDataItems)
+        meshes = []
+        swarms = []
+        for item in underlying:
+            under_meshes, under_swarms = get_substrates(item)
+            meshes.extend(under_meshes)
+            swarms.extend(under_swarms)
+        meshes = list(set(meshes))
+        swarms = list(set(swarms))
+    else:
+        raise Exception("Input not recognised.")
+    meshes = list(sorted(meshes))
+    swarms = list(sorted(swarms))
+    return meshes, swarms
+
+def get_prioritySubstrate(var):
+    meshes, swarms = get_substrates(var)
+    if len(swarms) > 0:
+        substrate = swarms[0]
+    elif len(meshes) > 0:
+        substrate = meshes[0]
+    else:
+        substrate = None
     return substrate
 
 def get_mesh(var):
-    substrate = get_substrate(var)
-    try:
-        mesh = substrate.mesh
-    except:
-        mesh = substrate
-    return mesh
+    meshes, swarms = get_substrates(var)
+    if len(meshes) > 0:
+        return meshes[0]
+    else:
+        raise Exception("No mesh detected.")
 
-def get_substrates(var):
-    substrate = get_substrate(var)
-    try:
-        mesh = substrate.mesh
-    except:
-        mesh = substrate
-    return mesh, substrate
+def get_sampleData(var):
+    substrate = get_prioritySubstrate(var)
+    if substrate is None:
+        evalCoords = None
+    else:
+        evalCoords = substrate.data[0:1]
+    sample_data = var.evaluate(evalCoords)
+    return sample_data
 
-# def get_varInfo(*args, detailed = False, return_var = False):
-#
-#     var, varName, substrate = unpack_var(*args)
-#
-#     var = UWFn.convert(var)
-#     if var is None:
-#         raise Exception
-#
-#     if substrate == 'notprovided':
-#         substrate = get_substrate(var)
-#
-#     data = var.evaluate(substrate)
-#
-#     varDim = data.shape[1]
-#
-#     try:
-#         mesh = substrate.mesh
-#     except:
-#         mesh = substrate
-#
-#     if type(var) == _fn.misc.constant:
-#         varType = 'constant'
-#     elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
-#         varType = 'swarmVar'
-#     elif type(var) == uw.mesh._meshvariable.MeshVariable:
-#         varType = 'meshVar'
-#     else:
-#         if substrate is mesh:
-#             varType = 'meshFn'
-#         else:
-#             varType = 'swarmFn'
-#
-#     if str(data.dtype) == 'int32':
-#         dType = 'int'
-#     elif str(data.dtype) == 'float64':
-#         dType = 'double'
-#     elif str(data.dtype) == 'bool':
-#         dType = 'boolean'
-#     else:
-#         raise Exception(
-#             "Input data type not acceptable."
-#             )
-#
-#     if detailed:
-#         outDict = {
-#             'varType': varType,
-#             'mesh': mesh,
-#             'substrate': substrate,
-#             'dType': dType,
-#             'varDim': varDim,
-#             'varName': varName,
-#             }
-#         if return_var:
-#             return var, outDict
-#         else:
-#             return outDict
-#     else:
-#         if return_var:
-#             return var, varType, mesh, substrate, dType, varDim
-#         else:
-#             return varType, mesh, substrate, dType, varDim
+def get_varDim(var):
+    sample_data = get_sampleData(var)
+    varDim = sample_data.shape[-1]
+    return varDim
+
+def check_uw(var):
+    if type(var) == uw.mesh._meshvariable.MeshVariable:
+        pass
+    elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
+        pass
+    elif isinstance(var, UWFn):
+        pass
+    else:
+        raise Exception("Not an underworld variable or function.")
 
 def splitter(filename):
     name, ext = os.path.splitext(filename)
@@ -403,6 +350,17 @@ def hashToInt(inputObj):
         addval = ord(char)
         hashVal *= 10 ** int(math.log10(addval))
         hashVal += ord(char)
+    return hashVal
+
+def var_check_hash(var):
+    random.seed(
+        sum([
+            hashToInt(underlying.data) \
+                for underlying in list(var._underlyingDataItems)
+            ])
+        )
+    hashVal = random.randint(1e18, 1e19 - 1)
+    random.seed()
     return hashVal
 
 def timestamp():

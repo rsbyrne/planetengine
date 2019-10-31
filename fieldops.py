@@ -1,12 +1,14 @@
 import numpy as np
+import weakref
 
 import underworld as uw
 from underworld import function as _fn
 
 from .meshutils import get_meshUtils
 from . import mapping
-from .utilities import get_scales
-from .utilities import message
+from . import utilities
+get_scales = utilities.get_scales
+message = utilities.message
 
 from . import mpi
 
@@ -114,60 +116,39 @@ def weightVar(mesh, specialSets = None):
         weightVar.data[index] = localIntegral.evaluate()[0]
     return weightVar
 
-def makeLocalAnnulus(mesh):
-    for proc in range(mpi.size):
-        if mpi.rank == proc:
-            localAnn = uw.mesh.FeMesh_Annulus(
-                elementType = mesh.elementType,
-                elementRes = mesh.elementRes,
-                radialLengths = mesh.radialLengths,
-                angularExtent = mesh.angularExtent,
-                periodic = mesh.periodic,
-                partitioned = False,
-                )
-    # mpi.barrier()
-    return localAnn
+fullLocalMeshVars = {}
 
-def makeLocalCart(mesh):
-    for proc in range(mpi.size):
-        if mpi.rank == proc:
-            localMesh = uw.mesh.FeMesh_Cartesian(
-                elementType = mesh.elementType,
-                elementRes = mesh.elementRes,
-                minCoord = mesh.minCoord,
-                maxCoord = mesh.maxCoord,
-                periodic = mesh.periodic,
-                partitioned = False,
-                )
-    # mpi.barrier()
-    return localMesh
+def get_fullLocalMeshVar(field1):
+    fullInField = None
+    if field1.__hash__() in fullLocalMeshVars:
+        fullInField = fullLocalMeshVars[field1.__hash__()]()
+    if fullInField is None:
+        fullInField = make_fullLocalMeshVar(field1)
+    return fullInField
 
 def make_fullLocalMeshVar(field1):
 
     if type(field1) == uw.mesh._meshvariable.MeshVariable:
-        inField = field1
         inMesh = field1.mesh
         inDim = field1.nodeDofCount
     elif type(field1) == uw.swarm._swarmvariable.SwarmVariable:
         inMesh = field1.swarm.mesh
-        field1Proj = uw.mesh.MeshVariable(
-            inMesh,
-            field1.count,
-            )
-        field1Projector = uw.utils.MeshVariable_Projection(
-            field1Proj,
-            field1
-            )
-        field1Projector.solve()
-        inField = field1Proj
         inDim = field1.count
     else:
-        raise Exception("Input not a field.")
-
-    localAnnulus = makeLocalAnnulus(inMesh)
+        inMesh = utilities.get_mesh(field1)
+        inDim = utilities.get_varDim(field1)
+    meshUtils = get_meshUtils(inMesh)
+    inField = meshUtils.meshify(
+        field1,
+        vector = inDim == inMesh.dim,
+        update = False
+        )
+    localAnnulus = meshUtils.get_full_local_mesh()
     fullInField = localAnnulus.add_variable(inDim)
 
     def update():
+        if hasattr(inField, 'project'):
+            inField.project()
         allData = mpi.comm.gather(inField.data, root = 0)
         allGID = mpi.comm.gather(inField.mesh.data_nodegId, root = 0)
         if mpi.rank == 0:
@@ -181,7 +162,8 @@ def make_fullLocalMeshVar(field1):
 
     # POSSIBLE CIRCULAR REFERENCE:
     fullInField.update = update
-    fullInField.update()
+
+    fullLocalMeshVars[field1.__hash__()] = weakref.ref(fullInField)
 
     return fullInField
 
@@ -191,8 +173,7 @@ def copyField(field1, field2,
         boxDims = None,
         freqs = None,
         mirrored = None,
-        blendweight = None,
-        _fullLocalMeshVar = None
+        blendweight = None
         # scales = None,
         # boundaries = None
         ):
@@ -201,12 +182,7 @@ def copyField(field1, field2,
         assert np.max(np.array(boxDims)) <= 1., "Max boxdim is 1."
         assert np.min(np.array(boxDims)) >= 0., "Min boxdim is 0."
 
-    if type(field1) == uw.mesh._meshvariable.MeshVariable:
-        pass
-    elif type(field1) == uw.swarm._swarmvariable.SwarmVariable:
-        pass
-    else:
-        raise Exception("Input 1 not a field.")
+    utilities.check_uw(field1)
 
     if type(field2) == uw.mesh._meshvariable.MeshVariable:
         outMesh = field2.mesh
@@ -220,11 +196,8 @@ def copyField(field1, field2,
         raise Exception("Input 2 not a field.")
     outField = field2
 
-    if _fullLocalMeshVar is None:
-        fullInField = make_fullLocalMeshVar(field1)
-    else:
-        fullInField = _fullLocalMeshVar
-        fullInField.update()
+    fullInField = get_fullLocalMeshVar(field1)
+    fullInField.update()
     inDim = fullInField.nodeDofCount
     inMesh = fullInField.mesh
 

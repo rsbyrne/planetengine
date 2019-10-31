@@ -15,8 +15,12 @@ class Gradient(_function.Function):
 
     def __init__(self, inVar, *args, **kwargs):
 
-        inVar = _convert.convert(inVar).meshVar()
-        var = inVar.var.fn_gradient
+        inVar = _convert.convert(inVar)
+        meshVar = inVar.meshVar(
+            update = False,
+            returnvar = False
+            )
+        var = meshVar.fn_gradient
 
         self.stringVariants = {}
         self.inVars = [inVar]
@@ -27,6 +31,9 @@ class Gradient(_function.Function):
         self.bounds = [['.'] * inVar.mesh.dim ** 2] * inVar.varDim
 
         super().__init__(**kwargs)
+
+    def _partial_update(self):
+        self.inVar.meshVar(update = True, returnvar = False)
 
 def default(*args, **kwargs):
     return _construct(*args, **kwargs)

@@ -10,7 +10,6 @@ class AsciiRaster:
         self.var = mesh.add_variable(1)
         self.var.scales = [[0., 9.]]
         self.inVar = inVar
-        self.fullLocalMeshVar = fieldops.make_fullLocalMeshVar(inVar)
         self.greyscale = " .:-=+*#%@"
         self.outStr = ''
         self.allStr = ''
@@ -19,8 +18,7 @@ class AsciiRaster:
     def update(self):
         tolerance = fieldops.copyField(
             self.inVar,
-            self.var,
-            _fullLocalMeshVar = self.fullLocalMeshVar
+            self.var
             )
         mangledArray = np.round(
             np.flip(

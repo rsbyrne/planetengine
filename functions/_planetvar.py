@@ -270,8 +270,7 @@ class PlanetVar(UWFn):
         if isinstance(self, _reduction.Reduction):
             self.value = self.evaluate(lazy = True)[0]
 
-    def meshVar(self):
-        self.update()
+    def _check_meshable(self):
         if not any([
                 isinstance(self, _function.Function),
                 type(self) == _basetypes.Variable
@@ -279,12 +278,24 @@ class PlanetVar(UWFn):
             raise Exception
         if self.varType == 'constFn':
             raise Exception
-        if not hasattr(self, '_meshVar'):
-            projVar = projection.Projection(self)
-            # self._meshVar = weakref.ref(projVar)
-            # POSSIBLE CIRCULAR REFERENCE!
-            self._meshVar = lambda: projVar
-        return self._meshVar()
+
+    def meshVar(self, update = True, returnvar = True):
+        self._check_meshable()
+        self.update()
+        if inVar.dType in ('int', 'boolean'):
+            rounding = 0
+        else:
+            rounding = 6
+        if type(self.var) == uw.mesh._meshvariable.MeshVariable:
+            outVar = self.var
+        else:
+            outVar = self.meshUtils.meshify(
+                self.var,
+                self.vector,
+                update = update
+                )
+        if returnvar:
+            return outVar
 
     def _input_processing(self, evalInput):
         return evalInput
@@ -358,7 +369,7 @@ from . import _convert
 from . import _basetypes
 from . import _function
 from . import _reduction
-from . import projection
+# from . import projection
 from . import gradient
 from . import operations
 from .. import utilities
