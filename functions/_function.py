@@ -59,7 +59,10 @@ class Function(_planetvar.PlanetVar):
                 sample_data = self.var.evaluate(self.substrate.data[0:1])
         self.dType = _planetvar.get_dType(sample_data)
         self.varDim = sample_data.shape[1]
-        self.vector = self.varDim == self.mesh.dim
+        if not self.mesh is None:
+            self.vector = self.varDim == self.mesh.dim
+        else:
+            self.vector = False
 
     def _detect_scales_bounds(self):
         fields = []

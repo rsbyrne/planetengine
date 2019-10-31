@@ -17,8 +17,7 @@ class Gradient(_function.Function):
 
         inVar = _convert.convert(inVar)
         meshVar = inVar.meshVar(
-            update = False,
-            returnvar = False
+            update = False
             )
         var = meshVar.fn_gradient
 

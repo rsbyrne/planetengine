@@ -257,20 +257,18 @@ class MeshUtils:
         return self.vectorProjector
 
     def _make_scalarProjector(self):
-        fromVar = _fn.misc.constant(0.)
         toVar = self._make_scalarVar()
         projector = uw.utils.MeshVariable_Projection(
             toVar,
-            fromVar
+            toVar
             )
         self.scalarProjector = projector
 
     def _make_vectorProjector(self):
-        fromVar = _fn.misc.constant(0.)
         toVar = self._make_vectorVar()
         projector = uw.utils.MeshVariable_Projection(
             toVar,
-            fromVar
+            toVar
             )
         self.vectorProjector = projector
 

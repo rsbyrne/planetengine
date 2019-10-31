@@ -39,9 +39,7 @@ class Variable(_basetypes.BaseTypes):
 
         if not type(var) in self.convertTypes:
             vanillaVar = vanilla.default(var)
-            projVar = vanillaVar.meshVar(update = False)
-            var = projVar.var
-            self._projUpdate = projVar.project
+            var = vanillaVar.meshVar(update = False)
             if hasattr(vanillaVar, 'scales'):
                 var.scales = vanillaVar.scales
             if hasattr(vanillaVar, 'bounds'):
@@ -76,7 +74,10 @@ class Variable(_basetypes.BaseTypes):
         sample_data = self.data[0:1]
         self.dType = _planetvar.get_dType(sample_data)
         self.varDim = self.data.shape[1]
-        self.vector = self.varDim == self.mesh.dim
+        if not self.mesh is None:
+            self.vector = self.varDim == self.mesh.dim
+        else:
+            self.vector = False
         self.meshUtils = meshutils.get_meshUtils(self.mesh)
 
         if hasattr(var, 'scales'):
@@ -98,7 +99,7 @@ class Variable(_basetypes.BaseTypes):
         self.meshdata = self.var.evaluate(self.mesh)
 
     def _partial_update(self):
-        if hasattr(self, '_projUpdate'):
-            self._projUpdate()
+        if hasattr(self.var, 'project'):
+            self.var.project()
         if not type(self.var) == uw.mesh._meshvariable.MeshVariable:
             self._set_meshdata()

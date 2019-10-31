@@ -1,7 +1,8 @@
 import weakref
 import numpy as np
 
-from underworld import function as _fn
+import underworld as uw
+_fn = uw.function
 UWFn = _fn._function.Function
 
 from .. import utilities
@@ -282,7 +283,7 @@ class PlanetVar(UWFn):
     def meshVar(self, update = True, returnvar = True):
         self._check_meshable()
         self.update()
-        if inVar.dType in ('int', 'boolean'):
+        if self.dType in ('int', 'boolean'):
             rounding = 0
         else:
             rounding = 6
