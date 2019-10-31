@@ -189,14 +189,11 @@ def make_stamps(built):
     else:
 
         toHash = {}
-        if mpi.rank == 0:
-            toHash['inputs'] = built.inputs
-            toHash['scripts'] = [
-                utilities.stringify(open(script)) \
-                    for script in built.scripts
-                ]
-        toHash = mpi.comm.bcast(toHash, root = 0)
-        # mpi.barrier()
+        toHash['inputs'] = built.inputs
+        toHash['scripts'] = [
+            utilities.stringify(utilities.ToOpen(script)) \
+                for script in built.scripts
+            ]
 
         stamps = {
             key: utilities.hashstamp(val) \

@@ -145,60 +145,60 @@ def splitter(filename):
         name, ext = os.path.splitext(name)
     return name
 
-def get_toCheck(var):
-    to_check = {}
-    # try:
-    #     to_check[var.__hash__()] = stringify(var)
-    if hasattr(var, '_underlyingDataItems'):
-        for subVar in list(var._underlyingDataItems):
-            if not subVar is var:
-                sub_toCheck = get_toCheck(
-                    subVar
-                    )
-                to_check.update(sub_toCheck)
-    if len(to_check) == 0:
-        if hasattr(var, 'data'):
-            to_check[var.__hash__()] = var.data
-        elif hasattr(var, 'value'):
-            to_check[var.__hash__()] = var.value
-        elif hasattr(var, 'evaluate'):
-            to_check[var.__hash__()] = var.evaluate()
-        else:
-            raise Exception
-    if hasattr(var, 'mesh'):
-        if not var.mesh is None:
-            to_check[var.mesh.__hash__()] = var.mesh.data
-    if hasattr(var, 'swarm'):
-        to_check[var.swarm.__hash__()] = var.swarm.data
+# def get_toCheck(var):
+#     to_check = {}
+#     # try:
+#     #     to_check[var.__hash__()] = stringify(var)
+#     if hasattr(var, '_underlyingDataItems'):
+#         for subVar in list(var._underlyingDataItems):
+#             if not subVar is var:
+#                 sub_toCheck = get_toCheck(
+#                     subVar
+#                     )
+#                 to_check.update(sub_toCheck)
+#     if len(to_check) == 0:
+#         if hasattr(var, 'data'):
+#             to_check[var.__hash__()] = var.data
+#         elif hasattr(var, 'value'):
+#             to_check[var.__hash__()] = var.value
+#         elif hasattr(var, 'evaluate'):
+#             to_check[var.__hash__()] = var.evaluate()
+#         else:
+#             raise Exception
+#     if hasattr(var, 'mesh'):
+#         if not var.mesh is None:
+#             to_check[var.mesh.__hash__()] = var.mesh.data
+#     if hasattr(var, 'swarm'):
+#         to_check[var.swarm.__hash__()] = var.swarm.data
+#
+#     return to_check
 
-    return to_check
-
-def hash_var(
-        var,
-        global_eval = True,
-        return_checked = False,
-        **kwargs
-        ):
-    if 'checked' in kwargs:
-        checked = kwargs['checked']
-    else:
-        checked = {}
-    to_check = get_toCheck(var)
-    hashVal = 0
-    for key, val in to_check.items():
-        if key in checked:
-            hashVal += checked[key]
-        else:
-            hashVal += hash(stringify(val))
-            checked[key] = hashVal
-    assert not hashVal == 0, \
-        "Not a valid var for hashing!"
-    if global_eval:
-        hashVal = sum(mpi.comm.allgather(hashVal))
-    if return_checked:
-        return hashVal, checked
-    else:
-        return hashVal
+# def hash_var(
+#         var,
+#         global_eval = True,
+#         return_checked = False,
+#         **kwargs
+#         ):
+#     if 'checked' in kwargs:
+#         checked = kwargs['checked']
+#     else:
+#         checked = {}
+#     to_check = get_toCheck(var)
+#     hashVal = 0
+#     for key, val in to_check.items():
+#         if key in checked:
+#             hashVal += checked[key]
+#         else:
+#             hashVal += hash(stringify(val))
+#             checked[key] = hashVal
+#     assert not hashVal == 0, \
+#         "Not a valid var for hashing!"
+#     if global_eval:
+#         hashVal = sum(mpi.comm.allgather(hashVal))
+#     if return_checked:
+#         return hashVal, checked
+#     else:
+#         return hashVal
 
 def get_valSets(array):
     valSets = []
@@ -287,6 +287,17 @@ def getDefaultKwargs(function):
     argdict = dict(argbind.arguments)
     return argdict
 
+class ToOpen:
+    def __init__(self, filepath):
+        self.filepath = filepath
+    def __call__(self):
+        filedata = ''
+        if mpi.rank == 0:
+            with open(self.filepath) as file:
+                filedata = file.read()
+        filedata = mpi.comm.bcast(filedata, root = 0)
+        return filedata
+
 def stringify(*args):
     outStr = '{'
     if len(args) > 1:
@@ -321,10 +332,8 @@ def stringify(*args):
                 outStr += (stringify(key))
                 outStr += (stringify(val))
             typeStr = 'dct'
-        elif objType == io.TextIOWrapper:
-            file = inputObject.read()
-            outStr += file
-            inputObject.close()
+        elif objType == ToOpen:
+            outStr += inputObject()
             typeStr = 'str'
         elif objType == np.ndarray:
             outStr += str(inputObject)
@@ -339,28 +348,32 @@ def stringify(*args):
     return outStr
 
 def hashstamp(inputObj):
-    inputStr = stringify(inputObj).encode()
-    stamp = hashlib.md5(inputStr).hexdigest()
+    local_inputStr = stringify(inputObj)
+    all_inputStrs = mpi.comm.allgather(local_inputStr)
+    global_inputStr = ''.join(all_inputStrs)
+    stamp = hashlib.md5(global_inputStr.encode()).hexdigest()
     return stamp
 
 def hashToInt(inputObj):
     stamp = hashstamp(inputObj)
-    hashVal = 0
-    for char in stamp:
-        addval = ord(char)
-        hashVal *= 10 ** int(math.log10(addval))
-        hashVal += ord(char)
+    random.seed(stamp)
+    hashVal = random.randint(1e18, 1e19 - 1)
+    random.seed()
     return hashVal
 
 def var_check_hash(var):
-    random.seed(
-        sum([
-            hashToInt(underlying.data) \
-                for underlying in list(var._underlyingDataItems)
-            ])
+    underlying_datas = [
+        underlying.data \
+            for underlying in sorted(list(var._underlyingDataItems))
+        ]
+    swarms, meshes = get_substrates(var)
+    substrates = [*swarms, *meshes]
+    underlying_datas.extend(
+        [substrate.data for substrate in substrates]
         )
-    hashVal = random.randint(1e18, 1e19 - 1)
-    random.seed()
+    hashVal = hashToInt(
+        underlying_datas
+        )
     return hashVal
 
 def timestamp():
