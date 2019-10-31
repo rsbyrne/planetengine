@@ -6,6 +6,7 @@ from underworld import function as _fn
 
 import numpy as np
 import weakref
+import random
 
 def get_meshUtils(var):
     try:
@@ -145,41 +146,101 @@ class MeshUtils:
             self.unitVar.data[:] = 1.
         return self.unitVar
 
-    # def meshify(self, inVar, vector = False):
-    #     if not vector:
-    #         projector = self.get_scalarProjector()
+    meshifieds = {}
+
+    def meshify(
+            self,
+            inVar,
+            vector = False,
+            solve = True,
+            rounding = 6
+            ):
+        random.seed(inVar.__hash__() + rounding)
+        in_hash = random.randint(1e18, 1e19 - 1)
+        random.seed()
+        try:
+            outVar = self.meshifieds[in_hash]()
+            assert not outVar is None
+        except:
+            if vector:
+                outVar = self._make_vectorVar()
+            else:
+                outVar = self._make_scalarVar()
+            self.meshifieds[in_hash] = weakref.ref(outVar)
+            outVar.project = lambda: self.project(
+                outVar,
+                inVar,
+                rounding
+                )
+        if solve:
+            outVar.project()
+        return outVar
+
+    def project(self, meshVar, inFn, rounding = 6):
+        if meshVar.nodeDofCount == meshVar.mesh.dim:
+            projector = self.get_vectorProjector()
+        else:
+            projector = self.get_scalarProjector()
+        projector.fn = inFn
+        projector.solve()
+        meshVar.data[:] = projector._meshVariable.data
+        allwalls = self.surfaces['all']
+        meshVar.data[allwalls.data] = \
+            self.inFn.evaluate(allwalls)
+        meshVar.data[:] = np.round(
+            meshVar.data,
+            rounding
+            )
+
+    def get_scalarProjector(self):
+        if not hasattr(self, 'scalarProjector'):
+            self._make_scalarProjector()
+        return self.scalarProjector
+
+    def get_vectorProjector(self):
+        if not hasattr(self, 'vectorProjector'):
+            self._make_vectorProjector()
+        return self.vectorProjector
+
+    def _make_scalarProjector(self):
+        fromVar = _fn.misc.constant(0.)
+        toVar = self._make_scalarVar()
+        projector = uw.utils.MeshVariable_Projection(
+            toVar,
+            fromVar
+            )
+        self.scalarProjector = projector
+
+    def _make_vectorProjector(self):
+        fromVar = _fn.misc.constant(0.)
+        toVar = self._make_vectorVar()
+        projector = uw.utils.MeshVariable_Projection(
+            toVar,
+            fromVar
+            )
+        self.vectorProjector = projector
+
+    def _make_scalarVar(self):
+        outVar = self.mesh().add_variable(1)
+        outVar.data[:] = 0.
+        return outVar
+
+    def _make_vectorVar(self):
+        outVar = self.mesh().add_variable(self.mesh().dim)
+        outVar.data[:] = 0.
+        return outVar
+
+    # def _get_scalar_dummyVar(self):
+    #     if not hasattr(self, 'scalarDummyVar'):
+    #         self.scalarDummyVar = self._make_scalarVar()
+    #     else:
+    #         self.scalarDummyVar = self._get_scalar_dummyVar()
+    #     return self.scalarDummyVar
     #
+    # def _get_vector_dummyVar(self):
+    #     if not hasattr(self, 'vectorDummyVar'):
+    #         self.vectorDummyVar = self._make_scalarVar()
+    #     else:
+    #         self.scalarDummyVar = self._get_scalar_dummyVar()
+    #     return self.scalarDummyVar
     #
-    # def get_scalarProjector(self):
-    #     if not hasattr(self, 'scalarProjector'):
-    #         self._make_scalarProjector()
-    #     return self.scalarProjector
-    #
-    # def get_vectorProjector(self):
-    #     if not hasattr(self, 'vectorProjector'):
-    #         self._make_vectorProjector()
-    #     return self.vectorProjector
-    #
-    # def _make_scalarProjector(self):
-    #     fromVar = self._make_scalarVar()
-    #     toVar = self._make_scalarVar()
-    #     projector = uw.utils.MeshVariable_Projection(
-    #         toVar,
-    #         fromVar,
-    #         )
-    #     self.scalarProjector = projector
-    #
-    # def _make_vectorProjector(self):
-    #     fromVar = self._make_vectorVar()
-    #     toVar = self._make_vectorVar()
-    #     projector = uw.utils.MeshVariable_Projection(
-    #         toVar,
-    #         fromVar,
-    #         )
-    #     self.vectorProjector = projector
-    #
-    # def _make_scalarVar(self):
-    #     return self.mesh().add_variable(1)
-    #
-    # def _make_vectorVar(self):
-    #     return self.mesh().add_variable(self.mesh().dim)

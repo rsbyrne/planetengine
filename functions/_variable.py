@@ -77,6 +77,7 @@ class Variable(_basetypes.BaseTypes):
         sample_data = self.data[0:1]
         self.dType = _planetvar.get_dType(sample_data)
         self.varDim = self.data.shape[1]
+        self.vector = self.varDim == self.mesh.dim
         self.meshUtils = meshutils.get_meshUtils(self.mesh)
 
         if hasattr(var, 'scales'):
