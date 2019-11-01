@@ -13,7 +13,7 @@
 # class Projection(_function.Function):
 #
 #     opTag = 'Projection'
-#
+# 
 #     def __init__(self, inVar, *args, **kwargs):
 #
 #         inVar = _convert.convert(inVar)
