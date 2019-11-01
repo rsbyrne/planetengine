@@ -120,8 +120,8 @@ def weightVar(mesh, specialSets = None):
 
 def get_fullLocalMeshVar(field1):
     fullInField = None
-    # if field1.__hash__() in fullLocalMeshVars:
-    #     fullInField = fullLocalMeshVars[field1.__hash__()]()
+    if field1.__hash__() in fullLocalMeshVars:
+        fullInField = fullLocalMeshVars[field1.__hash__()]()
     if fullInField is None:
         fullInField = make_fullLocalMeshVar(field1)
     return fullInField
