@@ -135,10 +135,10 @@ class Checkpointer:
 
         if mpi.rank == 0:
             if os.path.isdir(checkpointDir):
-                message('Checkpoint directory found: removing')
+                # message('Checkpoint directory found: removing')
                 shutil.rmtree(checkpointDir)
                 assert not os.path.isdir(checkpointDir)
-            message('Making checkpoint directory.')
+            # message('Making checkpoint directory.')
             os.makedirs(checkpointDir)
             assert os.path.isdir(checkpointDir)
         # mpi.barrier()

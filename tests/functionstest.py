@@ -10,7 +10,7 @@ from . import testsystems
 
 def testfn():
 
-    system = testsystems.get_system(res = 16, Ra = 1e4)
+    system = testsystems.arrhenius(res = 16, Ra = 1e4)
 
     variable1 = pfn.convert(system.velocityField, 'velocity')
     variable2 = pfn.convert(system.temperatureField, 'temperature')
@@ -24,7 +24,7 @@ def testfn():
         lambda var: var * variable1,
         lambda var: pfn.component.rad(var),
         lambda var: pfn.operations.log(var),
-        lambda var: pfn.gradient.mag(var),
+        # lambda var: pfn.gradient.mag(var),
         lambda var: pfn.handlenan.zeroes(var),
         lambda var: pfn.binarise.default(var),
         lambda var: var + 1.,
@@ -37,12 +37,12 @@ def testfn():
                 for compVar in pfn.split.getall(var)
             ]),
         lambda var: pfn.component.rad(var),
-        lambda var: pfn.gradient.ang(var),
+        # lambda var: pfn.gradient.ang(var),
         lambda var: pfn.normalise.default(var, [1., 2.]),
         lambda var: pfn.clip.torange(var, [1.2, 1.8]),
         lambda var: pfn.handlenan.default(var, 1.6),
         lambda var: pfn.filter.default(var, 1.6),
-        lambda var: pfn.region.default(var, shape),
+        lambda var: pfn.region.default(var, shape), # SERIOUSLy BROKEN!
         lambda var: pfn.handlenan.zeroes(var),
         lambda var: pfn.binarise.default(var)
         ]
@@ -86,7 +86,7 @@ def testfn():
 
     message(timings)
 
-    red = pfn.integral._construct(var)
+    red = pfn.integral.default(var)
 
     system.reset()
     red.update()
