@@ -12,6 +12,8 @@ message = utilities.message
 
 from . import mpi
 
+fullLocalMeshVars = {}
+
 def set_boundaries(variable, values):
 
     try:
@@ -115,8 +117,6 @@ def weightVar(mesh, specialSets = None):
         maskVar.data[index] = 1.
         weightVar.data[index] = localIntegral.evaluate()[0]
     return weightVar
-
-fullLocalMeshVars = {}
 
 def get_fullLocalMeshVar(field1):
     fullInField = None

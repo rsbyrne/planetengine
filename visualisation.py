@@ -23,7 +23,8 @@ class QuickFig:
             *args,
             figname = 'default',
             onMesh = True,
-            facecolour = 'black',
+            facecolour = 'white',
+            edgecolour = 'white',
             colourBar = False,
             quality = 3.,
             **kwargs
@@ -56,15 +57,13 @@ class QuickFig:
         self.functions_used = []
 
         self.add_vars(
-            args,
-            onMesh = onMesh,
+            *args,
+            # onMesh = onMesh,
             colourBar = colourBar,
             **kwargs
             )
 
-    def add_vars(self, args, **kwargs):
-
-        args = list(args)
+    def add_vars(self, *args, **kwargs):
 
         if len(args) == 1 and type(args[0]) == dict:
             args = sorted(args[0].items())
@@ -95,15 +94,15 @@ class QuickFig:
                             found = True
                             self.functions_used.append(function)
                         except Exception as e:
-                            message(function, e)
+                            # message(function, e)
                             continue
             if found:
                 self.fittedvars.append(planetVar)
         self.notfittedvars = [var for var in self.vars if not var in self.fittedvars]
 
-        message(
-            "Fitted " + str(len(self.fittedvars)) + " variables to the figure."
-            )
+        # message(
+        #     "Fitted " + str(len(self.fittedvars)) + " variables to the figure."
+        #     )
 
     def add_grid(self, arg, **kwargs):
         self.fig.append(

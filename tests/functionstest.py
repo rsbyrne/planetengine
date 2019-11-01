@@ -20,31 +20,31 @@ def testfn():
 
     makeFns = [
         lambda var: var ** constant,
-        lambda var: pfn.region._construct(var, shape),
+        lambda var: pfn.region.default(var, shape),
         lambda var: var * variable1,
         lambda var: pfn.component.rad(var),
         lambda var: pfn.operations.log(var),
         lambda var: pfn.gradient.mag(var),
         lambda var: pfn.handlenan.zeroes(var),
+        lambda var: pfn.binarise.default(var),
         lambda var: var + 1.,
         lambda var: var * vanilla,
         lambda var: pfn.quantiles.terciles(var),
-        lambda var: pfn.substitute._construct(var, 2., 0.),
-        lambda var: pfn.binarise._construct(var),
+        lambda var: pfn.substitute.default(var, 2., 0.),
         lambda var: var * variable1,
-        lambda var: pfn.merge._construct(*[
+        lambda var: pfn.merge.default(*[
             compVar * -1. \
                 for compVar in pfn.split.getall(var)
             ]),
         lambda var: pfn.component.rad(var),
         lambda var: pfn.gradient.ang(var),
-        lambda var: pfn.normalise._construct(var, [1., 2.]),
+        lambda var: pfn.normalise.default(var, [1., 2.]),
         lambda var: pfn.clip.torange(var, [1.2, 1.8]),
-        lambda var: pfn.handlenan._construct(var, 1.6),
-        lambda var: pfn.filter._construct(var, 1.6),
-        lambda var: pfn.region._construct(var, shape),
+        lambda var: pfn.handlenan.default(var, 1.6),
+        lambda var: pfn.filter.default(var, 1.6),
+        lambda var: pfn.region.default(var, shape),
         lambda var: pfn.handlenan.zeroes(var),
-        lambda var: pfn.binarise._construct(var)
+        lambda var: pfn.binarise.default(var)
         ]
 
     var = variable2
