@@ -13,12 +13,7 @@ class Shape(_basetypes.BaseTypes):
 
     opTag = 'Shape'
 
-    defaultName = 'anon'
-
     def __init__(self, vertices, varName = None, *args, **kwargs):
-
-        if varName is None:
-            varName = self.defaultName
 
         shape = _fn.shape.Polygon(vertices)
         self.vertices = vertices
@@ -26,6 +21,9 @@ class Shape(_basetypes.BaseTypes):
         self.richvertices = shapes.interp_shape(self.vertices, num = 1000)
         self.morphs = {}
         self._currenthash = hasher(self.vertices)
+
+        defaultName = str(self._currenthash)
+        self.varName = varName
 
         self._hashVars = [self.vertices,]
         # self.data = self.vertices

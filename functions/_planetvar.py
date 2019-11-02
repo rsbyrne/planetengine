@@ -22,35 +22,37 @@ def get_opHash(varClass, *hashVars, **stringVariants):
 
     hashList = []
 
-    if varClass is _basetypes.Shape:
-        assert len(hashVars) == 1
-        vertices = hashVars[0]
-        assert type(vertices) == np.ndarray
-        hashList.append(vertices)
+    if issubclass(varClass, _basetypes.BaseTypes):
 
-    elif varClass is _basetypes.Constant:
-        assert len(hashVars) == 1
-        var = UWFn.convert(hashVars[0])
-        if var is None:
-            raise Exception
-        if len(list(var._underlyingDataItems)) > 0:
-            raise Exception
-        value = var.evaluate()[0]
-        valString = utilities.stringify(
-            value
-            )
-        stringVariants = {'val': valString}
+        if varClass is _basetypes.Shape:
+            assert len(hashVars) == 1
+            vertices = hashVars[0]
+            assert type(vertices) == np.ndarray
+            hashList.append(vertices)
 
-    elif varClass is _basetypes.Variable:
-        assert len(hashVars) == 1
-        var = UWFn.convert(hashVars[0])
-        hashList.append(var.__hash__())
+        elif varClass is _basetypes.Constant:
+            assert len(hashVars) == 1
+            var = UWFn.convert(hashVars[0])
+            if var is None:
+                raise Exception
+            if len(list(var._underlyingDataItems)) > 0:
+                raise Exception
+            value = var.evaluate()[0]
+            valString = utilities.stringify(
+                value
+                )
+            stringVariants = {'val': valString}
 
-    elif varClass is _basetypes.Parameter:
-        assert len(hashVars) == 0
-        pass
-        # random_hash = random.randint(0, 1e18)
-        # hashList.append(random_hash)
+        elif varClass is _basetypes.Variable:
+            assert len(hashVars) == 1
+            var = UWFn.convert(hashVars[0])
+            hashList.append(var.__hash__())
+
+        elif varClass is _basetypes.Parameter:
+            assert len(hashVars) == 0
+            pass
+            # random_hash = random.randint(0, 1e18)
+            # hashList.append(random_hash)
 
     else:
 
@@ -65,7 +67,7 @@ def get_opHash(varClass, *hashVars, **stringVariants):
             for underlying in sorted(var._underlyingDataItems):
                 inVars.append(_convert.convert(underlying))
             hashVars = inVars
-            stringVariants = {'UWhash': var.__hash__()}
+            hashList.append(var.__hash__())
         else:
             hashVars = _convert.convert(hashVars)
 
@@ -79,8 +81,9 @@ def get_opHash(varClass, *hashVars, **stringVariants):
                     rootVarHashes.append(rootVar.__hash__())
         hashList.extend(list(sorted(set(rootVarHashes))))
 
-    fulltag = update_opTag(varClass.opTag, stringVariants)
-    hashList.append(fulltag)
+    opTag = update_opTag(varClass.opTag, stringVariants)
+
+    hashList.append(opTag)
     hashVal = hasher(hashList)
 
     return hashVal
@@ -121,15 +124,15 @@ class PlanetVar(UWFn):
                     )
 
         # Naming the variable:
-
-        self.opTag = update_opTag(self.opTag, self.stringVariants)
-        if hide:
-            if len(self.inVars) > 1:
-                raise Exception
-            self.varName = self.inVar.varName
+        long_opTag = update_opTag(self.opTag, self.stringVariants)
+        if hasattr(self, 'varName'):
+            if self.varName is None:
+                self.varName = self.defaultName
+            self.varName = self.opTag + '{' + str(self.varName) + '}'
         else:
-            inTags = [inVar.varName for inVar in self.inVars]
-            self.varName = self.opTag + '{' + ';'.join(inTags) + '}'
+            inTags = [str(inVar.varName) for inVar in self.inVars]
+            self.varName = long_opTag + '{' + ';'.join(inTags) + '}'
+        self.opTag = long_opTag
 
         # Stuff to make Underworld happy:
 

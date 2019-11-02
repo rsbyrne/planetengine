@@ -22,5 +22,6 @@ from . import substitute
 from . import surface
 from . import tile
 from . import vanilla
+from . import _basetypes as basetypes
 
 from ._convert import convert

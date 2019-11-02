@@ -15,8 +15,6 @@ class Variable(_basetypes.BaseTypes):
 
     opTag = 'Variable'
 
-    defaultName = 'anon'
-
     convertTypes = {
         uw.mesh._meshvariable.MeshVariable,
         uw.swarm._swarmvariable.SwarmVariable
@@ -31,21 +29,11 @@ class Variable(_basetypes.BaseTypes):
         if len(list(var._underlyingDataItems)) == 0:
             raise Exception
 
-        if varName is None:
-            if hasattr(var, 'name'):
-                varName = var.name
-            else:
-                varName = self.defaultName
+        self.defaultName = var.__hash__()
+        self.varName = varName
 
         if not type(var) in self.convertTypes:
-            from . import projection
-            vanillaVar = vanilla.default(var)
-            inVar = projection.default(vanillaVar)
-            var = inVar.var
-            if hasattr(vanillaVar, 'scales'):
-                var.scales = vanillaVar.scales
-            if hasattr(vanillaVar, 'bounds'):
-                var.bounds = vanillaVar.bounds
+            raise Exception
 
         self.data = var.data
 
@@ -63,10 +51,6 @@ class Variable(_basetypes.BaseTypes):
             raise Exception
 
         self._hashVars = [var]
-
-        if not varName == self.defaultName:
-            var._planetVar = weakref.ref(self)
-        # self._set_meshdata()
 
         sample_data = self.data[0:1]
         self.dType = _planetvar.get_dType(sample_data)
@@ -89,7 +73,7 @@ class Variable(_basetypes.BaseTypes):
         if hasattr(var, 'bounds'):
             self.bounds = var.bounds
 
-        self.stringVariants = {'varName': varName, 'vector': vector}
+        self.stringVariants = {'varName': varName}
         self.inVars = []
         self.parameters = []
         self.var = var

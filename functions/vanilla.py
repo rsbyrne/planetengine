@@ -12,7 +12,7 @@ class Vanilla(_function.Function):
 
     opTag = 'Vanilla'
 
-    def __init__(self, inVar, *args, **kwargs):
+    def __init__(self, inVar, *args, varName = None, vector = None, **kwargs):
 
         var = UWFn.convert(inVar)
 
@@ -20,6 +20,9 @@ class Vanilla(_function.Function):
             raise Exception
         if not len(var._underlyingDataItems) > 0:
             raise Exception
+
+        self.defaultName = var.__hash__()
+        self.varName = varName
 
         inVars = _convert.convert(
             tuple(
@@ -29,7 +32,9 @@ class Vanilla(_function.Function):
                 )
             )
 
-        self.stringVariants = {'UWhash': var.__hash__()}
+        self.vector = vector
+
+        self.stringVariants = {'varName': varName}
         self.inVars = inVars
         self.parameters = []
         self.var = var

@@ -10,10 +10,6 @@ class BaseTypes(_planetvar.PlanetVar):
             evalInput = self.substrate
         return self.var.evaluate(evalInput)
 
-    # def _update(self, **kwargs):
-    #     self._partial_update()
-    #     # self._set_summary_stats()
-
     def __call__(self):
         return self.var
 

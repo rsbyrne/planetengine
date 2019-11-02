@@ -16,17 +16,15 @@ def _convert(var, varName = None):
         # message("Already a _planetvar.PlanetVar! Returning.")
         return var
 
-    if hasattr(var, '_planetVar'):
-        outVar  = var._planetVar()
-        if isinstance(outVar, _planetvar.PlanetVar):
-            if (outVar.stringVariants['varName'] == varName) \
-                    or (varName is None):
-                return outVar
+    # if hasattr(var, '_planetVar'):
+    #     outVar  = var._planetVar()
+    #     if isinstance(outVar, _planetvar.PlanetVar):
+    #         if (outVar.stringVariants['varName'] == varName) \
+    #                 or (varName is None):
+    #             return outVar
 
     if type(var) == np.ndarray:
         if len(var.shape) == 2:
-            if varName is None:
-                varName = _basetypes.Shape.defaultName
             stringVariants = {'varName': varName}
             varClass = _basetypes.Shape
         elif len(var.shape) == 1:
@@ -48,17 +46,11 @@ def _convert(var, varName = None):
             stringVariants = {'val': valString}
             varClass = _basetypes.Constant
         elif type(var) in _basetypes.Variable.convertTypes:
-            if varName is None:
-                varName = _basetypes.Variable.defaultName
             stringVariants = {'varName': varName}
             varClass = _basetypes.Variable
         elif isinstance(var, UWFn):
-            if not varName is None:
-                stringVariants = {'varName': varName}
-                varClass = _basetypes.Variable
-            else:
-                stringVariants = {}
-                varClass = vanilla.Vanilla
+            stringVariants = {'varName': varName}
+            varClass = vanilla.Vanilla
         else:
             raise Exception
 
