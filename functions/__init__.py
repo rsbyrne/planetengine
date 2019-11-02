@@ -12,7 +12,7 @@ from . import integral
 from . import merge
 from . import normalise
 from . import operations
-# from . import projection
+from . import projection
 from . import quantiles
 from . import range
 from . import region
@@ -23,5 +23,6 @@ from . import surface
 from . import tile
 from . import vanilla
 from . import _basetypes as basetypes
+from . import _planetvar
 
 from ._convert import convert

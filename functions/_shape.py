@@ -22,7 +22,7 @@ class Shape(_basetypes.BaseTypes):
         self.morphs = {}
         self._currenthash = hasher(self.vertices)
 
-        defaultName = str(self._currenthash)
+        self.defaultName = str(self._currenthash)
         self.varName = varName
 
         self._hashVars = [self.vertices,]

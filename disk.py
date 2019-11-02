@@ -7,11 +7,12 @@ import traceback
 import random
 import subprocess
 import underworld as uw
-from underworld import function as _fn
+_fn = uw.function
+UWFn = _fn._function.Function
 
 from . import utilities
 from .utilities import message
-from .functions import _basetypes
+from . import functions as pfn
 from . import paths
 
 from . import mpi
@@ -345,9 +346,17 @@ def varsOnDisk(
                 var.value = load_json(varName, checkpointDir)
             break
 
-        if type(var) == _basetypes.Variable:
-            var.update()
-            var = var.var
+        # if type(var) == pfn.basetypes.Variable:
+        #     var.update()
+        #     var = var.var
+        # elif type(var) == pfn.vanilla.Vanilla
+
+        if isinstance(var, UWFn):
+            pvar = pfn.convert(var)
+            if not pvar.varType == 'meshVar':
+                pvar = pfn.projection.default(pvar)
+            pvar.update()
+            var = pvar.var
 
         if type(var) == uw.mesh._meshvariable.MeshVariable:
             substrate = var.mesh
