@@ -157,11 +157,11 @@ class PlanetVar(UWFn):
         # if not self.__class__ is _basetypes.Constant:
         #     self._set_weakref(self) # is static
 
-    #     self._safety_checks()
-    #
-    # def _safety_checks(self):
-    #     if hasattr(self, 'varDim'):
-    #         assert self.varDim < 99
+        self._safety_checks()
+
+    def _safety_checks(self):
+        if hasattr(self, 'varDim'):
+            assert self.varDim < 99
 
     def _set_rootVars(self):
         rootVars = set()
@@ -271,32 +271,32 @@ class PlanetVar(UWFn):
         if isinstance(self, _reduction.Reduction):
             self.value = self.evaluate(lazy = True)[0]
 
-    def _check_meshable(self):
-        if not any([
-                isinstance(self, _function.Function),
-                type(self) == _basetypes.Variable
-                ]):
-            raise Exception
-        if self.varType == 'constFn':
-            raise Exception
+    # def _check_meshable(self):
+    #     if not any([
+    #             isinstance(self, _function.Function),
+    #             type(self) == _basetypes.Variable
+    #             ]):
+    #         raise Exception
+    #     if self.varType == 'constFn':
+    #         raise Exception
 
-    def meshVar(self, update = True, returnvar = True):
-        self._check_meshable()
-        self.update()
-        if self.dType in ('int', 'boolean'):
-            rounding = 0
-        else:
-            rounding = 6
-        if type(self.var) == uw.mesh._meshvariable.MeshVariable:
-            outVar = self.var
-        else:
-            outVar = self.meshUtils.meshify(
-                self.var,
-                self.vector,
-                update = update
-                )
-        if returnvar:
-            return outVar
+    # def meshVar(self, update = True, returnvar = True):
+    #     self._check_meshable()
+    #     self.update()
+    #     if self.dType in ('int', 'boolean'):
+    #         rounding = 0
+    #     else:
+    #         rounding = 6
+    #     if type(self.var) == uw.mesh._meshvariable.MeshVariable:
+    #         outVar = self.var
+    #     else:
+    #         outVar = self.meshUtils.meshify(
+    #             self.var,
+    #             self.vector,
+    #             update = update
+    #             )
+    #     if returnvar:
+    #         return outVar
 
     def _input_processing(self, evalInput):
         return evalInput

@@ -6,6 +6,7 @@ from . import _function
 from . import _convert
 from ._construct import _construct as _master_construct
 from .. import fieldops
+from . import projection as _projection
 
 def _construct(*args, **kwargs):
     func = _master_construct(Tile, *args, **kwargs)
@@ -22,6 +23,8 @@ class Tile(_function.Function):
             freqs,
             mirrored
             )
+        if not inVar.varType == 'meshVar':
+            inVar = _projection.default(inVar)
 
         var = inVar.mesh.add_variable(inVar.varDim)
 
@@ -38,7 +41,7 @@ class Tile(_function.Function):
         freqs = tuple(*freqs.evaluate())
         mirrored = tuple(*mirrored.evaluate())
         fieldops.copyField(
-            inVar.meshVar(),
+            inVar.var,
             self.var,
             freqs = freqs,
             mirrored = mirrored

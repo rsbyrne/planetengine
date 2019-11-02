@@ -38,8 +38,10 @@ class Variable(_basetypes.BaseTypes):
                 varName = self.defaultName
 
         if not type(var) in self.convertTypes:
+            from . import projection
             vanillaVar = vanilla.default(var)
-            var = vanillaVar.meshVar(update = False)
+            inVar = projection.default(vanillaVar)
+            var = inVar.var
             if hasattr(vanillaVar, 'scales'):
                 var.scales = vanillaVar.scales
             if hasattr(vanillaVar, 'bounds'):

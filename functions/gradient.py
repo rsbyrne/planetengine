@@ -4,6 +4,7 @@ from . import _convert
 from . import _function
 from ._construct import _construct as _master_construct
 from . import component as _component
+from . import projection as _projection
 
 def _construct(*args, **kwargs):
     func = _master_construct(Gradient, *args, **kwargs)
@@ -16,8 +17,9 @@ class Gradient(_function.Function):
     def __init__(self, inVar, *args, **kwargs):
 
         inVar = _convert.convert(inVar)
-        self._inVarMeshVar = inVar.meshVar(update = False)
-        var = self._inVarMeshVar.fn_gradient
+        if not inVar.varType == 'meshVar':
+            inVar = _projection.default(inVar)
+        var = inVar.var.fn_gradient
 
         self.stringVariants = {}
         self.inVars = [inVar]
@@ -28,10 +30,6 @@ class Gradient(_function.Function):
         self.bounds = [['.'] * inVar.mesh.dim ** 2] * inVar.varDim
 
         super().__init__(**kwargs)
-
-    def _partial_update(self):
-        if hasattr(self._inVarMeshVar, 'project'):
-            self._inVarMeshVar.project()
 
 def default(*args, **kwargs):
     return _construct(*args, **kwargs)

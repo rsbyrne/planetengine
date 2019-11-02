@@ -57,64 +57,64 @@ def testfn():
     message("All together: ", round(sum(timings), 3))
     quickShow(var)
 
-    # def testfn(var, timings = '', layer = 1):
-    #     def outer_timefn(var, timinglist = []):
-    #         system.reset()
-    #         var.update()
-    #         system.iterate()
-    #         timing = timeit(var.update, number = 1)
-    #         timinglist.append(timing)
-    #         return timinglist
-    #     var_timings = []
-    #     for i in range(1):
-    #         var_timings = outer_timefn(var, var_timings)
-    #     var_timing = sum(var_timings) / len(var_timings)
-    #     var_timing = round(var_timing, 6)
-    #     timings += '\n'
-    #     newrow = ''
-    #     newrow += layer * '-' + ' '
-    #     newrow += var.opTag
-    #     newrow += ': '
-    #     newrow += '.' * (56 - len(newrow)) + ' '
-    #     newrow += str(var_timing)
-    #     timings += newrow
-    #     for inVar in var.inVars:
-    #         timings = testfn(inVar, timings, layer + 1)
-    #     return timings
-    #
-    # timings = testfn(var)
-    #
-    # message(timings)
-    #
-    # red = pfn.integral.default(var)
-    #
-    # system.reset()
-    # red.update()
-    # system.iterate()
-    # val = red.evaluate()
-    # message(val)
-    # val = red.evaluate()
-    # message(val)
-    # system.iterate()
-    # val = red.evaluate()
-    # message(val)
-    # val = red.evaluate()
-    # message(val)
-    #
-    # def testfn():
-    #     freshsteps = []
-    #     stalesteps = []
-    #     for i in range(1):
-    #         system.reset()
-    #         red.update
-    #         system.iterate()
-    #         freshsteps.append(timeit(red.update, number = 1))
-    #     for i in range(1):
-    #         stalesteps.append(timeit(red.update, number = 1))
-    #     average_fresh = round(sum(freshsteps) / len(freshsteps), 5)
-    #     average_stale = round(sum(stalesteps) / len(stalesteps), 5)
-    #     ratio = round(average_fresh / average_stale, 5)
-    #     return(average_fresh, average_stale, ratio)
-    #
-    # output = testfn()
-    # message(output)
+    def testfn(var, timings = '', layer = 1):
+        def outer_timefn(var, timinglist = []):
+            system.reset()
+            var.update()
+            system.iterate()
+            timing = timeit(var.update, number = 1)
+            timinglist.append(timing)
+            return timinglist
+        var_timings = []
+        for i in range(1):
+            var_timings = outer_timefn(var, var_timings)
+        var_timing = sum(var_timings) / len(var_timings)
+        var_timing = round(var_timing, 6)
+        timings += '\n'
+        newrow = ''
+        newrow += layer * '-' + ' '
+        newrow += var.opTag
+        newrow += ': '
+        newrow += '.' * (56 - len(newrow)) + ' '
+        newrow += str(var_timing)
+        timings += newrow
+        for inVar in var.inVars:
+            timings = testfn(inVar, timings, layer + 1)
+        return timings
+
+    timings = testfn(var)
+
+    message(timings)
+
+    red = pfn.integral.default(var)
+
+    system.reset()
+    red.update()
+    system.iterate()
+    val = red.evaluate()
+    message(val)
+    val = red.evaluate()
+    message(val)
+    system.iterate()
+    val = red.evaluate()
+    message(val)
+    val = red.evaluate()
+    message(val)
+
+    def testfn():
+        freshsteps = []
+        stalesteps = []
+        for i in range(1):
+            system.reset()
+            red.update
+            system.iterate()
+            freshsteps.append(timeit(red.update, number = 1))
+        for i in range(1):
+            stalesteps.append(timeit(red.update, number = 1))
+        average_fresh = round(sum(freshsteps) / len(freshsteps), 5)
+        average_stale = round(sum(stalesteps) / len(stalesteps), 5)
+        ratio = round(average_fresh / average_stale, 5)
+        return(average_fresh, average_stale, ratio)
+
+    output = testfn()
+    message(output)

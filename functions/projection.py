@@ -26,12 +26,15 @@ class Projection(_function.Function):
             var,
             inVar,
             )
-        self._meshVar = lambda: var
 
         self.stringVariants = {}
         self.inVars = [inVar]
         self.parameters = []
         self.var = var
+
+        super().__init__(**kwargs)
+
+        self.varType = 'meshVar'
 
     def _partial_update(self):
         self._projector.solve()
@@ -47,5 +50,5 @@ class Projection(_function.Function):
             rounding
             )
 
-    def default(*args, **kwargs):
-        return _construct(*args, **kwargs)
+def default(*args, **kwargs):
+    return _construct(*args, **kwargs)
