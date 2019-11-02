@@ -16,8 +16,7 @@ class Component(_function.Function):
 
         inVar = _convert.convert(inVar)
 
-        if not inVar.varDim == inVar.mesh.dim:
-            # hence is not a vector and so has no components:
+        if not inVar.vector:
             raise Exception
         if component == 'mag':
             var = _fn.math.sqrt(

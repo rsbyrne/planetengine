@@ -170,7 +170,7 @@ class QuickFig:
 
     def add_arrows(self, arg, colour = 'black', **kwargs):
         planetVar = convert(arg)
-        if not planetVar.varDim == planetVar.mesh.dim:
+        if not planetVar.vector:
             raise Exception
         kwargs = {**kwargs}
         topop = {'colourBar', 'colour'}

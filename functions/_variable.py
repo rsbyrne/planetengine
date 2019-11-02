@@ -22,7 +22,7 @@ class Variable(_basetypes.BaseTypes):
         uw.swarm._swarmvariable.SwarmVariable
         }
 
-    def __init__(self, inVar, varName = None, *args, **kwargs):
+    def __init__(self, inVar, varName = None, vector = None, *args, **kwargs):
 
         var = UWFn.convert(inVar)
 
@@ -62,11 +62,6 @@ class Variable(_basetypes.BaseTypes):
 
         self._hashVars = [var]
 
-        self.stringVariants = {'varName': varName}
-        self.inVars = []
-        self.parameters = []
-        self.var = var
-
         if not varName == self.defaultName:
             var._planetVar = weakref.ref(self)
         # self._set_meshdata()
@@ -74,16 +69,28 @@ class Variable(_basetypes.BaseTypes):
         sample_data = self.data[0:1]
         self.dType = _planetvar.get_dType(sample_data)
         self.varDim = self.data.shape[1]
-        if not self.mesh is None:
-            self.vector = self.varDim == self.mesh.dim
-        else:
-            self.vector = False
+
+        if vector is None:
+            if not self.mesh is None:
+                vector = self.varDim == self.mesh.dim
+            else:
+                vector = False
+        elif vector:
+            if not self.varDim == self.mesh.dim:
+                raise Exception
+        self.vector = vector
+
         self.meshUtils = meshutils.get_meshUtils(self.mesh)
 
         if hasattr(var, 'scales'):
             self.scales = var.scales
         if hasattr(var, 'bounds'):
             self.bounds = var.bounds
+
+        self.stringVariants = {'varName': varName, 'vector': vector}
+        self.inVars = []
+        self.parameters = []
+        self.var = var
 
         super().__init__(**kwargs)
 

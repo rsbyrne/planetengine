@@ -6,12 +6,7 @@ class Function(_planetvar.PlanetVar):
 
     def __init__(self, *args, **kwargs):
 
-        for inVar in self.inVars:
-            if not isinstance(inVar, _planetvar.PlanetVar):
-                raise Exception(
-                    "Type " + str(type(inVar)) + " is not _planetvar.PlanetVar."
-                    )
-
+        self._check_inVars()
         self._detect_substrates()
         self._detect_attributes()
         if not self.varType == 'constFn':
@@ -19,6 +14,13 @@ class Function(_planetvar.PlanetVar):
         self._hashVars = self.inVars
 
         super().__init__(**kwargs)
+
+    def _check_inVars(self):
+        for inVar in self.inVars:
+            if not isinstance(inVar, _planetvar.PlanetVar):
+                raise Exception(
+                    "Type " + str(type(inVar)) + " is not _planetvar.PlanetVar."
+                    )
 
     def _detect_substrates(self):
         meshes = set()
@@ -59,10 +61,22 @@ class Function(_planetvar.PlanetVar):
                 sample_data = self.var.evaluate(self.substrate.data[0:1])
         self.dType = _planetvar.get_dType(sample_data)
         self.varDim = sample_data.shape[1]
-        if not self.mesh is None:
-            self.vector = self.varDim == self.mesh.dim
+        self._check_vector()
+
+    def _check_vector(self):
+        if hasattr(self, 'vector'):
+            vector = self.vector
         else:
-            self.vector = False
+            vector = None
+        if vector is None:
+            if not self.mesh is None:
+                vector = self.varDim == self.mesh.dim
+            else:
+                vector = False
+        elif vector:
+            if not self.varDim == self.mesh.dim:
+                raise Exception
+        self.vector = vector
 
     def _detect_scales_bounds(self):
         fields = []
