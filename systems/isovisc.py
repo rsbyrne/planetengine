@@ -1,7 +1,6 @@
 import underworld as uw
 from underworld import function as _fn
 import math
-import numpy as np
 
 from planetengine._system import System
 

@@ -1,28 +1,31 @@
 import underworld as uw
 from underworld import function as _fn
 import math
+import numpy as np
 
 from planetengine._system import System
 
 def build(*args, name = None, **kwargs):
-    built = Arrhenius(*args, **kwargs)
+    built = Isovisc(*args, **kwargs)
     if type(name) == str:
         built.name = name
     return built
 
-class Arrhenius(System):
+class Isovisc(System):
 
-    name = "arrhenius"
+    name = "isovisc"
     script = __file__
 
     def __init__(
         self,
         *args,
-        res = 64,
+        res = 32,
         f = 0.54,
         aspect = 1.,
-        Ra = 1e7,
-        eta0 = 3e4,
+        visc_ref = 1.,
+        visc_ratio = 1.,
+        density_ref = 1.,
+        density_ratio = 0.,
         **kwargs
         ):
 
@@ -72,13 +75,19 @@ class Arrhenius(System):
             periodic = [False, periodic]
             )
 
-        temperatureField = uw.mesh.MeshVariable(mesh, 1)
-        temperatureDotField = uw.mesh.MeshVariable(mesh, 1)
-        pressureField = uw.mesh.MeshVariable(mesh.subMesh, 1)
-        velocityField = uw.mesh.MeshVariable(mesh, 2)
+        velocityField = mesh.add_variable(2)
+        pressureField = mesh.subMesh.add_variable(1)
 
-        temperatureField.scales = [[0., 1.]]
-        temperatureField.bounds = [[0., 1., '.', '.']]
+        swarm = uw.swarm.Swarm(mesh)
+        materialField = swarm.add_variable(
+            dataType = "int",
+            count = 1
+            )
+        swarmLayout = uw.swarm.layouts.PerCellSpaceFillerLayout(
+            swarm = swarm,
+            particlesPerCell = 20
+            )
+        swarm.populate_using_layout(swarmLayout)
 
         ### BOUNDARIES ###
 
@@ -89,20 +98,15 @@ class Arrhenius(System):
         if periodic:
             velBC = uw.conditions.RotatedDirichletCondition(
                 variable = velocityField,
-                indexSetsPerDof = (inner + outer, None),
+                indexSetsPerDof = (inner + outer, inner + outer),
                 basis_vectors = (mesh.bnd_vec_normal, mesh.bnd_vec_tangent)
                 )
         else:
             velBC = uw.conditions.RotatedDirichletCondition(
                 variable = velocityField,
-                indexSetsPerDof = (inner + outer, sides),
+                indexSetsPerDof = (inner + outer, sides + inner + outer),
                 basis_vectors = (mesh.bnd_vec_normal, mesh.bnd_vec_tangent)
                 )
-
-        tempBC = uw.conditions.DirichletCondition(
-            variable = temperatureField,
-            indexSetsPerDof = (inner + outer,)
-            )
 
         ### FUNCTIONS ###
 
@@ -110,18 +114,16 @@ class Arrhenius(System):
         vc_eqNum = uw.systems.sle.EqNumber(vc, False )
         vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
 
-        buoyancyFn = Ra * temperatureField
-
-        diffusivityFn = 1.
-
-        heatingFn = 1.
+        denseIndex = 0
+        lightIndex = 1
+        densityMap = {lightIndex: density_ratio * density_ref, denseIndex: density_ref}
+        densityFn = _fn.branching.map(fn_key = materialField, mapping = densityMap)
+        buoyancyFn = densityFn * -1. * mesh.unitvec_r_Fn
 
         ### RHEOLOGY ###
 
-        viscosityFn = _fn.math.pow(
-            eta0,
-            1. - temperatureField
-            )
+        viscosityMap = {lightIndex: visc_ratio * visc_ref, denseIndex: visc_ref}
+        viscosityFn  = _fn.branching.map(fn_key = materialField, mapping = viscosityMap)
 
         ### SYSTEMS ###
 
@@ -130,19 +132,16 @@ class Arrhenius(System):
             pressureField = pressureField,
             conditions = [velBC,],
             fn_viscosity = viscosityFn,
-            fn_bodyforce = buoyancyFn * mesh.unitvec_r_Fn,
+            fn_bodyforce = buoyancyFn,
             _removeBCs = False,
             )
 
         solver = uw.systems.Solver(stokes)
 
-        advDiff = uw.systems.AdvectionDiffusion(
-            phiField = temperatureField,
-            phiDotField = temperatureDotField,
+        advector = uw.systems.SwarmAdvector(
+            swarm = swarm,
             velocityField = vc,
-            fn_diffusivity = diffusivityFn,
-            fn_sourceTerm = heatingFn,
-            conditions = [tempBC,]
+            order = 2
             )
 
         ### SOLVING ###
@@ -177,17 +176,13 @@ class Arrhenius(System):
             solve()
 
         def integrate():
-            dt = advDiff.get_max_dt()
-            advDiff.integrate(dt)
+            dt = advector.get_max_dt()
+            advector.integrate(dt)
             return dt
 
         super().__init__(
-            varsOfState = {'temperatureField': temperatureField},
-            obsVars = {
-                'temperature': temperatureField,
-                'velocity': velocityField,
-                'stress': velocityField * viscosityFn
-                },
+            varsOfState = {'materialField': materialField},
+            obsVars = {'stress': velocityField * viscosityFn},
             _update = update,
             _integrate = integrate,
             _locals = locals(),
