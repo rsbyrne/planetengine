@@ -88,6 +88,14 @@ class Isovisc(System):
             particlesPerCell = 20
             )
         swarm.populate_using_layout(swarmLayout)
+        repopulator = uw.swarm.PopulationControl(
+            swarm,
+            aggressive = True,
+            splitThreshold = 0.15,
+            maxDeletions = 2,
+            maxSplits = 10,
+            particlesPerCell = 10
+            )
 
         ### BOUNDARIES ###
 
@@ -178,11 +186,17 @@ class Isovisc(System):
         def integrate():
             dt = advector.get_max_dt()
             advector.integrate(dt)
+            repopulator.repopulate()
             return dt
+
+        stress = velocityField * viscosityFn
+        stress.varName = 'stress'
+        materialField.varName = 'material'
+        velocityField.varName = 'velocity'
 
         super().__init__(
             varsOfState = {'materialField': materialField},
-            obsVars = {'stress': velocityField * viscosityFn},
+            obsVars = {'stress': stress, 'material': materialField},
             _update = update,
             _integrate = integrate,
             _locals = locals(),

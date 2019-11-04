@@ -3,6 +3,8 @@ from underworld.function._function import Function as UWFn
 from . import _function
 from . import _convert
 from ._construct import _construct as _master_construct
+from .. import utilities
+from .. import meshutils
 
 def _construct(*args, **kwargs):
     func = _master_construct(Vanilla, *args, **kwargs)
@@ -40,6 +42,11 @@ class Vanilla(_function.Function):
         self.var = var
 
         super().__init__(**kwargs)
+
+    def _detect_substrates(self):
+        self.mesh = utilities.get_mesh(self.var)
+        self.meshUtils = meshutils.get_meshUtils(self.mesh)
+        self.substrate = utilities.get_prioritySubstrate(self.var)
 
 def default(*args, **kwargs):
     return _construct(*args, **kwargs)

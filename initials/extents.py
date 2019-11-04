@@ -10,22 +10,17 @@ def build(*args, name = None, **kwargs):
 
 class Extents(IC):
 
-    varDim = 1
-    meshDim = 2
+    script = __file__
 
     def __init__(
             self,
-            shapes = None
+            *args,
+            shapes = None,
+            **kwargs
             ):
 
         # HOUSEKEEPING: this should always be here
-        self.script = __file__
-        self.inputs = {}
-
-        if shapes is None:
-            # shapes = args
-            raise Exception
-        self.inputs['shapes'] = shapes
+        inputs = locals().copy()
 
         self.polygons = [(0, _fn.misc.constant(True))]
         for val, vertices in shapes:
@@ -33,7 +28,13 @@ class Extents(IC):
                 (val, _fn.shape.Polygon(vertices))
                 )
 
-        super().__init__()
+        super().__init__(
+            args = args,
+            kwargs = kwargs,
+            inputs = inputs,
+            script = self.script,
+            evaluate = self.evaluate
+            )
 
     def evaluate(self, coordArray):
         outArray = np.zeros(

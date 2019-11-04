@@ -209,6 +209,8 @@ def box(
         mirrored = None,
         ):
 
+    meshUtils = get_meshUtils(mesh)
+
     if coordArray is None:
         coordArray = mesh.data
 
@@ -223,7 +225,7 @@ def box(
             radialCoords,
             inScales,
             outScales,
-            flip = [True, True]
+            flip = meshUtils.flip
             )
     else:
         outArray = rescale_array(
