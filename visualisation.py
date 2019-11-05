@@ -205,9 +205,9 @@ class QuickFig:
                 planetVar.substrate,
                 fn_colour = planetVar,
                 fn_mask = planetVar,
-                opacity = 0.5,
-                fn_size = 1e3 / float(planetVar.substrate.particleGlobalCount)**0.5,
-                colours = "purple green brown pink red",
+                # opacity = 0.5,
+                # fn_size = 1e3 / float(planetVar.substrate.particleGlobalCount)**0.5,
+                # colours = "purple green brown pink red",
                 **kwargs
                 )
             )

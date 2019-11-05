@@ -109,7 +109,7 @@ class Isovisc(System):
         vc_eqNum = uw.systems.sle.EqNumber(vc, False )
         vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
 
-        buoyancyFn = Ra * temperatureField
+        buoyancyFn = Ra * temperatureField * mesh.unitvec_r_Fn
 
         diffusivityFn = 1.
 
@@ -126,7 +126,7 @@ class Isovisc(System):
             pressureField = pressureField,
             conditions = [velBC,],
             fn_viscosity = viscosityFn,
-            fn_bodyforce = buoyancyFn * mesh.unitvec_r_Fn,
+            fn_bodyforce = buoyancyFn,
             _removeBCs = False,
             )
 
@@ -137,7 +137,7 @@ class Isovisc(System):
             phiDotField = temperatureDotField,
             velocityField = vc,
             fn_diffusivity = diffusivityFn,
-            fn_sourceTerm = heatingFn,
+            fn_sourceTerm = buoyancyFn,
             conditions = [tempBC,]
             )
 

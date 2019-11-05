@@ -5,14 +5,14 @@ import math
 from planetengine._system import System
 
 def build(*args, name = None, **kwargs):
-    built = Arrhenius(*args, **kwargs)
+    built = Viscoplastic(*args, **kwargs)
     if type(name) == str:
         built.name = name
     return built
 
-class Arrhenius(System):
+class Viscoplastic(System):
 
-    name = "arrhenius"
+    name = "viscoplastic"
     script = __file__
 
     def __init__(
@@ -118,10 +118,36 @@ class Arrhenius(System):
 
         ### RHEOLOGY ###
 
-        viscosityFn = _fn.math.pow(
+        creepViscFn = _fn.math.pow(
             eta0,
             1. - temperatureField
             )
+
+        depthFn = mesh.radialLengths[1] - mesh.radiusFn
+        yieldStressFn = tau0 + depthFn * tau1
+        vc = uw.mesh.MeshVariable(
+            mesh = mesh,
+            nodeDofCount = 2
+            )
+        vc_eqNum = uw.systems.sle.EqNumber(
+            vc,
+            False
+            )
+        vcVec = uw.systems.sle.SolutionVector(
+            vc,
+            vc_eqNum
+            )
+        secInvFn = _fn.tensor.second_invariant(
+            _fn.tensor.symmetric(
+                vc.fn_gradient
+                )
+            )
+        plasticViscFn = yieldStressFn / (2. * secInvFn + 1e-18)
+
+        viscosityFn = _fn.misc.min(
+            creepViscFn,
+            plasticViscFn
+            ) + 0. * velocityField[0]
 
         ### SYSTEMS ###
 
@@ -164,7 +190,7 @@ class Arrhenius(System):
         def solve():
             velocityField.data[:] = 0.
             solver.solve(
-                nonLinearIterate = False,
+                nonLinearIterate = True,
                 callback_post_solve = postSolve,
                 )
             uw.libUnderworld.Underworld.AXequalsX(

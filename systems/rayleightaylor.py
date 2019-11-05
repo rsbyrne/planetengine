@@ -6,14 +6,14 @@ import numpy as np
 from planetengine._system import System
 
 def build(*args, name = None, **kwargs):
-    built = Isovisc(*args, **kwargs)
+    built = RayleighTaylor(*args, **kwargs)
     if type(name) == str:
         built.name = name
     return built
 
-class Isovisc(System):
+class RayleighTaylor(System):
 
-    name = "isovisc"
+    name = "rayleightaylor"
     script = __file__
 
     def __init__(
@@ -78,7 +78,7 @@ class Isovisc(System):
         velocityField = mesh.add_variable(2)
         pressureField = mesh.subMesh.add_variable(1)
 
-        swarm = uw.swarm.Swarm(mesh)
+        swarm = uw.swarm.Swarm(mesh, particleEscape = True)
         materialField = swarm.add_variable(
             dataType = "int",
             count = 1
