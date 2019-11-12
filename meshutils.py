@@ -90,7 +90,7 @@ class MeshUtils:
 
         elif type(mesh) == uw.mesh.FeMesh_Annulus:
 
-            self.flip = [True, False] # left to right, bottom to top
+            self.flip = [True, True] # left to right, bottom to top
             _flip_cfs = [int(not boolean) * 2. - 1. for boolean in self.flip]
 
             self.comps = {
