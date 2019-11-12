@@ -88,7 +88,7 @@ class Standard(_observer.Observer):
 
         saveCollectors = [mainCollector,]
 
-        fig = planetengine.visualisation.QuickFig(
+        fig = QuickFig(
             facecolour = 'black',
             figsize = (600, 600),
             quality = 3

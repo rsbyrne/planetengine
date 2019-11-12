@@ -3,25 +3,24 @@ import glucifer
 import numpy as np
 import os
 
-from . import functions as pfn
-from .utilities import message
-from .functions import convert
-from . import functions as pfn
-from .meshutils import get_meshUtils
-
-from . import mpi
+from .. import functions as pfn
+from ..utilities import message
+from ..functions import convert
+from .. import functions as pfn
+from ..meshutils import get_meshUtils
+from .. import mpi
+from . import _fig
 
 def quickShow(*args, **kwargs):
 
     quickFig = QuickFig(*args, **kwargs)
     quickFig.show()
 
-class QuickFig:
+class QuickFig(_fig.Fig):
 
     def __init__(
             self,
             *args,
-            figname = 'default',
             onMesh = True,
             facecolour = 'white',
             edgecolour = 'white',
@@ -38,7 +37,6 @@ class QuickFig:
             **kwargs
             )
 
-        self.figname = figname
         self.features = set()
         self.fittedvars = []
         self.updateFuncs = []
@@ -64,6 +62,8 @@ class QuickFig:
             colourBar = colourBar,
             **kwargs
             )
+
+        super().__init__(**kwargs)
 
     def add_vars(self, *args, **kwargs):
 
@@ -216,23 +216,15 @@ class QuickFig:
                 )
             )
 
-    def update(self):
+    def _update(self):
         for updateFunc in self.updateFuncs:
             updateFunc()
 
     def show(self):
-        self.update()
+        self._update()
         for var in self.fittedvars:
             message(var.varName)
         self.fig.show()
 
-    def save(self, path = '', name = None):
-        self.update()
-        if name is None:
-            name = self.figname
-        if mpi.rank == 0:
-            if not os.path.isdir(path):
-                os.makedirs(path)
-            assert os.path.isdir(path)
-        # mpi.barrier()
-        self.fig.save(os.path.join(path, name))
+    def _save(self, path, name, ext):
+        self.fig.save(os.path.join(path, name + '.' + ext))

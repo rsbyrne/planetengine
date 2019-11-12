@@ -33,4 +33,4 @@ from . import raster
 from .utilities import message
 from .utilities import log
 from .fieldops import copyField
-from .visualisation import quickShow
+quickShow = visualisation.quickShow

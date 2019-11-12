@@ -1,11 +1,13 @@
 import underworld as uw
 import numpy as np
 import os
-from . import mpi
-from . import fieldops
-from .utilities import message
-from . import functions as pfn
 from PIL import Image
+
+from .. import mpi
+from .. import fieldops
+from ..utilities import message
+from .. import functions as pfn
+from . import _fig
 
 class Data:
     def __init__(self, inVar, size = (16, 16)):
@@ -32,17 +34,15 @@ class Data:
         data = mpi.comm.bcast(data, root = 0)
         self.data = data
 
-class Raster:
+class Raster(_fig.Fig):
     '''
     Modes: 1, L, P, RGB, RGBA, CMYK, YCbCr, LAB, HSV, I, F, RGBa, LA, RGBX
     '''
-    def __init__(self, *args, size = (16, 16), mode = 'L', name = 'anon', add = None):
-        self.name = name
+    def __init__(self, *args, size = (16, 16), mode = 'L', **kwargs):
         self.mode = mode
-        self.add = add
         self.dataObjs = [Data(arg, size = size) for arg in args]
-        self.update()
-    def update(self):
+        self._update()
+    def _update(self):
         self._update_data()
         self._update_img()
     def _update_data(self):
@@ -59,25 +59,6 @@ class Raster:
         img = Image.merge(self.mode, bands)
         self.bands = bands
         self.img = img
-    def save(self, path = '', name = None, add = None, ext = 'png'):
-        self.update()
-        if name is None:
-            name = self.name
-        if add is None:
-            if not self.add is None:
-                add = self.add
-            else:
-                add = ''
-        if callable(add):
-            add = add()
-        if type(add) == int:
-            add = '_' + str(add).zfill(8)
-        elif len(add) > 0:
-            add = '_' + str(add)
-        name += add
-        if mpi.rank == 0:
-            if not os.path.isdir(path):
-                os.makedirs(path)
-            assert os.path.isdir(path)
-        # mpi.barrier()
+        super().__init__(**kwargs)
+    def _save(self, path, name, ext):
         self.img.save(os.path.join(path, name + '.' + ext))
