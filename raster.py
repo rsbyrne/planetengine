@@ -4,6 +4,7 @@ from . import fieldops
 from .utilities import message
 from . import functions as pfn
 from PIL import Image
+
 class Data:
     def __init__(self, inVar, size = 16):
         mesh = uw.mesh.FeMesh_Cartesian(

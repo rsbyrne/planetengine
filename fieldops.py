@@ -7,6 +7,7 @@ from underworld import function as _fn
 from .meshutils import get_meshUtils
 from . import mapping
 from . import utilities
+from .functions import projection as _projection
 get_scales = utilities.get_scales
 message = utilities.message
 
@@ -193,7 +194,12 @@ def copyField(field1, field2,
         outCoords = field2.swarm.particleCoordinates.data
         outDim = field2.count
     else:
-        raise Exception("Input 2 not a field.")
+        projVar = _projection.get_meshVar(field1)
+        field2 = projVar.var
+        outMesh = field2.mesh
+        outCoords = outMesh.data
+        outDim = field2.nodeDofCount
+        # raise Exception("Input 2 not a field.")
     outField = field2
 
     fullInField = get_fullLocalMeshVar(field1)

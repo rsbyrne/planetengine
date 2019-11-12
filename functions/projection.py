@@ -52,3 +52,9 @@ class Projection(_function.Function):
 
 def default(*args, **kwargs):
     return _construct(*args, **kwargs)
+
+def get_meshVar(inVar, **kwargs):
+    inVar = _convert.convert(inVar)
+    if not inVar.varType == 'meshVar':
+        inVar = _construct(inVar, **kwargs)
+    return inVar

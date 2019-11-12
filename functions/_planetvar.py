@@ -158,7 +158,7 @@ class PlanetVar(UWFn):
         self._update()
 
         # if not self.__class__ is _basetypes.Constant:
-        #     self._set_weakref(self) # is static
+        self._set_weakref() # is static
 
         self._safety_checks()
 
@@ -273,6 +273,9 @@ class PlanetVar(UWFn):
             self._minmax.evaluate(self.substrate)
         if isinstance(self, _reduction.Reduction):
             self.value = self.evaluate(lazy = True)[0]
+
+    def _set_weakref(self):
+        self.var._planetVar = weakref.ref(self)
 
     # def _check_meshable(self):
     #     if not any([
