@@ -47,8 +47,14 @@ class Isobench(_observer.Observer):
         avTemp = pfn.integral.default(temperature)
         tempGrad = pfn.gradient.rad(temperature)
         Nu = pfn.integral.outer(tempGrad) / pfn.integral.inner(temperature) * -1.
-        velMag = pfn.component.mag(velocity)
-        VRMS = pfn.integral.default(velMag)
+        VRMS = pfn.operations.sqrt(
+            pfn.integral.volume(
+                pfn.operations.dot(
+                    velocity,
+                    velocity
+                    )
+                )
+            )
         horizVel = pfn.component.ang(velocity)
         surfAngVel = pfn.integral.default(horizVel)
 

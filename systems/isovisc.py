@@ -137,7 +137,7 @@ class Isovisc(System):
             phiDotField = temperatureDotField,
             velocityField = vc,
             fn_diffusivity = diffusivityFn,
-            fn_sourceTerm = buoyancyFn,
+            fn_sourceTerm = heatingFn,
             conditions = [tempBC,]
             )
 
