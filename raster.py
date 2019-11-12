@@ -1,5 +1,6 @@
 import underworld as uw
 import numpy as np
+from . import mpi
 from . import fieldops
 from .utilities import message
 from . import functions as pfn
@@ -8,7 +9,7 @@ from PIL import Image
 class Data:
     def __init__(self, inVar, size = 16):
         mesh = uw.mesh.FeMesh_Cartesian(
-            elementRes = (size - 1, size - 1)
+            elementRes = (size, size)
             )
         self.var = mesh.add_variable(1)
         self.var.scales = [[-128., 127.]]
@@ -17,14 +18,18 @@ class Data:
         self.data = np.zeros((size, size)).astype('int8')
         self.update()
     def update(self):
+        self.inVar.update()
         tolerance = fieldops.copyField(
-            self.inVar.meshVar(),
+            self.inVar,
             self.var
             )
-        data = self.var.data
-        data = data.reshape([self.size, self.size])
-        data = np.flip(data, axis = 0)
-        data = data.astype('int8')
+        data = None
+        if mpi.rank == 0:
+            data = self.var.evaluate_global(self.var.mesh.subMesh.data)
+            data = data.reshape([self.size, self.size])
+            data = np.flip(data, axis = 0)
+            data = data.astype('int8')
+        data = mpi.comm.bcast(data, root = 0)
         self.data[...] = data
 
 class Raster:

@@ -13,13 +13,13 @@ message = utilities.message
 def _convert(var, varName = None):
 
     if isinstance(var, _planetvar.PlanetVar):
-        message("Already a planetVar. Returning.")
+        # message("Already a planetVar. Returning.")
         return var
 
     if hasattr(var, '_planetVar'):
         outVar  = var._planetVar()
         if isinstance(outVar, _planetvar.PlanetVar):
-            message("Already has _planetVar. Returning.")
+            # message("Already has _planetVar. Returning.")
             return outVar
 
     if type(var) == np.ndarray:
