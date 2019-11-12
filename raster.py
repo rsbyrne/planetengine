@@ -16,7 +16,6 @@ class Data:
         self.var.scales = [[-128., 127.]]
         self.inVar = pfn.projection.get_meshVar(inVar)
         self.size = size
-        self.data = np.zeros(size).astype('int8')
         self.update()
     def update(self):
         tolerance = fieldops.copyField(
@@ -26,11 +25,12 @@ class Data:
         data = None
         if mpi.rank == 0:
             data = self.var.evaluate_global(self.var.mesh.subMesh.data)
-            data = data.reshape(self.size)
-            data = np.flip(data, axis = 0)
+            data = data.flatten()
+            data = data.reshape(self.size[::-1])
+            data = np.flip(data, axis = 0) # makes it top-bottom
             data = data.astype('int8')
         data = mpi.comm.bcast(data, root = 0)
-        self.data[...] = data
+        self.data = data
 
 class Raster:
     '''
@@ -41,14 +41,6 @@ class Raster:
         self.mode = mode
         self.add = add
         self.dataObjs = [Data(arg, size = size) for arg in args]
-        self.bands = []
-        for obj in self.dataObjs:
-            newimg = Image.new(
-                'L',
-                size,
-                "black"
-                )
-            self.bands.append(newimg)
         self.update()
     def update(self):
         self._update_data()
@@ -57,13 +49,16 @@ class Raster:
         for dataObj in self.dataObjs:
             dataObj.update()
     def _update_img(self):
-        for band, dataObj in zip(self.bands, self.dataObjs):
-            pixels = band.load()
-            dataArray = dataObj.data
-            for i in range(band.size[0]):
-                for j in range(band.size[1]):
-                    pixels[i, j] = (dataArray[j, i] + 128,)
-        self.img = Image.merge(self.mode, self.bands)
+        bands = []
+        for dataObj in self.dataObjs:
+            band = Image.fromarray(
+                dataObj.data + 127,
+                mode = 'L',
+                )
+            bands.append(band)
+        img = Image.merge(self.mode, bands)
+        self.bands = bands
+        self.img = img
     def save(self, path = '', name = None, add = None, ext = 'png'):
         self.update()
         if name is None:

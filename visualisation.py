@@ -30,6 +30,8 @@ class QuickFig:
             **kwargs
             ):
 
+        args = list(args)
+
         self.fig = glucifer.Figure(
             facecolour = facecolour,
             quality = 3.,
@@ -65,15 +67,17 @@ class QuickFig:
 
     def add_vars(self, *args, **kwargs):
 
+        args = list(args)
+
         if len(args) == 1 and type(args[0]) == dict:
             args = sorted(args[0].items())
         for arg in args:
             if hasattr(arg, 'subMesh'):
                 args.remove(arg)
-                self.add_grid(arg, **kwargs)
+                self.add_grid(arg)
             elif hasattr(arg, 'particleCoordinates'):
                 args.remove(arg)
-                self.add_swarm(arg, **kwargs)
+                self.add_swarm(arg)
         for arg in args:
             if type(arg) == tuple:
                 varName, var = arg
