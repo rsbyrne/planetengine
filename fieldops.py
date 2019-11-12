@@ -195,6 +195,7 @@ def copyField(field1, field2,
         outDim = field2.count
     else:
         projVar = _projection.get_meshVar(field1)
+        projVar.update()
         field2 = projVar.var
         outMesh = field2.mesh
         outCoords = outMesh.data

@@ -13,12 +13,11 @@ class Data:
             )
         self.var = mesh.add_variable(1)
         self.var.scales = [[-128., 127.]]
-        self.inVar = pfn.convert(inVar)
+        self.inVar = pfn.projection.get_meshVar(inVar)
         self.size = size
         self.data = np.zeros((size, size)).astype('int8')
         self.update()
     def update(self):
-        self.inVar.update()
         tolerance = fieldops.copyField(
             self.inVar,
             self.var
