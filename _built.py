@@ -4,10 +4,7 @@ import shutil
 from . import utilities
 from . import wordhash
 from . import disk
-from . import paths
-
 from . import mpi
-# from .utilities import check_reqs
 
 def save_built(built, name, path):
 
