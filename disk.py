@@ -13,7 +13,6 @@ UWFn = _fn._function.Function
 from . import utilities
 from .utilities import message
 from . import functions as pfn
-from . import paths
 
 from . import mpi
 
