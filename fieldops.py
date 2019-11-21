@@ -15,6 +15,26 @@ from . import mpi
 
 fullLocalMeshVars = {}
 
+def get_global_sorted_array(var):
+    data = var.data
+    nodeIDs = var.mesh.data_nodegId
+    local_nodeDict = {
+        nodeID[0]: datum \
+            for nodeID, datum in zip(
+                nodeIDs,
+                data
+                )
+        }
+    gathered = mpi.comm.allgather(local_nodeDict)
+    global_nodeDict = {}
+    for nodeDict in gathered:
+        global_nodeDict.update(nodeDict)
+    sorted_global_data = [
+        global_nodeDict[key] for key in sorted(global_nodeDict)
+        ]
+    sorted_global_data = np.array(sorted_global_data)
+    return sorted_global_data
+
 def set_boundaries(variable, values):
 
     try:
