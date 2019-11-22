@@ -9,13 +9,9 @@ def build(*args, name = None, **kwargs):
 
 class Constant(IC):
 
-    script = __file__
-
     def __init__(
             self,
-            *args,
-            value = 0.,
-            **kwargs
+            value = 0.
             ):
 
         inputs = locals().copy()
@@ -23,10 +19,8 @@ class Constant(IC):
         self.value = value
 
         super().__init__(
-            args = args,
-            kwargs = kwargs,
             inputs = inputs,
-            script = self.script,
+            script = __file__,
             evaluate = self.evaluate
             )
 

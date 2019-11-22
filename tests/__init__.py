@@ -1,4 +1,4 @@
-from . import archivertest
-from . import framestest
-from . import functionstest
-from . import testsystems
+# from . import archivertest
+# from . import framestest
+# from . import functionstest
+# from . import testsystems

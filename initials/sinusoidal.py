@@ -9,15 +9,11 @@ def build(*args, name = None, **kwargs):
 
 class Sinusoidal(IC):
 
-    script = __file__
-
     def __init__(
             self,
-            *args,
             pert = 0.2,
             freq = 1.,
             phase = 0.,
-            **kwargs
             ):
 
         inputs = locals().copy()
@@ -29,10 +25,8 @@ class Sinusoidal(IC):
         self.pert = pert
 
         super().__init__(
-            args = args,
-            kwargs = kwargs,
             inputs = inputs,
-            script = self.script,
+            script = __file__,
             evaluate = self.evaluate
             )
 

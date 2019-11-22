@@ -10,13 +10,9 @@ def build(*args, name = None, **kwargs):
 
 class Extents(IC):
 
-    script = __file__
-
     def __init__(
             self,
-            *args,
-            shapes = None,
-            **kwargs
+            shapes = None
             ):
 
         # HOUSEKEEPING: this should always be here
@@ -29,10 +25,8 @@ class Extents(IC):
                 )
 
         super().__init__(
-            args = args,
-            kwargs = kwargs,
             inputs = inputs,
-            script = self.script,
+            script = __file__,
             evaluate = self.evaluate
             )
 

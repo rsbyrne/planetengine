@@ -3,6 +3,9 @@ from underworld import function as _fn
 import math
 
 from planetengine._system import System
+from planetengine.initials import sinusoidal
+
+default_IC = sinusoidal.build()
 
 def build(*args, name = None, **kwargs):
     built = Isovisc(*args, **kwargs)
@@ -13,16 +16,14 @@ def build(*args, name = None, **kwargs):
 class Isovisc(System):
 
     name = "isovisc"
-    script = __file__
 
     def __init__(
         self,
-        *args,
         res = 64,
         f = 0.54,
         aspect = 1.,
         Ra = 1e7,
-        **kwargs
+        _initial_temperatureField = default_IC
         ):
 
         ### HOUSEKEEPING: IMPORTANT! ###
@@ -157,7 +158,7 @@ class Isovisc(System):
                 stokes._vnsVec._cself
                 )
 
-        def solve():
+        def update():
             velocityField.data[:] = 0.
             solver.solve(
                 nonLinearIterate = False,
@@ -169,25 +170,15 @@ class Isovisc(System):
                 False
                 )
 
-        def update():
-            solve()
-
         def integrate():
             dt = advDiff.get_max_dt()
             advDiff.integrate(dt)
             return dt
 
         super().__init__(
-            varsOfState = {'temperatureField': temperatureField},
-            obsVars = {
-                'temperature': temperatureField,
-                'velocity': velocityField
-                },
-            _update = update,
-            _integrate = integrate,
-            _locals = locals(),
-            args = args,
-            kwargs = kwargs,
             inputs = inputs,
-            script = self.script
+            script = __file__,
+            varsOfState = {'temperatureField': temperatureField},
+            update = update,
+            integrate = integrate
             )

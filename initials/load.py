@@ -13,16 +13,14 @@ def build(*args, name = None, **kwargs):
 
 class Load(IC):
 
-    script = __file__
-
     def __init__(
             self,
-            *args,
             inFrame = None,
             varName = None,
-            _loadStep = None,
-            **kwargs
+            _loadStep = None
             ):
+
+        raise Exception("Not supported yet!")
 
         assert not varName is None
         if isinstance(inFrame, frame.Frame): # hence new
@@ -50,10 +48,8 @@ class Load(IC):
             }
 
         super().__init__(
-            args = args,
-            kwargs = kwargs,
             inputs = inputs,
-            script = self.script,
+            script = __file__,
             evaluate = self.evaluate
             )
 

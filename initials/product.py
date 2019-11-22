@@ -16,6 +16,8 @@ class Product(IC):
             *args,
             ):
 
+        raise Exception("Not supported yet!")
+
         pass
         # self.inputs =
 

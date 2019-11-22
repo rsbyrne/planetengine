@@ -1,6 +1,8 @@
 import underworld as uw
 import numpy as np
 
+import everest
+
 from .fieldops import copyField
 from .fieldops import set_scales
 from .fieldops import set_boundaries
@@ -13,24 +15,21 @@ from types import ModuleType
 def load(name, path):
     return _built.load_built(name, path)
 
-class IC(Built):
+class IC(everest.built.Built):
 
     def __init__(
             self,
-            args,
-            kwargs,
             inputs,
             script,
             evaluate
             ):
 
         self.evaluate = evaluate
+        self.subs = []
 
         super().__init__(
-            args = args,
-            kwargs = kwargs,
-            inputs = inputs,
-            script = script
+            inputs,
+            script
             )
 
     def _get_ICdata(self, var, boxDims):
