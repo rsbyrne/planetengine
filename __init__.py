@@ -22,7 +22,6 @@ from . import tests
 from . import disk
 from . import paths
 from . import model
-from . import value
 from . import suite
 from . import campaign
 from . import campaigns

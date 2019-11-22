@@ -3,7 +3,6 @@ from . import utilities
 from .utilities import message
 from .visualisation import QuickFig
 from . import _frame as frame
-from .value import Value
 from . import _system
 from . import _observer
 from . import disk

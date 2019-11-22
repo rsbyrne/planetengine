@@ -80,7 +80,7 @@ class System(everest.built.Built):
         outs = []
         for key in self.outkeys:
             if key == 'modeltime':
-                outs.append([self.modeltime()])
+                outs.append(self.modeltime())
             else:
                 var = self.varsOfState[key]
                 data = fieldops.get_global_sorted_array(var)
