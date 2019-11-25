@@ -7,19 +7,8 @@ import traceback
 from . import mpi
 
 workPath = '/home/jovyan/workspace'
-# if not workPath in sys.path:
-#     sys.path.append(workPath)
-# ignoreme = subprocess.call(['chmod', '-R', '777', workPath])
 outPath = os.path.join(workPath, 'out')
-# if not os.path.isdir(outPath):
-#     os.makedirs(outPath)
-# ignoreme = subprocess.call(['chmod', '-R', '777', outPath])
 testPath = os.path.join(outPath, 'test')
-# defaultPath = os.path.join(outPath, 'default')
-# if not os.path.isdir(defaultPath):
-#     os.makedirs(defaultPath)
-# ignoreme = subprocess.call(['chmod', '-R', '777', defaultPath])
-# ignoreme = subprocess.call(['chmod', '-R', '777', outPath])
 defaultPath = os.path.join(outPath, 'default')
 
 class TestDir:

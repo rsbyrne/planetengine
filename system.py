@@ -1,15 +1,9 @@
 # from ..utilities import check_reqs
 import everest
-
-from . import _built
 from . import fieldops
-
 from .visualisation import QuickFig
 
 INITIAL_FLAG = '_initial_'
-
-def load(name, path):
-    return _built.load_built(name, path)
 
 class System(everest.built.Built):
 

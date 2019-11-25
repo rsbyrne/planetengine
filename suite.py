@@ -1,12 +1,6 @@
 import random
 import itertools
-import os
-import shutil
-import subprocess
-from . import disk
 from . import mpi
-from . import wordhash
-from . import planetengineDir
 
 def suite_list(listDict, shuffle = False, chunks = None, shuffleseed = 1066):
     listOfKeys = sorted(listDict)

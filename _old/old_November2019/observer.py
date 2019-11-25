@@ -1,10 +1,49 @@
-import everest
+from . import _built
+from . import checkpoint
+from . import _frame
 from . import system
 from . import mpi
 from .utilities import message
 import os
 
-class Observer(everest.built.Built):
+def load_observer(name, path, system = None):
+    obsDir = os.path.join(path, name)
+    builts = _built.load_builtsDir(obsDir)
+    loadObserver = builts['observer']
+    if system is None:
+        loadSystem = builts['observed']['system']
+        loadInitials = builts['observed']['initials']
+        loadSystem.initialise(loadInitials)
+    else:
+        if not isinstance(system, system.System):
+            raise Exception
+        loadSystem = system
+    loadObserver.attach(loadSystem)
+    loadObserver.outputPath = path
+    return loadObserver
+
+def load_observers(path, system = None, return_dict = False):
+    files = []
+    if mpi.rank == 0:
+        files = os.listdir(path)
+    files = mpi.comm.bcast(files, root = 0)
+    loadObservers = []
+    for file in files:
+        if file[:6] == Observer.prefix + '_':
+            loadObserver = load_observer(
+                file,
+                path,
+                system
+                )
+            loadObservers.append(loadObserver)
+    if return_dict:
+        loadObservers = {
+            loadObserver.instanceID: loadObserver \
+                for loadObserver in loadObservers
+            }
+    return loadObservers
+
+class Observer(_built.Built):
 
     name = 'anonObs'
     prefix = 'peobs'
