@@ -36,6 +36,8 @@ class System(everest.built.Built):
                     if key[:len(INITIAL_FLAG)] == INITIAL_FLAG
             }
 
+        self.observers = []
+
         # ATTRIBUTES EXPECTED BY BUILT CLASS
 
         self.outkeys = [
@@ -63,6 +65,8 @@ class System(everest.built.Built):
         self.clipVals()
         self.setBounds()
         self.modeltime.value += dt
+        for observer in self.observers:
+            observer.prompt()
 
     def load(self, loadDict):
         for key, loadData in sorted(loadDict.items()):
@@ -88,6 +92,11 @@ class System(everest.built.Built):
         return outs
 
     # OTHER METHODS
+
+    def add_observer(self, observer):
+        self.observers.append(observer)
+        if self.anchored:
+            observer.anchor(self.frameID, self.path)
 
     def clipVals(self):
         for varName, var in sorted(self.varsOfState.items()):

@@ -2,7 +2,7 @@ import planetengine
 from planetengine import functions as pfn
 from planetengine.visualisation import QuickFig
 from planetengine import analysis
-from planetengine import _observer
+from planetengine.observer import Observer
 from planetengine.utilities import message
 
 def build(*args, name = None, **kwargs):
@@ -11,7 +11,7 @@ def build(*args, name = None, **kwargs):
         built.name = name
     return built
 
-class Isobench(_observer.Observer):
+class Isobench(Observer):
 
     script = __file__
     name = 'isobench'

@@ -2,7 +2,7 @@ import underworld as uw
 from underworld import function as _fn
 import math
 
-from planetengine._system import System
+from planetengine.system import System
 from planetengine.initials import sinusoidal
 
 default_IC = sinusoidal.build()

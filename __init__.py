@@ -6,8 +6,8 @@ from . import analysis
 from . import checkpoint
 from . import _frame
 from . import _built
-from . import _system
-from . import _IC
+from . import system
+from . import IC
 from . import initials
 from . import systems
 from . import observers

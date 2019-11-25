@@ -3,7 +3,7 @@ import os
 from planetengine import _frame as frame
 from planetengine import fieldops
 from planetengine import mapping
-from planetengine._IC import IC
+from planetengine.IC import IC
 
 def build(*args, name = None, **kwargs):
     built = Load(*args, **kwargs)

@@ -1,5 +1,5 @@
 import numpy as np
-from planetengine._IC import IC
+from planetengine.IC import IC
 
 def build(*args, name = None, **kwargs):
     built = Sinusoidal(*args, **kwargs)

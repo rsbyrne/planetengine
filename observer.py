@@ -1,7 +1,7 @@
 from . import _built
 from . import checkpoint
 from . import _frame
-from . import _system
+from . import system
 from . import mpi
 from .utilities import message
 import os
@@ -15,7 +15,7 @@ def load_observer(name, path, system = None):
         loadInitials = builts['observed']['initials']
         loadSystem.initialise(loadInitials)
     else:
-        if not isinstance(system, _system.System):
+        if not isinstance(system, system.System):
             raise Exception
         loadSystem = system
     loadObserver.attach(loadSystem)
@@ -81,7 +81,7 @@ class Observer(_built.Built):
             outputPath = frame.path
             system = frame.system
             initials = frame.initials
-        elif isinstance(attachee, _system.System):
+        elif isinstance(attachee, system.System):
             outputPath = None
             frame = None
             system = attachee

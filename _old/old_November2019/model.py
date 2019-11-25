@@ -3,8 +3,8 @@ from . import utilities
 from .utilities import message
 from .visualisation import QuickFig
 from . import _frame as frame
-from . import _system
-from . import _observer
+from . import system
+from . import observer
 from . import disk
 
 Frame = frame.Frame
@@ -44,7 +44,7 @@ class Model(Frame):
         if outputPath is None:
             outputPath = paths.defaultPath
 
-        if not isinstance(system, _system.System):
+        if not isinstance(system, system.System):
             raise Exception(
                 "System must be an instance of 'system'; instead, type was " + str(type(system)) + "."
                 )
