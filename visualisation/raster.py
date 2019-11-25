@@ -7,7 +7,7 @@ from .. import mpi
 from .. import fieldops
 from ..utilities import message
 from .. import functions as pfn
-from . import _fig
+from . import fig
 
 class Data:
     def __init__(self, inVar, size = (16, 16)):
@@ -34,20 +34,35 @@ class Data:
         data = mpi.comm.bcast(data, root = 0)
         self.data = data
 
-class Raster(_fig.Fig):
+class Raster(fig.Fig):
     '''
     Modes: 1, L, P, RGB, RGBA, CMYK, YCbCr, LAB, HSV, I, F, RGBa, LA, RGBX
     '''
-    def __init__(self, *args, size = (16, 16), mode = 'L', **kwargs):
+    def __init__(self, *bands, size = (16, 16), mode = None, **kwargs):
+        if mode is None:
+            if len(bands) == 1:
+                mode = 'L'
+            elif len(bands) <= 3:
+                if len(bands) == 2:
+                    bands = [*bands, bands[-1]]
+                mode = 'RGB'
+            else:
+                raise Exception("Too many bands!")
         self.mode = mode
-        self.dataObjs = [Data(arg, size = size) for arg in args]
-        self._update()
+        self.dataObjs = [Data(band, size = size) for band in bands]
+        self.shape = [*size, len(self.dataObjs)]
+        self.data = np.zeros(self.shape, dtype = 'int8')
+        super().__init__(**kwargs)
+        self.update()
     def _update(self):
         self._update_data()
         self._update_img()
     def _update_data(self):
         for dataObj in self.dataObjs:
             dataObj.update()
+        self.data[...] = np.dstack(
+            [dataObj.data for dataObj in self.dataObjs]
+            )
     def _update_img(self):
         bands = []
         for dataObj in self.dataObjs:
@@ -59,6 +74,10 @@ class Raster(_fig.Fig):
         img = Image.merge(self.mode, bands)
         self.bands = bands
         self.img = img
-        super().__init__(**kwargs)
     def _save(self, path, name, ext):
         self.img.save(os.path.join(path, name + '.' + ext))
+    def _show(self):
+        self.update()
+    def evaluate(self):
+        self.update()
+        return self.data

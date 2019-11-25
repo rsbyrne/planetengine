@@ -7,10 +7,8 @@ from planetengine.initials import sinusoidal
 
 default_IC = sinusoidal.build()
 
-def build(*args, name = None, **kwargs):
+def build(*args, **kwargs):
     built = Isovisc(*args, **kwargs)
-    if type(name) == str:
-        built.name = name
     return built
 
 class Isovisc(System):
@@ -23,7 +21,7 @@ class Isovisc(System):
         f = 0.54,
         aspect = 1.,
         Ra = 1e7,
-        _initial_temperatureField = default_IC
+        _initial_temperature = default_IC
         ):
 
         ### HOUSEKEEPING: IMPORTANT! ###
@@ -178,7 +176,14 @@ class Isovisc(System):
         super().__init__(
             inputs = inputs,
             script = __file__,
-            varsOfState = {'temperatureField': temperatureField},
+            varsOfState = {
+                'temperature': temperatureField,
+                'temperatureDot': temperatureDotField
+                },
+            obsVars = {
+                'temperature': temperatureField,
+                'velocity': velocityField
+                },
             update = update,
             integrate = integrate
             )

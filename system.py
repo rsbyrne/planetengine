@@ -14,11 +14,13 @@ class System(everest.built.Built):
             inputs,
             script,
             varsOfState,
+            obsVars,
             update,
             integrate
             ):
 
         self.varsOfState = varsOfState
+        self.obsVars = obsVars
         self.modeltime = everest.value.Value(0.)
 
         self._update = update
@@ -59,8 +61,8 @@ class System(everest.built.Built):
         self.clipVals()
         self.setBounds()
         self.modeltime.value += dt
-        for observer in self.observers:
-            observer.prompt()
+        # for observer in self.observers:
+        #     observer.prompt()
 
     def load(self, loadDict):
         for key, loadData in sorted(loadDict.items()):
@@ -87,10 +89,10 @@ class System(everest.built.Built):
 
     # OTHER METHODS
 
-    def add_observer(self, observer):
-        self.observers.append(observer)
-        if self.anchored:
-            observer.anchor(self.frameID, self.path)
+    # def add_observer(self, observer):
+    #     self.observers.append(observer)
+    #     if self.anchored:
+    #         observer.anchor(self.frameID, self.path)
 
     def clipVals(self):
         for varName, var in sorted(self.varsOfState.items()):

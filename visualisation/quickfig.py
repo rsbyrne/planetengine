@@ -9,14 +9,14 @@ from ..functions import convert
 from .. import functions as pfn
 from ..meshutils import get_meshUtils
 from .. import mpi
-from . import _fig
+from . import fig
 
 def quickShow(*args, **kwargs):
 
     quickFig = QuickFig(*args, **kwargs)
     quickFig.show()
 
-class QuickFig(_fig.Fig):
+class QuickFig(fig.Fig):
 
     def __init__(
             self,
@@ -220,8 +220,8 @@ class QuickFig(_fig.Fig):
         for updateFunc in self.updateFuncs:
             updateFunc()
 
-    def show(self):
-        self._update()
+    def _show(self):
+        self.update()
         for var in self.fittedvars:
             message(var.varName)
         self.fig.show()

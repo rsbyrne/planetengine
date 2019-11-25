@@ -12,11 +12,10 @@ class Fig:
         self.name = name
         self.add = add
         self.ext = ext
-        pass
     def _update(self):
         pass
     def update(self):
-        pass
+        self._update()
     def _save(self):
         pass
     def save(self, path = '', name = None, add = None, ext = None):
@@ -42,3 +41,5 @@ class Fig:
                 os.makedirs(path)
             assert os.path.isdir(path)
         self._save(path, name, ext)
+    def show(self):
+        self._show()
