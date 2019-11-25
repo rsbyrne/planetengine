@@ -16,7 +16,6 @@ from . import functions
 from . import visualisation
 from . import tests
 from . import paths
-from . import model
 from . import suite
 
 from .utilities import message
