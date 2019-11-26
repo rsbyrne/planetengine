@@ -16,8 +16,17 @@ from . import mpi
 fullLocalMeshVars = {}
 
 def get_global_sorted_array(var):
-    data = var.data
-    nodeIDs = var.mesh.data_nodegId
+    substrate = utilities.get_prioritySubstrate(var)
+    if isinstance(var, _fn._function.Function):
+        data = var.evaluate(substrate)
+    else:
+        data = var.data
+    if isinstance(substrate, uw.mesh.FeMesh):
+        nodeIDs = substrate.data_nodegId
+    elif isinstance(substrate, uw.swarm.Swarm):
+        raise Exception("Swarms not supported yet!")
+    else:
+        assert False
     local_nodeDict = {
         nodeID[0]: datum \
             for nodeID, datum in zip(

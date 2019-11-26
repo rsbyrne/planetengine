@@ -48,8 +48,8 @@ class Standard(Observer):
             outDict['surfAngVel'] = surfAngVel
             velMag = pfn.component.mag(velocity)
             rasterFns.extend([angVel, radVel])
-        # raster = Raster(*rasterFns)
-        # outDict['raster'] = raster
+        raster = Raster(*rasterFns)
+        outDict['raster'] = raster
 
         super().__init__(
             inputs = inputs,

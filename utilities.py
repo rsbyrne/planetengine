@@ -92,6 +92,12 @@ def get_substrates(var):
             swarms.extend(under_swarms)
         meshes = list(set(meshes))
         swarms = list(set(swarms))
+    elif isinstance(var, uw.mesh.FeMesh):
+        meshes = [var,]
+        swarms = []
+    elif isinstance(var, uw.swarm.Swarm):
+        meshes = [var.mesh,]
+        swarms = [var,]
     else:
         raise Exception("Input not recognised.")
     meshes = list(sorted(meshes))

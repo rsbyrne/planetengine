@@ -18,14 +18,16 @@ class Data:
         self.var.scales = [[-128., 127.]]
         self.inVar = pfn.projection.get_meshVar(inVar)
         self.size = size
+        self.evalCoords = fieldops.get_global_sorted_array(mesh.subMesh)
         self.update()
     def update(self):
         tolerance = fieldops.copyField(
             self.inVar,
             self.var
             )
-        data = self.var.evaluate_global(self.var.mesh.subMesh.data)
+        data = self.var.evaluate_global(self.evalCoords)
         if mpi.rank == 0:
+            assert len(data) == self.size[0] * self.size[1]
             data = data.flatten()
             data = data.reshape(self.size[::-1])
             data = np.flip(data, axis = 0) # makes it top-bottom
