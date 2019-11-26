@@ -199,109 +199,109 @@ def make_fullLocalMeshVar(field1):
 
     return fullInField
 
-def copyField(field1, field2,
-        tolerance = 0.01,
-        rounded = False,
-        boxDims = None,
-        freqs = None,
-        mirrored = None,
-        blendweight = None
-        # scales = None,
-        # boundaries = None
-        ):
-
-    if not boxDims is None:
-        assert np.max(np.array(boxDims)) <= 1., "Max boxdim is 1."
-        assert np.min(np.array(boxDims)) >= 0., "Min boxdim is 0."
-
-    utilities.check_uw(field1)
-
-    if type(field2) == uw.mesh._meshvariable.MeshVariable:
-        outMesh = field2.mesh
-        outCoords = outMesh.data
-        outDim = field2.nodeDofCount
-    elif type(field2) == uw.swarm._swarmvariable.SwarmVariable:
-        outMesh = field2.swarm.mesh
-        outCoords = field2.swarm.particleCoordinates.data
-        outDim = field2.count
-    else:
-        projVar = _projection.get_meshVar(field1)
-        projVar.update()
-        field2 = projVar.var
-        outMesh = field2.mesh
-        outCoords = outMesh.data
-        outDim = field2.nodeDofCount
-        # raise Exception("Input 2 not a field.")
-    outField = field2
-
-    fullInField = get_fullLocalMeshVar(field1)
-    fullInField.update()
-    inDim = fullInField.nodeDofCount
-    inMesh = fullInField.mesh
-
-    assert outDim == inDim, \
-        "In and Out fields have different dimensions!"
-    assert outMesh.dim == inMesh.dim, \
-        "In and Out meshes have different dimensions!"
-
-    outBox = mapping.box(
-        outMesh,
-        outCoords,
-        boxDims,
-        freqs,
-        mirrored
-        )
-
-    def mapFn(tolerance):
-
-        evalCoords = mapping.unbox(
-            inMesh,
-            outBox,
-            tolerance = tolerance
-            )
-
-        newData = fullInField.evaluate(evalCoords)
-        oldData = outField.data[:]
-        if not blendweight is None:
-            newData = np.sum(
-                np.array([oldData, blendweight * newData]),
-                axis = 0
-                ) \
-                / (blendweight + 1)
-
-        outField.data[:] = newData
-
-        # message("Mapping achieved at tolerance = " + str(tolerance))
-        return tolerance
-
-    tryTolerance = 0.
-
-    while True:
-        try:
-            tryTolerance = mapFn(tryTolerance)
-            break
-        except:
-            if tryTolerance > 0.:
-                tryTolerance *= 1.01
-            else:
-                tryTolerance += 0.00001
-            if tryTolerance > tolerance:
-                raise Exception("Couldn't find acceptable tolerance.")
-            else:
-                pass
-
-    if rounded:
-        field2.data[:] = np.around(field2.data)
-
-    # if not scales is None:
-    #     set_scales(field2, scales)
-    #
-    # if not boundaries is None:
-    #     set_boundaries(field2, boundaries)
-
-    try_set_scales(field2, field1)
-    try_set_boundaries(field2, field1)
-    try_set_scales(field2)
-    try_set_boundaries(field2)
-
-    return tryTolerance
+# def copyField(field1, field2,
+#         tolerance = 0.01,
+#         rounded = False,
+#         boxDims = None,
+#         freqs = None,
+#         mirrored = None,
+#         blendweight = None
+#         # scales = None,
+#         # boundaries = None
+#         ):
+#
+#     if not boxDims is None:
+#         assert np.max(np.array(boxDims)) <= 1., "Max boxdim is 1."
+#         assert np.min(np.array(boxDims)) >= 0., "Min boxdim is 0."
+#
+#     utilities.check_uw(field1)
+#
+#     if type(field2) == uw.mesh._meshvariable.MeshVariable:
+#         outMesh = field2.mesh
+#         outCoords = outMesh.data
+#         outDim = field2.nodeDofCount
+#     elif type(field2) == uw.swarm._swarmvariable.SwarmVariable:
+#         outMesh = field2.swarm.mesh
+#         outCoords = field2.swarm.particleCoordinates.data
+#         outDim = field2.count
+#     else:
+#         projVar = _projection.get_meshVar(field1)
+#         projVar.update()
+#         field2 = projVar.var
+#         outMesh = field2.mesh
+#         outCoords = outMesh.data
+#         outDim = field2.nodeDofCount
+#         # raise Exception("Input 2 not a field.")
+#     outField = field2
+#
+#     fullInField = get_fullLocalMeshVar(field1)
+#     fullInField.update()
+#     inDim = fullInField.nodeDofCount
+#     inMesh = fullInField.mesh
+#
+#     assert outDim == inDim, \
+#         "In and Out fields have different dimensions!"
+#     assert outMesh.dim == inMesh.dim, \
+#         "In and Out meshes have different dimensions!"
+#
+#     outBox = mapping.box(
+#         outMesh,
+#         outCoords,
+#         boxDims,
+#         freqs,
+#         mirrored
+#         )
+#
+#     def mapFn(tolerance):
+#
+#         evalCoords = mapping.unbox(
+#             inMesh,
+#             outBox,
+#             tolerance = tolerance
+#             )
+#
+#         newData = fullInField.evaluate(evalCoords)
+#         oldData = outField.data[:]
+#         if not blendweight is None:
+#             newData = np.sum(
+#                 np.array([oldData, blendweight * newData]),
+#                 axis = 0
+#                 ) \
+#                 / (blendweight + 1)
+#
+#         outField.data[:] = newData
+#
+#         # message("Mapping achieved at tolerance = " + str(tolerance))
+#         return tolerance
+#
+#     tryTolerance = 0.
+#
+#     while True:
+#         try:
+#             tryTolerance = mapFn(tryTolerance)
+#             break
+#         except:
+#             if tryTolerance > 0.:
+#                 tryTolerance *= 1.01
+#             else:
+#                 tryTolerance += 0.00001
+#             if tryTolerance > tolerance:
+#                 raise Exception("Couldn't find acceptable tolerance.")
+#             else:
+#                 pass
+#
+#     if rounded:
+#         field2.data[:] = np.around(field2.data)
+#
+#     # if not scales is None:
+#     #     set_scales(field2, scales)
+#     #
+#     # if not boundaries is None:
+#     #     set_boundaries(field2, boundaries)
+#
+#     try_set_scales(field2, field1)
+#     try_set_boundaries(field2, field1)
+#     try_set_scales(field2)
+#     try_set_boundaries(field2)
+#
+#     return tryTolerance
