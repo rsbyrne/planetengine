@@ -15,8 +15,10 @@ from . import mpi
 
 fullLocalMeshVars = {}
 
-def get_global_sorted_array(var):
+def get_global_sorted_array(var, subMesh = False):
     substrate = utilities.get_prioritySubstrate(var)
+    if subMesh:
+        substrate = substrate.subMesh
     if isinstance(var, _fn._function.Function):
         data = var.evaluate(substrate)
     else:

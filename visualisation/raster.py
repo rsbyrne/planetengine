@@ -10,36 +10,22 @@ from .. import functions as pfn
 from . import fig
 
 class Data:
-    def __init__(self, inVar, size = (16, 16)):
-        mesh = uw.mesh.FeMesh_Cartesian(
-            elementRes = size
-            )
-        self.var = mesh.add_variable(1)
-        self.var.scales = [[-128., 127.]]
-        self.inVar = pfn.projection.get_meshVar(inVar)
-        self.size = size
-        self.evalCoords = fieldops.get_global_sorted_array(mesh.subMesh)
+    def __init__(self, inVar):
+        self.var = pfn.normalise.default(inVar, [-128., 127.])
         self.update()
     def update(self):
-        tolerance = fieldops.copyField(
-            self.inVar,
-            self.var
-            )
-        data = self.var.evaluate_global(self.evalCoords)
-        if mpi.rank == 0:
-            assert len(data) == self.size[0] * self.size[1]
-            data = data.flatten()
-            data = data.reshape(self.size[::-1])
-            data = np.flip(data, axis = 0) # makes it top-bottom
-            data = data.astype('int8')
-        data = mpi.comm.bcast(data, root = 0)
+        data = fieldops.get_global_sorted_array(self.var, subMesh = True)
+        data = data.flatten()
+        data = data.reshape(self.var.mesh.elementRes[::-1])
+        data = np.flip(data, axis = 0) # makes it top-bottom
+        data = data.astype('int8')
         self.data = data
 
 class Raster(fig.Fig):
     '''
     Modes: 1, L, P, RGB, RGBA, CMYK, YCbCr, LAB, HSV, I, F, RGBa, LA, RGBX
     '''
-    def __init__(self, *bands, size = (16, 16), mode = None, **kwargs):
+    def __init__(self, *bands, mode = None, **kwargs):
         if mode is None:
             if len(bands) == 1:
                 mode = 'L'
@@ -50,8 +36,8 @@ class Raster(fig.Fig):
             else:
                 raise Exception("Too many bands!")
         self.mode = mode
-        self.dataObjs = [Data(band, size = size) for band in bands]
-        self.shape = [*size, len(self.dataObjs)]
+        self.dataObjs = [Data(band) for band in bands]
+        self.shape = [*self.dataObjs[0].data.shape, len(self.dataObjs)]
         self.data = np.zeros(self.shape, dtype = 'int8')
         super().__init__(**kwargs)
         self.update()
