@@ -3,7 +3,6 @@ import numpy as np
 
 import everest
 
-from .fieldops import copyField
 from .fieldops import set_scales
 from .fieldops import set_boundaries
 from .utilities import check_reqs

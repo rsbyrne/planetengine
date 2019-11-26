@@ -77,9 +77,6 @@ class Load(IC):
 
         return outArray
 
-    # def _apply(self, var, boxDims = None):
-    #     tolerance = fieldops.copyField(self.inVar, var)
-
     def _pre_save_hook(self, path, name = None):
         self.inFrame.checkpoint(
             path = path,

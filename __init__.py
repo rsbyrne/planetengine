@@ -20,5 +20,4 @@ from . import suite
 
 from .utilities import message
 from .utilities import log
-from .fieldops import copyField
 quickShow = visualisation.quickShow

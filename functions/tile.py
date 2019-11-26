@@ -18,6 +18,8 @@ class Tile(_function.Function):
 
     def __init__(self, inVar, freqs, mirrored, *args, **kwargs):
 
+        raise Exception("Not functional at present!")
+
         inVar, freqs, mirrored = inVars = _convert.convert(
             inVar,
             freqs,
@@ -40,12 +42,12 @@ class Tile(_function.Function):
         inVar, freqs, mirrored = self.inVars
         freqs = tuple(*freqs.evaluate())
         mirrored = tuple(*mirrored.evaluate())
-        fieldops.copyField(
-            inVar.var,
-            self.var,
-            freqs = freqs,
-            mirrored = mirrored
-            )
+        # fieldops.copyField(
+        #     inVar.var,
+        #     self.var,
+        #     freqs = freqs,
+        #     mirrored = mirrored
+        #     )
 
 def default(*args, **kwargs):
     return _construct(*args, **kwargs)
