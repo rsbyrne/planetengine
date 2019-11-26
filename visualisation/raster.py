@@ -24,9 +24,8 @@ class Data:
             self.inVar,
             self.var
             )
-        data = None
+        data = self.var.evaluate_global(self.var.mesh.subMesh.data)
         if mpi.rank == 0:
-            data = self.var.evaluate_global(self.var.mesh.subMesh.data)
             data = data.flatten()
             data = data.reshape(self.size[::-1])
             data = np.flip(data, axis = 0) # makes it top-bottom
