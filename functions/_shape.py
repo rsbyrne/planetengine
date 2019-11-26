@@ -4,8 +4,6 @@ UWFn = _fn._function.Function
 
 from . import _basetypes
 from . import _planetvar
-from .. import utilities
-hasher = utilities.hashToInt
 from .. import shapes
 from .. import mapping
 
@@ -20,7 +18,6 @@ class Shape(_basetypes.BaseTypes):
         self.richvertices = vertices
         self.richvertices = shapes.interp_shape(self.vertices, num = 1000)
         self.morphs = {}
-        self._currenthash = hasher(self.vertices)
 
         self.defaultName = str(self._currenthash)
         self.varName = varName
@@ -34,10 +31,17 @@ class Shape(_basetypes.BaseTypes):
         self.var = shape
         self.mesh = self.substrate = None
 
+        self._update_hash()
+
         super().__init__(**kwargs)
 
-    def _check_hash(self, **kwargs):
+    def _check_hash(self, lazy = False):
+        if not lazy:
+            self._update_hash()
         return self._currenthash
+
+    def _update_hash(self):
+        self._currenthash = hash(str(self.vertices))
 
     def morph(self, mesh):
         try:

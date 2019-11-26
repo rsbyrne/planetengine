@@ -1,5 +1,5 @@
-# from ..utilities import check_reqs
 import everest
+wordhashstamp = everest.utilities.wordhashstamp
 from . import fieldops
 from .visualisation import QuickFig
 
@@ -26,10 +26,15 @@ class System(everest.built.Built):
         self._update = update
         self._integrate = integrate
 
-        self.initials = {
+        self.configs = {
             key[len(INITIAL_FLAG):]: val \
                 for key, val in inputs.items() \
                     if key[:len(INITIAL_FLAG)] == INITIAL_FLAG
+            }
+        self.params = {
+            key: val \
+                for key, val in inputs.items() \
+                    if not key[:len(INITIAL_FLAG)] == INITIAL_FLAG
             }
 
         self.observers = []
@@ -41,6 +46,11 @@ class System(everest.built.Built):
             *sorted(self.varsOfState.keys())
             ]
 
+        meta = {
+            # 'params': wordhashstamp(self.params)
+            # 'configs': wordhashstamp(self.configs)
+            }
+
         super().__init__(
             inputs,
             script
@@ -49,8 +59,8 @@ class System(everest.built.Built):
     # METHODS EXPECTED BY BUILT CLASS:
 
     def initialise(self):
-        for varName in sorted(self.initials):
-            self.initials[varName].apply(
+        for varName in sorted(self.configs):
+            self.configs[varName].apply(
                 self.varsOfState[varName]
                 )
         self.modeltime.value = 0.
@@ -106,7 +116,7 @@ class System(everest.built.Built):
 
     def set_initials(self, ICdict):
         if ICdict.keys() == self.varsOfState.keys():
-            self.initials = ICdict
+            self.configs = ICdict
         else:
             raise Exception(
                 "Must provide an initial condition for every variable of state."

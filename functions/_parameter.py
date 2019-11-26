@@ -7,8 +7,6 @@ UWFn = _fn._function.Function
 
 from . import _basetypes
 from . import _planetvar
-from .. import utilities
-hasher = utilities.hashToInt
 
 class Parameter(_basetypes.BaseTypes):
 
@@ -49,4 +47,4 @@ class Parameter(_basetypes.BaseTypes):
         self._update_attributes()
 
     def __hash__(self):
-        return self._hashval
+        return hash((_planetvar._PLANETVAR_FLAG, self.opTag, self._hashval))
