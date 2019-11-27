@@ -1,22 +1,21 @@
-from .. import initials
-from .. import systems
-from .. import functions as pfn
-from ..visualisation import quickShow
-from ..utilities import message
+import planetengine
+from planetengine import systems
+from planetengine import functions as pfn
+from planetengine.visualisation import quickShow
+from planetengine.utilities import message
 import numpy as np
-import math
 from timeit import timeit
-from . import testsystems
 
 def testfn():
 
-    system = testsystems.arrhenius(res = 16, Ra = 1e4)
+    system = systems.isovisc.build(res = 16, Ra = 1e5)
 
-    variable1 = pfn.convert(system.velocityField, 'velocity')
-    variable2 = pfn.convert(system.temperatureField, 'temperature')
+    variable1 = pfn.convert(system.obsVars['velocity'], 'velocity')
+    variable2 = pfn.convert(system.obsVars['temperature'], 'temperature')
     constant = pfn.convert(2.)
     shape = pfn.convert(np.array([[0.2, 0.1], [0.9, 0.3], [0.8, 0.7], [0.4, 0.9]]))
-    vanilla = pfn.convert(system.viscosityFn, 'viscosity')
+    # vanilla = pfn.convert(system.viscosityFn, 'viscosity')
+    vanilla = pfn.convert(system.obsVars['temperature'] ** 10.)
 
     makeFns = [
         lambda var: var ** constant,
@@ -44,7 +43,8 @@ def testfn():
         lambda var: pfn.filter.default(var, 1.6),
         lambda var: pfn.region.default(var, shape), # SERIOUSLy BROKEN!
         lambda var: pfn.handlenan.zeroes(var),
-        lambda var: pfn.binarise.default(var)
+        lambda var: pfn.binarise.default(var),
+        lambda var: variable2 * var
         ]
 
     var = variable2
@@ -90,12 +90,12 @@ def testfn():
 
     system.reset()
     red.update()
-    system.iterate()
+    system.go(10)
     val = red.evaluate()
     message(val)
     val = red.evaluate()
     message(val)
-    system.iterate()
+    system.go(10)
     val = red.evaluate()
     message(val)
     val = red.evaluate()
@@ -118,3 +118,5 @@ def testfn():
 
     output = testfn()
     message(output)
+
+testfn()

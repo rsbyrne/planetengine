@@ -81,7 +81,8 @@ def get_opHash(varClass, *hashVars, **stringVariants):
     opTag = update_opTag(varClass.opTag, stringVariants)
 
     hashList.append(opTag)
-    hashVal = hash(tuple(hashList))
+    str_hashList = [str(item) for item in hashList]
+    hashVal = hash(tuple(str_hashList))
 
     return hashVal
 

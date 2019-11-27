@@ -19,6 +19,7 @@ class Shape(_basetypes.BaseTypes):
         self.richvertices = shapes.interp_shape(self.vertices, num = 1000)
         self.morphs = {}
 
+        self._update_hash()
         self.defaultName = str(self._currenthash)
         self.varName = varName
 
@@ -30,8 +31,6 @@ class Shape(_basetypes.BaseTypes):
         self.parameters = []
         self.var = shape
         self.mesh = self.substrate = None
-
-        self._update_hash()
 
         super().__init__(**kwargs)
 
