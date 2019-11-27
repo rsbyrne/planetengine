@@ -5,6 +5,7 @@ from PIL import Image
 
 from .. import mpi
 from .. import fieldops
+from .. import mapping
 from ..utilities import message
 from .. import functions as pfn
 from . import fig
@@ -16,8 +17,21 @@ class Data:
         self.var = pfn.normalise.default(inVar, [-128., 127.])
         self.update()
     def update(self):
+        # grid = np.vstack(
+        #     np.dstack(
+        #         np.meshgrid(
+        #             np.linspace(0., 1., 256),
+        #             np.linspace(0., 1., 256)
+        #             )
+        #         )
+        #     )
+        # data, tolerance = mapping.safe_box_evaluate(
+        #     self.var,
+        #     grid
+        #     )
+        # data = data.flatten().reshape((256, 256))
+        # raise Exception(data)
         data = fieldops.get_global_var_data(self.var, subMesh = True)
-        data = data.flatten()
         data = data.reshape(self.var.mesh.elementRes[::-1])
         data = np.flip(data, axis = 0) # makes it top-bottom
         data = np.flip(data, axis = 1) # makes it top-bottom
@@ -64,7 +78,8 @@ class Raster(fig.Fig):
             bands.append(band)
         img = Image.merge(self.mode, bands)
         self.bands = bands
-        self.img = img.resize(STANDARD_SIZE)
+        # self.img = img.resize(STANDARD_SIZE)
+        self.img = img
     def _save(self, path, name, ext):
         self.img.save(os.path.join(path, name + '.' + ext))
     def _show(self):
