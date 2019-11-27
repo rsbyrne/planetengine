@@ -317,8 +317,6 @@ def box_evaluate(inFn, inCoords, tolerance):
     for coord in unboxed:
         outVals.append(globalValsDict[tuple(coord)])
     outArray = np.array(outVals)
-    # print(inCoords.shape)
-    # print(outArray.shape)
     if not outArray.shape[0] == inCoords.shape[0]:
         raise Exception("Some coords could not be evaluated!")
     return outArray
