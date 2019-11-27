@@ -14,23 +14,6 @@ def message(*args):
         if mpi.rank == 0:
             print(arg)
 
-def log(text, outputPath = None, outputName = 'diaglog.txt'):
-    if outputPath == None:
-        outputPath = paths.defaultPath
-
-    if mpi.rank == 0:
-        filename = os.path.join(outputPath, outputName)
-        if not os.path.exists(outputPath):
-            os.mkdir(outputPath)
-        if os.path.isfile(filename):
-            file = open(filename, 'a')
-        else:
-            file = open(filename, 'w')
-        file.write(text)
-        file.write('\n')
-        file.close()
-    # mpi.barrier()
-
 def get_substrates(var):
     if type(var) == uw.mesh._meshvariable.MeshVariable:
         meshes = [var.mesh,]
