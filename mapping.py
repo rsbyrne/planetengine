@@ -2,6 +2,8 @@ import numpy as np
 import math
 import underworld as uw
 
+from . import mpi
+from . import utilities
 from . import meshutils
 get_meshUtils = meshutils.get_meshUtils
 
@@ -279,4 +281,44 @@ def unbox(
         inverse = True
         )
 
+    return outArray
+
+def safe_box_evaluate(inFn, inCoords, maxTolerance = 0.1):
+    tolerance = 0.
+    while tolerance < maxTolerance:
+        try:
+            outArray = box_evaluate(inFn, inCoords, tolerance)
+            break
+        except:
+            if tolerance == 0.:
+                tolerance += 0.00001
+            else:
+                tolerance *= 1.01
+    if tolerance > maxTolerance:
+        raise Exception("Acceptable tolerance could not be found.")
+    return outArray, tolerance
+
+def box_evaluate(inFn, inCoords, tolerance):
+    mesh = utilities.get_mesh(inFn)
+    unboxed = unbox(
+        mesh,
+        inCoords,
+        tolerance = tolerance
+        )
+    localValsDict = {}
+    for coords in unboxed:
+        try: localValsDict[tuple(coords)] = inFn.evaluate(np.array([coords,]))[0]
+        except: pass
+    allValsDicts = mpi.comm.allgather(localValsDict)
+    globalValsDict = {}
+    for localValDict in allValsDicts:
+        globalValsDict.update(localValDict)
+    outVals = []
+    for coord in unboxed:
+        outVals.append(globalValsDict[tuple(coord)])
+    outArray = np.array(outVals)
+    # print(inCoords.shape)
+    # print(outArray.shape)
+    if not outArray.shape[0] == inCoords.shape[0]:
+        raise Exception("Some coords could not be evaluated!")
     return outArray

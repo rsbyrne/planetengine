@@ -93,7 +93,7 @@ class System(everest.built.Built):
                 outs.append(self.modeltime())
             else:
                 var = self.varsOfState[key]
-                data = fieldops.get_global_sorted_array(var)
+                data = get_global_var_data(var)
                 outs.append(data)
         return outs
 

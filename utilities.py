@@ -116,6 +116,24 @@ def get_scales(array, valSets = None):
         scales = np.dstack([mins, maxs])[0]
         return scales
 
+def globalise_array(inArray, sortArray):
+    local_nodeDict = {
+        sortNode: inNode \
+            for sortNode, inNode \
+                in zip(
+                    sortArray,
+                    inArray
+                    )
+        }
+    gathered = mpi.comm.allgather(local_nodeDict)
+    global_nodeDict = {}
+    for local_nodeDict in gathered:
+        global_nodeDict.update(local_nodeDict)
+    global_array = []
+    for sortNode, inNode in sorted(global_nodeDict.items()):
+        global_array.append(inNode)
+    return np.array(global_array)
+
 # def get_ranges(array, scales = None):
 #     if scales is None:
 #         scales = get_scales(array)

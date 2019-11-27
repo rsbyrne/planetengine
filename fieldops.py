@@ -15,36 +15,23 @@ from . import mpi
 
 fullLocalMeshVars = {}
 
-def get_global_sorted_array(var, subMesh = False):
+def get_global_var_data(var, subMesh = False):
     substrate = utilities.get_prioritySubstrate(var)
     if subMesh:
         substrate = substrate.subMesh
     if isinstance(var, _fn._function.Function):
-        data = var.evaluate(substrate)
+        varData = var.evaluate(substrate)
     else:
-        data = var.data
-    if isinstance(substrate, uw.mesh.FeMesh):
-        nodeIDs = substrate.data_nodegId
-    elif isinstance(substrate, uw.swarm.Swarm):
-        raise Exception("Swarms not supported yet!")
-    else:
-        assert False
-    local_nodeDict = {
-        nodeID[0]: datum \
-            for nodeID, datum in zip(
-                nodeIDs,
-                data
-                )
-        }
-    gathered = mpi.comm.allgather(local_nodeDict)
-    global_nodeDict = {}
-    for nodeDict in gathered:
-        global_nodeDict.update(nodeDict)
-    sorted_global_data = [
-        global_nodeDict[key] for key in sorted(global_nodeDict)
+        varData = var.data
+    nodegId = substrate.data_nodegId
+    sortNodes = [
+        int(node) for node in nodegId
         ]
-    sorted_global_data = np.array(sorted_global_data)
-    return sorted_global_data
+    data = utilities.globalise_array(
+        varData,
+        sortNodes
+        )
+    return data
 
 def set_boundaries(variable, values):
 
@@ -129,179 +116,18 @@ def clip_array(variable, scales):
                 )
         ]).T
 
-def weightVar(mesh, specialSets = None):
-
-    maskVar = uw.mesh.MeshVariable(mesh, nodeDofCount = 1)
-    weightVar = uw.mesh.MeshVariable(mesh, nodeDofCount = 1)
-
-    if specialSets == None:
-        localIntegral = uw.utils.Integral(maskVar, mesh)
-    else:
-        localIntegral = uw.utils.Integral(
-            maskVar,
-            mesh,
-            integrationType = 'surface',
-            surfaceIndexSet = specialSets
-            )
-
-    for index, val in enumerate(weightVar.data):
-        maskVar.data[:] = 0.
-        maskVar.data[index] = 1.
-        weightVar.data[index] = localIntegral.evaluate()[0]
-    return weightVar
-
-def get_fullLocalMeshVar(field1):
-    fullInField = None
-    if field1.__hash__() in fullLocalMeshVars:
-        fullInField = fullLocalMeshVars[field1.__hash__()]()
-    if fullInField is None:
-        fullInField = make_fullLocalMeshVar(field1)
-    return fullInField
-
-def make_fullLocalMeshVar(field1):
-
-    if type(field1) == uw.mesh._meshvariable.MeshVariable:
-        inMesh = field1.mesh
-        inDim = field1.nodeDofCount
-    elif type(field1) == uw.swarm._swarmvariable.SwarmVariable:
-        inMesh = field1.swarm.mesh
-        inDim = field1.count
-    else:
-        inMesh = utilities.get_mesh(field1)
-        inDim = utilities.get_varDim(field1)
-    meshUtils = get_meshUtils(inMesh)
-    inField = meshUtils.meshify(
-        field1,
-        vector = inDim == inMesh.dim,
-        update = False
+def copyField(fromField, toField, maxTolerance = 0.1):
+    # NOT KNOWN TO BE PARALLEL SAFE YET
+    if not hasattr(fromField, 'evaluate'):
+        raise Exception
+    if not type(toField) == uw.mesh._meshvariable.MeshVariable:
+        raise Exception
+    toMesh = utilities.get_mesh(toField)
+    toBox = mapping.box(toMesh)
+    outArray, tolerance = mapping.safe_box_evaluate(
+        fromField,
+        toBox,
+        maxTolerance
         )
-    localAnnulus = meshUtils.get_full_local_mesh()
-    fullInField = localAnnulus.add_variable(inDim)
-
-    def update():
-        if hasattr(inField, 'project'):
-            inField.project()
-        allData = mpi.comm.gather(inField.data, root = 0)
-        allGID = mpi.comm.gather(inField.mesh.data_nodegId, root = 0)
-        if mpi.rank == 0:
-            for proc in range(mpi.size):
-                for data, ID in zip(allData[proc], allGID[proc]):
-                    fullInField.data[ID] = data
-        fullInField.data[:] = mpi.comm.bcast(fullInField.data, root = 0)
-
-        try_set_scales(fullInField, field1)
-        try_set_boundaries(fullInField, field1)
-
-    # POSSIBLE CIRCULAR REFERENCE:
-    fullInField.update = update
-
-    fullLocalMeshVars[field1.__hash__()] = weakref.ref(fullInField)
-
-    return fullInField
-
-# def copyField(field1, field2,
-#         tolerance = 0.01,
-#         rounded = False,
-#         boxDims = None,
-#         freqs = None,
-#         mirrored = None,
-#         blendweight = None
-#         # scales = None,
-#         # boundaries = None
-#         ):
-#
-#     if not boxDims is None:
-#         assert np.max(np.array(boxDims)) <= 1., "Max boxdim is 1."
-#         assert np.min(np.array(boxDims)) >= 0., "Min boxdim is 0."
-#
-#     utilities.check_uw(field1)
-#
-#     if type(field2) == uw.mesh._meshvariable.MeshVariable:
-#         outMesh = field2.mesh
-#         outCoords = outMesh.data
-#         outDim = field2.nodeDofCount
-#     elif type(field2) == uw.swarm._swarmvariable.SwarmVariable:
-#         outMesh = field2.swarm.mesh
-#         outCoords = field2.swarm.particleCoordinates.data
-#         outDim = field2.count
-#     else:
-#         projVar = _projection.get_meshVar(field1)
-#         projVar.update()
-#         field2 = projVar.var
-#         outMesh = field2.mesh
-#         outCoords = outMesh.data
-#         outDim = field2.nodeDofCount
-#         # raise Exception("Input 2 not a field.")
-#     outField = field2
-#
-#     fullInField = get_fullLocalMeshVar(field1)
-#     fullInField.update()
-#     inDim = fullInField.nodeDofCount
-#     inMesh = fullInField.mesh
-#
-#     assert outDim == inDim, \
-#         "In and Out fields have different dimensions!"
-#     assert outMesh.dim == inMesh.dim, \
-#         "In and Out meshes have different dimensions!"
-#
-#     outBox = mapping.box(
-#         outMesh,
-#         outCoords,
-#         boxDims,
-#         freqs,
-#         mirrored
-#         )
-#
-#     def mapFn(tolerance):
-#
-#         evalCoords = mapping.unbox(
-#             inMesh,
-#             outBox,
-#             tolerance = tolerance
-#             )
-#
-#         newData = fullInField.evaluate(evalCoords)
-#         oldData = outField.data[:]
-#         if not blendweight is None:
-#             newData = np.sum(
-#                 np.array([oldData, blendweight * newData]),
-#                 axis = 0
-#                 ) \
-#                 / (blendweight + 1)
-#
-#         outField.data[:] = newData
-#
-#         # message("Mapping achieved at tolerance = " + str(tolerance))
-#         return tolerance
-#
-#     tryTolerance = 0.
-#
-#     while True:
-#         try:
-#             tryTolerance = mapFn(tryTolerance)
-#             break
-#         except:
-#             if tryTolerance > 0.:
-#                 tryTolerance *= 1.01
-#             else:
-#                 tryTolerance += 0.00001
-#             if tryTolerance > tolerance:
-#                 raise Exception("Couldn't find acceptable tolerance.")
-#             else:
-#                 pass
-#
-#     if rounded:
-#         field2.data[:] = np.around(field2.data)
-#
-#     # if not scales is None:
-#     #     set_scales(field2, scales)
-#     #
-#     # if not boundaries is None:
-#     #     set_boundaries(field2, boundaries)
-#
-#     try_set_scales(field2, field1)
-#     try_set_boundaries(field2, field1)
-#     try_set_scales(field2)
-#     try_set_boundaries(field2)
-#
-#     return tryTolerance
+    toField.data[...] = outArray
+    return tolerance

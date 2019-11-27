@@ -229,8 +229,14 @@ class PlanetVar(UWFn):
                     self,
                     fn_norm = fn_norm
                     )
-            minFn = minmax.min_global
-            maxFn = minmax.max_global
+            def minFn():
+                allmins = mpi.comm.allgather(minmax.min_local())
+                return min(allmins)
+            def maxFn():
+                allmaxs = mpi.comm.allgather(minmax.max_local())
+                return max(allmaxs)
+            # minFn = minmax.min_global
+            # maxFn = minmax.max_global
             self._minmax = minmax
             rangeFn = lambda: abs(minFn() - maxFn())
         elif isinstance(self, _reduction.Reduction) \
