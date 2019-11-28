@@ -1,3 +1,5 @@
+import os
+
 from .. import mpi
 
 class Fig:

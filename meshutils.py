@@ -1,6 +1,6 @@
 from .utilities import get_scales
 # from .utilities import get_mesh
-from .utilities import var_check_hash
+from .utilities import hash_var
 
 import underworld as uw
 from underworld import function as _fn
@@ -227,7 +227,7 @@ class MeshUtils:
             _lasthash = 0,
             _update_lasthash = False
             ):
-        currenthash = var_check_hash(inFn)
+        currenthash = hash_var(inFn)
         if not currenthash == _lasthash:
             if meshVar.nodeDofCount == meshVar.mesh.dim:
                 projector = self.get_vectorProjector()

@@ -5,19 +5,37 @@ from PIL import Image
 
 from .. import mpi
 from .. import fieldops
+from .. import mapping
 from ..utilities import message
 from .. import functions as pfn
 from . import fig
+
+STANDARD_SIZE = (256, 256)
 
 class Data:
     def __init__(self, inVar):
         self.var = pfn.normalise.default(inVar, [-128., 127.])
         self.update()
     def update(self):
-        data = fieldops.get_global_sorted_array(self.var, subMesh = True)
-        data = data.flatten()
+        # grid = np.vstack(
+        #     np.dstack(
+        #         np.meshgrid(
+        #             np.linspace(0., 1., 256),
+        #             np.linspace(0., 1., 256)
+        #             )
+        #         )
+        #     )
+        # data, tolerance = mapping.safe_box_evaluate(
+        #     self.var,
+        #     grid
+        #     )
+        # data = data.flatten().reshape((256, 256))
+        # raise Exception(data)
+        data = fieldops.get_global_var_data(self.var, subMesh = True)
         data = data.reshape(self.var.mesh.elementRes[::-1])
         data = np.flip(data, axis = 0) # makes it top-bottom
+        data = np.flip(data, axis = 1) # makes it top-bottom
+        data = data.T
         data = data.astype('int8')
         self.data = data
 
@@ -60,6 +78,7 @@ class Raster(fig.Fig):
             bands.append(band)
         img = Image.merge(self.mode, bands)
         self.bands = bands
+        # self.img = img.resize(STANDARD_SIZE)
         self.img = img
     def _save(self, path, name, ext):
         self.img.save(os.path.join(path, name + '.' + ext))
@@ -68,3 +87,7 @@ class Raster(fig.Fig):
     def evaluate(self):
         self.update()
         return self.data
+    def enlarge(self, factor = 4):
+        return self.img.resize(
+            factor * np.array(self.shape[:2])[::-1]
+            )

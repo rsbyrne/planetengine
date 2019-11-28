@@ -1,6 +1,5 @@
 import random
 import itertools
-from . import mpi
 
 def suite_list(listDict, shuffle = False, chunks = None, shuffleseed = 1066):
     listOfKeys = sorted(listDict)

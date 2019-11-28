@@ -5,7 +5,6 @@ import everest
 
 from .fieldops import set_scales
 from .fieldops import set_boundaries
-from .utilities import check_reqs
 from . import mapping
 
 from types import ModuleType

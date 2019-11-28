@@ -5,8 +5,7 @@ import underworld as uw
 _fn = uw.function
 UWFn = _fn._function.Function
 
-from .. import utilities
-hasher = utilities.hashToInt
+_PLANETVAR_FLAG = 'planetVar'
 
 # MOST IMPORTS ARE AT THE BOTTOM
 # DUE TO CIRCULAR IMPORTS PROBLEM
@@ -38,9 +37,7 @@ def get_opHash(varClass, *hashVars, **stringVariants):
             if len(list(var._underlyingDataItems)) > 0:
                 raise Exception
             value = var.evaluate()[0]
-            valString = utilities.stringify(
-                value
-                )
+            valString = str(value)
             stringVariants = {'val': valString}
 
         elif varClass is _basetypes.Variable:
@@ -84,7 +81,8 @@ def get_opHash(varClass, *hashVars, **stringVariants):
     opTag = update_opTag(varClass.opTag, stringVariants)
 
     hashList.append(opTag)
-    hashVal = hasher(hashList)
+    str_hashList = [str(item) for item in hashList]
+    hashVal = hash(tuple(str_hashList))
 
     return hashVal
 
@@ -231,8 +229,14 @@ class PlanetVar(UWFn):
                     self,
                     fn_norm = fn_norm
                     )
-            minFn = minmax.min_global
-            maxFn = minmax.max_global
+            def minFn():
+                allmins = mpi.comm.allgather(minmax.min_local())
+                return min(allmins)
+            def maxFn():
+                allmaxs = mpi.comm.allgather(minmax.max_local())
+                return max(allmaxs)
+            # minFn = minmax.min_global
+            # maxFn = minmax.max_global
             self._minmax = minmax
             rangeFn = lambda: abs(minFn() - maxFn())
         elif isinstance(self, _reduction.Reduction) \
@@ -379,5 +383,4 @@ from . import _reduction
 # from . import projection
 from . import gradient
 from . import operations
-from .. import utilities
 from .. import mpi
