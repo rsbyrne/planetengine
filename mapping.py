@@ -288,112 +288,112 @@ def unbox(
 
     return outArray
 
-def safe_box_evaluate(inFn, inCoords, maxTolerance = 0.1):
-    tolerance = 0.
-    while tolerance < maxTolerance:
-        try:
-            outArray = box_evaluate(inFn, inCoords, tolerance)
-            break
-        except:
-            if tolerance == 0.:
-                tolerance += 0.00001
-            else:
-                tolerance *= 1.01
-    if tolerance > maxTolerance:
-        raise Exception("Acceptable tolerance could not be found.")
-    return outArray, tolerance
+# def safe_box_evaluate(inFn, inCoords, maxTolerance = 0.1):
+#     tolerance = 0.
+#     while tolerance < maxTolerance:
+#         try:
+#             outArray = box_evaluate(inFn, inCoords, tolerance)
+#             break
+#         except:
+#             if tolerance == 0.:
+#                 tolerance += 0.00001
+#             else:
+#                 tolerance *= 1.01
+#     if tolerance > maxTolerance:
+#         raise Exception("Acceptable tolerance could not be found.")
+#     return outArray, tolerance
 
-def box_evaluate(inFn, inCoords, tolerance):
-    mesh = utilities.get_mesh(inFn)
-    unboxed = unbox(
-        mesh,
-        inCoords,
-        tolerance = tolerance
-        )
-    localValsDict = {}
-    for coords in unboxed:
-        try: localValsDict[tuple(coords)] = inFn.evaluate(np.array([coords,]))[0]
-        except: pass
-    allValsDicts = mpi.comm.allgather(localValsDict)
-    globalValsDict = {}
-    for localValDict in allValsDicts:
-        globalValsDict.update(localValDict)
-    outVals = []
-    for coord in unboxed:
-        outVals.append(globalValsDict[tuple(coord)])
-    outArray = np.array(outVals)
-    if not outArray.shape[0] == inCoords.shape[0]:
-        raise Exception("Some coords could not be evaluated!")
-    return outArray
+# def box_evaluate(inFn, inCoords, tolerance):
+#     mesh = utilities.get_mesh(inFn)
+#     unboxed = unbox(
+#         mesh,
+#         inCoords,
+#         tolerance = tolerance
+#         )
+#     localValsDict = {}
+#     for coords in unboxed:
+#         try: localValsDict[tuple(coords)] = inFn.evaluate(np.array([coords,]))[0]
+#         except: pass
+#     allValsDicts = mpi.comm.allgather(localValsDict)
+#     globalValsDict = {}
+#     for localValDict in allValsDicts:
+#         globalValsDict.update(localValDict)
+#     outVals = []
+#     for coord in unboxed:
+#         outVals.append(globalValsDict[tuple(coord)])
+#     outArray = np.array(outVals)
+#     if not outArray.shape[0] == inCoords.shape[0]:
+#         raise Exception("Some coords could not be evaluated!")
+#     return outArray
 
-def get_localInCoords(inCoords, mesh, boxInput = True):
-    if not boxInput:
-        inCoords = box(mesh, inCoords)
-    localBox = box(mesh)
-    localBoxScales = utilities.get_scales(
-        localBox,
-        local = True
-        )
-    localBoxVertices = np.vstack(
-        np.dstack(
-            np.meshgrid(
-                localBoxScales[0],
-                localBoxScales[1]
-                )
-            )
-        )
-    rearrangedLocalBoxVertices = np.array([
-        localBoxVertices[0],
-        localBoxVertices[1],
-        localBoxVertices[3],
-        localBoxVertices[2]
-        ])
-    localBoxPoly = fn.shape.Polygon(
-        rearrangedLocalBoxVertices
-        )
-    localIndices, nonlocalIndices = np.where(
-        localBoxPoly.evaluate(
-            inCoords
-            )
-        )
-    localInCoords = inCoords[localIndices]
-    if not boxInput:
-        localInCoords = unbox(
-            mesh,
-            localInCoords
-            )
-    return localInCoords
-
-def safe_local_box_evaluate(inFn, inCoords, maxTolerance = 0.001):
-    mesh = utilities.get_mesh(inFn)
-    localInCoords = get_localInCoords(inCoords, mesh)
-    tolerance = 0.
-    while tolerance < maxTolerance:
-        try:
-            unboxedLocalInCoords = unbox(
-                mesh,
-                localInCoords,
-                tolerance = tolerance
-                )
-            outArray = inFn.evaluate(unboxedLocalInCoords)
-            break
-        except:
-            if tolerance == 0.:
-                tolerance += 0.00001
-            else:
-                tolerance *= 1.01
-    if tolerance > maxTolerance:
-        raise Exception("Acceptable tolerance could not be found.")
-    return outArray, tolerance
-
-def local_box_evaluate(inFn, inCoords, tolerance = 0.1):
-    mesh = utilities.get_mesh(inFn)
-    localInCoords = get_localInCoords(inCoords, mesh)
-    unboxedLocalInCoords = unbox(
-        mesh,
-        localInCoords,
-        tolerance = tolerance,
-        shrinkLocal = True
-        )
-    outArray = inFn.evaluate(unboxedLocalInCoords)
-    return outArray, tolerance
+# def get_localInCoords(inCoords, mesh, boxInput = True):
+#     if not boxInput:
+#         inCoords = box(mesh, inCoords)
+#     localBox = box(mesh)
+#     localBoxScales = utilities.get_scales(
+#         localBox,
+#         local = True
+#         )
+#     localBoxVertices = np.vstack(
+#         np.dstack(
+#             np.meshgrid(
+#                 localBoxScales[0],
+#                 localBoxScales[1]
+#                 )
+#             )
+#         )
+#     rearrangedLocalBoxVertices = np.array([
+#         localBoxVertices[0],
+#         localBoxVertices[1],
+#         localBoxVertices[3],
+#         localBoxVertices[2]
+#         ])
+#     localBoxPoly = fn.shape.Polygon(
+#         rearrangedLocalBoxVertices
+#         )
+#     localIndices, nonlocalIndices = np.where(
+#         localBoxPoly.evaluate(
+#             inCoords
+#             )
+#         )
+#     localInCoords = inCoords[localIndices]
+#     if not boxInput:
+#         localInCoords = unbox(
+#             mesh,
+#             localInCoords
+#             )
+#     return localInCoords
+#
+# def safe_local_box_evaluate(inFn, inCoords, maxTolerance = 0.001):
+#     mesh = utilities.get_mesh(inFn)
+#     localInCoords = get_localInCoords(inCoords, mesh)
+#     tolerance = 0.
+#     while tolerance < maxTolerance:
+#         try:
+#             unboxedLocalInCoords = unbox(
+#                 mesh,
+#                 localInCoords,
+#                 tolerance = tolerance
+#                 )
+#             outArray = inFn.evaluate(unboxedLocalInCoords)
+#             break
+#         except:
+#             if tolerance == 0.:
+#                 tolerance += 0.00001
+#             else:
+#                 tolerance *= 1.01
+#     if tolerance > maxTolerance:
+#         raise Exception("Acceptable tolerance could not be found.")
+#     return outArray, tolerance
+#
+# def local_box_evaluate(inFn, inCoords, tolerance = 0.1):
+#     mesh = utilities.get_mesh(inFn)
+#     localInCoords = get_localInCoords(inCoords, mesh)
+#     unboxedLocalInCoords = unbox(
+#         mesh,
+#         localInCoords,
+#         tolerance = tolerance,
+#         shrinkLocal = True
+#         )
+#     outArray = inFn.evaluate(unboxedLocalInCoords)
+#     return outArray, tolerance
