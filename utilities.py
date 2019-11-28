@@ -88,7 +88,7 @@ def get_varDim(var):
 #         valSets.append(valSet)
 #     return valSets
 
-def get_scales(array, valSets = None):
+def get_scales(array, valSets = None, local = False):
     if valSets is None:
         array = np.array(array)
         array = array.T
@@ -96,10 +96,14 @@ def get_scales(array, valSets = None):
         for component in array:
             minVal = np.nanmin(component)
             maxVal = np.nanmax(component)
-            minVals = mpi.comm.allgather(minVal)
-            maxVals = mpi.comm.allgather(maxVal)
-            minVals = [val for val in minVals if val < np.inf]
-            maxVals = [val for val in maxVals if val < np.inf]
+            if local:
+                minVals = [minVal,]
+                maxVals = [maxVal,]
+            else:
+                minVals = mpi.comm.allgather(minVal)
+                maxVals = mpi.comm.allgather(maxVal)
+                minVals = [val for val in minVals if val < np.inf]
+                maxVals = [val for val in maxVals if val < np.inf]
             assert len(minVals) > 0
             assert len(maxVals) > 0
             allmin = min(minVals)

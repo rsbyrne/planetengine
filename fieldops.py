@@ -116,7 +116,7 @@ def clip_array(variable, scales):
                 )
         ]).T
 
-def copyField(fromField, toField, maxTolerance = 0.1):
+def copyField(fromField, toField, maxTolerance = 0.01):
     # NOT KNOWN TO BE PARALLEL SAFE YET
     if not hasattr(fromField, 'evaluate'):
         raise Exception

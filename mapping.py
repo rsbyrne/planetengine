@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import underworld as uw
+fn = uw.function
 
 from . import mpi
 from . import utilities
@@ -176,7 +177,7 @@ def shrink_box(
         boxDims = pureBoxDims
 
     # scale to unit box if necessary:
-    if not boxDims == pureBoxDims:
+    if not np.allclose(boxDims, pureBoxDims):
         outBox = rescale_array(
             coordArray,
             boxDims,
@@ -194,7 +195,7 @@ def shrink_box(
         )
 
     # return box to original dimensions:
-    if not boxDims == pureBoxDims:
+    if not np.allclose(boxDims, pureBoxDims):
         outBox = rescale_array(
             outBox,
             pureBoxDims,
@@ -252,20 +253,24 @@ def unbox(
         coordArray = None,
         boxDims = None,
         tolerance = 0.,
+        shrinkLocal = False
         ):
 
     meshUtils = get_meshUtils(mesh)
 
     if coordArray is None:
         coordArray = mesh.data[:]
-    pureBoxDims = get_pureBoxDims(coordArray)
     if boxDims is None:
-        boxDims = pureBoxDims
+        boxDims = get_pureBoxDims(coordArray)
 
     inBox = coordArray
 
     if tolerance > 0.:
-        inBox = shrink_box(coordArray, boxDims, tolerance)
+        if shrinkLocal:
+            shrinkBox = utilities.get_scales(inBox, local = True)
+        else:
+            shrinkBox = boxDims
+        inBox = shrink_box(coordArray, shrinkBox, tolerance)
     else:
         inBox = coordArray
 
@@ -320,3 +325,75 @@ def box_evaluate(inFn, inCoords, tolerance):
     if not outArray.shape[0] == inCoords.shape[0]:
         raise Exception("Some coords could not be evaluated!")
     return outArray
+
+def get_localInCoords(inCoords, mesh, boxInput = True):
+    if not boxInput:
+        inCoords = box(mesh, inCoords)
+    localBox = box(mesh)
+    localBoxScales = utilities.get_scales(
+        localBox,
+        local = True
+        )
+    localBoxVertices = np.vstack(
+        np.dstack(
+            np.meshgrid(
+                localBoxScales[0],
+                localBoxScales[1]
+                )
+            )
+        )
+    rearrangedLocalBoxVertices = np.array([
+        localBoxVertices[0],
+        localBoxVertices[1],
+        localBoxVertices[3],
+        localBoxVertices[2]
+        ])
+    localBoxPoly = fn.shape.Polygon(
+        rearrangedLocalBoxVertices
+        )
+    localIndices, nonlocalIndices = np.where(
+        localBoxPoly.evaluate(
+            inCoords
+            )
+        )
+    localInCoords = inCoords[localIndices]
+    if not boxInput:
+        localInCoords = unbox(
+            mesh,
+            localInCoords
+            )
+    return localInCoords
+
+def safe_local_box_evaluate(inFn, inCoords, maxTolerance = 0.001):
+    mesh = utilities.get_mesh(inFn)
+    localInCoords = get_localInCoords(inCoords, mesh)
+    tolerance = 0.
+    while tolerance < maxTolerance:
+        try:
+            unboxedLocalInCoords = unbox(
+                mesh,
+                localInCoords,
+                tolerance = tolerance
+                )
+            outArray = inFn.evaluate(unboxedLocalInCoords)
+            break
+        except:
+            if tolerance == 0.:
+                tolerance += 0.00001
+            else:
+                tolerance *= 1.01
+    if tolerance > maxTolerance:
+        raise Exception("Acceptable tolerance could not be found.")
+    return outArray, tolerance
+
+def local_box_evaluate(inFn, inCoords, tolerance = 0.1):
+    mesh = utilities.get_mesh(inFn)
+    localInCoords = get_localInCoords(inCoords, mesh)
+    unboxedLocalInCoords = unbox(
+        mesh,
+        localInCoords,
+        tolerance = tolerance,
+        shrinkLocal = True
+        )
+    outArray = inFn.evaluate(unboxedLocalInCoords)
+    return outArray, tolerance

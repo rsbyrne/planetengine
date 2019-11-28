@@ -25,7 +25,7 @@ class Data:
         #             )
         #         )
         #     )
-        # data, tolerance = mapping.safe_box_evaluate(
+        # data, tolerance = mapping.safe_local_box_evaluate(
         #     self.var,
         #     grid
         #     )
