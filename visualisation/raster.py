@@ -1,41 +1,48 @@
 import underworld as uw
 import numpy as np
+from scipy.interpolate import griddata
 import os
 from PIL import Image
 
-from .. import mpi
 from .. import fieldops
 from .. import mapping
-from ..utilities import message
+from .. import utilities
 from .. import functions as pfn
 from . import fig
 
 STANDARD_SIZE = (256, 256)
 
 class Data:
-    def __init__(self, inVar):
+    def __init__(self, inVar, size = (256, 256)):
         self.var = pfn.normalise.default(inVar, [-128., 127.])
+        self.grid = np.vstack(
+            np.dstack(
+                np.meshgrid(
+                    np.linspace(0., 1., size[0]),
+                    np.linspace(0., 1., size[1])
+                    )
+                )
+            )
+        self.fromMesh = utilities.get_mesh(self.var)
+        self.tolerance = 0.0001
+        self.size = size
         self.update()
     def update(self):
-        # grid = np.vstack(
-        #     np.dstack(
-        #         np.meshgrid(
-        #             np.linspace(0., 1., 256),
-        #             np.linspace(0., 1., 256)
-        #             )
-        #         )
-        #     )
-        # data, tolerance = mapping.safe_local_box_evaluate(
-        #     self.var,
-        #     grid
-        #     )
-        # data = data.flatten().reshape((256, 256))
-        # raise Exception(data)
-        data = fieldops.get_global_var_data(self.var, subMesh = True)
-        data = data.reshape(self.var.mesh.elementRes[::-1])
-        data = np.flip(data, axis = 0) # makes it top-bottom
-        data = np.flip(data, axis = 1) # makes it top-bottom
-        data = data.T
+        globalFromMesh = fieldops.get_global_var_data(self.fromMesh)
+        globalFromField = fieldops.get_global_var_data(self.var)
+        evalCoords = mapping.unbox(
+            self.fromMesh,
+            self.grid,
+            tolerance = self.tolerance,
+            shrinkLocal = True
+            )
+        data = griddata(
+            globalFromMesh,
+            globalFromField,
+            evalCoords,
+            method = 'cubic'
+            )
+        data = data.reshape(self.size)
         data = data.astype('int8')
         self.data = data
 
