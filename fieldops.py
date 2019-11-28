@@ -120,8 +120,7 @@ def copyField(
     fromMesh = utilities.get_mesh(fromField)
     toMesh = utilities.get_mesh(toField)
     globalFromMesh = get_global_var_data(fromMesh)
-    globalFromField = fromField.evaluate_global(fromMesh.data)
-    globalFromField = mpi.comm.bcast(globalFromField, root = 0)
+    globalFromField = get_global_var_data(fromField)
     evalCoords = mapping.unbox(
         fromMesh,
         mapping.box(
