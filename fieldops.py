@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import griddata
 import weakref
 
 import underworld as uw
@@ -7,13 +8,8 @@ from underworld import function as _fn
 from .meshutils import get_meshUtils
 from . import mapping
 from . import utilities
-from .functions import projection as _projection
-get_scales = utilities.get_scales
-message = utilities.message
-
 from . import mpi
-
-fullLocalMeshVars = {}
+message = utilities.message
 
 def get_global_var_data(var, subMesh = False):
     substrate = utilities.get_prioritySubstrate(var)
@@ -82,7 +78,7 @@ def set_scales(variable, values = None):
 
     variable.data[:] = mapping.rescale_array(
         variable.data,
-        get_scales(variable.data),
+        utilities.get_scales(variable.data),
         values
         )
 
@@ -116,18 +112,31 @@ def clip_array(variable, scales):
                 )
         ]).T
 
-def copyField(fromField, toField, maxTolerance = 0.01):
-    # NOT KNOWN TO BE PARALLEL SAFE YET
-    if not hasattr(fromField, 'evaluate'):
-        raise Exception
-    if not type(toField) == uw.mesh._meshvariable.MeshVariable:
-        raise Exception
-    toMesh = utilities.get_mesh(toField)
-    toBox = mapping.box(toMesh)
-    outArray, tolerance = mapping.safe_box_evaluate(
+def copyField(
         fromField,
-        toBox,
-        maxTolerance
+        toField,
+        tolerance = 0.001
+        ):
+    fromMesh = utilities.get_mesh(fromField)
+    toMesh = utilities.get_mesh(toField)
+    globalFromMesh = get_global_var_data(fromMesh)
+    globalFromField = fromField.evaluate_global(fromMesh.data)
+    globalFromField = mpi.comm.bcast(globalFromField, root = 0)
+    evalCoords = mapping.unbox(
+        fromMesh,
+        mapping.box(
+            toMesh,
+            toMesh.data
+            ),
+        tolerance = tolerance,
+        shrinkLocal = True
         )
-    toField.data[...] = outArray
-    return tolerance
+
+    copyData = griddata(
+        globalFromMesh,
+        globalFromField,
+        evalCoords,
+        method = 'cubic'
+        )
+
+    toField.data[...] = copyData
