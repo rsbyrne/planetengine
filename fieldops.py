@@ -148,7 +148,7 @@ def box_evaluate(
                 )
     return data
 
-def safe_box_evaluate(var, boxCoords, maxTolerance = None, returnTolerance = False):
+def safe_box_evaluate(var, boxCoords, maxTolerance = None):
     if maxTolerance is None:
         maxTolerance = 1e-100
     tolerance = 0.
@@ -165,10 +165,7 @@ def safe_box_evaluate(var, boxCoords, maxTolerance = None, returnTolerance = Fal
                 globalFromMesh,
                 globalFromField
                 )
-            if returnTolerance:
-                return data, tolerance
-            else:
-                return data
+            return data
         except exceptions.NaNFound:
             pass
     raise exceptions.AcceptableToleranceNotFound(
@@ -178,19 +175,16 @@ def safe_box_evaluate(var, boxCoords, maxTolerance = None, returnTolerance = Fal
 def copyField(
         fromField,
         toField,
-        maxTolerance = None,
-        returnTolerance = False
+        maxTolerance = None
         ):
     toMesh = utilities.get_mesh(toField)
     boxCoords = mapping.box(
         toMesh,
         toMesh.data
         )
-    copyData, tolerance = safe_box_evaluate(
+    copyData = safe_box_evaluate(
         fromField,
         boxCoords,
         maxTolerance
         )
     toField.data[...] = copyData
-    if returnTolerance:
-        return tolerance
