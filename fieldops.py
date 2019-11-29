@@ -132,7 +132,7 @@ def box_evaluate(
         fromMesh,
         boxCoords,
         tolerance = tolerance,
-        shrinkLocal = False
+        shrinkLocal = True
         )
     data = sp.interpolate.griddata(
         globalFromMesh,
@@ -152,7 +152,7 @@ def box_evaluate(
 def safe_box_evaluate(var, boxCoords, maxTolerance = None):
     if maxTolerance is None:
         maxTolerance = 1e-1
-    tolerance = 0.
+    tolerance = 1e-8
     fromMesh = utilities.get_mesh(var)
     globalFromMesh = get_global_var_data(fromMesh)
     globalFromField = get_global_var_data(var)
@@ -169,10 +169,24 @@ def safe_box_evaluate(var, boxCoords, maxTolerance = None):
                 )
             return data
         except exceptions.NaNFound:
-            tolerance
+            tolerance *= 10.
     raise exceptions.AcceptableToleranceNotFound(
         '''Acceptable tolerance could not be found.'''
         )
+
+    # while True:
+    #     try:
+    #         tryTolerance = mapFn(tryTolerance)
+    #         break
+    #     except:
+    #         if tryTolerance > 0.:
+    #             tryTolerance *= 1.01
+    #         else:
+    #             tryTolerance += 0.00001
+    #         if tryTolerance > tolerance:
+    #             raise Exception("Couldn't find acceptable tolerance.")
+    #         else:
+    #             pass
 
 def copyField(
         fromField,
