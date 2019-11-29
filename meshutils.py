@@ -90,14 +90,20 @@ class MeshUtils:
 
         elif type(mesh) == uw.mesh.FeMesh_Annulus:
 
-            self.flip = [True, True] # left to right, bottom to top
-            _flip_cfs = [int(not boolean) * 2. - 1. for boolean in self.flip]
-
+            # self.flip = [True, False] # left to right, bottom to top
+            # _flip_cfs = [int(not boolean) * 2. - 1. for boolean in self.flip]
+            #
+            # self.comps = {
+            #     'x': _fn.misc.constant((1., 0.)),
+            #     'y': _fn.misc.constant((0., 1.)),
+            #     'ang': _flip_cfs[0] * mesh.unitvec_theta_Fn,
+            #     'rad': _flip_cfs[1] * mesh.unitvec_r_Fn,
+            #     }
             self.comps = {
                 'x': _fn.misc.constant((1., 0.)),
                 'y': _fn.misc.constant((0., 1.)),
-                'ang': _flip_cfs[0] * mesh.unitvec_theta_Fn,
-                'rad': _flip_cfs[1] * mesh.unitvec_r_Fn,
+                'ang': mesh.unitvec_theta_Fn,
+                'rad':  mesh.unitvec_r_Fn,
                 }
             self.surfaces = {
                 'inner': mesh.specialSets['inner'],

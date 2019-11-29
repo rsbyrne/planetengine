@@ -37,7 +37,7 @@ class Sinusoidal(IC):
             self.pert \
             * np.cos(np.pi * (self.phase + self.freq * coordArray[:,0])) \
             * np.sin(np.pi * coordArray[:,1])
-        outArray = valMin + deltaVal * (coordArray[:,1]) + pertArray
+        outArray = valMin + deltaVal * (1. - coordArray[:,1]) + pertArray
         outArray = np.clip(outArray, valMin, valMax)
         outArray = np.array([[item] for item in outArray])
         return outArray

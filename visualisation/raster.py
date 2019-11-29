@@ -20,7 +20,7 @@ class Data:
             np.dstack(
                 np.meshgrid(
                     np.linspace(0., 1., size[0]),
-                    np.linspace(0., 1., size[1])
+                    np.linspace(1., 0., size[1])
                     )
                 )
             )
@@ -32,6 +32,10 @@ class Data:
             self.var,
             self.grid
             )
+        # data = data.flatten()
+        # data = data.reshape(self.size)
+        # data = np.flip(data, axis = 0) # makes it top-bottom
+        # data = np.round(data).astype('int8')
         # data = data.T
         data = data.reshape(self.size)
         data = np.round(data).astype('int8')

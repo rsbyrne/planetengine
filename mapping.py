@@ -5,8 +5,6 @@ fn = uw.function
 
 from . import mpi
 from . import utilities
-from . import meshutils
-get_meshUtils = meshutils.get_meshUtils
 
 def get_pureBoxDims(coordArray):
     pureBoxDims = ((0., 1.),) * coordArray.shape[1]
@@ -212,8 +210,6 @@ def box(
         mirrored = None,
         ):
 
-    meshUtils = get_meshUtils(mesh)
-
     if coordArray is None:
         coordArray = mesh.data
 
@@ -228,7 +224,7 @@ def box(
             radialCoords,
             inScales,
             outScales,
-            flip = meshUtils.flip
+            flip = [True, False]
             )
     else:
         outArray = rescale_array(
@@ -256,8 +252,6 @@ def unbox(
         shrinkLocal = False
         ):
 
-    meshUtils = get_meshUtils(mesh)
-
     if coordArray is None:
         coordArray = mesh.data[:]
     if boxDims is None:
@@ -281,7 +275,7 @@ def unbox(
             inBox,
             boxDims,
             outBoxDims,
-            flip = meshUtils.flip
+            flip = [True, False]
             ),
         inverse = True
         )
