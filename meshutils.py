@@ -102,7 +102,7 @@ class MeshUtils:
             self.comps = {
                 'x': _fn.misc.constant((1., 0.)),
                 'y': _fn.misc.constant((0., 1.)),
-                'ang': mesh.unitvec_theta_Fn,
+                'ang': -mesh.unitvec_theta_Fn,
                 'rad':  mesh.unitvec_r_Fn,
                 }
             self.surfaces = {
