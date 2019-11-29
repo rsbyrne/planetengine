@@ -158,7 +158,6 @@ def safe_box_evaluate(var, boxCoords, maxTolerance = None):
     globalFromField = get_global_var_data(var)
     while tolerance < maxTolerance:
         try:
-            print("Trying tolerance = ", tolerance)
             data = box_evaluate(
                 var,
                 boxCoords,
@@ -173,20 +172,6 @@ def safe_box_evaluate(var, boxCoords, maxTolerance = None):
     raise exceptions.AcceptableToleranceNotFound(
         '''Acceptable tolerance could not be found.'''
         )
-
-    # while True:
-    #     try:
-    #         tryTolerance = mapFn(tryTolerance)
-    #         break
-    #     except:
-    #         if tryTolerance > 0.:
-    #             tryTolerance *= 1.01
-    #         else:
-    #             tryTolerance += 0.00001
-    #         if tryTolerance > tolerance:
-    #             raise Exception("Couldn't find acceptable tolerance.")
-    #         else:
-    #             pass
 
 def copyField(
         fromField,
