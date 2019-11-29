@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.interpolate import griddata
+import scipy as sp
 import weakref
 
 import underworld as uw
@@ -9,6 +9,7 @@ from .meshutils import get_meshUtils
 from . import mapping
 from . import utilities
 from . import mpi
+from . import exceptions
 message = utilities.message
 
 def get_global_var_data(var, subMesh = False):
@@ -112,30 +113,84 @@ def clip_array(variable, scales):
                 )
         ]).T
 
-def copyField(
-        fromField,
-        toField,
-        tolerance = 0.001
+def box_evaluate(
+        var,
+        boxCoords,
+        tolerance = 0.,
+        fromMesh = None,
+        globalFromMesh = None,
+        globalFromField = None,
+        checkNaN = True
         ):
-    fromMesh = utilities.get_mesh(fromField)
-    toMesh = utilities.get_mesh(toField)
-    globalFromMesh = get_global_var_data(fromMesh)
-    globalFromField = get_global_var_data(fromField)
+    if fromMesh is None:
+        fromMesh = utilities.get_mesh(var)
+    if globalFromMesh is None:
+        globalFromMesh = get_global_var_data(fromMesh)
+    if globalFromField is None:
+        globalFromField = get_global_var_data(var)
     evalCoords = mapping.unbox(
         fromMesh,
-        mapping.box(
-            toMesh,
-            toMesh.data
-            ),
+        boxCoords,
         tolerance = tolerance,
-        shrinkLocal = True
+        shrinkLocal = False
         )
-
-    copyData = griddata(
+    data = sp.interpolate.griddata(
         globalFromMesh,
         globalFromField,
         evalCoords,
         method = 'cubic'
         )
+    if checkNaN:
+        if np.nan in data:
+            raise exceptions.NanFound(
+                '''Nan value detected in array: ''' \
+                '''to ignore, flag checkNaN = False'''
+                )
+    return data
 
+def safe_box_evaluate(var, boxCoords, maxTolerance = None, returnTolerance = False):
+    if maxTolerance is None:
+        maxTolerance = 1e-100
+    tolerance = 0.
+    fromMesh = utilities.get_mesh(var)
+    globalFromMesh = get_global_var_data(fromMesh)
+    globalFromField = get_global_var_data(var)
+    while tolerance < maxTolerance:
+        try:
+            data = box_evaluate(
+                var,
+                boxCoords,
+                tolerance,
+                fromMesh,
+                globalFromMesh,
+                globalFromField
+                )
+            if returnTolerance:
+                return data, tolerance
+            else:
+                return data
+        except exceptions.NaNFound:
+            pass
+    raise exceptions.AcceptableToleranceNotFound(
+        '''Acceptable tolerance could not be found.'''
+        )
+
+def copyField(
+        fromField,
+        toField,
+        maxTolerance = None,
+        returnTolerance = False
+        ):
+    toMesh = utilities.get_mesh(toField)
+    boxCoords = mapping.box(
+        toMesh,
+        toMesh.data
+        )
+    copyData, tolerance = safe_box_evaluate(
+        fromField,
+        boxCoords,
+        maxTolerance
+        )
     toField.data[...] = copyData
+    if returnTolerance:
+        return tolerance

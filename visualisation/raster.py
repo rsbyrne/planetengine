@@ -24,23 +24,12 @@ class Data:
                 )
             )
         self.fromMesh = utilities.get_mesh(self.var)
-        self.tolerance = 0.0001
         self.size = size
         self.update()
     def update(self):
-        globalFromMesh = fieldops.get_global_var_data(self.fromMesh)
-        globalFromField = fieldops.get_global_var_data(self.var)
-        evalCoords = mapping.unbox(
-            self.fromMesh,
-            self.grid,
-            tolerance = self.tolerance,
-            shrinkLocal = True
-            )
-        data = griddata(
-            globalFromMesh,
-            globalFromField,
-            evalCoords,
-            method = 'cubic'
+        data = fieldops.safe_box_evaluate(
+            self.var,
+            self.grid
             )
         data = data.reshape(self.size)
         data = data.astype('int8')
