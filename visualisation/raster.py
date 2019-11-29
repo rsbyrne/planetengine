@@ -13,8 +13,9 @@ from . import fig
 STANDARD_SIZE = (256, 256)
 
 class Data:
-    def __init__(self, inVar, size = (256, 256)):
-        self.var = pfn.normalise.default(inVar, [-128., 127.])
+    def __init__(self, inVar, size):
+        normInterval = [-126.999, 127.999]
+        self.var = pfn.normalise.default(inVar, normInterval)
         self.grid = np.vstack(
             np.dstack(
                 np.meshgrid(
@@ -31,15 +32,16 @@ class Data:
             self.var,
             self.grid
             )
+        # data = data.T
         data = data.reshape(self.size)
-        data = data.astype('int8')
+        data = np.round(data).astype('int8')
         self.data = data
 
 class Raster(fig.Fig):
     '''
     Modes: 1, L, P, RGB, RGBA, CMYK, YCbCr, LAB, HSV, I, F, RGBa, LA, RGBX
     '''
-    def __init__(self, *bands, mode = None, **kwargs):
+    def __init__(self, *bands, mode = None, size = (256, 256), **kwargs):
         if mode is None:
             if len(bands) == 1:
                 mode = 'L'
@@ -50,8 +52,11 @@ class Raster(fig.Fig):
             else:
                 raise Exception("Too many bands!")
         self.mode = mode
-        self.dataObjs = [Data(band) for band in bands]
-        self.shape = [*self.dataObjs[0].data.shape, len(self.dataObjs)]
+        self.dataObjs = [
+            Data(band, size = size) \
+                for band in bands
+            ]
+        self.shape = [*size, len(self.dataObjs)]
         self.data = np.zeros(self.shape, dtype = 'int8')
         super().__init__(**kwargs)
         self.update()
@@ -87,3 +92,5 @@ class Raster(fig.Fig):
         return self.img.resize(
             factor * np.array(self.shape[:2])[::-1]
             )
+    def resize(self, size = (256, 256)):
+        return self.img.resize(size)
