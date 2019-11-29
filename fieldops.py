@@ -141,8 +141,9 @@ def box_evaluate(
         method = 'cubic'
         )
     if checkNaN:
-        if np.nan in data:
-            raise exceptions.NanFound(
+        nanFound = np.isnan(np.sum(data))
+        if nanFound:
+            raise exceptions.NaNFound(
                 '''Nan value detected in array: ''' \
                 '''to ignore, flag checkNaN = False'''
                 )
@@ -150,13 +151,14 @@ def box_evaluate(
 
 def safe_box_evaluate(var, boxCoords, maxTolerance = None):
     if maxTolerance is None:
-        maxTolerance = 1e-100
+        maxTolerance = 1e-1
     tolerance = 0.
     fromMesh = utilities.get_mesh(var)
     globalFromMesh = get_global_var_data(fromMesh)
     globalFromField = get_global_var_data(var)
     while tolerance < maxTolerance:
         try:
+            print("Trying tolerance = ", tolerance)
             data = box_evaluate(
                 var,
                 boxCoords,
@@ -167,7 +169,7 @@ def safe_box_evaluate(var, boxCoords, maxTolerance = None):
                 )
             return data
         except exceptions.NaNFound:
-            pass
+            tolerance
     raise exceptions.AcceptableToleranceNotFound(
         '''Acceptable tolerance could not be found.'''
         )
