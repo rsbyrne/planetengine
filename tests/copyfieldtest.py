@@ -12,4 +12,5 @@ var2 = system2.obsVars['temperature']
 def testfn():
     planetengine.fieldops.copyField(var1, var2)
 planetengine.message(timeit(testfn, system2.reset, number = 10) / 10.)
+planetengine.quickShow(var1)
 planetengine.quickShow(var2)
