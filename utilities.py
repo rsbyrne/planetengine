@@ -13,6 +13,10 @@ def message(*args):
         if mpi.rank == 0:
             print(arg)
 
+class Grouper:
+    def __init__(self, grouperDict):
+        self.__dict__.update(grouperDict)
+
 def get_substrates(var):
     if type(var) == uw.mesh._meshvariable.MeshVariable:
         meshes = [var.mesh,]

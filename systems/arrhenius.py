@@ -1,29 +1,32 @@
+import numpy as np
+
 import underworld as uw
-from underworld import function as _fn
-import math
+fn = uw.function
 
 from planetengine.system import System
+from planetengine.initials import sinusoidal
 
-def build(*args, name = None, **kwargs):
+default_IC = sinusoidal.build()
+
+def build(*args, **kwargs):
     built = Arrhenius(*args, **kwargs)
-    if type(name) == str:
-        built.name = name
     return built
 
 class Arrhenius(System):
 
     name = "arrhenius"
-    script = __file__
 
     def __init__(
         self,
-        *args,
         res = 64,
         f = 0.54,
         aspect = 1.,
         Ra = 1e7,
+        urey = 0.,
         eta0 = 3e4,
-        **kwargs
+        dither = 0,
+        seed = 0,
+        _initial_temperatureField = default_IC
         ):
 
         ### HOUSEKEEPING: IMPORTANT! ###
@@ -42,7 +45,7 @@ class Arrhenius(System):
         outerRad = 1. / (1. - f)
         radii = (outerRad - length, outerRad)
 
-        maxAspect = math.pi * sum(radii) / length
+        maxAspect = np.pi * sum(radii) / length
         if aspect == 'max':
             aspect = maxAspect
             periodic = True
@@ -51,9 +54,9 @@ class Arrhenius(System):
             periodic = False
 
         width = length**2 * aspect * 2. / (radii[1]**2 - radii[0]**2)
-        midpoint = math.pi / 2.
+        midpoint = np.pi / 2.
         angExtentRaw = (midpoint - 0.5 * width, midpoint + 0.5 * width)
-        angExtentDeg = [item * 180. / math.pi for item in angExtentRaw]
+        angExtentDeg = [item * 180. / np.pi for item in angExtentRaw]
         angularExtent = [
             max(0., angExtentDeg[0]),
             min(360., angExtentDeg[1] + abs(min(0., angExtentDeg[0])))
@@ -110,15 +113,15 @@ class Arrhenius(System):
         vc_eqNum = uw.systems.sle.EqNumber(vc, False )
         vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
 
-        buoyancyFn = Ra * temperatureField * mesh.unitvec_r_Fn
+        buoyancyFn = Ra * temperatureField
 
         diffusivityFn = 1.
 
-        heatingFn = 1.
+        heatingFn = urey * Ra ** (1. / 3.)
 
         ### RHEOLOGY ###
 
-        viscosityFn = _fn.math.pow(
+        viscosityFn = fn.math.pow(
             eta0,
             1. - temperatureField
             )
@@ -130,7 +133,7 @@ class Arrhenius(System):
             pressureField = pressureField,
             conditions = [velBC,],
             fn_viscosity = viscosityFn,
-            fn_bodyforce = buoyancyFn,
+            fn_bodyforce = buoyancyFn * mesh.unitvec_r_Fn,
             _removeBCs = False,
             )
 
@@ -161,7 +164,17 @@ class Arrhenius(System):
                 stokes._vnsVec._cself
                 )
 
-        def solve():
+        def ditherFn():
+            inArr = temperatureField.data
+            ditherFactor = 10 ** (8 - dither)
+            modArr = inArr * ditherFactor
+            modArrInt = np.where(modArr <= 1., 1, modArr.astype('int'))
+            clippedArr = inArr - modArr % modArrInt / ditherFactor
+            np.random.seed(seed + self.count())
+            inArr[...] = clippedArr + np.random.random(clippedArr.shape) / ditherFactor
+            np.random.seed()
+
+        def update():
             velocityField.data[:] = 0.
             solver.solve(
                 nonLinearIterate = False,
@@ -173,26 +186,25 @@ class Arrhenius(System):
                 False
                 )
 
-        def update():
-            solve()
-
         def integrate():
             dt = advDiff.get_max_dt()
             advDiff.integrate(dt)
+            ditherFn()
             return dt
 
         super().__init__(
-            varsOfState = {'temperatureField': temperatureField},
+            inputs = inputs,
+            script = __file__,
+            varsOfState = {
+                'temperatureField': temperatureField,
+                'temperatureDotField': temperatureDotField
+                },
             obsVars = {
                 'temperature': temperatureField,
                 'velocity': velocityField,
-                'stress': velocityField * viscosityFn
+                'viscosity': viscosityFn
                 },
-            _update = update,
-            _integrate = integrate,
-            _locals = locals(),
-            args = args,
-            kwargs = kwargs,
-            inputs = inputs,
-            script = self.script
+            update = update,
+            integrate = integrate,
+            localsDict = locals()
             )

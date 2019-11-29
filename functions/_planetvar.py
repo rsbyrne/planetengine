@@ -237,29 +237,29 @@ class PlanetVar(UWFn):
             #     return max(allmaxs)
             minFn = minmax.min_global
             maxFn = minmax.max_global
+            minmax.evaluate(self.substrate)
             self._minmax = minmax
             rangeFn = lambda: abs(minFn() - maxFn())
+            def scaleFn():
+                return [[minFn(), maxFn()] for dim in range(self.varDim)]
         elif isinstance(self, _reduction.Reduction) \
                 or type(self) == _basetypes.Constant:
             minFn = lambda: min(self.value)
             maxFn = lambda: max(self.value)
             rangeFn = lambda: maxFn() - minFn()
+            scaleFn = lambda: [minFn(), maxFn()]
         elif type(self) in {
                 _basetypes.Parameter,
                 _basetypes.Shape
                 }:
-            minFn = maxFn = rangeFn = lambda: None
+            minFn = maxFn = rangeFn = scaleFn = lambda: None
         else:
             raise Exception
 
-        def scaleFn():
-            return [[minFn(), maxFn()] for dim in range(self.varDim)]
         self._minFn = minFn
         self._maxFn = maxFn
         self._rangeFn = rangeFn
         self._scaleFn = scaleFn
-
-        minmax.evaluate(self.substrate)
 
     def minFn(self):
         if not hasattr(self, '_minFn'):

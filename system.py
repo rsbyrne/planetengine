@@ -1,6 +1,7 @@
 import everest
 wordhashstamp = everest.utilities.wordhashstamp
 from . import fieldops
+from . import utilities
 from .visualisation import QuickFig
 
 INITIAL_FLAG = '_initial_'
@@ -16,7 +17,8 @@ class System(everest.built.Built):
             varsOfState,
             obsVars,
             update,
-            integrate
+            integrate,
+            localsDict = {}
             ):
 
         self.varsOfState = varsOfState
@@ -50,6 +52,8 @@ class System(everest.built.Built):
             # 'params': wordhashstamp(self.params)
             # 'configs': wordhashstamp(self.configs)
             }
+
+        self.locals = utilities.Grouper(localsDict)
 
         super().__init__(
             inputs,
@@ -140,13 +144,13 @@ class System(everest.built.Built):
     def go(self, steps):
         for step in range(steps):
             self.iterate()
-
-    def makefig(self):
-        self.fig = QuickFig(self.varsOfState)
-
-    def show(self):
-        if not hasattr(self, 'fig'):
-            self.makefig()
-        else:
-            self.fig.update()
-        self.fig.show()
+    #
+    # def makefig(self):
+    #     self.fig = QuickFig(self.varsOfState)
+    #
+    # def show(self):
+    #     if not hasattr(self, 'fig'):
+    #         self.makefig()
+    #     else:
+    #         self.fig.update()
+    #     self.fig.show()

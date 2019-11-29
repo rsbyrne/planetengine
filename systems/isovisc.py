@@ -1,7 +1,6 @@
 import numpy as np
 
 import underworld as uw
-_fn = uw.function
 
 from planetengine.system import System
 from planetengine.initials import sinusoidal
@@ -22,9 +21,10 @@ class Isovisc(System):
         f = 0.54,
         aspect = 1.,
         Ra = 1e7,
+        urey = 0.,
         dither = 0,
         seed = 0,
-        _initial_temperature = default_IC
+        _initial_temperatureField = default_IC
         ):
 
         ### HOUSEKEEPING: IMPORTANT! ###
@@ -111,11 +111,11 @@ class Isovisc(System):
         vc_eqNum = uw.systems.sle.EqNumber(vc, False )
         vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
 
-        buoyancyFn = Ra * temperatureField * mesh.unitvec_r_Fn
+        buoyancyFn = Ra * temperatureField
 
         diffusivityFn = 1.
 
-        heatingFn = 1.
+        heatingFn = urey * Ra ** (1. / 3.)
 
         ### RHEOLOGY ###
 
@@ -128,7 +128,7 @@ class Isovisc(System):
             pressureField = pressureField,
             conditions = [velBC,],
             fn_viscosity = viscosityFn,
-            fn_bodyforce = buoyancyFn,
+            fn_bodyforce = buoyancyFn * mesh.unitvec_r_Fn,
             _removeBCs = False,
             )
 
@@ -191,13 +191,14 @@ class Isovisc(System):
             inputs = inputs,
             script = __file__,
             varsOfState = {
-                'temperature': temperatureField,
-                'temperatureDot': temperatureDotField
+                'temperatureField': temperatureField,
+                'temperatureDotField': temperatureDotField
                 },
             obsVars = {
                 'temperature': temperatureField,
                 'velocity': velocityField
                 },
             update = update,
-            integrate = integrate
+            integrate = integrate,
+            localsDict = locals()
             )

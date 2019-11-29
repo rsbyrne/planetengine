@@ -13,7 +13,7 @@ from . import fig
 STANDARD_SIZE = (256, 256)
 
 class Data:
-    def __init__(self, var, size, normInterval = [-126.999, 127.999]):
+    def __init__(self, var, size, normInterval = [0.0001, 254.9999]):
         self.var = pfn.convert(var)
         self.grid = np.vstack(
             np.dstack(
@@ -36,9 +36,31 @@ class Data:
             self.var.scaleFn(),
             [self.normInterval for dim in range(data.shape[-1])]
             )
-        data = np.round(data).astype('int8')
+        data = np.round(data).astype('uint8')
         data = np.reshape(data, self.size[::-1])
         self.data = data
+
+def split_imgArr(imgArr):
+    outArrs = [
+        np.reshape(arr, arr.shape[:2]) \
+            for arr in np.split(
+                imgArr,
+                imgArr.shape[-1],
+                axis = -1
+                )
+        ]
+    return outArrs
+
+def rasterise(*datas, mode = 'RGB'):
+    bands = []
+    for data in datas:
+        band = Image.fromarray(
+            data,
+            mode = 'L',
+            )
+        bands.append(band)
+    img = Image.merge(mode, bands)
+    return img
 
 class Raster(fig.Fig):
     '''
@@ -60,7 +82,7 @@ class Raster(fig.Fig):
                 for band in bands
             ]
         self.shape = [*size[::-1], len(self.dataObjs)]
-        self.data = np.zeros(self.shape, dtype = 'int8')
+        self.data = np.zeros(self.shape, dtype = 'uint8')
         super().__init__(**kwargs)
         self.update()
     def _update(self):
@@ -69,28 +91,21 @@ class Raster(fig.Fig):
     def _update_data(self):
         for dataObj in self.dataObjs:
             dataObj.update()
-        # self.data[...] = np.dstack(
-        #     [dataObj.data for dataObj in self.dataObjs]
-        #     )
+        self.data[...] = np.dstack(
+            [dataObj.data for dataObj in self.dataObjs]
+            )
     def _update_img(self):
-        bands = []
-        for dataObj in self.dataObjs:
-            band = Image.fromarray(
-                dataObj.data + 127,
-                mode = 'L',
-                )
-            bands.append(band)
-        img = Image.merge(self.mode, bands)
-        self.bands = bands
-        # self.img = img.resize(STANDARD_SIZE)
-        self.img = img
+        self.img = rasterise(
+            *[dataObj.data for dataObj in self.dataObjs],
+            mode = self.mode
+            )
     def _save(self, path, name, ext):
         self.img.save(os.path.join(path, name + '.' + ext))
     def _show(self):
         self.update()
     def evaluate(self):
         self.update()
-        return self.data
+        return self.data.copy()
     def enlarge(self, factor = 4):
         return self.img.resize(
             factor * np.array(self.shape[:2])[::-1]
