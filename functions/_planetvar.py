@@ -229,14 +229,14 @@ class PlanetVar(UWFn):
                     self,
                     fn_norm = fn_norm
                     )
-            def minFn():
-                allmins = mpi.comm.allgather(minmax.min_local())
-                return min(allmins)
-            def maxFn():
-                allmaxs = mpi.comm.allgather(minmax.max_local())
-                return max(allmaxs)
-            # minFn = minmax.min_global
-            # maxFn = minmax.max_global
+            # def minFn():
+            #     allmins = mpi.comm.allgather(minmax.min_local())
+            #     return min(allmins)
+            # def maxFn():
+            #     allmaxs = mpi.comm.allgather(minmax.max_local())
+            #     return max(allmaxs)
+            minFn = minmax.min_global
+            maxFn = minmax.max_global
             self._minmax = minmax
             rangeFn = lambda: abs(minFn() - maxFn())
         elif isinstance(self, _reduction.Reduction) \
@@ -252,9 +252,14 @@ class PlanetVar(UWFn):
         else:
             raise Exception
 
+        def scaleFn():
+            return [[minFn(), maxFn()] for dim in range(self.varDim)]
         self._minFn = minFn
         self._maxFn = maxFn
         self._rangeFn = rangeFn
+        self._scaleFn = scaleFn
+
+        minmax.evaluate(self.substrate)
 
     def minFn(self):
         if not hasattr(self, '_minFn'):
@@ -268,6 +273,10 @@ class PlanetVar(UWFn):
         if not hasattr(self, '_rangeFn'):
             self._set_summary_stats()
         return self._rangeFn()
+    def scaleFn(self):
+        if not hasattr(self, '_maxFn'):
+            self._set_summary_stats()
+        return self._scaleFn()
 
     def _update_summary_stats(self):
         if (isinstance(self, _function.Function) \

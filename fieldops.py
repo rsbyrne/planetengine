@@ -138,7 +138,7 @@ def box_evaluate(
         globalFromMesh,
         globalFromField,
         evalCoords,
-        method = 'cubic'
+        method = 'linear'
         )
     if checkNaN:
         nanFound = np.isnan(np.sum(data))

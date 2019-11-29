@@ -13,9 +13,8 @@ from . import fig
 STANDARD_SIZE = (256, 256)
 
 class Data:
-    def __init__(self, inVar, size):
-        normInterval = [-126.999, 127.999]
-        self.var = pfn.normalise.default(inVar, normInterval)
+    def __init__(self, var, size, normInterval = [-126.999, 127.999]):
+        self.var = pfn.convert(var)
         self.grid = np.vstack(
             np.dstack(
                 np.meshgrid(
@@ -24,21 +23,21 @@ class Data:
                     )
                 )
             )
-        self.fromMesh = utilities.get_mesh(self.var)
         self.size = size
+        self.normInterval = normInterval
         self.update()
     def update(self):
         data = fieldops.safe_box_evaluate(
             self.var,
             self.grid
             )
-        # data = data.flatten()
-        # data = data.reshape(self.size)
-        # data = np.flip(data, axis = 0) # makes it top-bottom
-        # data = np.round(data).astype('int8')
-        # data = data.T
-        data = data.reshape(self.size)
+        data = mapping.rescale_array(
+            data,
+            self.var.scaleFn(),
+            [self.normInterval for dim in range(data.shape[-1])]
+            )
         data = np.round(data).astype('int8')
+        data = np.reshape(data, self.size[::-1])
         self.data = data
 
 class Raster(fig.Fig):
@@ -60,7 +59,7 @@ class Raster(fig.Fig):
             Data(band, size = size) \
                 for band in bands
             ]
-        self.shape = [*size, len(self.dataObjs)]
+        self.shape = [*size[::-1], len(self.dataObjs)]
         self.data = np.zeros(self.shape, dtype = 'int8')
         super().__init__(**kwargs)
         self.update()
@@ -70,9 +69,9 @@ class Raster(fig.Fig):
     def _update_data(self):
         for dataObj in self.dataObjs:
             dataObj.update()
-        self.data[...] = np.dstack(
-            [dataObj.data for dataObj in self.dataObjs]
-            )
+        # self.data[...] = np.dstack(
+        #     [dataObj.data for dataObj in self.dataObjs]
+        #     )
     def _update_img(self):
         bands = []
         for dataObj in self.dataObjs:
