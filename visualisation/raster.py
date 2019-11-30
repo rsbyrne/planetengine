@@ -15,6 +15,8 @@ STANDARD_SIZE = (256, 256)
 class Data:
     def __init__(self, var, size, normInterval = [0.0001, 254.9999]):
         self.var = pfn.convert(var)
+        if self.var.varDim > 1:
+            raise Exception
         self.grid = np.vstack(
             np.dstack(
                 np.meshgrid(

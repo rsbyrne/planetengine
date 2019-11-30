@@ -26,11 +26,26 @@ class ObserveMS98(Observer):
 
         outDict = {}
 
-        temperature = system.obsVars[temperatureKey]
+        temperature = pfn.convert(
+            system.obsVars[temperatureKey],
+            'temperature'
+            )
+        gradTemp = pfn.gradient.rad(temperature)
         avTemp = pfn.integral.default(temperature)
-        tempGrad = pfn.gradient.rad(temperature)
-        Nu = pfn.integral.outer(tempGrad) / pfn.integral.inner(temperature) * -1.
-        velocity = system.obsVars[velocityKey]
+        Nu = \
+            pfn.integral.outer(gradTemp) \
+            / pfn.integral.inner(temperature) * -1.
+        outDict['avTemp'] = avTemp
+        outDict['Nu'] = Nu
+
+        velocity = pfn.convert(
+            system.obsVars[velocityKey],
+            'velocity'
+            )
+        angVel = pfn.component.ang(velocity)
+        # radVel = pfn.component.rad(velocity)
+        # magVel = pfn.component.mag(velocity)
+        surfAngVel = pfn.integral.outer(angVel)
         VRMS = pfn.operations.sqrt(
             pfn.integral.volume(
                 pfn.operations.dot(
@@ -39,33 +54,50 @@ class ObserveMS98(Observer):
                     )
                 )
             )
-        angVel = pfn.component.ang(velocity)
-        radVel = pfn.component.rad(velocity)
-        surfAngVel = pfn.integral.default(angVel)
-        velMag = pfn.component.mag(velocity)
+        outDict['surfAngVel'] = surfAngVel
+        outDict['VRMS'] = VRMS
+
         strainSecInv = fn.tensor.second_invariant(
             fn.tensor.symmetric(
-                velocity.fn_gradient
+                system.obsVars[velocityKey].fn_gradient
                 )
             )
-        viscosity = system.obsVars[viscosityKey]
-        avVisc = pfn.integral.default(viscosity)
+        strainSecInv = pfn.convert(
+            strainSecInv,
+            'strainSecInv'
+            )
         avStrainSecInv = pfn.integral.default(strainSecInv)
+        outDict['avStrainSecInv'] = avStrainSecInv
+
+        viscosity = pfn.convert(
+            system.obsVars[viscosityKey],
+            'viscosity'
+            )
+        avVisc = pfn.integral.default(viscosity)
+        outDict['avVisc'] = avVisc
+
         plasticity = system.obsVars[plasticityKey]
         avPlasticity = pfn.integral.default(plasticity)
+        outDict['avPlasticity'] = avPlasticity
 
-        buoyancy = system.obsVars[buoyancyKey]
-        rasterFns = [buoyancy, velMag, strainSecInv]
+        stress = pfn.convert(
+            system.obsVars[velocityKey] * system.obsVars[viscosityKey],
+            'stress'
+            )
+        angStress = pfn.component.ang(stress)
+        magStress = pfn.component.mag(stress)
+        # radStress = pfn.component.rad(stress)
+        # magStress = pfn.component.mag(stress)
+        surfAngStress = pfn.integral.outer(angStress)
+        outDict['surfAngStress'] = surfAngStress
+
+        buoyancy = pfn.convert(
+            system.obsVars[buoyancyKey],
+            'buoyancy'
+            )
+        rasterFns = [buoyancy, magStress, strainSecInv]
         raster = Raster(*rasterFns)
         self.raster = raster
-
-        outDict['avTemp'] = avTemp
-        outDict['Nu'] = Nu
-        outDict['VRMS'] = VRMS
-        outDict['surfAngVel'] = surfAngVel
-        outDict['avVisc'] = avVisc
-        outDict['avPlasticity'] = avPlasticity
-        outDict['avStrainSecInv'] = avStrainSecInv
         outDict['raster'] = raster
 
         super().__init__(
