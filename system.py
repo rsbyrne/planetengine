@@ -126,8 +126,21 @@ class System(everest.built.Built):
                 "Must provide an initial condition for every variable of state."
                 )
 
+    def has_changed(self, reset = True):
+        if not hasattr(self, '_currenthash'):
+            self._currenthash = 0
+        latesthash = hash(tuple([
+            utilities.hash_var(var) \
+                for key, var in sorted(self.varsOfState.items())
+            ]))
+        changed = latesthash != self._currenthash
+        if reset:
+            self._currenthash = latesthash
+        return changed
+
     def update(self):
-        self._update()
+        if self.has_changed():
+            self._update()
 
     def integrate(self, _skipClips = False):
         dt = self._integrate()
