@@ -19,13 +19,13 @@ class MS98(System):
     def __init__(
         self,
         res = 64,
-        f = 0.54,
+        f = 1.,
         aspect = 1.,
         Ra = 1e7,
         urey = 0.,
         eta0 = 3e4,
         tau0 = 4e5,
-        tau1 = 1e6,
+        tau1 = 1e7,
         dither = 0,
         seed = 0,
         _initial_temperatureField = default_IC
