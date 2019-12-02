@@ -2,8 +2,8 @@ import weakref
 import numpy as np
 
 import underworld as uw
-_fn = uw.function
-UWFn = _fn._function.Function
+fn = uw.function
+UWFn =fn._function.Function
 
 _PLANETVAR_FLAG = 'planetVar'
 
@@ -217,15 +217,15 @@ class PlanetVar(UWFn):
         if isinstance(self, _function.Function) \
                 or type(self) == _basetypes.Variable:
             if self.varDim == 1:
-                minmax = _fn.view.min_max(self.var)
+                minmax =fn.view.min_max(self.var)
             else:
-                fn_norm = _fn.math.sqrt(
-                    _fn.math.dot(
+                fn_norm =fn.math.sqrt(
+                   fn.math.dot(
                         self,
                         self
                         )
                     )
-                minmax = _fn.view.min_max(
+                minmax =fn.view.min_max(
                     self,
                     fn_norm = fn_norm
                     )

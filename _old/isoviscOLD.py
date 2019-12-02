@@ -1,5 +1,5 @@
 import underworld as uw
-from underworld import function as _fn
+from underworld import function as fn
 import math
 
 from planetengine.utilities import Grouper
@@ -126,8 +126,8 @@ def build(
         conditions = [tempBC,]
         )
 
-    step = _fn.misc.constant(0)
-    modeltime = _fn.misc.constant(0.)
+    step =fn.misc.constant(0)
+    modeltime =fn.misc.constant(0.)
 
     ### SOLVING ###
 

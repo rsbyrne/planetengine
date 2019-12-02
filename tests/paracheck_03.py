@@ -10,7 +10,7 @@ with everest.paths.TestDir() as outputPath:
     system = planetengine.systems.isovisc.build(res = 16)
     system.anchor(path = outputPath)
     observer = planetengine.observers.standard.build(system)
-    system.co_anchor(observer)
+    system.coanchor(observer)
 
     # print('!' * 100)
     # print(system.hashID)
@@ -62,8 +62,6 @@ with everest.paths.TestDir() as outputPath:
                 observer.store()
             system_loaded.save()
             observer.save()
-
-    system.show()
 
     timing = timeit(testfn, number = 1)
     planetengine.message(timing)

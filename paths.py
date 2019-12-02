@@ -30,17 +30,6 @@ class TestDir:
         delete_testdir()
         return True
 
-def liberate_paths():
-    subprocess.call(
-        ['chmod', '777', workPath]
-        )
-    subprocess.call(
-        ['chmod', '777', outPath]
-        )
-    subprocess.call(
-        ['chmod', '777', testPath]
-        )
-
 def make_testdir():
 
     delete_testdir()

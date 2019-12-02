@@ -1,4 +1,4 @@
-from underworld import function as _fn
+from underworld import function as fn
 import glucifer
 import numpy as np
 import os
@@ -165,7 +165,7 @@ class QuickFig(fig.Fig):
         self.fig.append(
             glucifer.objects.Contours(
                 planetVar.mesh,
-                _fn.math.log2(normed),
+               fn.math.log2(normed),
                 colours = colours,
                 interval = 1.,
                 **kwargs

@@ -1,6 +1,6 @@
 import numpy as np
 
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _function
 from . import _convert
@@ -26,8 +26,8 @@ class Select(_function.Function):
             outVar = _convert.convert(outVar)
             inVars = tuple([*list(inVars), outVar])
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var = _fn.branching.conditional([
-            (_fn.math.abs(inVar - selectVal) < 1e-18, outVar),
+        var =fn.branching.conditional([
+            (fn.math.abs(inVar - selectVal) < 1e-18, outVar),
             (True, nullVal)
             ])
 

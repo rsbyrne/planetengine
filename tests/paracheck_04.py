@@ -10,7 +10,7 @@ with planetengine.paths.TestDir() as outputPath:
     system = planetengine.systems.isovisc.build(res = 16)
     system.anchor(path = outputPath)
     observer = planetengine.observers.standard.build(system)
-    system.co_anchor(observer)
+    system.coanchor(observer)
 
     system.store()
     system.save()
@@ -23,7 +23,6 @@ with planetengine.paths.TestDir() as outputPath:
             observer.store()
         system.save()
         observer.save()
-    print("!" * 100)
     for i in range(3):
         system.go(3)
         system.store()

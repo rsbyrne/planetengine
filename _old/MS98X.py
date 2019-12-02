@@ -1,5 +1,5 @@
 import underworld as uw
-from underworld import function as _fn
+from underworld import function as fn
 import math
 
 from planetengine.utilities import Grouper
@@ -128,7 +128,7 @@ def build(
 
     scaledTFn = (temperatureField - surfT) / deltaT
 
-    buoyancyFn = scaledTFn * Ra * _fn.branching.map(
+    buoyancyFn = scaledTFn * Ra *fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: buoyancy,
@@ -136,7 +136,7 @@ def build(
             }
         )
 
-    diffusivityFn = _fn.branching.map(
+    diffusivityFn =fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: diffusivity,
@@ -144,7 +144,7 @@ def build(
             }
         )
 
-    heatingFn = _fn.branching.map(
+    heatingFn =fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: heating,
@@ -160,7 +160,7 @@ def build(
 
     depthFn = (mesh.radialLengths[1] - mesh.radiusFn) / length
 
-    yieldStressFn = _fn.branching.map(
+    yieldStressFn =fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: tau * (1. + (tau_bR - 1) * depthFn),
@@ -168,46 +168,46 @@ def build(
             }
         )
 
-    secInvFn = _fn.tensor.second_invariant(
-        _fn.tensor.symmetric(
+    secInvFn =fn.tensor.second_invariant(
+       fn.tensor.symmetric(
             vc.fn_gradient
             )
         )
 
     plasticViscFn = yieldStressFn / (2. * secInvFn + 1e-18)
 
-    creepViscFn = _fn.branching.map(
+    creepViscFn =fn.branching.map(
         fn_key = materialVar,
         mapping = {
-            0: creep * _fn.math.pow(
-                _fn.misc.constant(creep_sR),
+            0: creep *fn.math.pow(
+               fn.misc.constant(creep_sR),
                 -1. * (temperatureField - baseT)
                 ),
-            1: creep * cont_creep_mR * _fn.math.pow(
-                _fn.misc.constant(creep_sR * cont_creep_sR_mR),
+            1: creep * cont_creep_mR *fn.math.pow(
+               fn.misc.constant(creep_sR * cont_creep_sR_mR),
                 -1. * (temperatureField - baseT)
                 ),
             }
         )
 
-    viscosityFn = _fn.branching.map(
+    viscosityFn =fn.branching.map(
         fn_key = materialVar,
         mapping = {
-            0: _fn.misc.max(
+            0:fn.misc.max(
                 creep,
-                _fn.misc.min(
+               fn.misc.min(
                     creep * creep_sR,
-                    _fn.misc.min(
+                   fn.misc.min(
                         creepViscFn,
                         plasticViscFn,
                         )
                     )
                 ),
-            1: _fn.misc.max(
+            1:fn.misc.max(
                 creep * cont_creep_mR,
-                _fn.misc.min(
+               fn.misc.min(
                     creep * creep_sR * cont_creep_mR * cont_creep_sR_mR,
-                    _fn.misc.min(
+                   fn.misc.min(
                         creepViscFn,
                         plasticViscFn,
                         )

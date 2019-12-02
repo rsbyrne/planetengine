@@ -7,8 +7,8 @@ import traceback
 import random
 import subprocess
 import underworld as uw
-_fn = uw.function
-UWFn = _fn._function.Function
+fn = uw.function
+UWFn =fn._function.Function
 
 from . import utilities
 from .utilities import message
@@ -338,7 +338,7 @@ def varsOnDisk(
 
     for varName, var in sorted(saveVars.items()):
 
-        if type(var) == _fn.misc.constant:
+        if type(var) ==fn.misc.constant:
             if mode == 'save':
                 save_json(var.value, varName, checkpointDir)
             elif mode == 'load':

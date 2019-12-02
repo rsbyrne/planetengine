@@ -1,4 +1,4 @@
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _convert
 from . import _function
@@ -20,17 +20,17 @@ class Binarise(_function.Function):
             raise Exception
 
         if inVar.dType == 'double':
-            var = 0. * inVar + _fn.branching.conditional([
-                (_fn.math.abs(inVar) > 1e-18, 1.),
+            var = 0. * inVar +fn.branching.conditional([
+                (fn.math.abs(inVar) > 1e-18, 1.),
                 (True, 0.),
                 ])
         elif inVar.dType == 'boolean':
-            var = 0. * inVar + _fn.branching.conditional([
+            var = 0. * inVar +fn.branching.conditional([
                 (inVar, 1.),
                 (True, 0.),
                 ])
         elif inVar.dType == 'int':
-            var = 0 * inVar + _fn.branching.conditional([
+            var = 0 * inVar +fn.branching.conditional([
                 (inVar, 1),
                 (True, 0),
                 ])

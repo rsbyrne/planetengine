@@ -1,6 +1,6 @@
 import numpy as np
 
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _function
 from . import _basetypes
@@ -32,7 +32,7 @@ class Range(_function.Function):
             outVal = inVar0
         lowerBounds = _basetypes.Parameter(inVars[1].minFn)
         upperBounds = _basetypes.Parameter(inVars[1].maxFn)
-        var = _fn.branching.conditional([
+        var =fn.branching.conditional([
             (inVar0 < lowerBounds, outVal),
             (inVar0 > upperBounds, outVal),
             (True, inVal),

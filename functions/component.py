@@ -1,4 +1,4 @@
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _convert
 from . import _function
@@ -19,15 +19,15 @@ class Component(_function.Function):
         if not inVar.vector:
             raise Exception
         if component == 'mag':
-            var = _fn.math.sqrt(
-                _fn.math.dot(
+            var =fn.math.sqrt(
+               fn.math.dot(
                     inVar,
                     inVar
                     )
                 )
         else:
             compVec = inVar.meshUtils.comps[component]
-            var = _fn.math.dot(
+            var =fn.math.dot(
                 inVar,
                 compVec
                 )

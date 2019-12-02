@@ -3,7 +3,7 @@ import time
 import os
 
 import underworld as uw
-from underworld import function as _fn
+from underworld import function as fn
 from underworld.function._function import Function as UWFn
 
 from . import mpi

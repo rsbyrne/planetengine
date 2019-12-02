@@ -1,4 +1,4 @@
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _convert
 from . import _function
@@ -19,8 +19,8 @@ class Booleanise(_function.Function):
         if not inVar.varDim == 1:
             raise Exception
 
-        var = _fn.branching.conditional([
-            (_fn.math.abs(inVar) < 1e-18, False),
+        var =fn.branching.conditional([
+            (fn.math.abs(inVar) < 1e-18, False),
             (True, True),
             ])
 

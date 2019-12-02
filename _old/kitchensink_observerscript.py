@@ -1,5 +1,5 @@
 import underworld as uw
-from underworld import function as _fn
+from underworld import function as fn
 import math
 import time
 import glucifer
@@ -50,7 +50,7 @@ def build():
 
         figViscComponent = fig.Contours(
             system.mesh,
-            _fn.math.log10(tools.projections['viscosityProj']),
+           fn.math.log10(tools.projections['viscosityProj']),
             colours = "red black",
             interval = 0.5,
             colourBar = False,
@@ -97,7 +97,7 @@ def build():
                 system.mesh,
                 ),
             'yielding': analysis.Analyse.ScalarFieldAverage(
-                _fn.branching.conditional([
+               fn.branching.conditional([
                     (system.creepViscFn < system.plasticViscFn, 0.),
                     (True, 1.),
                     ]),

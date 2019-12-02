@@ -1,10 +1,8 @@
 import numpy as np
 from planetengine.IC import IC
 
-def build(*args, name = None, **kwargs):
+def build(*args, **kwargs):
     built = Constant(*args, **kwargs)
-    if type(name) == str:
-        built.name = name
     return built
 
 class Constant(IC):

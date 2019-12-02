@@ -1,14 +1,12 @@
 import underworld as uw
-from underworld import function as _fn
+from underworld import function as fn
 import math
 import numpy as np
 
 from planetengine.system import System
 
-def build(*args, name = None, **kwargs):
+def build(*args, **kwargs):
     built = RayleighTaylor(*args, **kwargs)
-    if type(name) == str:
-        built.name = name
     return built
 
 class RayleighTaylor(System):
@@ -125,13 +123,13 @@ class RayleighTaylor(System):
         denseIndex = 0
         lightIndex = 1
         densityMap = {lightIndex: density_ratio * density_ref, denseIndex: density_ref}
-        densityFn = _fn.branching.map(fn_key = materialField, mapping = densityMap)
+        densityFn =fn.branching.map(fn_key = materialField, mapping = densityMap)
         buoyancyFn = densityFn * -1. * mesh.unitvec_r_Fn
 
         ### RHEOLOGY ###
 
         viscosityMap = {lightIndex: visc_ratio * visc_ref, denseIndex: visc_ref}
-        viscosityFn  = _fn.branching.map(fn_key = materialField, mapping = viscosityMap)
+        viscosityFn  =fn.branching.map(fn_key = materialField, mapping = viscosityMap)
 
         ### SYSTEMS ###
 

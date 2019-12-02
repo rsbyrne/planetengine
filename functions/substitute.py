@@ -1,4 +1,4 @@
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _function
 from . import _convert
@@ -18,8 +18,8 @@ class Substitute(_function.Function):
             inVar, fromVal, toVal
             )
 
-        var = _fn.branching.conditional([
-            (_fn.math.abs(inVar - fromVal) < 1e-18, toVal),
+        var =fn.branching.conditional([
+            (fn.math.abs(inVar - fromVal) < 1e-18, toVal),
             (True, inVar),
             ])
 

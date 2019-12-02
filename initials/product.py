@@ -1,9 +1,7 @@
 from planetengine.IC import IC
 
-def build(*args, name = None, **kwargs):
+def build(*args, **kwargs):
     built = Product(*args, **kwargs)
-    if type(name) == str:
-        built.name = name
     return built
 
 class Product(IC):
@@ -20,8 +18,7 @@ class Product(IC):
 
         pass
         # self.inputs =
+        def evaluate(coordArray):
+            return coordArray
 
         super().__init__()
-
-    def evaluate(self, coordArray):
-        return coordArray

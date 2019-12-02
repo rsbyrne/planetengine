@@ -1,13 +1,13 @@
 import numpy as np
 from planetengine.IC import IC
 
-def build(*args, name = None, **kwargs):
+def build(*args, **kwargs):
     built = Sinusoidal(*args, **kwargs)
-    if type(name) == str:
-        built.name = name
     return built
 
 class Sinusoidal(IC):
+
+    name = ''
 
     def __init__(
             self,
@@ -18,26 +18,25 @@ class Sinusoidal(IC):
 
         inputs = locals().copy()
 
-        self.valRange = (0., 1.)
+        valRange = (0., 1.)
+        freq = freq
+        phase = phase
+        pert = pert
 
-        self.freq = freq
-        self.phase = phase
-        self.pert = pert
+        def evaluate(coordArray):
+            valMin, valMax = valRange
+            deltaVal = valRange[1] - valRange[0]
+            pertArray = \
+                pert \
+                * np.cos(np.pi * (phase + freq * coordArray[:,0])) \
+                * np.sin(np.pi * coordArray[:,1])
+            outArray = valMin + deltaVal * (1. - coordArray[:,1]) + pertArray
+            outArray = np.clip(outArray, valMin, valMax)
+            outArray = np.array([[item] for item in outArray])
+            return outArray
 
         super().__init__(
             inputs = inputs,
             script = __file__,
-            evaluate = self.evaluate
+            evaluate = evaluate
             )
-
-    def evaluate(self, coordArray):
-        valMin, valMax = self.valRange
-        deltaVal = self.valRange[1] - self.valRange[0]
-        pertArray = \
-            self.pert \
-            * np.cos(np.pi * (self.phase + self.freq * coordArray[:,0])) \
-            * np.sin(np.pi * coordArray[:,1])
-        outArray = valMin + deltaVal * (1. - coordArray[:,1]) + pertArray
-        outArray = np.clip(outArray, valMin, valMax)
-        outArray = np.array([[item] for item in outArray])
-        return outArray

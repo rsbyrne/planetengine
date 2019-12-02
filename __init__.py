@@ -15,6 +15,7 @@ from . import meshutils
 from . import functions
 from . import visualisation
 from . import tests
+from . import paths
 
 from .utilities import message
 quickShow = visualisation.quickShow

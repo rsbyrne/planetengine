@@ -1,6 +1,6 @@
 import numpy as np
 
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _function
 from . import _convert
@@ -23,14 +23,14 @@ class Region(_function.Function):
 
         regionVar = inVar.mesh.add_variable(1)
         polygon = inShape.morph(inVar.mesh)
-        boolFn = _fn.branching.conditional([
+        boolFn =fn.branching.conditional([
             (polygon, 1),
             (True, 0),
             ])
         regionVar.data[:] = boolFn.evaluate(inVar.mesh)
 
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var = _fn.branching.conditional([
+        var =fn.branching.conditional([
             (regionVar > 0., inVar),
             (True, nullVal),
             ])

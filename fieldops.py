@@ -3,7 +3,7 @@ import scipy as sp
 import weakref
 
 import underworld as uw
-from underworld import function as _fn
+from underworld import function as fn
 
 from .meshutils import get_meshUtils
 from . import mapping
@@ -16,7 +16,7 @@ def get_global_var_data(var, subMesh = False):
     substrate = utilities.get_prioritySubstrate(var)
     if subMesh:
         substrate = substrate.subMesh
-    if isinstance(var, _fn._function.Function):
+    if isinstance(var,fn._function.Function):
         varData = var.evaluate(substrate)
     else:
         varData = var.data

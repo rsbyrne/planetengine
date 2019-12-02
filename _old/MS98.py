@@ -1,5 +1,5 @@
 import underworld as uw
-from underworld import function as _fn
+from underworld import function as fn
 import math
 
 from planetengine.utilities import Grouper
@@ -102,7 +102,7 @@ def build(
 
     ### RHEOLOGY ###
 
-    creepViscFn = _fn.math.pow(
+    creepViscFn =fn.math.pow(
         surfEta,
         1. - temperatureField
         )
@@ -112,14 +112,14 @@ def build(
     vc = uw.mesh.MeshVariable(mesh = mesh, nodeDofCount = 2)
     vc_eqNum = uw.systems.sle.EqNumber(vc, False )
     vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
-    secInvFn = _fn.tensor.second_invariant(
-        _fn.tensor.symmetric(
+    secInvFn =fn.tensor.second_invariant(
+       fn.tensor.symmetric(
             vc.fn_gradient
             )
         )
     plasticViscFn = yieldStressFn / (2. * secInvFn + 1e-18)
 
-    viscosityFn = _fn.misc.min(
+    viscosityFn =fn.misc.min(
         creepViscFn,
         plasticViscFn
         ) + 0. * velocityField[0]

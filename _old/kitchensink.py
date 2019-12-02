@@ -1,5 +1,5 @@
 import underworld as uw
-from underworld import function as _fn
+from underworld import function as fn
 import math
 
 from planetengine.utilities import Grouper
@@ -152,7 +152,7 @@ def build(
 
     baseT = surfT + deltaT
 
-    refBuoyancyFn = buoyancy * _fn.branching.map(
+    refBuoyancyFn = buoyancy *fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: 1.,
@@ -162,7 +162,7 @@ def build(
 
     scaledTFn = (temperatureField - surfT) / deltaT
 
-    thermalBuoyancyFn = scaledTFn * buoyancy_bR * _fn.branching.map(
+    thermalBuoyancyFn = scaledTFn * buoyancy_bR *fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: 1.,
@@ -172,7 +172,7 @@ def build(
 
     buoyancyFn = refBuoyancyFn * (1. + thermalBuoyancyFn)
 
-    diffusivityFn = diffusivity * _fn.branching.map(
+    diffusivityFn = diffusivity *fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: 1.,
@@ -180,7 +180,7 @@ def build(
             }
         )
 
-    heatingFn = heating * _fn.branching.map(
+    heatingFn = heating *fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: 1.,
@@ -193,7 +193,7 @@ def build(
     basalCreepFn = creep
     surfCreepFn = creep_sR
     baseT = surfT + deltaT
-    creepViscFn = basalCreepFn / _fn.math.pow(
+    creepViscFn = basalCreepFn /fn.math.pow(
         surfCreepFn,
         (temperatureField - baseT) / deltaT
         )
@@ -205,21 +205,21 @@ def build(
     vc = uw.mesh.MeshVariable(mesh = mesh, nodeDofCount = 2)
     vc_eqNum = uw.systems.sle.EqNumber(vc, False )
     vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
-    secInvFn = _fn.tensor.second_invariant(
-        _fn.tensor.symmetric(
+    secInvFn =fn.tensor.second_invariant(
+       fn.tensor.symmetric(
             vc.fn_gradient
             )
         )
     plasticViscFn = yieldStressFn / (2. * secInvFn + 1e-18)
 
-    viscosityFn = _fn.misc.min(
+    viscosityFn =fn.misc.min(
         creepViscFn,
         plasticViscFn
         ) + 0. * velocityField[0]
 
     ### RHEOLOGY ###
 
-    creepFn = creep * _fn.branching.map(
+    creepFn = creep *fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: 1.,
@@ -227,7 +227,7 @@ def build(
             }
         )
 
-    creepSrFn = creep_sR * _fn.branching.map(
+    creepSrFn = creep_sR *fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: 1.,
@@ -235,9 +235,9 @@ def build(
             }
         )
 
-    creepViscFn = creepFn / _fn.math.pow(creepSrFn, temperatureField - 1.)
+    creepViscFn = creepFn /fn.math.pow(creepSrFn, temperatureField - 1.)
 
-    cohesiveYieldFn = tau0 * _fn.branching.map(
+    cohesiveYieldFn = tau0 *fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: 1.,
@@ -247,7 +247,7 @@ def build(
 
     depthFn = (mesh.radialLengths[1] - mesh.radiusFn) / length
 
-    depthYieldFn = depthFn * tau1 * _fn.branching.map(
+    depthYieldFn = depthFn * tau1 *fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: 1.,
@@ -261,15 +261,15 @@ def build(
     vc_eqNum = uw.systems.sle.EqNumber(vc, False )
     vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
 
-    secInvFn = _fn.tensor.second_invariant(
-        _fn.tensor.symmetric(
+    secInvFn =fn.tensor.second_invariant(
+       fn.tensor.symmetric(
             vc.fn_gradient
             )
         )
 
     plasticViscFn = yieldStressFn / (2. * secInvFn + 1e-18)
 
-    viscosityFn = _fn.misc.min(
+    viscosityFn =fn.misc.min(
         creepViscFn,
         plasticViscFn
         ) + 0. * velocityField[0]
@@ -278,7 +278,7 @@ def build(
 
     solidusFn = solidus_refT + solidus_zCoef * depthFn
 
-    meltFn = _fn.branching.conditional([
+    meltFn =fn.branching.conditional([
         (temperatureField > solidusFn, solidusFn),
         (True, temperatureField)
         ])
