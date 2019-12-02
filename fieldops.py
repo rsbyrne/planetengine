@@ -149,13 +149,23 @@ def box_evaluate(
                 )
     return data
 
-def safe_box_evaluate(var, boxCoords, maxTolerance = None):
+def safe_box_evaluate(
+        var,
+        boxCoords,
+        maxTolerance = None,
+        fromMesh = None,
+        globalFromMesh = None,
+        globalFromField = None,
+        ):
     if maxTolerance is None:
         maxTolerance = 1e-1
     tolerance = 1e-8
-    fromMesh = utilities.get_mesh(var)
-    globalFromMesh = get_global_var_data(fromMesh)
-    globalFromField = get_global_var_data(var)
+    if fromMesh is None:
+        fromMesh = utilities.get_mesh(var)
+    if globalFromMesh is None:
+        globalFromMesh = get_global_var_data(fromMesh)
+    if globalFromField is None:
+        globalFromField = get_global_var_data(var)
     while tolerance < maxTolerance:
         try:
             data = box_evaluate(

@@ -19,7 +19,6 @@ class IC(everest.built.Built):
             ):
 
         self.evaluate = evaluate
-        self.subs = []
 
         super().__init__(
             inputs,
@@ -32,12 +31,7 @@ class IC(everest.built.Built):
             box = mapping.box(var.mesh, var.mesh.data, boxDims)
         elif type(var) == uw.swarm.SwarmVariable:
             box = mapping.box(var.swarm.mesh, var.swarm.data, boxDims)
-
-        ICdata = np.ones(var.data.shape)
-        ICchain = [*self.subs[-1::-1], self]
-
-        for IC in ICchain:
-            ICdata *= IC.evaluate(box)
+        ICdata = self.evaluate(box)
 
         return ICdata
 

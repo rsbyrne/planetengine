@@ -35,11 +35,11 @@ class Arrhenius(System):
 
         ### MESH & MESH VARIABLES ###
 
-        maxf = 0.99999
+        maxf = 0.999
         if f == 'max' or f == 1.:
             f = maxf
         else:
-            assert f < maxf
+            assert f <= maxf
 
         length = 1.
         outerRad = 1. / (1. - f)
