@@ -12,10 +12,6 @@ with everest.paths.TestDir() as outputPath:
     observer = planetengine.observers.standard.build(system)
     system.coanchor(observer)
 
-    # print('!' * 100)
-    # print(system.hashID)
-    # print('!' * 100)
-
     def testfn():
         system.store()
         system.save()
