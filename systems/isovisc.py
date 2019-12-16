@@ -115,7 +115,10 @@ class Isovisc(System):
 
         diffusivityFn = 1.
 
-        heatingFn = urey * Ra ** (1. / 3.)
+        # eta0 = 1
+        # nomNu = 1. + (1. / 3.) * (f**2 * Ra / eta0) ** (1. / 3.)
+        # heatingFn = urey * nomNu
+        heatingFn = urey
 
         ### RHEOLOGY ###
 

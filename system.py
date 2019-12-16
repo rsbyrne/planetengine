@@ -33,11 +33,11 @@ class System(everest.built.Built):
                 for key, val in inputs.items() \
                     if key[:len(INITIAL_FLAG)] == INITIAL_FLAG
             }
-        self.params = {
-            key: val \
-                for key, val in inputs.items() \
-                    if not key[:len(INITIAL_FLAG)] == INITIAL_FLAG
-            }
+        # self.params = {
+        #     key: val \
+        #         for key, val in inputs.items() \
+        #             if not key[:len(INITIAL_FLAG)] == INITIAL_FLAG
+        #     }
 
         self.observers = []
 
@@ -59,6 +59,12 @@ class System(everest.built.Built):
             inputs,
             script
             )
+
+        self.params = {
+            key: val \
+                for key, val in self.inputs.items() \
+                    if not key[:len(INITIAL_FLAG)] == INITIAL_FLAG
+            }
 
     # METHODS EXPECTED BY BUILT CLASS:
 
@@ -154,9 +160,6 @@ class System(everest.built.Built):
         self.update()
         return dt
 
-    def go(self, steps):
-        for step in range(steps):
-            self.iterate()
     #
     # def makefig(self):
     #     self.fig = QuickFig(self.varsOfState)

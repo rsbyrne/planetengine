@@ -10,7 +10,7 @@ with everest.paths.TestDir() as outputPath:
     system = planetengine.systems.isovisc.build(res = 16)
     system.anchor(path = outputPath)
     observer = planetengine.observers.standard.build(system)
-    system.coanchor(observer)
+    observer.coanchor(system)
 
     def testfn():
         system.store()
