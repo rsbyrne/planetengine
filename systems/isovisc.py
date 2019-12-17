@@ -190,15 +190,6 @@ class Isovisc(System):
             ditherFn()
             return dt
 
-        res = 64,
-        f = 0.54,
-        aspect = 1.,
-        Ra = 1e7,
-        urey = 0.,
-        dither = 0,
-        seed = 0,
-        initial_temperatureField = default_IC
-
         super().__init__(
             inputs = inputs,
             script = __file__,
