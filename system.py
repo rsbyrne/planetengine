@@ -60,11 +60,11 @@ class System(everest.built.Built):
             script
             )
 
-        self.params = {
-            key: val \
-                for key, val in self.inputs.items() \
-                    if not key[:len(INITIAL_FLAG)] == INITIAL_FLAG
-            }
+        # self.params = {
+        #     key: val \
+        #         for key, val in self.inputs.items() \
+        #             if not key[:len(INITIAL_FLAG)] == INITIAL_FLAG
+        #     }
 
     # METHODS EXPECTED BY BUILT CLASS:
 
