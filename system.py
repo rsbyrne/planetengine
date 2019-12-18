@@ -1,5 +1,4 @@
 import everest
-wordhashstamp = everest.utilities.wordhashstamp
 from . import fieldops
 from . import utilities
 from .visualisation import QuickFig

@@ -8,7 +8,7 @@ import everest
 with everest.paths.TestDir() as outputPath:
 
     system = planetengine.systems.isovisc.build(res = 16)
-    system.anchor(path = outputPath)
+    system.anchor('testfrm', outputPath)
     observer = planetengine.observers.standard.build(system)
     observer.coanchor(system)
 
@@ -41,7 +41,7 @@ with everest.paths.TestDir() as outputPath:
             observer.save()
         system_loaded = everest.built.load(
             system.hashID,
-            system.hashID,
+            'testfrm',
             outputPath
             )
         system_loaded.load(10)
