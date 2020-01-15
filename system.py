@@ -17,6 +17,7 @@ class System(everest.built.Built):
             obsVars,
             update,
             integrate,
+            dither = None,
             localsDict = {}
             ):
 
@@ -53,6 +54,8 @@ class System(everest.built.Built):
             }
 
         self.locals = utilities.Grouper(localsDict)
+        if not dither is None:
+            self.dither = dither
 
         super().__init__(
             inputs,
@@ -145,7 +148,12 @@ class System(everest.built.Built):
 
     def update(self):
         if self.has_changed():
-            self._update()
+            if not hasattr(self, 'dither'):
+                self._update()
+            else:
+                self.dither._system = self
+                with self.dither:
+                    self._update()
 
     def integrate(self, _skipClips = False):
         dt = self._integrate()

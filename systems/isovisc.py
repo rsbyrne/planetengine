@@ -1,6 +1,8 @@
+import random
 import numpy as np
 
 import underworld as uw
+fn = uw.function
 
 from planetengine.system import System
 from planetengine.initials import sinusoidal
@@ -22,9 +24,8 @@ class Isovisc(System):
         aspect = 1.,
         Ra = 1e7,
         urey = 0.,
-        dither = 0,
-        seed = 0,
-        _initial_temperatureField = default_IC
+        _initial_temperatureField = default_IC,
+        **kwargs
         ):
 
         ### HOUSEKEEPING: IMPORTANT! ###
@@ -33,6 +34,8 @@ class Isovisc(System):
 
         ### MESH & MESH VARIABLES ###
 
+        if f == 1. and aspect == 'max':
+            raise ValueError
         maxf = 0.999
         if f == 'max' or f == 1.:
             f = maxf
@@ -162,17 +165,7 @@ class Isovisc(System):
                 stokes._vnsVec._cself
                 )
 
-        def ditherFn():
-            inArr = temperatureField.data
-            ditherFactor = 10 ** (8 - dither)
-            modArr = inArr * ditherFactor
-            modArrInt = np.where(modArr <= 1., 1, modArr.astype('int'))
-            clippedArr = inArr - modArr % modArrInt / ditherFactor
-            np.random.seed(seed + self.count())
-            inArr[...] = clippedArr + np.random.random(clippedArr.shape) / ditherFactor
-            np.random.seed()
-
-        def update():
+        def solve():
             velocityField.data[:] = 0.
             solver.solve(
                 nonLinearIterate = False,
@@ -184,10 +177,12 @@ class Isovisc(System):
                 False
                 )
 
+        def update():
+            solve()
+
         def integrate():
             dt = advDiff.get_max_dt()
             advDiff.integrate(dt)
-            ditherFn()
             return dt
 
         super().__init__(
@@ -203,5 +198,6 @@ class Isovisc(System):
                 },
             update = update,
             integrate = integrate,
-            localsDict = locals()
+            localsDict = locals(),
+            **kwargs
             )
