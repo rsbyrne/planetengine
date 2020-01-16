@@ -56,6 +56,7 @@ class System(everest.built.Built):
         self.locals = utilities.Grouper(localsDict)
         if not dither is None:
             self.dither = dither
+            dither.attach(self)
 
         super().__init__(
             inputs,
