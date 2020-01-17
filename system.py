@@ -178,7 +178,9 @@ class System(everest.built.Built):
                 self._anchoring_observers_stuff(observer)
 
     def _anchoring_observers_stuff(self, observer):
-        pass
+        for key in sorted(observer.outDict):
+            linkDest = '/' + observer.hashID + '/outs/' + key
+            self._add_link(linkDest, key, ['observations',])
 
     def _prompt_observers(self):
         for ref in self.observers:

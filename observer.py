@@ -3,6 +3,8 @@ import weakref
 
 class Observer(everest.built.Built):
 
+    type = 'observer'
+
     def __init__(
             self,
             inputs,
