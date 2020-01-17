@@ -11,6 +11,8 @@ from types import ModuleType
 
 class IC(everest.built.Built):
 
+    type = 'IC'
+
     def __init__(
             self,
             inputs,
