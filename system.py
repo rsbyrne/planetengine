@@ -8,6 +8,7 @@ INITIAL_FLAG = '_initial_'
 class System(everest.built.Built):
 
     name = 'system'
+    observers = []
 
     def __init__(
             self,
@@ -155,6 +156,7 @@ class System(everest.built.Built):
                 self.dither._system = self
                 with self.dither:
                     self._update()
+        self._prompt_observers()
 
     def integrate(self, _skipClips = False):
         dt = self._integrate()
@@ -167,6 +169,28 @@ class System(everest.built.Built):
         dt = self.integrate(_skipClips = True)
         self.update()
         return dt
+
+    def _post_anchor_hook(self):
+        for ref in self.observers:
+            observer = ref()
+            if not observer is None:
+                observer.coanchor(self)
+                self._anchoring_observers_stuff(observer)
+
+    def _anchoring_observers_stuff(self, observer):
+        pass
+
+    def _prompt_observers(self):
+        for ref in self.observers:
+            observer = ref()
+            if not observer is None:
+                observer.prompt()
+
+    def attach_observer(self, observer):
+        self.observers.append(weakref.ref(observer))
+        if self.anchored:
+            self._anchoring_observers_stuff(observer)
+
 
     #
     # def makefig(self):

@@ -1,4 +1,5 @@
 import everest
+import weakref
 
 class Observer(everest.built.Built):
 
@@ -12,6 +13,9 @@ class Observer(everest.built.Built):
 
         outDict['modeltime'] = system.modeltime
 
+        system.attach_observer(self)
+
+        self.orders = lambda: False
         self.system = system
         self.outDict = outDict
         self.outkeys = [*sorted(self.outDict)]
@@ -29,7 +33,11 @@ class Observer(everest.built.Built):
         for key in self.outkeys:
             outs.append(self.outDict[key].evaluate())
         return outs
-        #
-        # def prompt(self):
-        #     if True:
-        #         self.
+
+    def set_orders(self, orders):
+        self.orders = orders
+
+    # def prompt(self):
+    #     if self.orders():
+    #         self.store()
+    #         if len(self.stored) >
