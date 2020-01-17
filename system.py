@@ -1,3 +1,5 @@
+import weakref
+
 import everest
 from . import fieldops
 from . import utilities
@@ -178,9 +180,12 @@ class System(everest.built.Built):
                 self._anchoring_observers_stuff(observer)
 
     def _anchoring_observers_stuff(self, observer):
-        for key in sorted(observer.outDict):
-            linkDest = '/' + observer.hashID + '/outs/' + key
-            self._add_link(linkDest, key, ['observations',])
+        pass
+        # # WILL OVERRIDE if names clash!
+        # for key in sorted(observer.outDict):
+        #     linkDest = '/' + observer.hashID + '/outs/' + key
+        #     groupnames = self._add_subgroup('observations')
+        #     self._add_link(linkDest, key, groupnames)
 
     def _prompt_observers(self):
         for ref in self.observers:
