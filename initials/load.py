@@ -5,7 +5,7 @@ from planetengine.initials import IC
 
 class Load(IC):
 
-    name = 'load'
+    species = 'load'
 
     def __init__(
             self,

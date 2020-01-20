@@ -10,7 +10,7 @@ INITIAL_FLAG = '_initial_'
 class System(everest.built.Built):
 
     observers = []
-    type = 'system'
+    genus = 'system'
 
     def __init__(
             self,

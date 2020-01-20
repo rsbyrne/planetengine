@@ -15,7 +15,7 @@ def apply(ICdict, system):
 
 class IC(everest.built.Built):
 
-    type = 'IC'
+    genus = 'IC'
 
     def __init__(
             self,

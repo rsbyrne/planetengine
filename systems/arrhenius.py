@@ -10,7 +10,7 @@ default_IC = sinusoidal.build()
 
 class Arrhenius(System):
 
-    name = "arrhenius"
+    species = "arrhenius"
 
     def __init__(
         self,

@@ -3,7 +3,7 @@ from planetengine.initials import IC
 
 class Sinusoidal(IC):
 
-    name = ''
+    species = 'sinusoidal'
 
     def __init__(
             self,

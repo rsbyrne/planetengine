@@ -7,8 +7,7 @@ from planetengine.systems import System
 
 class RayleighTaylor(System):
 
-    name = "rayleightaylor"
-    script = __file__
+    species = "rayleightaylor"
 
     def __init__(
         self,
@@ -197,7 +196,7 @@ class RayleighTaylor(System):
             args = args,
             kwargs = kwargs,
             inputs = inputs,
-            script = self.script
+            script = __file__
             )
 
 ### IMPORTANT ###

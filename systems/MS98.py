@@ -10,7 +10,7 @@ default_IC = sinusoidal.build()
 
 class MS98(System):
 
-    name = "ms98"
+    species = "ms98"
 
     def __init__(
         self,

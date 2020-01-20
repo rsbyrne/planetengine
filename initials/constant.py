@@ -3,6 +3,8 @@ from planetengine.initials import IC
 
 class Constant(IC):
 
+    species = 'constant'
+
     def __init__(
             self,
             value = 0.

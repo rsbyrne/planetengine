@@ -2,6 +2,8 @@ from planetengine.initials import IC
 
 class Product(IC):
 
+    species = 'product'
+
     varDim = 1
     meshDim = 2
 

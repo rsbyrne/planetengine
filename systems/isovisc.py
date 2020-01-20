@@ -11,7 +11,7 @@ default_IC = sinusoidal.build()
 
 class Isovisc(System):
 
-    name = "isovisc"
+    species = "isovisc"
 
     def __init__(
         self,

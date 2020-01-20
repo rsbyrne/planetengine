@@ -4,6 +4,8 @@ from planetengine.initials import IC
 
 class Extents(IC):
 
+    species = 'extents'
+
     def __init__(
             self,
             shapes = None
