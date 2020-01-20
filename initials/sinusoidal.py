@@ -1,10 +1,6 @@
 import numpy as np
 from planetengine.IC import IC
 
-def build(*args, **kwargs):
-    built = Sinusoidal(*args, **kwargs)
-    return built
-
 class Sinusoidal(IC):
 
     name = ''
@@ -40,3 +36,8 @@ class Sinusoidal(IC):
             script = __file__,
             evaluate = evaluate
             )
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = Sinusoidal
+build = make_buildFn(CLASS)

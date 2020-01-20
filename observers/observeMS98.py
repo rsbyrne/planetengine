@@ -4,10 +4,6 @@ from planetengine.observer import Observer
 from planetengine.visualisation import Raster
 from planetengine import functions as pfn
 
-def build(*args, **kwargs):
-    built = ObserveMS98(*args, **kwargs)
-    return built
-
 class ObserveMS98(Observer):
 
     name = 'observeMS98'
@@ -106,3 +102,8 @@ class ObserveMS98(Observer):
             system = system,
             outDict = outDict
             )
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = ObserveMS98
+build = make_buildFn(CLASS)

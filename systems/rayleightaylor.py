@@ -5,10 +5,6 @@ import numpy as np
 
 from planetengine.system import System
 
-def build(*args, **kwargs):
-    built = RayleighTaylor(*args, **kwargs)
-    return built
-
 class RayleighTaylor(System):
 
     name = "rayleightaylor"
@@ -203,3 +199,8 @@ class RayleighTaylor(System):
             inputs = inputs,
             script = self.script
             )
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = RayleighTaylor
+build = make_buildFn(CLASS)

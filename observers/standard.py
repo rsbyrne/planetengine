@@ -2,10 +2,6 @@ from planetengine.observer import Observer
 from planetengine.visualisation import Raster
 from planetengine import functions as pfn
 
-def build(*args, **kwargs):
-    built = Standard(*args, **kwargs)
-    return built
-
 class Standard(Observer):
 
     name = 'standard_iso'
@@ -57,3 +53,8 @@ class Standard(Observer):
             system = system,
             outDict = outDict
             )
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = Standard
+build = make_buildFn(CLASS)

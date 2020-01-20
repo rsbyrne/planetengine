@@ -1,10 +1,6 @@
 import numpy as np
 from planetengine.IC import IC
 
-def build(*args, **kwargs):
-    built = Constant(*args, **kwargs)
-    return built
-
 class Constant(IC):
 
     def __init__(
@@ -30,3 +26,8 @@ class Constant(IC):
         var.value = self.value
     def apply(self, var):
         self._apply(var)
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = Constant
+build = make_buildFn(CLASS)

@@ -3,10 +3,6 @@ from planetengine import mapping
 from planetengine import utilities
 from planetengine.IC import IC
 
-def build(*args, **kwargs):
-    built = Load(*args, **kwargs)
-    return built
-
 class Load(IC):
 
     name = 'load'
@@ -44,3 +40,8 @@ class Load(IC):
             script = __file__,
             evaluate = evaluate
             )
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = Load
+build = make_buildFn(CLASS)

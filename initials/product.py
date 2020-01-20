@@ -1,9 +1,5 @@
 from planetengine.IC import IC
 
-def build(*args, **kwargs):
-    built = Product(*args, **kwargs)
-    return built
-
 class Product(IC):
 
     varDim = 1
@@ -22,3 +18,8 @@ class Product(IC):
             return coordArray
 
         super().__init__()
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = Product
+build = make_buildFn(CLASS)

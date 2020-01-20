@@ -177,15 +177,15 @@ class System(everest.built.Built):
             observer = ref()
             if not observer is None:
                 observer.coanchor(self)
-                self._anchoring_observers_stuff(observer)
+                # self._anchoring_observers_stuff(observer)
 
-    def _anchoring_observers_stuff(self, observer):
-        pass
-        # # WILL OVERRIDE if names clash!
-        # for key in sorted(observer.outDict):
-        #     linkDest = '/' + observer.hashID + '/outs/' + key
-        #     groupnames = self._add_subgroup('observations')
-        #     self._add_link(linkDest, key, groupnames)
+    # def _anchoring_observers_stuff(self, observer):
+    #     pass
+    #     # WILL OVERRIDE if names clash!
+    #     for key in sorted(observer.outDict):
+    #         linkDest = '/' + observer.hashID + '/outs/' + key
+    #         groupnames = self._add_subgroup('observations')
+    #         self._add_link(linkDest, key, groupnames)
 
     def _prompt_observers(self):
         for ref in self.observers:

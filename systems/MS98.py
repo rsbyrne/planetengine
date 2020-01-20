@@ -8,10 +8,6 @@ from planetengine.initials import sinusoidal
 
 default_IC = sinusoidal.build()
 
-def build(*args, **kwargs):
-    built = MS98(*args, **kwargs)
-    return built
-
 class MS98(System):
 
     name = "ms98"
@@ -228,3 +224,8 @@ class MS98(System):
             integrate = integrate,
             localsDict = locals()
             )
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = MS98
+build = make_buildFn(CLASS)

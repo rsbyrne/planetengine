@@ -5,10 +5,6 @@ from underworld import function as fn
 from planetengine.utilities import get_prioritySubstrate
 from . import Noise
 
-def build(*args, **kwargs):
-    built = Fourier(*args, **kwargs)
-    return built
-
 class Fourier(Noise):
 
     def __init__(
@@ -66,3 +62,8 @@ class Fourier(Noise):
         substrate = get_prioritySubstrate(var)
         dithering = self.waveFn.evaluate(substrate)
         var.data[:] *= dithering
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = Fourier
+build = make_buildFn(CLASS)

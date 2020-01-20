@@ -8,10 +8,6 @@ from planetengine.initials import sinusoidal
 
 default_IC = sinusoidal.build()
 
-def build(*args, **kwargs):
-    built = Arrhenius(*args, **kwargs)
-    return built
-
 class Arrhenius(System):
 
     name = "arrhenius"
@@ -199,3 +195,8 @@ class Arrhenius(System):
             integrate = integrate,
             localsDict = locals()
             )
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = Arrhenius
+build = make_buildFn(CLASS)

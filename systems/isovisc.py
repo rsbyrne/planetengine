@@ -9,10 +9,6 @@ from planetengine.initials import sinusoidal
 
 default_IC = sinusoidal.build()
 
-def build(*args, **kwargs):
-    built = Isovisc(*args, **kwargs)
-    return built
-
 class Isovisc(System):
 
     name = "isovisc"
@@ -201,3 +197,8 @@ class Isovisc(System):
             localsDict = locals(),
             **kwargs
             )
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = Isovisc
+build = make_buildFn(CLASS)

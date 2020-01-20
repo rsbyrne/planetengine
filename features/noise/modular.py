@@ -2,10 +2,6 @@ import numpy as np
 
 from . import Noise
 
-def build(*args, **kwargs):
-    built = Modular(*args, **kwargs)
-    return built
-
 class Modular(Noise):
 
     def __init__(
@@ -31,3 +27,8 @@ class Modular(Noise):
         np.random.seed((self.seed, *seed))
         inArr[...] = clippedArr + np.random.random(clippedArr.shape) / ditherFactor
         np.random.seed()
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = Noise
+build = make_buildFn(CLASS)

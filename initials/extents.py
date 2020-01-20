@@ -2,10 +2,6 @@ from underworld import function as fn
 import numpy as np
 from planetengine.IC import IC
 
-def build(*args, **kwargs):
-    built = Extents(*args, **kwargs)
-    return built
-
 class Extents(IC):
 
     def __init__(
@@ -38,3 +34,8 @@ class Extents(IC):
             script = __file__,
             evaluate = evaluate
             )
+
+### IMPORTANT ###
+from everest.built import make_buildFn
+CLASS = Extents
+build = make_buildFn(CLASS)
