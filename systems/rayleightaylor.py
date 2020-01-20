@@ -3,7 +3,7 @@ from underworld import function as fn
 import math
 import numpy as np
 
-from planetengine.system import System
+from planetengine.systems import System
 
 class RayleighTaylor(System):
 

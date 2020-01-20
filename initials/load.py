@@ -1,7 +1,7 @@
 from planetengine import fieldops
 from planetengine import mapping
 from planetengine import utilities
-from planetengine.IC import IC
+from planetengine.initials import IC
 
 class Load(IC):
 

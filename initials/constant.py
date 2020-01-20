@@ -1,5 +1,5 @@
 import numpy as np
-from planetengine.IC import IC
+from planetengine.initials import IC
 
 class Constant(IC):
 

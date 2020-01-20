@@ -1,4 +1,4 @@
-from planetengine.IC import IC
+from planetengine.initials import IC
 
 class Product(IC):
 

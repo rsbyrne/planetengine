@@ -1,6 +1,6 @@
 from underworld import function as fn
 import numpy as np
-from planetengine.IC import IC
+from planetengine.initials import IC
 
 class Extents(IC):
 

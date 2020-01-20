@@ -3,7 +3,7 @@ import numpy as np
 import underworld as uw
 fn = uw.function
 
-from planetengine.system import System
+from planetengine.systems import System
 from planetengine.initials import sinusoidal
 
 default_IC = sinusoidal.build()

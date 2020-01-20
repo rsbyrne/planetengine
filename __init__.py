@@ -3,8 +3,6 @@ planetengineDir = os.path.abspath(os.path.dirname(__file__))
 
 from . import utilities
 from . import analysis
-from . import system
-from . import IC
 from . import initials
 from . import systems
 from . import observers
@@ -14,7 +12,6 @@ from . import fieldops
 from . import meshutils
 from . import functions
 from . import visualisation
-from . import tests
 from . import paths
 
 from .utilities import message
