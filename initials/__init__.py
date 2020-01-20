@@ -1,3 +1,5 @@
+__all__ = ['sinusoidal', 'extents', 'load', 'constant']
+
 import underworld as uw
 import numpy as np
 
@@ -54,8 +56,3 @@ class IC(everest.built.Built):
 
         if hasattr(var, 'bounds'):
             set_boundaries(var, var.bounds)
-
-from . import sinusoidal
-from . import extents
-from . import load
-from . import constant

@@ -1,3 +1,5 @@
+__all__ = ['arrhenius', 'isovisc', 'MS98', 'rayleightaylor']
+
 import weakref
 
 import everest
@@ -209,7 +211,4 @@ class System(everest.built.Built):
     #         self.fig.update()
     #     self.fig.show()
 
-from . import isovisc
-from . import arrhenius
-from . import MS98
 # from . import rayleightaylor
