@@ -22,9 +22,8 @@ class Observer(Producer):
         self.orders = set()
 
         self.inputs = inputs
-        self.script = script
 
-        super().__init__()
+        super().__init__(self.out, self.outkeys)
 
     def update(self):
         self.count.value = self.system.count()

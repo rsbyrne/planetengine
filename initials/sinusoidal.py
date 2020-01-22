@@ -33,7 +33,6 @@ class Sinusoidal(IC):
 
         super().__init__(
             inputs = inputs,
-            script = __file__,
             evaluate = evaluate
             )
 

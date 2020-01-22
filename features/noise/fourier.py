@@ -45,8 +45,7 @@ class Fourier(Noise):
         self._system = None
 
         super().__init__(
-            inputs = inputs,
-            script = __file__
+            inputs = inputs
             )
 
     def _attach(self, system):

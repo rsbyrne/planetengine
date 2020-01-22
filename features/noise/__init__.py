@@ -6,13 +6,11 @@ class Noise(Built):
 
     def __init__(
             self,
-            inputs,
-            script
+            inputs
             ):
         self.preditherings = dict()
         self.system = None
         self.inputs = inputs
-        self.script = script
         super().__init__()
 
     def attach(self, system):

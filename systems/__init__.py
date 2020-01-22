@@ -1,6 +1,7 @@
 import weakref
 
 from everest.builts.iterator import Iterator
+from everest.value import Value
 from .. import fieldops
 from .. import utilities
 from ..visualisation import QuickFig
@@ -15,7 +16,6 @@ class System(Iterator):
     def __init__(
             self,
             inputs,
-            script,
             varsOfState,
             obsVars,
             update,
@@ -26,7 +26,7 @@ class System(Iterator):
 
         self.varsOfState = varsOfState
         self.obsVars = obsVars
-        self.modeltime = everest.value.Value(0.)
+        self.modeltime = Value(0.)
 
         self._update = update
         self._integrate = integrate
@@ -36,25 +36,13 @@ class System(Iterator):
                 for key, val in inputs.items() \
                     if key[:len(INITIAL_FLAG)] == INITIAL_FLAG
             }
-        # self.params = {
-        #     key: val \
-        #         for key, val in inputs.items() \
-        #             if not key[:len(INITIAL_FLAG)] == INITIAL_FLAG
-        #     }
 
         self.observers = []
-
-        # ATTRIBUTES EXPECTED BY BUILT CLASS
 
         self.outkeys = [
             'modeltime',
             *sorted(self.varsOfState.keys())
             ]
-
-        meta = {
-            # 'params': wordhashstamp(self.params)
-            # 'configs': wordhashstamp(self.configs)
-            }
 
         self.locals = utilities.Grouper(localsDict)
         if not dither is None:
@@ -62,17 +50,8 @@ class System(Iterator):
             dither.attach(self)
 
         self.inputs = inputs
-        self.script = script
 
-        super().__init__()
-
-        # self.params = {
-        #     key: val \
-        #         for key, val in self.inputs.items() \
-        #             if not key[:len(INITIAL_FLAG)] == INITIAL_FLAG
-        #     }
-
-    # METHODS EXPECTED BY BUILT CLASS:
+        super().__init__(self.initialise, self.iterate, self.out, self.outkeys, self.load)
 
     def initialise(self):
         for varName in sorted(self.configs):

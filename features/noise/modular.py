@@ -17,7 +17,6 @@ class Modular(Noise):
         self.intensity = intensity
         super().__init__(
             inputs,
-            script = __file__
             )
 
     def apply(self, var, seed):

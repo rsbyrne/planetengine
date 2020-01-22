@@ -196,7 +196,6 @@ class RayleighTaylor(System):
             args = args,
             kwargs = kwargs,
             inputs = inputs,
-            script = __file__
             )
 
 ### IMPORTANT ###

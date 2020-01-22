@@ -183,7 +183,6 @@ class Isovisc(System):
 
         super().__init__(
             inputs = inputs,
-            script = __file__,
             varsOfState = {
                 'temperatureField': temperatureField,
                 'temperatureDotField': temperatureDotField

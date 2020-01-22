@@ -33,7 +33,6 @@ class Extents(IC):
 
         super().__init__(
             inputs = inputs,
-            script = __file__,
             evaluate = evaluate
             )
 

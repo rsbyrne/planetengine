@@ -20,14 +20,12 @@ class IC(Built):
     def __init__(
             self,
             inputs,
-            script,
             evaluate
             ):
 
         self.evaluate = evaluate
 
         self.inputs = inputs
-        self.script = script
 
         super().__init__()
 
