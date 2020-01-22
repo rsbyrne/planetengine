@@ -1,6 +1,6 @@
-from everest.builts import Built
+from everest.builts.producer import Producer
 
-class Observer(Built):
+class Observer(Producer):
 
     genus = 'observer'
 

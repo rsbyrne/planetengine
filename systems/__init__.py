@@ -1,13 +1,13 @@
 import weakref
 
-from everest.builts import Built
+from everest.builts.iterator import Iterator
 from .. import fieldops
 from .. import utilities
 from ..visualisation import QuickFig
 
 INITIAL_FLAG = '_initial_'
 
-class System(Built):
+class System(Iterator):
 
     observers = []
     genus = 'system'
