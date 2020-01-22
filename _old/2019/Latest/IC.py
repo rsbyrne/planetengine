@@ -9,7 +9,7 @@ from . import mapping
 
 from types import ModuleType
 
-class IC(everest.built.Built):
+class IC(everest.builts.Built):
 
     type = 'IC'
 

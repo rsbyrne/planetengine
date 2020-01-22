@@ -4,6 +4,8 @@ from . import Noise
 
 class Modular(Noise):
 
+    species = 'modular'
+
     def __init__(
             self,
             intensity = 6,
@@ -29,6 +31,6 @@ class Modular(Noise):
         np.random.seed()
 
 ### IMPORTANT ###
-from everest.built import make_buildFn
+from everest.builts import make_buildFn
 CLASS = Noise
 build = make_buildFn(CLASS)

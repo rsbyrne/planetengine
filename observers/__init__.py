@@ -1,4 +1,4 @@
-from everest.built import Built
+from everest.builts import Built
 
 class Observer(Built):
 
@@ -21,10 +21,10 @@ class Observer(Built):
         self.outkeys = [*sorted(self.outDict)]
         self.orders = set()
 
-        super().__init__(
-            inputs = inputs,
-            script = script
-            )
+        self.inputs = inputs
+        self.script = script
+
+        super().__init__()
 
     def update(self):
         self.count.value = self.system.count()

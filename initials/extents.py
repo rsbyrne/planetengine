@@ -38,6 +38,6 @@ class Extents(IC):
             )
 
 ### IMPORTANT ###
-from everest.built import make_buildFn
+from everest.builts import make_buildFn
 CLASS = Extents
 build = make_buildFn(CLASS)

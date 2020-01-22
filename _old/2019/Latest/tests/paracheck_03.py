@@ -39,7 +39,7 @@ with everest.paths.TestDir() as outputPath:
                 observer.store()
             system.save()
             observer.save()
-        system_loaded = everest.built.load(
+        system_loaded = everest.builts.load(
             system.hashID,
             'testfrm',
             outputPath

@@ -1,7 +1,7 @@
 import underworld as uw
 import numpy as np
 
-import everest
+from everest.builts import Built
 
 from ..fieldops import set_scales
 from ..fieldops import set_boundaries
@@ -13,7 +13,7 @@ def apply(ICdict, system):
     for varName in sorted(ICdict):
         ICdict[varName].apply(system.varsOfState[varName])
 
-class IC(everest.built.Built):
+class IC(Built):
 
     genus = 'IC'
 
@@ -26,10 +26,10 @@ class IC(everest.built.Built):
 
         self.evaluate = evaluate
 
-        super().__init__(
-            inputs,
-            script
-            )
+        self.inputs = inputs
+        self.script = script
+
+        super().__init__()
 
     def _get_ICdata(self, var, boxDims):
 

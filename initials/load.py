@@ -42,6 +42,6 @@ class Load(IC):
             )
 
 ### IMPORTANT ###
-from everest.built import make_buildFn
+from everest.builts import make_buildFn
 CLASS = Load
 build = make_buildFn(CLASS)

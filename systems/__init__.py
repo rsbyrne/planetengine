@@ -1,13 +1,13 @@
 import weakref
 
-import everest
+from everest.builts import Built
 from .. import fieldops
 from .. import utilities
 from ..visualisation import QuickFig
 
 INITIAL_FLAG = '_initial_'
 
-class System(everest.built.Built):
+class System(Built):
 
     observers = []
     genus = 'system'
@@ -61,10 +61,10 @@ class System(everest.built.Built):
             self.dither = dither
             dither.attach(self)
 
-        super().__init__(
-            inputs,
-            script
-            )
+        self.inputs = inputs
+        self.script = script
+
+        super().__init__()
 
         # self.params = {
         #     key: val \

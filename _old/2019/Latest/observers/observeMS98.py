@@ -104,6 +104,6 @@ class ObserveMS98(Observer):
             )
 
 ### IMPORTANT ###
-from everest.built import make_buildFn
+from everest.builts import make_buildFn
 CLASS = ObserveMS98
 build = make_buildFn(CLASS)

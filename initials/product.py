@@ -22,6 +22,6 @@ class Product(IC):
         super().__init__()
 
 ### IMPORTANT ###
-from everest.built import make_buildFn
+from everest.builts import make_buildFn
 CLASS = Product
 build = make_buildFn(CLASS)

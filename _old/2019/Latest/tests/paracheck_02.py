@@ -20,7 +20,7 @@ with planetengine.paths.TestDir() as outputPath:
         system.iterate()
         system.store()
         system.save()
-        system_loaded = everest.built.load(
+        system_loaded = everest.builts.load(
             system.hashID,
             system.hashID,
             outputPath

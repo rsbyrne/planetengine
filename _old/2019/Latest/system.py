@@ -7,7 +7,7 @@ from .visualisation import QuickFig
 
 INITIAL_FLAG = '_initial_'
 
-class System(everest.built.Built):
+class System(everest.builts.Built):
 
     observers = []
     type = 'system'

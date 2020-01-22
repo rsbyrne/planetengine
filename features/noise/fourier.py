@@ -7,6 +7,8 @@ from . import Noise
 
 class Fourier(Noise):
 
+    species = 'fourier'
+
     def __init__(
             self,
             pert = 1e-6,
@@ -64,6 +66,6 @@ class Fourier(Noise):
         var.data[:] *= dithering
 
 ### IMPORTANT ###
-from everest.built import make_buildFn
+from everest.builts import make_buildFn
 CLASS = Fourier
 build = make_buildFn(CLASS)

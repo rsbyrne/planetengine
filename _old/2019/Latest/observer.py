@@ -1,7 +1,7 @@
 import everest
 import weakref
 
-class Observer(everest.built.Built):
+class Observer(everest.builts.Built):
 
     type = 'observer'
 

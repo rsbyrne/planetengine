@@ -30,6 +30,6 @@ class Constant(IC):
         self._apply(var)
 
 ### IMPORTANT ###
-from everest.built import make_buildFn
+from everest.builts import make_buildFn
 CLASS = Constant
 build = make_buildFn(CLASS)
