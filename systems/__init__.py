@@ -27,6 +27,12 @@ class System(Iterator):
         self.obsVars = obsVars
         self.modeltime = Value(0.)
 
+        self.configs = {
+            varName[len('_initial_'):]: var \
+                for varName, var in self.inputs.items() \
+                    if varName[:len('_initial_')] == '_initial_'
+            }
+
         self._update = update
         self._integrate = integrate
 

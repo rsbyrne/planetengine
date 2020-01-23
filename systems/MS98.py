@@ -222,4 +222,4 @@ class MS98(System):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = MS98
-# build = make_buildFn(CLASS)
+build = CLASS

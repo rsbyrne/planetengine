@@ -73,10 +73,10 @@ system.hashID
 
 del system
 del system_loaded
-del everest.builts.BUILTS['igruajuupha-osfiagiobro']
+del everest.builts.BUILTS['grioploiru-drienikwu']
 
 from everest.builts import load
-system_loaded = load('igruajuupha-osfiagiobro', 'test', '..')
+system_loaded = load('grioploiru-drienikwu', 'test', '..')
 
 system_loaded.hashID
 

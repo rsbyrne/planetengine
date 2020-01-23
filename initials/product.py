@@ -24,4 +24,4 @@
 # ### IMPORTANT ###
 # # from everest.builts import make_buildFn
 # CLASS = Product
-# # build = make_buildFn(CLASS)
+# build = CLASS

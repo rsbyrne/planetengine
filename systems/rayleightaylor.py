@@ -196,4 +196,4 @@ class RayleighTaylor(System):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = RayleighTaylor
-# build = make_buildFn(CLASS)
+build = CLASS

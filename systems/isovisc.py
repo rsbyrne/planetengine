@@ -195,4 +195,4 @@ class Isovisc(System):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = Isovisc
-# build = make_buildFn(CLASS)
+build = CLASS
