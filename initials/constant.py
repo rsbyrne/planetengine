@@ -10,12 +10,9 @@ class Constant(IC):
             value = 0.
             ):
 
-        inputs = locals().copy()
-
         self.value = value
 
         super().__init__(
-            inputs = inputs,
             evaluate = self.evaluate
             )
 
@@ -29,6 +26,6 @@ class Constant(IC):
         self._apply(var)
 
 ### IMPORTANT ###
-from everest.builts import make_buildFn
+# from everest.builts import make_buildFn
 CLASS = Constant
-build = make_buildFn(CLASS)
+# build = make_buildFn(CLASS)

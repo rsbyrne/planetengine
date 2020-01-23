@@ -17,8 +17,6 @@ class Fourier(Noise):
             seed = 1066,
             ):
 
-        inputs = locals().copy()
-
         randTerms = []
         coordFns = fn.coord()
         x, y = coordFns[0], coordFns[1]
@@ -44,9 +42,7 @@ class Fourier(Noise):
         self._preditherings = dict()
         self._system = None
 
-        super().__init__(
-            inputs = inputs
-            )
+        super().__init__()
 
     def _attach(self, system):
         radialLengths = system.locals.mesh.radialLengths
@@ -65,6 +61,6 @@ class Fourier(Noise):
         var.data[:] *= dithering
 
 ### IMPORTANT ###
-from everest.builts import make_buildFn
+# from everest.builts import make_buildFn
 CLASS = Fourier
-build = make_buildFn(CLASS)
+# build = make_buildFn(CLASS)

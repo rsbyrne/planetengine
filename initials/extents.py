@@ -11,8 +11,6 @@ class Extents(IC):
             shapes = None
             ):
 
-        inputs = locals().copy()
-
         polygons = [(0,fn.misc.constant(True))]
         for val, vertices in shapes:
             polygons.append(
@@ -32,11 +30,10 @@ class Extents(IC):
             return outArray
 
         super().__init__(
-            inputs = inputs,
             evaluate = evaluate
             )
 
 ### IMPORTANT ###
-from everest.builts import make_buildFn
+# from everest.builts import make_buildFn
 CLASS = Extents
-build = make_buildFn(CLASS)
+# build = make_buildFn(CLASS)

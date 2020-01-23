@@ -24,10 +24,6 @@ class Arrhenius(System):
         **kwargs
         ):
 
-        ### HOUSEKEEPING: IMPORTANT! ###
-
-        inputs = locals().copy()
-
         ### MESH & MESH VARIABLES ###
 
         maxf = 0.999
@@ -180,7 +176,6 @@ class Arrhenius(System):
             return dt
 
         super().__init__(
-            inputs = inputs,
             varsOfState = {
                 'temperatureField': temperatureField,
                 'temperatureDotField': temperatureDotField
@@ -196,6 +191,6 @@ class Arrhenius(System):
             )
 
 ### IMPORTANT ###
-from everest.builts import make_buildFn
+# from everest.builts import make_buildFn
 CLASS = Arrhenius
-build = make_buildFn(CLASS)
+# build = make_buildFn(CLASS)

@@ -6,7 +6,6 @@ class Observer(Producer):
 
     def __init__(
             self,
-            inputs,
             script,
             system,
             outDict
@@ -20,8 +19,6 @@ class Observer(Producer):
         self.outDict = outDict
         self.outkeys = [*sorted(self.outDict)]
         self.orders = set()
-
-        self.inputs = inputs
 
         super().__init__(self.out, self.outkeys)
 

@@ -19,8 +19,6 @@ class Load(IC):
         else:
             system.load(count)
 
-        inputs = locals().copy()
-
         var = system.varsOfState[varName]
         fromMesh = utilities.get_mesh(var)
         globalFromMesh = fieldops.get_global_var_data(fromMesh)
@@ -36,11 +34,10 @@ class Load(IC):
             return outArr
 
         super().__init__(
-            inputs = inputs,
             evaluate = evaluate
             )
 
 ### IMPORTANT ###
-from everest.builts import make_buildFn
+# from everest.builts import make_buildFn
 CLASS = Load
-build = make_buildFn(CLASS)
+# build = make_buildFn(CLASS)

@@ -19,13 +19,10 @@ class IC(Built):
 
     def __init__(
             self,
-            inputs,
             evaluate
             ):
 
         self.evaluate = evaluate
-
-        self.inputs = inputs
 
         super().__init__()
 

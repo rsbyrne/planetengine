@@ -18,7 +18,7 @@ class ObserveMS98(Observer):
             plasticityKey = 'plasticity'
             ):
 
-        inputs = locals().copy()
+        # inputs = locals().copy()
 
         outDict = {}
 
@@ -104,6 +104,6 @@ class ObserveMS98(Observer):
             )
 
 ### IMPORTANT ###
-from everest.builts import make_buildFn
+# from everest.builts import make_buildFn
 CLASS = ObserveMS98
-build = make_buildFn(CLASS)
+# build = make_buildFn(CLASS)

@@ -22,7 +22,7 @@ class Isobench(Observer):
             **kwargs
             ):
 
-        inputs = locals().copy()
+        # inputs = locals().copy()
 
         super().__init__(
             args,

@@ -24,10 +24,6 @@ class Isovisc(System):
         **kwargs
         ):
 
-        ### HOUSEKEEPING: IMPORTANT! ###
-
-        inputs = locals().copy()
-
         ### MESH & MESH VARIABLES ###
 
         if f == 1. and aspect == 'max':
@@ -182,7 +178,6 @@ class Isovisc(System):
             return dt
 
         super().__init__(
-            inputs = inputs,
             varsOfState = {
                 'temperatureField': temperatureField,
                 'temperatureDotField': temperatureDotField
@@ -198,6 +193,6 @@ class Isovisc(System):
             )
 
 ### IMPORTANT ###
-from everest.builts import make_buildFn
+# from everest.builts import make_buildFn
 CLASS = Isovisc
-build = make_buildFn(CLASS)
+# build = make_buildFn(CLASS)

@@ -12,12 +12,9 @@ class Modular(Noise):
             seed = 1066,
             ):
 
-        inputs = locals().copy()
         self.seed = seed
         self.intensity = intensity
-        super().__init__(
-            inputs,
-            )
+        super().__init__()
 
     def apply(self, var, seed):
         inArr = var.data
@@ -30,6 +27,6 @@ class Modular(Noise):
         np.random.seed()
 
 ### IMPORTANT ###
-from everest.builts import make_buildFn
+# from everest.builts import make_buildFn
 CLASS = Noise
-build = make_buildFn(CLASS)
+# build = make_buildFn(CLASS)

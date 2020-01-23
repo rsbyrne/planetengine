@@ -22,10 +22,6 @@ class RayleighTaylor(System):
         **kwargs
         ):
 
-        ### HOUSEKEEPING: IMPORTANT! ###
-
-        inputs = locals().copy()
-
         ### MESH & MESH VARIABLES ###
 
         maxf = 0.999
@@ -194,11 +190,10 @@ class RayleighTaylor(System):
             _integrate = integrate,
             _locals = locals(),
             args = args,
-            kwargs = kwargs,
-            inputs = inputs,
+            kwargs = kwargs
             )
 
 ### IMPORTANT ###
-from everest.builts import make_buildFn
+# from everest.builts import make_buildFn
 CLASS = RayleighTaylor
-build = make_buildFn(CLASS)
+# build = make_buildFn(CLASS)

@@ -15,7 +15,6 @@ class System(Iterator):
 
     def __init__(
             self,
-            inputs,
             varsOfState,
             obsVars,
             update,
@@ -31,12 +30,6 @@ class System(Iterator):
         self._update = update
         self._integrate = integrate
 
-        self.configs = {
-            key[len(INITIAL_FLAG):]: val \
-                for key, val in inputs.items() \
-                    if key[:len(INITIAL_FLAG)] == INITIAL_FLAG
-            }
-
         self.observers = []
 
         self.outkeys = [
@@ -48,8 +41,6 @@ class System(Iterator):
         if not dither is None:
             self.dither = dither
             dither.attach(self)
-
-        self.inputs = inputs
 
         super().__init__(self.initialise, self.iterate, self.out, self.outkeys, self.load)
 

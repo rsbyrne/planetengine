@@ -40,7 +40,7 @@ class ArrBench(campaign.Campaign):
 
         ### HOUSEKEEPING: IMPORTANT! ###
 
-        inputs = locals().copy()
+        # inputs = locals().copy()
 
         def _run(**kwargs):
             model = planetengine.model.make_model(

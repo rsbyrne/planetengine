@@ -12,8 +12,6 @@ class Sinusoidal(IC):
             phase = 0.,
             ):
 
-        inputs = locals().copy()
-
         valRange = (0., 1.)
         freq = freq
         phase = phase
@@ -32,11 +30,10 @@ class Sinusoidal(IC):
             return outArray
 
         super().__init__(
-            inputs = inputs,
             evaluate = evaluate
             )
 
 ### IMPORTANT ###
-from everest.builts import make_buildFn
+# from everest.builts import make_buildFn
 CLASS = Sinusoidal
-build = make_buildFn(CLASS)
+# build = make_buildFn(CLASS)

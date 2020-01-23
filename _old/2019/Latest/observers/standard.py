@@ -14,7 +14,7 @@ class Standard(Observer):
             stressKey = 'stress'
             ):
 
-        inputs = locals().copy()
+        # inputs = locals().copy()
 
         outDict = {}
         rasterFns = []
@@ -55,6 +55,6 @@ class Standard(Observer):
             )
 
 ### IMPORTANT ###
-from everest.builts import make_buildFn
+# from everest.builts import make_buildFn
 CLASS = Standard
-build = make_buildFn(CLASS)
+# build = make_buildFn(CLASS)

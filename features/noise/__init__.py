@@ -5,12 +5,10 @@ class Noise(Built):
     'genus' = 'noise'
 
     def __init__(
-            self,
-            inputs
+            self
             ):
         self.preditherings = dict()
         self.system = None
-        self.inputs = inputs
         super().__init__()
 
     def attach(self, system):

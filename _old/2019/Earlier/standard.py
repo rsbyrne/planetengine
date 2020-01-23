@@ -15,7 +15,7 @@
 
     ### HOUSEKEEPING: IMPORTANT! ###
 
-#     inputs = locals().copy()
+#     # inputs = locals().copy()
 #     script = __file__
 #     name = 'standard'
 # #     hashID = utilities.hashstamp(script, inputs)
@@ -108,7 +108,7 @@
 #
 #     ### HOUSEKEEPING: IMPORTANT! ###
 #
-# #     inputs = locals().copy()
+# #     # inputs = locals().copy()
 #     inputs = {'obsVars': sorted(obsVars.keys())}
 #     script = __file__
 #
