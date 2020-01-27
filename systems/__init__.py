@@ -5,6 +5,7 @@ from everest.value import Value
 from .. import fieldops
 from .. import utilities
 from ..visualisation import QuickFig
+from .. import initials
 
 INITIAL_FLAG = '_initial_'
 
@@ -51,8 +52,10 @@ class System(Iterator):
         super().__init__(self.initialise, self.iterate, self.out, self.outkeys, self.load)
 
     def initialise(self):
-        for varName in sorted(self.configs):
-            self.configs[varName].apply(
+        for varName, initialCondition in sorted(self.configs.items()):
+            if not isinstance(initialCondition, initials.IC):
+                raise TypeError(initialCondition, ' is not instance of IC class.')
+            initialCondition.apply(
                 self.varsOfState[varName]
                 )
         self.modeltime.value = 0.
@@ -105,14 +108,6 @@ class System(Iterator):
         for varName, var in sorted(self.varsOfState.items()):
             if hasattr(var, 'bounds'):
                 fieldops.set_boundaries(var, var.bounds)
-
-    def set_initials(self, ICdict):
-        if ICdict.keys() == self.varsOfState.keys():
-            self.configs = ICdict
-        else:
-            raise Exception(
-                "Must provide an initial condition for every variable of state."
-                )
 
     def has_changed(self, reset = True):
         if not hasattr(self, '_currenthash'):
