@@ -63,4 +63,4 @@ class Fourier(Noise):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = Fourier
-build = CLASS
+build = CLASS.build

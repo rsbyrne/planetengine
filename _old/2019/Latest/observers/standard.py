@@ -57,4 +57,4 @@ class Standard(Observer):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = Standard
-build = CLASS
+build = CLASS.build

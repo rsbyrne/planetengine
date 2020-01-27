@@ -2,11 +2,21 @@ import time
 
 import planetengine
 import everest
+from everest import disk
+from everest import builts
 from everest.mpi import message
 
 from planetengine.systems import isovisc
 
+import os
+from everest import mpi
+if mpi.rank == 0:
+    if os.path.exists('test.frm'):
+        os.remove('test.frm')
+
 system = isovisc.build(Ra = 1e4, res = 16, f = 0.9)
+system.anchor('test', '.')
+
 system.iterate()
 system.store()
 system.iterate()
@@ -16,12 +26,6 @@ system.store()
 system.store()
 system.iterate()
 
-import os
-from everest import mpi
-if mpi.rank == 0:
-    if os.path.exists('test.frm'):
-        os.remove('test.frm')
-system.anchor('test', '.')
 system.save()
 
 system_identical = isovisc.build(Ra = 1e4, res = 16, f = 0.9)
@@ -40,16 +44,16 @@ system.load(1)
 system.store()
 system.save()
 
-# if mpi.rank == 0:
-#     myfile = system.file()
-#     assert system.constructor.hashID in myfile.keys()
-
 from everest.builts import load
 
+got_built = load(system.configs['temperatureField'].hashID, 'test', '.')
+assert got_built is system.configs['temperatureField']
+
+system_got = everest.builts._PREBUILTS[system.hashID]()
 system_got = load(system.hashID, 'test', '.')
 assert system_got is system
 
-del everest.builts.Built._prebuilts[system.hashID]
+del everest.builts._PREBUILTS[system.hashID]
 
 system_loaded = load(system.hashID, 'test', '.')
 assert not system_loaded is system

@@ -193,4 +193,4 @@ class Arrhenius(System):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = Arrhenius
-build = CLASS
+build = CLASS.build

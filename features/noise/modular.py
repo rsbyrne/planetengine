@@ -29,4 +29,4 @@ class Modular(Noise):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = Noise
-build = CLASS
+build = CLASS.build

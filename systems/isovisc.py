@@ -23,7 +23,6 @@ class Isovisc(System):
         Ra = 1e7,
         urey = 0.,
         _initial_temperatureField = default_tempIC,
-        _initial_temperatureDotField = default_tempDotIC,
         **kwargs
         ):
 
@@ -198,4 +197,4 @@ class Isovisc(System):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = Isovisc
-build = CLASS
+build = CLASS.build

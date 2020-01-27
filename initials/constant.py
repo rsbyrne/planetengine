@@ -28,4 +28,4 @@ class Constant(IC):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = Constant
-build = CLASS
+build = CLASS.build

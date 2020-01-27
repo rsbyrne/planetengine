@@ -38,8 +38,8 @@ class System(Iterator):
                 self.configs[varName[len('_initial_'):]] = var
             else:
                 self.params[varName] = var
-        if not self.configs.keys() == self.varsOfState.keys():
-            raise Exception('Must provide an IC for each var of state!')
+        # if not self.configs.keys() == self.varsOfState.keys():
+        #     raise Exception('Must provide an IC for each var of state!')
 
         self._update = update
         self._integrate = integrate
