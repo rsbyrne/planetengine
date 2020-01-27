@@ -28,11 +28,18 @@ class System(Iterator):
         self.obsVars = obsVars
         self.modeltime = Value(0.)
 
-        self.configs = {
-            varName[len('_initial_'):]: var \
-                for varName, var in self.inputs.items() \
-                    if varName[:len('_initial_')] == '_initial_'
-            }
+        self.params, self.configs = dict(), dict()
+        for varName, var in self.inputs.items():
+            if varName[:len('_initial_')] == '_initial_':
+                if not isinstance(var, initials.IC):
+                    raise TypeError(
+                        varName, ' must be an instance of IC class.'
+                        )
+                self.configs[varName[len('_initial_'):]] = var
+            else:
+                self.params[varName] = var
+        if not self.configs.keys() == self.varsOfState.keys():
+            raise Exception('Must provide an IC for each var of state!')
 
         self._update = update
         self._integrate = integrate
@@ -49,12 +56,18 @@ class System(Iterator):
             self.dither = dither
             dither.attach(self)
 
-        super().__init__(self.initialise, self.iterate, self.out, self.outkeys, self.load)
+        super().__init__(
+            self.initialise,
+            self.iterate,
+            self.out,
+            self.outkeys,
+            self.load,
+            params = self.params,
+            configs = self.configs
+            )
 
     def initialise(self):
         for varName, initialCondition in sorted(self.configs.items()):
-            if not isinstance(initialCondition, initials.IC):
-                raise TypeError(initialCondition, ' is not instance of IC class.')
             initialCondition.apply(
                 self.varsOfState[varName]
                 )

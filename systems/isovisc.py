@@ -6,8 +6,10 @@ fn = uw.function
 
 from planetengine.systems import System
 from planetengine.initials import sinusoidal
+from planetengine.initials import constant
 
-default_IC = sinusoidal.build()
+default_tempIC = sinusoidal.build()
+default_tempDotIC = constant.build(value = 0.)
 
 class Isovisc(System):
 
@@ -20,7 +22,8 @@ class Isovisc(System):
         aspect = 1.,
         Ra = 1e7,
         urey = 0.,
-        _initial_temperatureField = default_IC,
+        _initial_temperatureField = default_tempIC,
+        _initial_temperatureDotField = default_tempDotIC,
         **kwargs
         ):
 
