@@ -4,7 +4,6 @@ import everest
 from planetengine.systems import isovisc
 
 system = isovisc.build(Ra = 1e4, res = 16, f = 0.9)
-hashID = system.hashID
 system.iterate()
 system.store()
 system.iterate()
@@ -21,7 +20,12 @@ if mpi.rank == 0:
         os.remove('test.frm')
 system.anchor('test', '.')
 system.save()
-system2 = isovisc.build()
+
+system_identical = isovisc.build(Ra = 1e4, res = 16, f = 0.9)
+assert system_identical is system
+
+system2 = isovisc.build(Ra = 1e4, res = 16, f = 0.8)
+assert not system2 is system
 system.clear()
 system.store()
 system.save()
@@ -30,13 +34,11 @@ system.store()
 system.save()
 
 from everest.builts import load
-system_loaded = load(system.hashID, 'test', '..')
+system_got = load(system.hashID, 'test', '.')
+assert system_got is system
 
-del system
-del system_loaded
-del everest.builts.BUILTS[hashID]
+del everest.builts.Built._prebuilts[system.hashID]
 
-from everest.builts import load
-system_loaded = load(hashID, 'test', '..')
-
-new_system = system_loaded.constructor(Ra = 1e6, f = 0.7)
+system_loaded = load(system.hashID, 'test', '.')
+assert not system_loaded is system
+assert system_loaded.hashID == system.hashID
