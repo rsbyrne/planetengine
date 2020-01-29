@@ -1,6 +1,6 @@
 import planetengine
 
-system = planetengine.systems.isovisc.build(f = 1., res = 4)
+system = planetengine.systems.isovisc.get(f = 1., res = 4)
 temperature = system.obsVars['temperature']
 
 outArray = planetengine.utilities.globalise_array(

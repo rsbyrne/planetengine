@@ -7,9 +7,9 @@ import everest
 
 with everest.paths.TestDir() as outputPath:
 
-    system = planetengine.systems.isovisc.build(res = 16)
+    system = planetengine.systems.isovisc.get(res = 16)
     system.anchor('testfrm', outputPath)
-    observer = planetengine.observers.standard.build(system)
+    observer = planetengine.observers.standard.get(system)
     observer.coanchor(system)
 
     def testfn():

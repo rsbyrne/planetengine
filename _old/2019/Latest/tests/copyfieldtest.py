@@ -1,13 +1,13 @@
 import planetengine
 from timeit import timeit
-system1 = planetengine.systems.isovisc.build(
+system1 = planetengine.systems.isovisc.get(
     res = 16,
     f = 0.5,
     aspect = 2.,
-    _initial_temperature = planetengine.initials.sinusoidal.build(freq = 4)
+    _initial_temperature = planetengine.initials.sinusoidal.get(freq = 4)
     )
 var1 = system1.obsVars['temperature'] ** 2
-system2 = planetengine.systems.isovisc.build(res = 32, f = 1., aspect = 1)
+system2 = planetengine.systems.isovisc.get(res = 32, f = 1., aspect = 1)
 var2 = system2.obsVars['temperature']
 def testfn():
     planetengine.fieldops.copyField(var1, var2)

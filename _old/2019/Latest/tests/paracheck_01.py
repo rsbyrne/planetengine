@@ -3,8 +3,8 @@ import os
 
 import everest
 
-IC = everest.examples.myobject2.build(400.)
-system = everest.examples.myobject1.build(a = 1, b = 0.5, initial_time = IC)
+IC = everest.examples.myobject2.get(400.)
+system = everest.examples.myobject1.get(a = 1, b = 0.5, initial_time = IC)
 
 outputPath = ''
 name = 'test'

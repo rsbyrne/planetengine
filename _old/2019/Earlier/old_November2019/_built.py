@@ -66,7 +66,7 @@ def load_built(name, path):
         scriptModule = disk.load_script(script_to_load, path)
         scriptModules.append(scriptModule)
 
-    built = scriptModules[0].build(
+    built = scriptModules[0].get(
         *scriptModules[1:],
         **inputDict
         )
@@ -232,7 +232,7 @@ class Built:
                     key for key in subKwargs if _check_key(key)
                     ])
                 subArgs = args[argIndex + 1: argIndex + 1 + subsubNo]
-                sub = subModule.build(*subArgs, **subKwargs)
+                sub = subModule.get(*subArgs, **subKwargs)
                 subs.append(sub)
                 argIndex += 1 + subsubNo
         for index, sub in enumerate(subs):

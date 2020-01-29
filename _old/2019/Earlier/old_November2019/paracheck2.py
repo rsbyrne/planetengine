@@ -2,8 +2,8 @@ import planetengine
 import numpy as np
 planetengine.paths.delete_testdir()
 outputPath = planetengine.paths.make_testdir()
-system = planetengine.systems.arrhenius.build()
-# IC = planetengine.initials.sinusoidal.build()
+system = planetengine.systems.arrhenius.get()
+# IC = planetengine.initials.sinusoidal.get()
 # IC.apply(system.locals.temperatureField)
 # system.locals.solver.solve()
 # mpi.barrier()

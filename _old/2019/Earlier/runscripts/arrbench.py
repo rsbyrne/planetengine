@@ -18,15 +18,15 @@ job = campaign.fm.load_json(jobFilename, 'jobs')
 outputPath = os.path.join(campaign.fm.path, 'out')
 
 model = planetengine.model.make_model(
-    planetengine.systems.arrhenius.build(res = 16, **job),
-    {'temperatureField': planetengine.initials.sinusoidal.build()},
+    planetengine.systems.arrhenius.get(res = 16, **job),
+    {'temperatureField': planetengine.initials.sinusoidal.get()},
     outputPath = outputPath
     )
 
 if len(model.checkpoints) > 0:
     model.load_checkpoint('max')
 
-observer = planetengine.observers.arrbench.build()
+observer = planetengine.observers.arrbench.get()
 observer.attach(model)
 
 conditions = {

@@ -1,10 +1,10 @@
 import planetengine
 
-system = planetengine.systems.isovisc.build(
+system = planetengine.systems.isovisc.get(
     res = 16,
     f = 0.5,
     aspect = 2.,
-    _initial_temperature = planetengine.initials.sinusoidal.build(freq = 2)
+    _initial_temperature = planetengine.initials.sinusoidal.get(freq = 2)
     )
 var1 = system.obsVars['temperature']
 var2 = planetengine.functions.component.rad(system.obsVars['velocity'])
@@ -15,8 +15,8 @@ myraster = planetengine.visualisation.Raster(var1, var2, var3)
 myraster.img.save('test.png')
 
 # import planetengine
-# system = planetengine.systems.isovisc.build(res = 16)
-# observer = planetengine.observers.standard.build(system)
+# system = planetengine.systems.isovisc.get(res = 16)
+# observer = planetengine.observers.standard.get(system)
 # observer.store()
 # if planetengine.mpi.rank == 0:
 #     print(observer.stored)

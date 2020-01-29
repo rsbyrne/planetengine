@@ -106,4 +106,4 @@ class ObserveMS98(Observer):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = ObserveMS98
-build = CLASS.build
+build, get = CLASS.build, CLASS.get

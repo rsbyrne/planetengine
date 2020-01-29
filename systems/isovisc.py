@@ -8,8 +8,8 @@ from planetengine.systems import System
 from planetengine.initials import sinusoidal
 from planetengine.initials import constant
 
-default_tempIC = sinusoidal.build()
-default_tempDotIC = constant.build(value = 0.)
+default_tempIC = sinusoidal.get()
+default_tempDotIC = constant.get(value = 0.)
 
 class Isovisc(System):
 
@@ -197,4 +197,4 @@ class Isovisc(System):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = Isovisc
-build = CLASS.build
+build, get = CLASS.build, CLASS.get

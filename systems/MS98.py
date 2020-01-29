@@ -6,7 +6,7 @@ fn = uw.function
 from planetengine.systems import System
 from planetengine.initials import sinusoidal
 
-default_IC = sinusoidal.build()
+default_IC = sinusoidal.get()
 
 class MS98(System):
 
@@ -222,4 +222,4 @@ class MS98(System):
 ### IMPORTANT ###
 # from everest.builts import make_buildFn
 CLASS = MS98
-build = CLASS.build
+build, get = CLASS.build, CLASS.get

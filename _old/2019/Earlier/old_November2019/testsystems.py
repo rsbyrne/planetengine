@@ -2,8 +2,8 @@ from .. import systems
 from .. import initials
 
 def getsystem(inSys = systems.arrhenius, **kwargs):
-    system = inSys.build(**kwargs)
-    ICs = {'temperatureField': initials.sinusoidal.build(freq = 1.)}
+    system = inSys.get(**kwargs)
+    ICs = {'temperatureField': initials.sinusoidal.get(freq = 1.)}
     system.initialise(ICs)
     return system
 

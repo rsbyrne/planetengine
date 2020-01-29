@@ -8,7 +8,7 @@ from timeit import timeit
 
 def testfn():
 
-    system = systems.isovisc.build(res = 16, Ra = 1e5)
+    system = systems.isovisc.get(res = 16, Ra = 1e5)
 
     variable1 = pfn.convert(system.obsVars['velocity'], 'velocity')
     variable2 = pfn.convert(system.obsVars['temperature'], 'temperature')

@@ -34,15 +34,15 @@ planetengine.log(
     )
 
 model = planetengine.model.make_model(
-    planetengine.systems.isovisc.build(**job),
-    {'temperatureField': planetengine.initials.sinusoidal.build(freq = job['aspect'])},
+    planetengine.systems.isovisc.get(**job),
+    {'temperatureField': planetengine.initials.sinusoidal.get(freq = job['aspect'])},
     outputPath = outputPath
     )
 
 if len(model.checkpoints) > 0:
     model.load_checkpoint('max')
 
-observer = planetengine.observers.isobench.build()
+observer = planetengine.observers.isobench.get()
 observer.attach(model)
 
 conditions = {

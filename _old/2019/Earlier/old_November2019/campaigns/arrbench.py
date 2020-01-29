@@ -44,13 +44,13 @@ class ArrBench(campaign.Campaign):
 
         def _run(**kwargs):
             model = planetengine.model.make_model(
-                planetengine.systems.arrhenius.build(**kwargs),
-                {'temperatureField': planetengine.initials.sinusoidal.build()},
+                planetengine.systems.arrhenius.get(**kwargs),
+                {'temperatureField': planetengine.initials.sinusoidal.get()},
                 outputPath = self.fm.directories['out']['.']
                 )
             if len(model.checkpoints) > 0:
                 model.load_checkpoint('max')
-            observer = planetengine.observers.arrbench.build()
+            observer = planetengine.observers.arrbench.get()
             observer.attach(model)
             conditions = {
                 'stopCondition': lambda: model.modeltime() > 0.3,

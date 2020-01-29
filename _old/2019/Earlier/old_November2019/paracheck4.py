@@ -8,15 +8,15 @@ from planetengine import paths
 with paths.TestDir() as outputPath:
 
     IC0 = {
-        'temperatureField': initials.sinusoidal.build(
-            initials.sinusoidal.build(
+        'temperatureField': initials.sinusoidal.get(
+            initials.sinusoidal.get(
                 freq = 2,
                 pert = 0.4
                 )
             )
         }
 
-    system0 = systems.arrhenius.build(res = 32, f = 0.5)
+    system0 = systems.arrhenius.get(res = 32, f = 0.5)
 
     model0 = model.make_model(
         system = system0,
@@ -29,13 +29,13 @@ with paths.TestDir() as outputPath:
     model0.checkpoint()
 
     IC1 = {
-        'temperatureField': initials.load.build(
+        'temperatureField': initials.load.get(
             inFrame = model0,
             varName = 'temperatureField'
             )
         }
 
-    system1 = systems.arrhenius.build(res = 32, f = 1.)
+    system1 = systems.arrhenius.get(res = 32, f = 1.)
 
     model1 = model.make_model(
         system = system1,
@@ -60,15 +60,15 @@ with paths.TestDir() as outputPath:
     model1_load.archive()
 
     IC2 = {
-        'temperatureField': initials.load.build(
+        'temperatureField': initials.load.get(
             IC0['temperatureField'],
-            initials.sinusoidal.build(freq = 10., pert = 0.6),
+            initials.sinusoidal.get(freq = 10., pert = 0.6),
             inFrame = model0,
             varName = 'temperatureField'
             )
         }
 
-    system2 = systems.arrhenius.build(res = 32, f = 0.7)
+    system2 = systems.arrhenius.get(res = 32, f = 0.7)
 
     model2 = model.make_model(
         system = system2,
