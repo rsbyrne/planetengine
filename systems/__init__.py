@@ -1,6 +1,6 @@
 import weakref
 
-from everest.builts.iterator import Iterator
+from everest.builts._iterator import Iterator
 from everest.value import Value
 from .. import fieldops
 from .. import utilities
