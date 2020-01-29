@@ -33,19 +33,19 @@ system.save()
 system.load(1)
 system.store()
 system.save()
-# 
-# from everest.builts import load
-# from everest.builts import _PREBUILTS
+
+from everest.builts import get
+from everest.builts import _PREBUILTS
 #
-# got_built = get(system.configs['temperatureField'].hashID, 'test', '.')
-# assert got_built is system.configs['temperatureField']
-#
-# system_got = _PREBUILTS[system.hashID]()
-# system_got = load(system.hashID, 'test', '.')
-# assert system_got is system
-#
-# del _PREBUILTS[system.hashID]
-#
-# system_loaded = load(system.hashID, 'test', '.')
-# assert not system_loaded is system
-# assert system_loaded.hashID == system.hashID
+got_built = get(system.configs['temperatureField'].hashID, 'test', '.')
+assert got_built is system.configs['temperatureField']
+
+system_got = _PREBUILTS[system.hashID]()
+system_got = get(system.hashID, 'test', '.')
+assert system_got is system
+
+del _PREBUILTS[system.hashID]
+
+system_loaded = get(system.hashID, 'test', '.')
+assert not system_loaded is system
+assert system_loaded.hashID == system.hashID
