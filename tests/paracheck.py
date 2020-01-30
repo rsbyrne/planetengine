@@ -1,5 +1,8 @@
 import os
 from everest import mpi
+
+raise Exception
+
 if mpi.rank == 0:
     if os.path.exists('test.frm'):
         os.remove('test.frm')
