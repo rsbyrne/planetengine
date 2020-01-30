@@ -1,7 +1,9 @@
 import os
 from everest import mpi
 
-raise Exception
+# !!!!!!!!!!!!!!!!!!!!!!
+raise Exception("Fails due to link error.")
+# !!!!!!!!!!!!!!!!!!!!!!
 
 if mpi.rank == 0:
     if os.path.exists('test.frm'):
