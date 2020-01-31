@@ -188,8 +188,8 @@ class Isovisc(System):
                 'temperature': temperatureField,
                 'velocity': velocityField
                 },
-            update = update,
-            integrate = integrate,
+            updateFn = update,
+            integrateFn = integrate,
             localsDict = locals(),
             **kwargs
             )
