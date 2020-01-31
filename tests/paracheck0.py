@@ -1,9 +1,9 @@
 import os
 from everest import mpi
 
-# !!!!!!!!!!!!!!!!!!!!!!
-raise Exception("Fails due to link error.")
-# !!!!!!!!!!!!!!!!!!!!!!
+# # !!!!!!!!!!!!!!!!!!!!!!
+# raise Exception("Fails due to link error.")
+# # !!!!!!!!!!!!!!!!!!!!!!
 
 if mpi.rank == 0:
     if os.path.exists('test.frm'):
@@ -39,18 +39,14 @@ system.load(1)
 system.store()
 system.save()
 
-from everest.builts import get
-from everest.builts import _PREBUILTS
+from everest.builts import load
 #
-got_built = get(system.configs['temperatureField'].hashID, 'test', '.')
+got_built = load(system.configs['temperatureField'].hashID, 'test', '.', get = True)
 assert got_built is system.configs['temperatureField']
 
-system_got = _PREBUILTS[system.hashID]()
-system_got = get(system.hashID, 'test', '.')
+system_got = load(system.hashID, 'test', '.', get = True)
 assert system_got is system
 
-del _PREBUILTS[system.hashID]
-
-system_loaded = get(system.hashID, 'test', '.')
+system_loaded = load(system.hashID, 'test', '.', get = False)
 assert not system_loaded is system
 assert system_loaded.hashID == system.hashID
