@@ -95,15 +95,12 @@ class System(Iterator):
                     var.data[index] = loadData[gId]
 
     def out(self):
-        outs = []
         for key in self.outkeys:
             if key == 'modeltime':
-                outs.append(self.modeltime())
+                yield self.modeltime())
             else:
                 var = self.varsOfState[key]
-                data = fieldops.get_global_var_data(var)
-                outs.append(data)
-        return outs
+                yield fieldops.get_global_var_data(var)
 
     # OTHER METHODS
 
