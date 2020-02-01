@@ -1,30 +1,32 @@
-import random
 import numpy as np
 
 import underworld as uw
 fn = uw.function
 
 from planetengine.systems import System
-from planetengine.initials import sinusoidal
-from planetengine.initials import constant
-
-default_tempIC = sinusoidal.get()
-default_tempDotIC = constant.get(value = 0.)
 
 class Isovisc(System):
 
-    species = "isovisc"
-
     def __init__(
-        self,
-        res = 64,
-        f = 0.54,
-        aspect = 1.,
-        Ra = 1e7,
-        urey = 0.,
-        _initial_temperatureField = default_tempIC,
-        **kwargs
-        ):
+            self,
+            res = 64,
+            f = 0.54,
+            aspect = 1.,
+            **kwargs
+            ):
+        super().__init__(**kwargs)
+        self.options = self.inputs
+
+    def parameterise(
+            self,
+            Ra = 1e7,
+            urey = 0
+            ):
+
+        ### OPTIONS ###
+        f = self.options['f']
+        res = self.options['res']
+        aspect = self.options['aspect']
 
         ### MESH & MESH VARIABLES ###
 
@@ -179,22 +181,17 @@ class Isovisc(System):
             advDiff.integrate(dt)
             return dt
 
-        super().__init__(
-            varsOfState = {
-                'temperatureField': temperatureField,
-                'temperatureDotField': temperatureDotField
-                },
-            obsVars = {
-                'temperature': temperatureField,
-                'velocity': velocityField
-                },
-            updateFn = update,
-            integrateFn = integrate,
-            localsDict = locals(),
-            **kwargs
-            )
+        varsOfState = {
+            'temperatureField': temperatureField,
+            'temperatureDotField': temperatureDotField
+            }
 
-### IMPORTANT ###
-# from everest.builts import make_buildFn
+        obsVars = {
+            'temperature': temperatureField,
+            'velocity': velocityField
+            }
+
+        return locals()
+
 CLASS = Isovisc
 build, get = CLASS.build, CLASS.get

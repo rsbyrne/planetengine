@@ -1,7 +1,6 @@
 import underworld as uw
-import numpy as np
 
-from everest.builts import Built
+from everest.builts._applier import Applier
 
 from ..fieldops import set_scales
 from ..fieldops import set_boundaries
@@ -9,43 +8,38 @@ from .. import mapping
 
 from types import ModuleType
 
-def apply(ICdict, system):
-    for varName in sorted(ICdict):
-        ICdict[varName].apply(system.varsOfState[varName])
-
-class IC(Built):
-
-    genus = 'IC'
+class IC(Applier):
 
     def __init__(
             self,
-            evaluate
+            evaluate,
+            **kwargs
             ):
 
-        self.evaluate = evaluate
+        def _get_ICdata(var, boxDims):
 
-        super().__init__()
+            if type(var) == uw.mesh.MeshVariable:
+                box = mapping.box(var.mesh, var.mesh.data, boxDims)
+            elif type(var) == uw.swarm.SwarmVariable:
+                box = mapping.box(var.swarm.mesh, var.swarm.data, boxDims)
+            ICdata = evaluate(box)
 
-    def _get_ICdata(self, var, boxDims):
+            return ICdata
 
-        if type(var) == uw.mesh.MeshVariable:
-            box = mapping.box(var.mesh, var.mesh.data, boxDims)
-        elif type(var) == uw.swarm.SwarmVariable:
-            box = mapping.box(var.swarm.mesh, var.swarm.data, boxDims)
-        ICdata = self.evaluate(box)
+        def _apply(var, boxDims = None):
 
-        return ICdata
+            var.data[:] = _get_ICdata(var, boxDims)
 
-    def _apply(self, var, boxDims = None):
+        def apply(var, boxDims = None):
 
-        var.data[:] = self._get_ICdata(var, boxDims)
+            _apply(var, boxDims = boxDims)
 
-    def apply(self, var, boxDims = None):
+            if hasattr(var, 'scales'):
+                set_scales(var, var.scales)
 
-        self._apply(var, boxDims = boxDims)
+            if hasattr(var, 'bounds'):
+                set_boundaries(var, var.bounds)
 
-        if hasattr(var, 'scales'):
-            set_scales(var, var.scales)
+        super().__init__(**kwargs)
 
-        if hasattr(var, 'bounds'):
-            set_boundaries(var, var.bounds)
+        self._apply_fns.append(apply)
