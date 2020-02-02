@@ -1,5 +1,6 @@
 from everest import mpi
 import os
+
 if mpi.rank == 0:
     if os.path.exists('./test.frm'):
         os.remove('./test.frm')
@@ -39,3 +40,7 @@ task2()
 mpi.message(sorted(task2.reader['*'].keys()))
 
 mpi.message("Complete!")
+
+if mpi.rank == 0:
+    if os.path.exists('./test.frm'):
+        os.remove('./test.frm')
