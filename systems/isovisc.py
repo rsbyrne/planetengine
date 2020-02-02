@@ -20,7 +20,7 @@ class Isovisc(System):
     def parameterise(
             self,
             Ra = 1e7,
-            urey = 0
+            urey = 0.
             ):
 
         ### OPTIONS ###

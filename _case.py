@@ -1,6 +1,5 @@
 from everest.builts._sliceable import Sliceable
-from .configs import Configs
-from .real import Real
+from . import real
 from .utilities import Grouper
 
 class Case(Sliceable):
@@ -18,5 +17,5 @@ class Case(Sliceable):
         self.varsOfState = self.locals.varsOfState
         super().__init__(**kwargs)
         def configs_sliceFn(configs):
-            return Real.build(case = self, configs = configs)
+            return real.build(case = self, configs = configs)
         self._slice_fns.append(configs_sliceFn)

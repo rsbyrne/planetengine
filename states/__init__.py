@@ -9,6 +9,7 @@ class State(Inquirer):
             ):
         super().__init__(
             _inquirer_meta_fn = all,
-            _inquirer_arg_typeCheck = lambda x: isinstance(x, Real)
+            _inquirer_arg_typeCheck = lambda arg: isinstance(arg, Real),
+            **kwargs
             )
         self._inquirer_fns.append(evaluateFn)

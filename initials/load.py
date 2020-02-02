@@ -5,21 +5,22 @@ from planetengine.initials import IC
 
 class Load(IC):
 
-    species = 'load'
+    def _process_inputs(inputs):
+        realCount = inputs['real'].count()
+        if inputs['_count'] is None:
+            inputs['_count'] = realCount
+        else:
+            if not realCount == inputs['counts']:
+                raise Exception
 
     def __init__(
             self,
-            system = None,
+            real = None,
             varName = None,
-            count = None
+            _count = None
             ):
 
-        if count is None:
-            count = system.count()
-        else:
-            system.load(count)
-
-        var = system.varsOfState[varName]
+        var = real.varsOfState[varName]
         fromMesh = utilities.get_mesh(var)
         globalFromMesh = fieldops.get_global_var_data(fromMesh)
         globalFromField = fieldops.get_global_var_data(var)
@@ -37,7 +38,5 @@ class Load(IC):
             evaluate = evaluate
             )
 
-### IMPORTANT ###
-# from everest.builts import make_buildFn
 CLASS = Load
 build, get = CLASS.build, CLASS.get

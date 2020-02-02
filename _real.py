@@ -1,17 +1,20 @@
 import numpy as np
 
 from everest.builts._iterator import Iterator
-
+from everest.builts._sliceable import Sliceable
 from everest.value import Value
+
 from . import fieldops
 from . import utilities
+from . import traverse
 
-class Real(Iterator):
+class Real(Iterator, Sliceable):
     from .real import __file__ as _file_
     def __init__(
             self,
             case,
-            configs
+            configs,
+            **kwargs
             ):
 
         modeltime = Value(0.)
@@ -71,12 +74,17 @@ class Real(Iterator):
         self.modeltime = modeltime
 
         super().__init__(
-            initialise,
-            iterate,
-            out,
-            outkeys,
-            load
+            initialiseFn = initialise,
+            iterateFn = iterate,
+            outFn = out,
+            outkeys = outkeys,
+            loadFn = load,
+            **kwargs
             )
+
+        def sliceFn(state):
+            return traverse.build(arg = self, state = state)
+        self._slice_fns.append(sliceFn)
 
     def clipVals(self):
         for varName, var in sorted(self.varsOfState.items()):
