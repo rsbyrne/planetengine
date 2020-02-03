@@ -3,6 +3,7 @@ from everest.builts._callable import Callable
 from everest.utilities import get_default_kwargs
 from .. import case
 from .. import params
+from ..utilities import interp_dicts
 
 class System(Sliceable, Callable):
 
@@ -18,7 +19,21 @@ class System(Sliceable, Callable):
         super().__init__(**kwargs)
 
         def sliceFn(inParams):
-            return case.build(system = self, params = inParams)
+            if type(inParams) is tuple:
+                inTuple = inParams
+                outs = []
+                for item in inTuple:
+                    # outs.extend(list(self[item]))
+                    raise Exception
+                return outs
+            elif type(inParams) is slice:
+                slicer = inParams
+                minPms, maxPms, n = slicer.start, slicer.stop, slicer.step
+                interpDicts = interp_dicts(minPms.inputs, maxPms.inputs, n)
+                interpParams = [params.build(**d) for d in interpDicts]
+                return [self[p] for p in interpParams]
+            else:
+                return case.build(system = self, params = inParams)
         self._slice_fns.append(sliceFn)
 
         self._call_fns.append(self.parameterise)

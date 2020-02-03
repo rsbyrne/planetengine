@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import os
+import itertools
 
 import underworld as uw
 from underworld import function as fn
@@ -147,6 +148,12 @@ def globalise_array(inArray, sortArray):
 #         scales = get_scales(array)
 #     ranges = np.array([maxVal - minVal for minVal, maxVal in scales])
 #     return ranges
+
+def interp_dicts(a, b, n):
+    keys = sorted(a.keys())
+    interps = [np.linspace(a[key], b[key], n) for key in keys]
+    combos = list(itertools.product(*interps))
+    return [{key: val for key, val in zip(keys, vals)} for vals in combos]
 
 class ToOpen:
     def __init__(self, filepath):
