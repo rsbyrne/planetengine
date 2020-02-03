@@ -13,33 +13,23 @@ from planetengine.initials import constant
 from planetengine.states import threshold
 
 system1 = isovisc.build(res = 16)
-case1 = system1[params.build(Ra = 1e5)]
-configuration = configs.build(
+params1 = params.build(Ra = 1e5)
+configs1 = configs.build(
     temperatureField = sinusoidal.build(),
     temperatureDotField = constant.build()
     )
-real1 = case1[configuration]
-traverse1 = real1[threshold.build(val = 10)]
-
-traverse1()
-
+state1 = threshold.build(val = 10)
+traverse1 = system1[params1][configs1][state1]
 system2 = isovisc.build(res = 32)
-case2 = system2[case1.params]
-real2 = case2[real1]
-traverse2 = real2[threshold.build(val = 5)]
+traverse2 = system2[params1][traverse1][state1]
 
-system3 = isovisc.build(res = 64)
-case3 = system3[case2.params]
-real3 = case3[traverse2]
-traverse3 = real3[threshold.build(val = 3)]
+traverse2()
 
-traverse3()
+traverse2.anchor('test', '.')
 
-traverse3.anchor('test', '.')
-
-mpi.message(real3.out())
-mpi.message(traverse3.reader['*'])
-mpi.message(traverse3.reader['*', '_count_'])
+mpi.message(traverse2.arg.out())
+mpi.message(traverse2.reader['*'])
+mpi.message(traverse2.reader['*', '_count_'])
 mpi.message("Complete!")
 
 if mpi.rank == 0:
