@@ -1,6 +1,5 @@
 from everest.builts._sliceable import Sliceable
-from ..params import Params
-from ..case import Case
+from .. import case
 
 class System(Sliceable):
     def __init__(
@@ -9,5 +8,5 @@ class System(Sliceable):
             ):
         super().__init__(**kwargs)
         def sliceFn(params):
-            return Case.build(system = self, params = params)
+            return case.build(system = self, params = params)
         self._slice_fns.append(sliceFn)
