@@ -3,6 +3,7 @@ from everest.builts._callable import Callable
 from . import real
 from . import configs
 from .utilities import Grouper
+from ._builttools import yield_sliceFn
 
 class Case(Sliceable, Callable):
 
@@ -24,8 +25,12 @@ class Case(Sliceable, Callable):
 
         super().__init__(**kwargs)
 
-        def sliceFn(inConfigs):
-            return real.build(case = self, configs = inConfigs)
+        # def sliceFn(inConfigs):
+        #     return real.build(case = self, configs = inConfigs)
+        # self._slice_fns.append(sliceFn)
+
+        from ._builttools import get_sliceFn
+        sliceFn = get_sliceFn(self, configs, real, ('case', 'configs'))
         self._slice_fns.append(sliceFn)
 
         self._call_fns.append(self.configure)

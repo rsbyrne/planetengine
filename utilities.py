@@ -152,8 +152,9 @@ def globalise_array(inArray, sortArray):
 def interp_dicts(a, b, n):
     keys = sorted(a.keys())
     interps = [np.linspace(a[key], b[key], n) for key in keys]
-    combos = list(itertools.product(*interps))
-    return [{key: val for key, val in zip(keys, vals)} for vals in combos]
+    combos = itertools.product(*interps)
+    for vals in combos:
+        yield dict(zip(keys, vals))
 
 class ToOpen:
     def __init__(self, filepath):
