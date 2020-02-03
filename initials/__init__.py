@@ -13,6 +13,7 @@ class IC(Applier):
     def __init__(
             self,
             evaluate,
+            initialise = lambda: None,
             **kwargs
             ):
 
@@ -31,6 +32,8 @@ class IC(Applier):
             var.data[:] = _get_ICdata(var, boxDims)
 
         def apply(var, boxDims = None):
+
+            initialise()
 
             _apply(var, boxDims = boxDims)
 

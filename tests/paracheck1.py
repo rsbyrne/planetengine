@@ -5,40 +5,53 @@ if mpi.rank == 0:
     if os.path.exists('./test.frm'):
         os.remove('./test.frm')
 
-from planetengine.systems.isovisc import build as isovisc
-from planetengine.params import build as params
-from planetengine.configs import build as configs
-from planetengine.initials.sinusoidal import build as sinusoidal
-from planetengine.initials.constant import build as constant
-from planetengine.initials.load import build as load
-from planetengine.states.threshold import build as threshold
+from planetengine.systems import isovisc
+from planetengine import params
+from planetengine import configs
+from planetengine.initials import sinusoidal
+from planetengine.initials import constant
+from planetengine.states import threshold
 
-system1 = isovisc(res = 32)
-params1 = params(Ra = 1e5)
-tempIC1 = sinusoidal()
-tempDotIC1 = constant()
-configs1 = configs(temperatureField = tempIC1, temperatureDotField = tempDotIC1)
-threshold1 = threshold(val = 10)
-case1 = system1[params1]
-real1 = case1[configs1]
-task1 = real1[threshold1]
+system1 = isovisc.build(res = 16)
 
-system2 = isovisc(res = 64)
-params2 = params(Ra = 1e6)
-tempIC2 = load(real = task1.arg, varName = 'temperatureField')
-tempDotIC2 = load(real = task1.arg, varName = 'temperatureDotField')
-configs2 = real1.configuration()
-threshold2 = threshold(val = 20)
-case2 = system2[params1]
-real2 = case2[configs2]
-task2 = real2[threshold2]
+case1 = system1[params.build(Ra = 1e5)]
 
-task2.anchor('test', '.')
+configuration = configs.build(
+    temperatureField = sinusoidal.build(),
+    temperatureDotField = constant.build()
+    )
+real1 = case1[configuration]
 
-task2()
+traverse1 = real1[threshold.build(val = 10)]
 
-mpi.message(sorted(task2.reader['*'].keys()))
+traverse1()
 
+system2 = isovisc.build(res = 32, Ra = 1e6)
+
+case2 = system2[case1.params]
+
+real2 = case2[real1]
+
+from planetengine import quickShow
+quickShow(real2.locals.temperatureField)
+
+traverse2 = real2[threshold.build(val = 5)]
+
+system3 = isovisc.build(res = 64, Ra = 1e7)
+
+case3 = system3[case2.params]
+
+real3 = case3[traverse2]
+
+traverse3 = real3[threshold.build(val = 3)]
+
+traverse3()
+
+traverse3.anchor('test', '.')
+
+mpi.message(real3.out())
+mpi.message(traverse3.reader['*'])
+mpi.message(traverse3.reader['*', '_count_'])
 mpi.message("Complete!")
 
 if mpi.rank == 0:

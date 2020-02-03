@@ -8,10 +8,21 @@ from . import fieldops
 from . import utilities
 from . import traverse
 from . import configs
-from .initials import copy as ICcopy
 
 class Real(Iterator, Sliceable):
+
     from .real import __file__ as _file_
+
+    @staticmethod
+    def _process_inputs(inputs):
+        inConf = inputs['configs']
+        if isinstance(inConf, configs.CLASS):
+            pass
+        elif isinstance(inConf, Real) or isinstance(inConf, traverse.CLASS):
+            inputs['configs'] = inConf.configuration()
+        else:
+            raise TypeError
+
     def __init__(
             self,
             case,
@@ -110,8 +121,20 @@ class Real(Iterator, Sliceable):
             self._currenthash = latesthash
         return changed
 
-    def configuration(self):
-        outDict = {}
+    def configuration(self, altKeys = dict()):
+        from .initials import state as ICstate
+        from . import configs
+        from .states import threshold
+        ICdict = {}
         for key in sorted(self.varsOfState):
-            outDict[key] = ICcopy.build(real = self, varName = key)
-        return conbuild(**outDict)
+            if key in altKeys:
+                ICkey = altKeys[key]
+            else:
+                ICkey = key
+            state = threshold.build(val = self.count())
+            ICdict[ICkey] = ICstate.build(
+                real = self,
+                state = state,
+                varName = key
+                )
+        return configs.build(**ICdict)
