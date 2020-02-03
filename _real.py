@@ -6,7 +6,7 @@ from everest.value import Value
 
 from . import fieldops
 from . import utilities
-from . import traverse
+from . import traverse as traverseModule
 from . import configs
 
 class Real(Iterator, Sliceable):
@@ -18,7 +18,7 @@ class Real(Iterator, Sliceable):
         inConf = inputs['configs']
         if isinstance(inConf, configs.CLASS):
             pass
-        elif isinstance(inConf, Real) or isinstance(inConf, traverse.CLASS):
+        elif isinstance(inConf, Real) or isinstance(inConf, traverseModule.CLASS):
             inputs['configs'] = inConf.configuration()
         else:
             raise TypeError
@@ -96,7 +96,7 @@ class Real(Iterator, Sliceable):
             )
 
         def sliceFn(state):
-            return traverse.build(arg = self, state = state)
+            return traverseModule.build(arg = self, state = state)
         self._slice_fns.append(sliceFn)
 
     def clipVals(self):
@@ -138,3 +138,6 @@ class Real(Iterator, Sliceable):
                 varName = key
                 )
         return configs.build(**ICdict)
+
+    def traverse(self, state):
+        return self[state]

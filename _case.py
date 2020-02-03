@@ -15,10 +15,11 @@ class Case(Sliceable, Callable):
             **kwargs
             ):
 
-        localsDict = system.make(**params.inputs)
+        localsDict = system.buildFn(**params.inputs)
+        self.locals = Grouper(localsDict)
+
         self.system = system
         self.params = params
-        self.locals = Grouper(localsDict)
         self.varsOfState = self.locals.varsOfState
 
         super().__init__(**kwargs)
@@ -29,5 +30,6 @@ class Case(Sliceable, Callable):
 
         self._call_fns.append(self.configure)
 
-    def configure(**inputs):
-        return self[configs.build(**inputs)]
+    def configure(self, **inputs):
+        modInps = {**self.system.defaultConfigs, **inputs}
+        return self[configs.build(**modInps)]

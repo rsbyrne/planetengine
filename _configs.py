@@ -18,7 +18,10 @@ class Configs(Basket, Applier):
         super().__init__()
         def apply(case):
             if not case.varsOfState.keys() == self.inputs.keys():
-                raise InsufficientConfigsError
+                raise InsufficientConfigsError(
+                    case.varsOfState.keys(),
+                    self.inputs.keys()
+                    )
             for key, IC in sorted(self.inputs.items()):
                 IC(case.varsOfState[key])
         self._apply_fns.append(apply)
