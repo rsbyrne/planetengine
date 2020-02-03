@@ -29,23 +29,13 @@ class System(Sliceable, Callable):
 
     @classmethod
     def make(cls, **inputs):
-        modOptions = dict()
-        modParams = dict()
-        modConfigs = dict()
-        leftovers = dict()
+        modOptions, modParams, modConfigs, leftovers = {}, {}, {}, {}
         defaultConfigs = cls.defaults
         defaultParams = get_default_kwargs(cls.buildFn)
         defaultOptions = get_default_kwargs(cls.__init__)
         for key, val in sorted(inputs.items()):
-            if key in defaultOptions:
-                modOptions[key] = val
-            elif key in defaultConfigs:
-                modConfigs[key] = val
-            elif key in defaultParams:
-                modParams[key] = val
-            else:
-                leftovers[key] = val
-        modOptions.update(leftovers)
-        modParams.update(leftovers)
-        modConfigs.update(leftovers)
+            if key in defaultOptions: modOptions[key] = val
+            elif key in defaultConfigs: modConfigs[key] = val
+            elif key in defaultParams: modParams[key] = val
+            else: leftovers[key] = val
         return cls.build(**modOptions)(**modParams)(**modConfigs)
