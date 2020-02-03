@@ -3,7 +3,7 @@ from planetengine import mapping
 from planetengine import utilities
 from planetengine.initials import IC
 
-class Copy(IC):
+class Count(IC):
 
     def _process_inputs(inputs):
         realCount = inputs['real'].count()
@@ -38,5 +38,5 @@ class Copy(IC):
             evaluate = evaluate
             )
 
-CLASS = Copy
+CLASS = Count
 build, get = CLASS.build, CLASS.get
