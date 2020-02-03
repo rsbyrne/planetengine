@@ -7,19 +7,19 @@ class Copy(IC):
 
     def _process_inputs(inputs):
         realCount = inputs['real'].count()
-        if not inputs['_count'] is None:
-            if not realCount == inputs['_count']:
+        if not inputs['count'] is None:
+            if not realCount == inputs['count']:
                 raise Exception
-        del inputs['_count']
         inputs['count'] = realCount
 
     def __init__(
             self,
             real = None,
             varName = None,
-            _count = None
+            count = None
             ):
-
+        if not count is None:
+            real.load(count)
         var = real.varsOfState[varName]
         fromMesh = utilities.get_mesh(var)
         globalFromMesh = fieldops.get_global_var_data(fromMesh)
