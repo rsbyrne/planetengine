@@ -3,15 +3,15 @@ from planetengine import mapping
 from planetengine import utilities
 from planetengine.initials import IC
 
-class Load(IC):
+class Copy(IC):
 
     def _process_inputs(inputs):
         realCount = inputs['real'].count()
-        if inputs['_count'] is None:
-            inputs['_count'] = realCount
-        else:
-            if not realCount == inputs['counts']:
+        if not inputs['_count'] is None:
+            if not realCount == inputs['_count']:
                 raise Exception
+        del inputs['_count']
+        inputs['count'] = realCount
 
     def __init__(
             self,
@@ -38,5 +38,5 @@ class Load(IC):
             evaluate = evaluate
             )
 
-CLASS = Load
+CLASS = Copy
 build, get = CLASS.build, CLASS.get

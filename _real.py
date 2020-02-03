@@ -7,6 +7,8 @@ from everest.value import Value
 from . import fieldops
 from . import utilities
 from . import traverse
+from . import configs
+from .initials import copy as ICcopy
 
 class Real(Iterator, Sliceable):
     from .real import __file__ as _file_
@@ -109,9 +111,7 @@ class Real(Iterator, Sliceable):
         return changed
 
     def configuration(self):
-        from .initials import load as ICload
-        from .configs import build as conbuild
         outDict = {}
         for key in sorted(self.varsOfState):
-            outDict[key] = ICload.build(real = self, varName = key)
+            outDict[key] = ICcopy.build(real = self, varName = key)
         return conbuild(**outDict)
