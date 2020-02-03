@@ -9,6 +9,7 @@ class Copy(IC):
             self,
             initialiseFn,
             varName,
+            **kwargs
             ):
 
         def initialise():
@@ -30,4 +31,4 @@ class Copy(IC):
                 )
             return outArr
 
-        super().__init__(evaluate, initialise)
+        super().__init__(evaluate, initialise, **kwargs)

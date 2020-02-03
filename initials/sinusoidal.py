@@ -8,6 +8,7 @@ class Sinusoidal(IC):
             pert = 0.2,
             freq = 1.,
             phase = 0.,
+            **kwargs
             ):
 
         valRange = (0., 1.)
@@ -27,11 +28,7 @@ class Sinusoidal(IC):
             outArray = np.array([[item] for item in outArray])
             return outArray
 
-        super().__init__(
-            evaluate = evaluate
-            )
+        super().__init__(evaluate, **kwargs)
 
-### IMPORTANT ###
-# from everest.builts import make_buildFn
 CLASS = Sinusoidal
 build, get = CLASS.build, CLASS.get

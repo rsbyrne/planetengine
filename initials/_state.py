@@ -8,7 +8,8 @@ class State(Copy):
             self,
             real = None,
             varName = None,
-            state = None
+            state = None,
+            **kwargs
             ):
 
         def initialise():
@@ -18,5 +19,6 @@ class State(Copy):
 
         super().__init__(
             initialise,
-            varName
+            varName,
+            **kwargs
             )

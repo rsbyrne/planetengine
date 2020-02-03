@@ -29,7 +29,12 @@ class IC(Applier):
 
         def _apply(var, boxDims = None):
 
-            var.data[:] = _get_ICdata(var, boxDims)
+            if hasattr(var, 'data'):
+                var.data[:] = _get_ICdata(var, boxDims)
+            elif hasattr(var, 'value'):
+                var.value = evaluate()
+            else:
+                raise TypeError
 
         def apply(var, boxDims = None):
 

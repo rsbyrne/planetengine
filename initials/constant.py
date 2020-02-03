@@ -7,25 +7,14 @@ class Constant(IC):
 
     def __init__(
             self,
-            value = 0.
+            value = 0.,
+            **kwargs
             ):
 
-        self.value = value
+        def evaluate(*args):
+            return value
 
-        super().__init__(
-            evaluate = self.evaluate
-            )
+        super().__init__(evaluate, **kwargs)
 
-    def _get_ICdata(self, *args, **kwargs):
-        return self._get_ICdata(*args, **kwargs)
-    def evaluate(self, *args, **kwargs):
-        return np.array([self.value])
-    def _apply(self, var):
-        var.value = self.value
-    def apply(self, var):
-        self._apply(var)
-
-### IMPORTANT ###
-# from everest.builts import make_buildFn
 CLASS = Constant
 build, get = CLASS.build, CLASS.get

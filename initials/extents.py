@@ -8,7 +8,8 @@ class Extents(IC):
 
     def __init__(
             self,
-            shapes = None
+            shapes = None,
+            **kwargs
             ):
 
         polygons = [(0,fn.misc.constant(True))]
@@ -29,11 +30,7 @@ class Extents(IC):
                     )
             return outArray
 
-        super().__init__(
-            evaluate = evaluate
-            )
+        super().__init__(evaluate, **kwargs)
 
-### IMPORTANT ###
-# from everest.builts import make_buildFn
 CLASS = Extents
 build, get = CLASS.build, CLASS.get
