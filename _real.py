@@ -107,3 +107,11 @@ class Real(Iterator, Sliceable):
         if reset:
             self._currenthash = latesthash
         return changed
+
+    def configuration(self):
+        from .initials import load as ICload
+        from .configs import build as conbuild
+        outDict = {}
+        for key in sorted(self.varsOfState):
+            outDict[key] = ICload.build(real = self, varName = key)
+        return conbuild(**outDict)

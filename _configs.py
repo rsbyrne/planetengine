@@ -1,6 +1,6 @@
 from everest.builts._basket import Basket
 from everest.builts._applier import Applier
-from .initials import IC
+from .initials import IC as ICclass
 from .exceptions import PlanetEngineException
 
 class InsufficientConfigsError(PlanetEngineException):
@@ -12,7 +12,7 @@ class Configs(Basket, Applier):
     @staticmethod
     def _process_inputs(inputs):
         for key, val in sorted(inputs.items()):
-            if not isinstance(val, IC):
+            if not isinstance(val, ICclass):
                 raise TypeError
     def __init__(self, **kwargs):
         super().__init__()

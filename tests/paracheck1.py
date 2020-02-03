@@ -27,7 +27,7 @@ system2 = isovisc(res = 64)
 params2 = params(Ra = 1e6)
 tempIC2 = load(real = task1.arg, varName = 'temperatureField')
 tempDotIC2 = load(real = task1.arg, varName = 'temperatureDotField')
-configs2 = configs(temperatureField = tempIC2, temperatureDotField = tempDotIC2)
+configs2 = real1.configuration()
 threshold2 = threshold(val = 20)
 case2 = system2[params1]
 real2 = case2[configs2]
