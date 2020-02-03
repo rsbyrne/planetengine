@@ -45,4 +45,7 @@ class System(Sliceable, Callable):
                 modParams[key] = val
             else:
                 leftovers[key] = val
-        return cls.build(**modOptions, **leftovers)(**modParams)(**modConfigs)
+        modOptions.update(leftovers)
+        modParams.update(leftovers)
+        modConfigs.update(leftovers)
+        return cls.build(**modOptions)(**modParams)(**modConfigs)
