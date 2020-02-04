@@ -1,4 +1,4 @@
-from everest.builts._vector import Vector
+from everest.builts.vector import Vector
 from everest.builts._applier import Applier
 from .initials import IC as ICclass
 from .exceptions import PlanetEngineException
