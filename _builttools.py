@@ -34,14 +34,14 @@ from .utilities import random_interp_dicts
 #     def slice_fn(self, inputs):
 #
 #
-# def get_sliceFn(self, vector, builder, keywords):
-#     return partial(
-#         sliceFn,
-#         self,
-#         vector = vector,
-#         builder = builder,
-#         keywords = keywords
-#         )
+def get_sliceFn(self, vector, builder, keywords):
+    return partial(
+        sliceFn,
+        self,
+        vector = vector,
+        builder = builder,
+        keywords = keywords
+        )
 
 def sliceFn(self, inputs, vector, builder, keywords):
     if isinstance(inputs, vector.CLASS):
