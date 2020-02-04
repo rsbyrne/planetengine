@@ -1,6 +1,6 @@
-from everest.builts._basket import Basket
+from everest.builts._vector import Vector
 
-class Params(Basket):
+class Params(Vector):
     from .params import __file__ as _file_
     @staticmethod
     def _process_inputs(inputs):

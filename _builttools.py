@@ -8,21 +8,21 @@ from .utilities import random_interp_dicts
 #     def __init__(
 #             self,
 #             obj,
-#             basket,
+#             vector,
 #             builder,
 #             keywords
 #             ):
 #         self.obj = obj
-#         self.basket = basket
+#         self.vector = vector
 #         self.builder = builder
 #         self.keywords = keywords
 #
-#     def slice_basket_fn(self, inp):
+#     def slice_vector_fn(self, inp):
 #         return builder.build(**dict(zip(self.keywords, (obj, inputs))))
 #
 #     def slice_mapping_fn(self, inp):
-#         sliceBasket = self.basket.build(**inp)
-#         return self.slice_basket_fn(sliceBasket)
+#         sliceVector = self.vector.build(**inp)
+#         return self.slice_vector_fn(sliceVector)
 #
 #     def slice_tuple_fn(self, inp):
 #         for subInp in inp:
@@ -34,37 +34,37 @@ from .utilities import random_interp_dicts
 #     def slice_fn(self, inputs):
 #
 #
-# def get_sliceFn(self, basket, builder, keywords):
+# def get_sliceFn(self, vector, builder, keywords):
 #     return partial(
 #         sliceFn,
 #         self,
-#         basket = basket,
+#         vector = vector,
 #         builder = builder,
 #         keywords = keywords
 #         )
 
-def sliceFn(self, inputs, basket, builder, keywords):
-    if isinstance(inputs, basket.CLASS):
+def sliceFn(self, inputs, vector, builder, keywords):
+    if isinstance(inputs, vector.CLASS):
         return builder.build(**dict(zip(keywords, (self, inputs))))
     elif type(inputs) is slice or type(inputs) is tuple:
         return yield_sliceFn(
-            self, inputs, basket, builder, keywords
+            self, inputs, vector, builder, keywords
             )
     elif isinstance(inputs, Mapping):
-        return sliceFn(self, basket.build(**inputs), basket, builder, keywords)
+        return sliceFn(self, vector.build(**inputs), vector, builder, keywords)
     else:
         raise TypeError
 
-def yield_sliceFn(self, inputs, basket, builder, keywords):
+def yield_sliceFn(self, inputs, vector, builder, keywords):
     if type(inputs) is tuple:
         inTuple = inputs
-        for inBasket in inTuple:
+        for inVector in inTuple:
             yield from yield_sliceFn(
-                self, inBasket, basket, builder, keywords
+                self, inVector, vector, builder, keywords
                 )
     elif isinstance(inputs, Mapping):
         yield from yield_sliceFn(
-            self, basket.build(**inputs), basket, builder, keywords
+            self, vector.build(**inputs), vector, builder, keywords
             )
     elif type(inputs) is slice:
         slicer = inputs
@@ -74,11 +74,11 @@ def yield_sliceFn(self, inputs, basket, builder, keywords):
                 yield random_interp_dicts(mins.inputs, maxs.inputs)
         else:
             for interpDict in interp_dicts(mins.inputs, maxs.inputs, n):
-                inBasket = basket.build(**interpDict)
+                inVector = vector.build(**interpDict)
                 yield from yield_sliceFn(
-                    self, inBasket, basket, builder, keywords
+                    self, inVector, vector, builder, keywords
                     )
-    elif isinstance(inputs, basket.CLASS):
+    elif isinstance(inputs, vector.CLASS):
         yield builder.build(**dict(zip(keywords, (self, inputs))))
     else:
         raise TypeError

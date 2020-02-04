@@ -1,4 +1,4 @@
-from everest.builts._basket import Basket
+from everest.builts._vector import Vector
 from everest.builts._applier import Applier
 from .initials import IC as ICclass
 from .exceptions import PlanetEngineException
@@ -7,7 +7,7 @@ class InsufficientConfigsError(PlanetEngineException):
     '''Configs keys must match varsOfState keys.'''
     pass
 
-class Configs(Basket, Applier):
+class Configs(Vector, Applier):
     from .configs import __file__ as _file_
     @staticmethod
     def _process_inputs(inputs):
