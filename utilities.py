@@ -156,6 +156,14 @@ def interp_dicts(a, b, n):
     for vals in combos:
         yield dict(zip(keys, vals))
 
+def random_interp_dicts(a, b):
+    keys = sorted(a.keys())
+    vals = [
+        (b[key] - a[key]) * np.random.random_sample() + a[key] \
+            for key in keys
+        ]
+    return dict(zip(keys, vals))
+
 class ToOpen:
     def __init__(self, filepath):
         self.filepath = filepath
