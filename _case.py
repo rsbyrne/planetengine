@@ -23,6 +23,8 @@ class Case(Sliceable, Callable):
         self.params = params
         self.varsOfState = self.locals.varsOfState
 
+        self.sliceDefaults = dict()
+
         super().__init__(**kwargs)
 
         from ._builttools import get_sliceFn

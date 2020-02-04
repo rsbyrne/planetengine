@@ -10,10 +10,13 @@ class System(Sliceable, Callable):
             self,
             **kwargs
             ):
+
         self.options = self.inputs
         self.defaultConfigs = self.defaults
         self.defaultParams = get_default_kwargs(self.buildFn)
         self.defaultOptions = get_default_kwargs(self.__init__)
+
+        self.sliceDefaults = self.defaultParams
 
         super().__init__(**kwargs)
 
