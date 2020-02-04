@@ -25,10 +25,6 @@ class Case(Sliceable, Callable):
 
         super().__init__(**kwargs)
 
-        # def sliceFn(inConfigs):
-        #     return real.build(case = self, configs = inConfigs)
-        # self._slice_fns.append(sliceFn)
-
         from ._builttools import get_sliceFn
         sliceFn = get_sliceFn(self, configs, real, ('case', 'configs'))
         self._slice_fns.append(sliceFn)

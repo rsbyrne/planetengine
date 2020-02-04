@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from functools import partial
 
 from .utilities import interp_dicts
@@ -18,6 +19,8 @@ def sliceFn(self, inputs, basket, builder, keywords):
         return yield_sliceFn(
             self, inputs, basket, builder, keywords
             )
+    elif isinstance(inputs, Mapping):
+        return sliceFn(self, basket.build(**inputs), basket, builder, keywords)
     else:
         raise TypeError
 
@@ -25,7 +28,13 @@ def yield_sliceFn(self, inputs, basket, builder, keywords):
     if type(inputs) is tuple:
         inTuple = inputs
         for inBasket in inTuple:
-            yield from yield_sliceFn(self, inBasket, basket, builder, keywords)
+            yield from yield_sliceFn(
+                self, inBasket, basket, builder, keywords
+                )
+    elif isinstance(inputs, Mapping):
+        yield from yield_sliceFn(
+            self, basket.build(**inputs), basket, builder, keywords
+            )
     elif type(inputs) is slice:
         slicer = inputs
         mins, maxs, n = slicer.start, slicer.stop, slicer.step
