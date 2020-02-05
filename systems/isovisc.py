@@ -8,20 +8,29 @@ from planetengine.initials import sinusoidal, constant
 
 class Isovisc(System):
 
-    defaults = {
-        'temperatureField': sinusoidal.build(),
-        'temperatureDotField': constant.build()
-        }
+    def __init__(self, **kwargs):
+        super().__init__(
+            optionKeys = {'res', 'f', 'aspect'},
+            paramKeys = {'Ra', 'urey'},
+            configsKeys = {'temperatureField', 'temperatureDotField'},
+            varsOfStateKeys = {'temperatureField', 'temperatureDotField'},
+            obsVarsKeys = {'temperatureField', 'velocityField'},
+            buildFn = self.buildFn,
+            **kwargs
+            )
 
-    def __init__(
+    def buildFn(
             self,
             res = 64,
             f = 0.54,
             aspect = 1.,
-            **kwargs
+            Ra = 1e7,
+            urey = 0.,
+            temperatureField = sinusoidal.build(),
+            temperatureDotField = constant.build()
             ):
 
-        ### MESH & MESH VARIABLES ###
+        ### MESH ###
 
         if f == 1. and aspect == 'max':
             raise ValueError
@@ -65,17 +74,7 @@ class Isovisc(System):
             periodic = [False, periodic]
             )
 
-        self.mesh = mesh
-
-        super().__init__(**kwargs)
-
-    def buildFn(
-            self,
-            Ra = 1e7,
-            urey = 0.
-            ):
-
-        mesh = self.mesh
+        ### MESH VARIABLES ###
 
         temperatureField = uw.mesh.MeshVariable(mesh, 1)
         temperatureDotField = uw.mesh.MeshVariable(mesh, 1)
@@ -185,16 +184,6 @@ class Isovisc(System):
             dt = advDiff.get_max_dt()
             advDiff.integrate(dt)
             return dt
-
-        varsOfState = {
-            'temperatureField': temperatureField,
-            'temperatureDotField': temperatureDotField
-            }
-
-        obsVars = {
-            'temperature': temperatureField,
-            'velocity': velocityField
-            }
 
         return locals()
 

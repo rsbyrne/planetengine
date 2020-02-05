@@ -7,7 +7,9 @@ from everest.value import Value
 from . import fieldops
 from . import utilities
 from . import traverse as traverseModule
-from . import configs
+from . import configs as configsMod
+from .initials import state as ICstate
+from .states import threshold
 
 class Real(Iterator, Sliceable):
 
@@ -16,7 +18,7 @@ class Real(Iterator, Sliceable):
     @staticmethod
     def _process_inputs(inputs):
         inConf = inputs['configs']
-        if isinstance(inConf, configs.CLASS):
+        if isinstance(inConf, configsMod.CLASS):
             pass
         elif isinstance(inConf, Real) or isinstance(inConf, traverseModule.CLASS):
             inputs['configs'] = inConf.configuration()
@@ -30,14 +32,20 @@ class Real(Iterator, Sliceable):
             **kwargs
             ):
 
+        localsDict = case.optionalisation.system.buildFn()
+        localsObj = utilities.Grouper(localsDict)
+
         modeltime = Value(0.)
-        varsOfState = case.varsOfState
+        varsOfState = {
+            key: localsDict[key] \
+                for key in case.optionalisation.system.varsOfStateKeys
+            }
 
         def update():
-            case.locals.update()
+            localsObj.update()
 
         def integrate(_skipClips = False):
-            dt = case.locals.integrate()
+            dt = localsObj.integrate()
             if not _skipClips:
                 self.clipVals()
                 self.setBounds()
@@ -55,7 +63,12 @@ class Real(Iterator, Sliceable):
             modeltime.value += dt
 
         def initialise():
-            configs(case)
+            initDict = {
+                **case.optionalisation.system.defaultConfigs,
+                **configs.inputs
+                }
+            for key, val in sorted(initDict.items()):
+                val.apply(localsDict[key])
             modeltime.value = 0.
             update()
 
@@ -64,7 +77,7 @@ class Real(Iterator, Sliceable):
                 if key == 'modeltime':
                     modeltime.value = loadData
                 else:
-                    var = varsOfState[key]
+                    var = localsDict[key]
                     assert hasattr(var, 'mesh'), \
                         'Only meshVar supported at present.'
                     nodes = var.mesh.data_nodegId
@@ -78,11 +91,14 @@ class Real(Iterator, Sliceable):
 
         outkeys = ['modeltime', *sorted(varsOfState.keys())]
 
-        self.system = case.system
-        self.params = case.params
-        self.locals = case.locals
+        self.system = case.optionalisation.system
+        self.optionalisation = case.optionalisation
         self.case = case
+        self.options = case.optionalisation.options
+        self.params = case.params
         self.configs = configs
+        self.locals = localsObj
+
         self.varsOfState = varsOfState
         self.modeltime = modeltime
 
@@ -95,9 +111,7 @@ class Real(Iterator, Sliceable):
             **kwargs
             )
 
-        def sliceFn(state):
-            return traverseModule.build(arg = self, state = state)
-        self._slice_fns.append(sliceFn)
+        self._slice_fns.append(self.traverse)
 
     def clipVals(self):
         for varName, var in sorted(self.varsOfState.items()):
@@ -122,9 +136,6 @@ class Real(Iterator, Sliceable):
         return changed
 
     def configuration(self, altKeys = dict()):
-        from .initials import state as ICstate
-        from . import configs
-        from .states import threshold
         ICdict = {}
         for key in sorted(self.varsOfState):
             if key in altKeys:
@@ -137,7 +148,7 @@ class Real(Iterator, Sliceable):
                 state = state,
                 varName = key
                 )
-        return configs.build(**ICdict)
+        return configsMod.build(**ICdict)
 
     def traverse(self, state):
-        return self[state]
+        return traverseModule.build(arg = self, state = state)

@@ -1,44 +1,60 @@
 from everest.builts._sliceable import Sliceable
 from everest.builts._callable import Callable
 from everest.utilities import get_default_kwargs
-from .. import case
-from .. import params
+from .. import optionalisation
+from .. import options as optionsMod
+from .. import params as paramsMod
+from .. import configs as configsMod
 
 class System(Sliceable, Callable):
 
     def __init__(
             self,
+            optionKeys = {},
+            paramKeys = {},
+            configsKeys = {},
+            varsOfStateKeys = {},
+            obsVarsKeys = {},
+            buildFn = None,
             **kwargs
             ):
 
-        self.options = self.inputs
-        self.defaultConfigs = self.defaults
-        self.defaultParams = get_default_kwargs(self.buildFn)
-        self.defaultOptions = get_default_kwargs(self.__init__)
-
-        self.sliceDefaults = self.defaultParams
-
+        defaults = get_default_kwargs(buildFn)
+        defaultOptions = {
+            key: val for key, val in sorted(defaults.items()) if key in optionKeys
+            }
+        defaultParams = {
+            key: val for key, val in sorted(defaults.items()) if key in paramKeys
+            }
+        defaultConfigs = {
+            key: val for key, val in sorted(defaults.items()) if key in configsKeys
+            }
+        self.optionKeys, self.paramKeys, self.configsKeys = \
+            optionKeys, paramKeys, configsKeys
+        self.varsOfStateKeys, self.obsVarsKeys = \
+            varsOfStateKeys, obsVarsKeys
+        self.buildFn = \
+            buildFn
+        self.defaultOptions, self.defaultParams, self.defaultConfigs = \
+            defaultOptions, defaultParams, defaultConfigs
         super().__init__(**kwargs)
+        self._slice_fns.append(self.slice)
+        self._call_fns.append(self.optionalise)
 
-        from .._builttools import get_sliceFn
-        sliceFn = get_sliceFn(self, params, case, ('system', 'params'))
-        self._slice_fns.append(sliceFn)
+    def optionalise(self, **inputs):
+        return self.slice(optionsMod.build(**inputs))
 
-        self._call_fns.append(self.parameterise)
+    def slice(self, arg):
+        return optionalisation.build(system = self, options = arg)
 
-    def parameterise(self, **inputs):
-        modInps = {**self.defaultParams, **inputs}
-        return self[params.build(**modInps)]
-
-    @classmethod
     def make(cls, **inputs):
-        modOptions, modParams, modConfigs, leftovers = {}, {}, {}, {}
-        defaultConfigs = cls.defaults
-        defaultParams = get_default_kwargs(cls.buildFn)
-        defaultOptions = get_default_kwargs(cls.__init__)
-        for key, val in sorted(inputs.items()):
-            if key in defaultOptions: modOptions[key] = val
-            elif key in defaultConfigs: modConfigs[key] = val
-            elif key in defaultParams: modParams[key] = val
-            else: leftovers[key] = val
-        return cls.build(**modOptions)(**modParams)(**modConfigs)
+        options = optionsMod.build(
+            **{key : inputs[key] for key in inputs if key in self.optionsKeys}
+            )
+        params = paramsMod.build(
+            **{key : inputs[key] for key in inputs if key in self.paramsKeys}
+            )
+        configs = configsMod.build(
+            **{key : inputs[key] for key in inputs if key in self.configsKeys}
+            )
+        return cls.build()[options][params][configs]

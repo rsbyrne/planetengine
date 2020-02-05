@@ -1,9 +1,7 @@
 from everest.builts._sliceable import Sliceable
 from everest.builts._callable import Callable
 from . import real
-from . import configs
-from .utilities import Grouper
-from ._builttools import yield_sliceFn
+from . import configs as configsMod
 
 class Case(Sliceable, Callable):
 
@@ -11,28 +9,19 @@ class Case(Sliceable, Callable):
 
     def __init__(
             self,
-            system = None,
+            optionalisation = None,
             params = None,
             **kwargs
             ):
 
-        localsDict = system.buildFn(**params.inputs)
-        self.locals = Grouper(localsDict)
-
-        self.system = system
+        self.optionalisation = optionalisation
         self.params = params
-        self.varsOfState = self.locals.varsOfState
-
-        self.sliceDefaults = dict()
-
         super().__init__(**kwargs)
-
-        from ._builttools import get_sliceFn
-        sliceFn = get_sliceFn(self, configs, real, ('case', 'configs'))
-        self._slice_fns.append(sliceFn)
-
+        self._slice_fns.append(self.slice)
         self._call_fns.append(self.configure)
 
     def configure(self, **inputs):
-        modInps = {**self.system.defaultConfigs, **inputs}
-        return self[configs.build(**modInps)]
+        return self.slice(configsMod.build(**inputs))
+
+    def slice(self, arg):
+        return real.build(case = self, configs = arg)
