@@ -4,6 +4,8 @@ if mpi.rank == 0:
     if os.path.exists('./test.frm'):
         os.remove('./test.frm')
 
+message = mpi.message
+
 from planetengine.systems import isovisc
 from everest.builts.states import booloperator
 from everest.builts import enactor, condition
@@ -22,7 +24,7 @@ myenactor = enactor.build(cycler = real2, condition = intercondition)
 traverse.add_promptee(myenactor)
 traverse()
 
-print(real1.count, real2.count)
+message(real1.count, real2.count)
 assert real1.count == real2.count * 2
 
 import weakref
@@ -38,4 +40,9 @@ del intercondition
 del myenactor
 
 ref = myref()
-print(ref, type(ref))
+assert ref is None
+
+# if not type(ref) is None:
+#     import gc
+#     referrers = gc.get_referrers(ref)
+#     message(referrers[1:])
