@@ -48,7 +48,7 @@ class System(Sliceable, Callable):
     def make(cls, **inputs):
         initDict = {}
         for key, val in sorted(inputs.items()):
-            if key in system.defaultInps:
+            if key in cls.defaultInps:
                 initDict[key] = val
         system = cls.build(**initDict)
         optionsDict = {}
