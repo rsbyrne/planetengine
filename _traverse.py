@@ -13,7 +13,8 @@ class Traverse(Task):
         super().__init__(**kwargs)
         if isinstance(arg, Task): arg = arg().arg
         self._task_cycler_fns.append(arg)
-        self._task_stop_fns.append(lambda: state(arg))
+        self._traverse_task_stop_fn = lambda: state(arg)
+        self._task_stop_fns.append(self._traverse_task_stop_fn)
 
     def configuration(self, altKeys = dict()):
         from .initials import state as ICstate

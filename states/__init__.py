@@ -12,4 +12,5 @@ class State(Inquirer):
             _inquirer_arg_typeCheck = lambda arg: isinstance(arg, Real),
             **kwargs
             )
-        self._inquirer_fns.append(evaluateFn)
+        self._state_inquire_fn = evaluateFn
+        self._inquirer_fns.append(self._state_inquire_fn)

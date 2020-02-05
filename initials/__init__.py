@@ -47,7 +47,8 @@ class IC(Applier):
 
             if hasattr(var, 'bounds'):
                 set_boundaries(var, var.bounds)
+        self._IC_apply_fn = apply
 
         super().__init__(**kwargs)
 
-        self._apply_fns.append(apply)
+        self._apply_fns.append(self._IC_apply_fn)

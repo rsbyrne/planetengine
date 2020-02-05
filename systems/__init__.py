@@ -47,14 +47,24 @@ class System(Sliceable, Callable):
     def slice(self, arg):
         return optionalisation.build(system = self, options = arg)
 
+    @classmethod
     def make(cls, **inputs):
-        options = optionsMod.build(
-            **{key : inputs[key] for key in inputs if key in self.optionsKeys}
-            )
-        params = paramsMod.build(
-            **{key : inputs[key] for key in inputs if key in self.paramsKeys}
-            )
-        configs = configsMod.build(
-            **{key : inputs[key] for key in inputs if key in self.configsKeys}
-            )
-        return cls.build()[options][params][configs]
+        initDict = {}
+        for key, val in sorted(inputs.items()):
+            if key in system.defaultInps:
+                initDict[key] = val
+        system = cls.build(**initDict)
+        optionsDict = {}
+        paramsDict = {}
+        configsDict = {}
+        leftoversDict = {}
+        for key, val in sorted(inputs.items()):
+            if key in system.defaultOptions:
+                optionsDict[key] = val
+            elif key in system.defaultParams:
+                paramsDict[key] = val
+            elif key in system.defaultConfigs:
+                configsDict[key] = val
+            else:
+                leftoversDict[key] = val
+        return system(**optionsDict)(**paramsDict)(**configsDict)
