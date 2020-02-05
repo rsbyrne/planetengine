@@ -3,7 +3,7 @@ import numpy as np
 from everest.builts._iterator import Iterator
 from everest.builts._sliceable import Sliceable
 from everest.value import Value
-from everest.builts.states import operator
+from everest.builts.states import booloperator
 
 from . import fieldops
 from . import utilities
@@ -75,7 +75,7 @@ class Real(Iterator, Sliceable):
         self._update()
         self.clipVals()
         self.setBounds()
-        self.modeltime.value += dt
+        self.modeltime += dt
 
     def _initialise(self):
         initDict = {
@@ -133,7 +133,7 @@ class Real(Iterator, Sliceable):
                 ICkey = altKeys[key]
             else:
                 ICkey = key
-            state = operator.build(val = self.count())
+            state = booloperator.build(val = self.count())
             ICdict[ICkey] = ICstate.build(
                 real = self,
                 state = state,
