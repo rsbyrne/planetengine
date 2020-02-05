@@ -41,54 +41,6 @@ class Real(Iterator, Sliceable):
                 for key in case.optionalisation.system.varsOfStateKeys
             }
 
-        def update():
-            localsObj.update()
-
-        def integrate(_skipClips = False):
-            dt = localsObj.integrate()
-            if not _skipClips:
-                self.clipVals()
-                self.setBounds()
-            return dt
-
-        def _iterate():
-            dt = integrate(_skipClips = True)
-            update()
-            return dt
-
-        def iterate():
-            dt = _iterate()
-            self.clipVals()
-            self.setBounds()
-            modeltime.value += dt
-
-        def initialise():
-            initDict = {
-                **case.optionalisation.system.defaultConfigs,
-                **configs.inputs
-                }
-            for key, val in sorted(initDict.items()):
-                val.apply(localsDict[key])
-            modeltime.value = 0.
-            update()
-
-        def load(loadDict):
-            for key, loadData in sorted(loadDict.items()):
-                if key == 'modeltime':
-                    modeltime.value = loadData
-                else:
-                    var = localsDict[key]
-                    assert hasattr(var, 'mesh'), \
-                        'Only meshVar supported at present.'
-                    nodes = var.mesh.data_nodegId
-                    for index, gId in enumerate(nodes):
-                        var.data[index] = loadData[gId]
-
-        def out():
-            yield np.array(modeltime())
-            for varName, var in sorted(varsOfState.items()):
-                yield fieldops.get_global_var_data(var)
-
         outkeys = ['modeltime', *sorted(varsOfState.keys())]
 
         self.system = case.optionalisation.system
@@ -97,21 +49,60 @@ class Real(Iterator, Sliceable):
         self.options = case.optionalisation.options
         self.params = case.params
         self.configs = configs
+        self.localsDict = localsDict
         self.locals = localsObj
 
         self.varsOfState = varsOfState
         self.modeltime = modeltime
+        self._outkeys = outkeys
 
-        super().__init__(
-            initialiseFn = initialise,
-            iterateFn = iterate,
-            outFn = out,
-            outkeys = outkeys,
-            loadFn = load,
-            **kwargs
-            )
+        super().__init__(**kwargs)
 
         self._slice_fns.append(self.traverse)
+
+    def _update(self):
+        self.locals.update()
+
+    def _integrate(self, _skipClips = False):
+        dt = self.locals.integrate()
+        if not _skipClips:
+            self.clipVals()
+            self.setBounds()
+        return dt
+
+    def _iterate(self):
+        dt = self._integrate(_skipClips = True)
+        self._update()
+        self.clipVals()
+        self.setBounds()
+        self.modeltime.value += dt
+
+    def _initialise(self):
+        initDict = {
+            **self.case.optionalisation.system.defaultConfigs,
+            **self.configs.inputs
+            }
+        for key, val in sorted(initDict.items()):
+            val.apply(self.localsDict[key])
+        self.modeltime.value = 0.
+        self._update()
+
+    def _load(self, loadDict):
+        for key, loadData in sorted(self.loadDict.items()):
+            if key == 'modeltime':
+                self.modeltime.value = loadData
+            else:
+                var = self.localsDict[key]
+                assert hasattr(var, 'mesh'), \
+                    'Only meshVar supported at present.'
+                nodes = var.mesh.data_nodegId
+                for index, gId in enumerate(nodes):
+                    var.data[index] = loadData[gId]
+
+    def _out(self):
+        yield np.array(self.modeltime())
+        for varName, var in sorted(self.varsOfState.items()):
+            yield fieldops.get_global_var_data(var)
 
     def clipVals(self):
         for varName, var in sorted(self.varsOfState.items()):

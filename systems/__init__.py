@@ -15,11 +15,10 @@ class System(Sliceable, Callable):
             configsKeys = {},
             varsOfStateKeys = {},
             obsVarsKeys = {},
-            buildFn = None,
             **kwargs
             ):
 
-        defaults = get_default_kwargs(buildFn)
+        defaults = get_default_kwargs(self.buildFn)
         defaultOptions = {
             key: val for key, val in sorted(defaults.items()) if key in optionKeys
             }
@@ -33,8 +32,6 @@ class System(Sliceable, Callable):
             optionKeys, paramKeys, configsKeys
         self.varsOfStateKeys, self.obsVarsKeys = \
             varsOfStateKeys, obsVarsKeys
-        self.buildFn = \
-            buildFn
         self.defaultOptions, self.defaultParams, self.defaultConfigs = \
             defaultOptions, defaultParams, defaultConfigs
         super().__init__(**kwargs)

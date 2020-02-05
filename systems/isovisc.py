@@ -15,7 +15,6 @@ class Isovisc(System):
             configsKeys = {'temperatureField', 'temperatureDotField'},
             varsOfStateKeys = {'temperatureField', 'temperatureDotField'},
             obsVarsKeys = {'temperatureField', 'velocityField'},
-            buildFn = self.buildFn,
             **kwargs
             )
 
