@@ -1,3 +1,5 @@
+raise Exception("Not up to date!")
+
 from everest import mpi
 import os
 

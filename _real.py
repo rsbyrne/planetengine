@@ -3,13 +3,13 @@ import numpy as np
 from everest.builts._iterator import Iterator
 from everest.builts._sliceable import Sliceable
 from everest.value import Value
+from everest.states import operator
 
 from . import fieldops
 from . import utilities
 from . import traverse as traverseModule
 from . import configs as configsMod
 from .initials import state as ICstate
-from .states import threshold
 
 class Real(Iterator, Sliceable):
 
@@ -133,7 +133,7 @@ class Real(Iterator, Sliceable):
                 ICkey = altKeys[key]
             else:
                 ICkey = key
-            state = threshold.build(val = self.count())
+            state = operator.build(val = self.count())
             ICdict[ICkey] = ICstate.build(
                 real = self,
                 state = state,
