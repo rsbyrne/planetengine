@@ -3,7 +3,7 @@ import numpy as np
 from everest.builts._iterator import Iterator
 from everest.builts._sliceable import Sliceable
 from everest.value import Value
-from everest.states import operator
+from everest.builts.states import operator
 
 from . import fieldops
 from . import utilities
