@@ -68,6 +68,10 @@ class System(Iterator):
                 leftoversDict[key] = val
         return optionsDict, paramsDict, configsDict, leftoversDict
 
+    @classmethod
+    def vectorise(cls, vector):
+        return cls.build(**vector.inputs)
+
     def __init__(self, localsDict, **kwargs):
 
         # Expects:
