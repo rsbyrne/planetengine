@@ -1,89 +1,156 @@
-from everest.builts._sliceable import Sliceable
-from everest.builts._callable import Callable
-from everest.utilities import get_default_kwargs
-from .. import optionalisation
-from .. import options as optionsMod
-from .. import params as paramsMod
-from .. import configs as configsMod
+import numpy as np
 
-class System(Sliceable, Callable):
+from everest.builts._iterator import Iterator
+from everest.value import Value
 
-    def __init__(
-            self,
-            optionKeys = {},
-            paramKeys = {},
-            configsKeys = {},
-            varsOfStateKeys = {},
-            obsVarsKeys = {},
-            **kwargs
-            ):
+from .. import fieldops
+from ..utilities import hash_var
 
-        defaults = get_default_kwargs(self.buildFn)
-        defaultOptions = {
-            key: val for key, val in sorted(defaults.items()) if key in optionKeys
+@classmethod
+def make(cls, **inputs):
+    initDict = {}
+    for key, val in sorted(inputs.items()):
+        if key in cls.defaultInps:
+            initDict[key] = val
+    system = cls.build(**initDict)
+    optionsDict = {}
+    paramsDict = {}
+    configsDict = {}
+    leftoversDict = {}
+    for key, val in sorted(inputs.items()):
+        if key in system.defaultOptions:
+            optionsDict[key] = val
+        elif key in system.defaultParams:
+            paramsDict[key] = val
+        elif key in system.defaultConfigs:
+            configsDict[key] = val
+        else:
+            leftoversDict[key] = val
+    return system(**optionsDict)(**paramsDict)(**configsDict)
+
+class System(Iterator):
+
+    @classmethod
+    def _make_defaults(cls, keys):
+        outDict = {
+            key: val \
+                for key, val in sorted(cls.defaultInps.items()) \
+                    if key in keys
             }
-        defaultParams = {
-            key: val for key, val in sorted(defaults.items()) if key in paramKeys
+        return outDict
+
+    @classmethod
+    def _custom_cls_fn(cls):
+        if hasattr(cls, 'optionsKeys'):
+            cls.defaultOptions = cls._make_defaults(cls.optionsKeys)
+            cls.defaultParams = cls._make_defaults(cls.paramsKeys)
+            cls.defaultConfigs = cls._make_defaults(cls.configsKeys)
+
+    @classmethod
+    def _sort_inputs(cls, inputs):
+        optionsDict = {**cls.defaultOptions}
+        paramsDict = {**cls.defaultParams}
+        configsDict = {**cls.defaultConfigs}
+        leftoversDict = {}
+        for key, val in sorted(inputs.items()):
+            if key in cls.defaultOptions:
+                optionsDict[key] = val
+            elif key in cls.defaultParams:
+                paramsDict[key] = val
+            elif key in cls.defaultConfigs:
+                configsDict[key] = val
+            else:
+                leftoversDict[key] = val
+        return optionsDict, paramsDict, configsDict, leftoversDict
+
+    def __init__(self, **kwargs):
+
+        # Expects:
+        # self.locals
+        # self.locals.update
+        # self.locals.integrate
+
+        self.options, self.params, self.configs, self.leftovers = \
+            self._sort_inputs(self.inputs)
+        self.chron = Value(0.)
+        self.varsOfState = {
+            key: self.locals[key] for key in self.varsOfStateKeys
             }
-        defaultConfigs = {
-            key: val for key, val in sorted(defaults.items()) if key in configsKeys
-            }
-        self.optionKeys, self.paramKeys, self.configsKeys = \
-            optionKeys, paramKeys, configsKeys
-        self.varsOfStateKeys, self.obsVarsKeys = \
-            varsOfStateKeys, obsVarsKeys
-        self.defaultOptions, self.defaultParams, self.defaultConfigs = \
-            defaultOptions, defaultParams, defaultConfigs
+
+        self._outkeys = ['chron', *sorted(self.varsOfStateKeys)]
+
+        # Iterator expects:
+        # self._initialise
+        # self._iterate
+        # self._out
+        # self._outkeys
+        # self._load
+
         super().__init__(**kwargs)
-        self._slice_fns.append(self.slice)
-        self._call_fns.append(self.optionalise)
 
-    def optionalise(self, **inputs):
-        return self.slice(optionsMod.build(**inputs))
+    # Iterator attributes:
 
-    def slice(self, arg):
-        return optionalisation.build(system = self, options = arg)
+    def _initialise(self):
+        for key, IC in sorted(self.configs.items()):
+            IC.apply(self.locals[key])
+            self.chron.value = 0.
+            self._update()
 
-    # @classmethod
-    # def make(cls, **inputs):
-    #     initDict = {}
-    #     for key, val in sorted(inputs.items()):
-    #         if key in cls.defaultInps:
-    #             initDict[key] = val
-    #     system = cls.build(**initDict)
-    #     optionsDict = {}
-    #     paramsDict = {}
-    #     configsDict = {}
-    #     leftoversDict = {}
-    #     for key, val in sorted(inputs.items()):
-    #         if key in system.defaultOptions:
-    #             optionsDict[key] = val
-    #         elif key in system.defaultParams:
-    #             paramsDict[key] = val
-    #         elif key in system.defaultConfigs:
-    #             configsDict[key] = val
-    #         else:
-    #             leftoversDict[key] = val
-    #     return system(**optionsDict)(**paramsDict)(**configsDict)
-    #
-    # @classmethod
-    # def _parse_inputs(cls, **inputs):
-    #     initDict = {}
-    #     for key, val in sorted(inputs.items()):
-    #         if key in cls.defaultInps:
-    #             initDict[key] = val
-    #     system = cls.build(**initDict)
-    #     optionsDict = {}
-    #     paramsDict = {}
-    #     configsDict = {}
-    #     leftoversDict = {}
-    #     for key, val in sorted(inputs.items()):
-    #         if key in system.defaultOptions:
-    #             optionsDict[key] = val
-    #         elif key in system.defaultParams:
-    #             paramsDict[key] = val
-    #         elif key in system.defaultConfigs:
-    #             configsDict[key] = val
-    #         else:
-    #             leftoversDict[key] = val
-    #     return optionsDict,
+    def _iterate(self):
+        dt = self._integrate(_skipClips = True)
+        self._update()
+        self.clipVals()
+        self.setBounds()
+        self.chron += dt
+
+    def _integrate(self, _skipClips = False):
+        dt = self.locals.integrate()
+        if not _skipClips:
+            self.clipVals()
+            self.setBounds()
+        return dt
+
+    def _update(self):
+        if self.has_changed():
+            self.locals.update()
+
+    def has_changed(self, reset = True):
+        if not hasattr(self, '_currenthash'):
+            self._currenthash = 0
+        latesthash = hash(tuple([
+            hash_var(var) \
+                for key, var in sorted(self.varsOfState.items())
+            ]))
+        changed = latesthash != self._currenthash
+        if reset:
+            self._currenthash = latesthash
+        return changed
+
+    def clipVals(self):
+        for varName, var in sorted(self.varsOfState.items()):
+            if hasattr(var, 'scales'):
+                fieldops.clip_array(var, var.scales)
+
+    def setBounds(self):
+        for varName, var in sorted(self.varsOfState.items()):
+            if hasattr(var, 'bounds'):
+                fieldops.set_boundaries(var, var.bounds)
+
+    def _out(self):
+        yield np.array(self.chron())
+        for varName, var in sorted(self.varsOfState.items()):
+            yield fieldops.get_global_var_data(var)
+
+    def _load(self, loadDict):
+        for key, loadData in sorted(loadDict.items()):
+            if key == 'chron':
+                self.chron.value = loadData
+            else:
+                var = self.locals[key]
+                assert hasattr(var, 'mesh'), \
+                    'Only meshVar supported at present.'
+                nodes = var.mesh.data_nodegId
+                for index, gId in enumerate(nodes):
+                    var.data[index] = loadData[gId]
+
+    # Other attributes:

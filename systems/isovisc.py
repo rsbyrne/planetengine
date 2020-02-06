@@ -3,30 +3,27 @@ import numpy as np
 import underworld as uw
 fn = uw.function
 
+from planetengine.utilities import Grouper
 from planetengine.systems import System
 from planetengine.initials import sinusoidal, constant
 
 class Isovisc(System):
 
-    def __init__(self, **kwargs):
-        super().__init__(
-            optionKeys = {'res', 'f', 'aspect'},
-            paramKeys = {'Ra', 'urey'},
-            configsKeys = {'temperatureField', 'temperatureDotField'},
-            varsOfStateKeys = {'temperatureField', 'temperatureDotField'},
-            obsVarsKeys = {'temperatureField', 'velocityField'},
-            **kwargs
-            )
+    optionsKeys = {'res', 'f', 'aspect'}
+    paramsKeys = {'Ra', 'urey'}
+    configsKeys = {'temperatureField', 'temperatureDotField'}
+    varsOfStateKeys = {'temperatureField', 'temperatureDotField'}
+    obsVarsKeys = {'temperatureField', 'velocityField'}
 
-    def buildFn(
-            self,
+    def __init__(self,
             res = 64,
             f = 0.54,
             aspect = 1.,
             Ra = 1e7,
             urey = 0.,
             temperatureField = sinusoidal.build(),
-            temperatureDotField = constant.build()
+            temperatureDotField = constant.build(),
+            **kwargs
             ):
 
         ### MESH ###
@@ -184,8 +181,9 @@ class Isovisc(System):
             advDiff.integrate(dt)
             return dt
 
-        return locals()
+        self.locals = Grouper(locals())
+
+        super().__init__(**kwargs)
 
 CLASS = Isovisc
 build, get = CLASS.build, CLASS.get
-make = CLASS.make

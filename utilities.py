@@ -17,6 +17,8 @@ def message(*args):
 class Grouper:
     def __init__(self, grouperDict):
         self.__dict__.update(grouperDict)
+    def __getitem__(self, key):
+        return getattr(self, key)
 
 def get_substrates(var):
     if type(var) == uw.mesh._meshvariable.MeshVariable:

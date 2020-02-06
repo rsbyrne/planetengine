@@ -31,7 +31,7 @@ traverse2.anchor('test', '.')
 
 mpi.message(traverse2.arg.out())
 mpi.message(traverse2.reader['*'])
-mpi.message(traverse2.reader['*', '_count_'])
+mpi.message(traverse2.reader['*', 'outputs', 'count'])
 mpi.message("Complete!")
 
 if mpi.rank == 0:
