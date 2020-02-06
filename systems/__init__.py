@@ -5,6 +5,11 @@ from everest.value import Value
 
 from .. import fieldops
 from ..utilities import hash_var
+from ..utilities import Grouper
+
+def _make_locals(localsDict):
+    del localsDict['self']
+    return Grouper(localsDict)
 
 @classmethod
 def make(cls, **inputs):
@@ -63,12 +68,14 @@ class System(Iterator):
                 leftoversDict[key] = val
         return optionsDict, paramsDict, configsDict, leftoversDict
 
-    def __init__(self, **kwargs):
+    def __init__(self, localsDict, **kwargs):
 
         # Expects:
         # self.locals
         # self.locals.update
         # self.locals.integrate
+
+        self.locals = _make_locals(localsDict)
 
         self.options, self.params, self.configs, self.leftovers = \
             self._sort_inputs(self.inputs)

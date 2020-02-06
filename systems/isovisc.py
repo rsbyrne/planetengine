@@ -3,7 +3,6 @@ import numpy as np
 import underworld as uw
 fn = uw.function
 
-from planetengine.utilities import Grouper
 from planetengine.systems import System
 from planetengine.initials import sinusoidal, constant
 
@@ -181,9 +180,7 @@ class Isovisc(System):
             advDiff.integrate(dt)
             return dt
 
-        self.locals = Grouper(locals())
-
-        super().__init__(**kwargs)
+        super().__init__(locals(), **kwargs)
 
 CLASS = Isovisc
 build, get = CLASS.build, CLASS.get
