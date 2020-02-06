@@ -27,7 +27,7 @@ class Analyser:
             analyserDict,
             formatDict,
             step,
-            modeltime,
+            chron,
             ):
 
         self.analyserDict = analyserDict
@@ -35,11 +35,11 @@ class Analyser:
 
         miscDict = {
             'step': step,
-            'modeltime': modeltime
+            'chron': chron
             }
         miscFormatDict = {
             'step': "{:.0f}",
-            'modeltime': "{:.1E}",
+            'chron': "{:.1E}",
             }
         self.analyserDict.update(miscDict)
         self.formatDict.update(miscFormatDict)

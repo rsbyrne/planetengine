@@ -35,13 +35,13 @@ class Real(Iterator, Sliceable):
         localsDict = case.optionalisation.system.buildFn()
         localsObj = utilities.Grouper(localsDict)
 
-        modeltime = Value(0.)
+        chron = Value(0.)
         varsOfState = {
             key: localsDict[key] \
                 for key in case.optionalisation.system.varsOfStateKeys
             }
 
-        outkeys = ['modeltime', *sorted(varsOfState.keys())]
+        outkeys = ['chron', *sorted(varsOfState.keys())]
 
         self.system = case.optionalisation.system
         self.optionalisation = case.optionalisation
@@ -53,7 +53,7 @@ class Real(Iterator, Sliceable):
         self.locals = localsObj
 
         self.varsOfState = varsOfState
-        self.modeltime = modeltime
+        self.chron = chron
         self._outkeys = outkeys
 
         super().__init__(**kwargs)
@@ -75,7 +75,7 @@ class Real(Iterator, Sliceable):
         self._update()
         self.clipVals()
         self.setBounds()
-        self.modeltime += dt
+        self.chron += dt
 
     def _initialise(self):
         initDict = {
@@ -84,13 +84,13 @@ class Real(Iterator, Sliceable):
             }
         for key, val in sorted(initDict.items()):
             val.apply(self.localsDict[key])
-        self.modeltime.value = 0.
+        self.chron.value = 0.
         self._update()
 
     def _load(self, loadDict):
         for key, loadData in sorted(loadDict.items()):
-            if key == 'modeltime':
-                self.modeltime.value = loadData
+            if key == 'chron':
+                self.chron.value = loadData
             else:
                 var = self.localsDict[key]
                 assert hasattr(var, 'mesh'), \
@@ -100,7 +100,7 @@ class Real(Iterator, Sliceable):
                     var.data[index] = loadData[gId]
 
     def _out(self):
-        yield np.array(self.modeltime())
+        yield np.array(self.chron())
         for varName, var in sorted(self.varsOfState.items()):
             yield fieldops.get_global_var_data(var)
 

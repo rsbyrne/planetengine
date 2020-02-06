@@ -11,7 +11,7 @@ class Observer(Producer):
             outDict
             ):
 
-        outDict['modeltime'] = system.modeltime
+        outDict['chron'] = system.chron
 
         system.attach_observer(self)
 
