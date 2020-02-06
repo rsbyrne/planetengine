@@ -44,24 +44,46 @@ class System(Sliceable, Callable):
     def slice(self, arg):
         return optionalisation.build(system = self, options = arg)
 
-    @classmethod
-    def make(cls, **inputs):
-        initDict = {}
-        for key, val in sorted(inputs.items()):
-            if key in cls.defaultInps:
-                initDict[key] = val
-        system = cls.build(**initDict)
-        optionsDict = {}
-        paramsDict = {}
-        configsDict = {}
-        leftoversDict = {}
-        for key, val in sorted(inputs.items()):
-            if key in system.defaultOptions:
-                optionsDict[key] = val
-            elif key in system.defaultParams:
-                paramsDict[key] = val
-            elif key in system.defaultConfigs:
-                configsDict[key] = val
-            else:
-                leftoversDict[key] = val
-        return system(**optionsDict)(**paramsDict)(**configsDict)
+    # @classmethod
+    # def make(cls, **inputs):
+    #     initDict = {}
+    #     for key, val in sorted(inputs.items()):
+    #         if key in cls.defaultInps:
+    #             initDict[key] = val
+    #     system = cls.build(**initDict)
+    #     optionsDict = {}
+    #     paramsDict = {}
+    #     configsDict = {}
+    #     leftoversDict = {}
+    #     for key, val in sorted(inputs.items()):
+    #         if key in system.defaultOptions:
+    #             optionsDict[key] = val
+    #         elif key in system.defaultParams:
+    #             paramsDict[key] = val
+    #         elif key in system.defaultConfigs:
+    #             configsDict[key] = val
+    #         else:
+    #             leftoversDict[key] = val
+    #     return system(**optionsDict)(**paramsDict)(**configsDict)
+    #
+    # @classmethod
+    # def _parse_inputs(cls, **inputs):
+    #     initDict = {}
+    #     for key, val in sorted(inputs.items()):
+    #         if key in cls.defaultInps:
+    #             initDict[key] = val
+    #     system = cls.build(**initDict)
+    #     optionsDict = {}
+    #     paramsDict = {}
+    #     configsDict = {}
+    #     leftoversDict = {}
+    #     for key, val in sorted(inputs.items()):
+    #         if key in system.defaultOptions:
+    #             optionsDict[key] = val
+    #         elif key in system.defaultParams:
+    #             paramsDict[key] = val
+    #         elif key in system.defaultConfigs:
+    #             configsDict[key] = val
+    #         else:
+    #             leftoversDict[key] = val
+    #     return optionsDict,
