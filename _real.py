@@ -88,7 +88,7 @@ class Real(Iterator, Sliceable):
         self._update()
 
     def _load(self, loadDict):
-        for key, loadData in sorted(self.loadDict.items()):
+        for key, loadData in sorted(loadDict.items()):
             if key == 'modeltime':
                 self.modeltime.value = loadData
             else:

@@ -1,20 +1,27 @@
 from everest.builts._task import Task
 
 class Traverse(Task):
+
     from .traverse import __file__ as _file_
+
     def __init__(
             self,
             arg = None,
             state = None,
             **kwargs
             ):
+
         self.arg = arg
         self.state = state
+
         super().__init__(**kwargs)
-        if isinstance(arg, Task): arg = arg().arg
+
+        # Task attributes:
         self._task_cycler_fns.append(arg)
-        self._traverse_task_stop_fn = lambda: state(arg)
         self._task_stop_fns.append(self._traverse_task_stop_fn)
+
+    def _traverse_task_stop_fn(self):
+        return self.state(self.arg)
 
     def configuration(self, altKeys = dict()):
         from .initials import state as ICstate
