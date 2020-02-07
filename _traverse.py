@@ -12,7 +12,7 @@ class Traverse(Perambulator):
         system = cosmos.vectorise(vector)
 
         super().__init__(
-            arg = system,
+            iterator = system,
             state = state,
             **kwargs
             )

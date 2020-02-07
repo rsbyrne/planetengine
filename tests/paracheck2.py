@@ -18,11 +18,11 @@ from everest.builts import enactor, condition
 from planetengine import quickShow
 
 real1 = isovisc.build(res = 16, Ra = 1e5)
-traverse = perambulator.build(arg = real1, state = 10)
+traverse = perambulator.build(real1, 10)
 real2 = isovisc.build(res = 32, Ra = 1e5)
 interop = threshold.build(op = 'mod', val = 2, inv = True)
-intercondition = condition.build(inquirer = interop, arg = real1)
-myenactor = enactor.build(cycler = real2, condition = intercondition)
+intercondition = condition.build(interop, real1)
+myenactor = enactor.build(real2, intercondition)
 traverse.add_promptee(myenactor)
 traverse()
 
