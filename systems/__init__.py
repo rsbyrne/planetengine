@@ -2,6 +2,7 @@ import numpy as np
 
 from everest.builts._iterator import Iterator
 from everest.value import Value
+from everest.builts.vector import Vector
 
 from .. import fieldops
 from ..utilities import hash_var
@@ -70,7 +71,11 @@ class System(Iterator):
 
     @classmethod
     def vectorise(cls, vector):
-        return cls.build(**vector.inputs)
+        if isinstance(vector, Vector):
+            inputs = vector.inputs
+        elif type(vector) is dict:
+            inputs = vector
+        return cls.build(**inputs)
 
     def __init__(self, localsDict, **kwargs):
 

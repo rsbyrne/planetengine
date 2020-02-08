@@ -2,30 +2,38 @@ import sys
 
 from everest.builts.container import Container
 from everest.builts._task import Task
+from everest.vectorset import VectorSet
 
 from planetengine.traverse import Traverse
 
 class CampaignIterable:
-    def __init__(self, ):
-        pass
+    def __init__(self, system, state, **vectorSets):
+        self.vectorSets = vectorSets
+        self.system, self.state = system, state
     def __iter__(self):
+        self.vectors = iter(VectorSet(**self.vectorSets))
         return self
     def __next__(self):
-        return None
+        vector = next(self.vectors)
+        return Traverse(self.system, vector, self.state)
 
 class Campaign(Container, Task):
 
     def __init__(self,
-            vectors = None,
+            system = None,
+            state = None,
             observers = [],
-            **kwargs
+            **vectorSets
             ):
 
         self.observers = observers
 
-        self._campaign_halt_toggle = False
+        iterable = CampaignIterable(system, state, **vectorSets)
 
-        super().__init__(iterable = sampler, **kwargs)
+        self._campaign_halt_toggle = False
+        self._held_ticket = None
+
+        super().__init__(iterable = iterable)
 
         # Task attributes:
         self._task_initialise_fns.append(self.initialise)
@@ -36,15 +44,20 @@ class Campaign(Container, Task):
     def _campaign_cycle(self):
         try:
             for ticket in self:
+                self._held_ticket = ticket
                 traverse = ticket()
                 for observer in self.observers:
                     traverse.add_promptee(observer)
                 traverse()
                 self.complete(ticket)
+                self._held_ticket = None
+            else:
+                self._campaign_halt_toggle = True
         except StopIteration:
             self._campaign_halt_toggle = True
         except:
-            self.checkBack(ticket)
+            self.checkBack(self._held_ticket)
+            self._held_ticket = None
             exc_type, exc_val = sys.exc_info()[:2]
             output = exc_type(exc_val)
             raise output
