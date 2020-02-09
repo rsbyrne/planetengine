@@ -72,10 +72,10 @@ class Traverse(Counter, Task):
         self.count += 1
         time_now = mpi.share(time.time())
         time_since_last_checkpoint = time_now - self._last_checkpoint_time
-        if time_since_last_checkpoint > 600.:
+        if time_since_last_checkpoint > 300.:
             self.traversee.store()
             self.store()
-            time_since_last_checkpoint = time_now
+            self._last_checkpoint_time = time_now
 
     def _traverse_stop(self):
         return self.state(self.traversee)
