@@ -15,7 +15,13 @@ class CampaignIterable:
         return self
     def __next__(self):
         vector = next(self.vectors)
-        return Traverse(self.system, vector, self.state)
+        out = Traverse(
+            self.system,
+            self.state,
+            express = True,
+            **vector
+            )
+        return out
 
 class Campaign(Container, Task):
 
@@ -28,7 +34,11 @@ class Campaign(Container, Task):
 
         self.observers = observers
 
-        iterable = CampaignIterable(system, state, **vectorSets)
+        iterable = CampaignIterable(
+            system,
+            state,
+            **vectorSets
+            )
 
         self._campaign_halt_toggle = False
         self._held_ticket = None
