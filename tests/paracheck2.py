@@ -1,5 +1,5 @@
 name = 'test'
-outputPath = '..'
+outputPath = '.'
 from everest import mpi
 import os
 fullpath = os.path.join(os.path.abspath(outputPath), name) + '.frm'
