@@ -13,6 +13,6 @@ set_global_anchor(name, outputPath)
 from planetengine.systems.isovisc import Isovisc
 from planetengine.campaign import Campaign
 
-mycampaign = Campaign(Isovisc, 2, Ra = [1e4, 1e5], f = [0.5, 0.7])
+mycampaign = Campaign(Isovisc, 1000, Ra = [1e4, 1e5], f = [0.5, 0.7])
 
 mycampaign()
