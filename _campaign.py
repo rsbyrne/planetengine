@@ -4,7 +4,7 @@ from everest.builts.container import Container
 from everest.builts._task import Task
 from everest.vectorset import VectorSet
 
-from planetengine.traverse import Traverse
+from .traverse import Traverse
 
 class CampaignIterable:
     def __init__(self, system, state, **vectorSets):
@@ -24,6 +24,8 @@ class CampaignIterable:
         return out
 
 class Campaign(Container, Task):
+
+    global _file_
 
     def __init__(self,
             system = None,
@@ -78,3 +80,5 @@ class Campaign(Container, Task):
             return True
         else:
             return False
+
+from .campaign import __file__ as _file_

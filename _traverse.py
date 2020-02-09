@@ -12,7 +12,7 @@ from everest import mpi
 
 class Traverse(Counter, Task):
 
-    from .traverse import __file__ as _file_
+    global _file_
 
     @staticmethod
     def _process_inputs(inputs):
@@ -86,3 +86,6 @@ class Traverse(Counter, Task):
         self.store()
         self.save()
         del self.traversee
+
+from . import traverse as module
+_file_ = module.__file__
