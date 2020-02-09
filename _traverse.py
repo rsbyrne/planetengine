@@ -61,8 +61,8 @@ class Traverse(Counter, Task):
                 self.traversee.load(self.state)
             except LoadFail:
                 if self.counts:
-                    self.count.value = max(self.counts)
-                    self.traversee.load(self.count())
+                    self.traversee.load(max(self.counts))
+        self.count.value = self.traversee.count()
         self.traversee.store()
         self.traversee.save()
         self._last_checkpoint_time = mpi.share(time.time())
