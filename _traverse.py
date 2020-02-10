@@ -12,7 +12,7 @@ from everest import mpi
 
 class Traverse(Counter, Task):
 
-    global _file_
+    from .traverse import __file__ as _file_
 
     @staticmethod
     def _process_inputs(inputs):
@@ -31,13 +31,14 @@ class Traverse(Counter, Task):
             cosmos = None,
             state = None,
             express = True,
+            observers = [],
             **vector
             ):
 
         check_global_anchor()
 
-        self.cosmos, self.state, self.express, self.vector = \
-            cosmos, state, express, vector
+        self.cosmos, self.state, self.express, self.observers, self.vector = \
+            cosmos, state, express, observers, vector
 
         ignoreme1, self.vectorHash, ignoreme2, self.systemHashID = \
             _get_info(cosmos, vector)
@@ -66,6 +67,7 @@ class Traverse(Counter, Task):
         self.traversee.store()
         self.traversee.save()
         self._last_checkpoint_time = mpi.share(time.time())
+        for observer in self.observers: self.add_promptee(observer)
 
     def _traverse_iterate(self):
         self.traversee()
@@ -86,6 +88,4 @@ class Traverse(Counter, Task):
         self.store()
         self.save()
         del self.traversee
-
-from . import traverse as module
-_file_ = module.__file__
+        for observer in observers: self.remove_promptee(observer)

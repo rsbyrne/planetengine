@@ -7,9 +7,9 @@ from everest.vectorset import VectorSet
 from .traverse import Traverse
 
 class CampaignIterable:
-    def __init__(self, system, state, **vectorSets):
+    def __init__(self, system, state, observers, **vectorSets):
         self.vectorSets = vectorSets
-        self.system, self.state = system, state
+        self.system, self.state, self.observers = system, state, observers
     def __iter__(self):
         self.vectors = iter(VectorSet(**self.vectorSets))
         return self
@@ -18,6 +18,7 @@ class CampaignIterable:
         out = Traverse(
             self.system,
             self.state,
+            self.observers,
             express = True,
             **vector
             )
@@ -25,20 +26,22 @@ class CampaignIterable:
 
 class Campaign(Container, Task):
 
-    global _file_
+    from .campaign import __file__ as _file_
 
     def __init__(self,
             system = None,
             state = None,
             observers = [],
+            cores = 1,
             **vectorSets
             ):
 
-        self.observers = observers
+        self.cores = cores
 
         iterable = CampaignIterable(
             system,
             state,
+            observers,
             **vectorSets
             )
 
@@ -58,15 +61,11 @@ class Campaign(Container, Task):
             for ticket in self:
                 self._held_ticket = ticket
                 traverse = ticket()
-                for observer in self.observers:
-                    traverse.add_promptee(observer)
-                traverse()
+                traverse.subrun(self.hashID, self.cores)
                 self.complete(ticket)
                 self._held_ticket = None
             else:
                 self._campaign_halt_toggle = True
-        except StopIteration:
-            self._campaign_halt_toggle = True
         except:
             self.checkBack(self._held_ticket)
             self._held_ticket = None
@@ -80,5 +79,3 @@ class Campaign(Container, Task):
             return True
         else:
             return False
-
-from .campaign import __file__ as _file_
