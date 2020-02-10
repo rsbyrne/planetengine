@@ -26,7 +26,7 @@ class CampaignIterable:
 
 class Campaign(Container, Task):
 
-    script = '''from planetengine.campaign import Campaign as CLASS'''
+    script = '''_script_from planetengine.campaign import Campaign as CLASS'''
 
     def __init__(self,
             system = None,

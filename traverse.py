@@ -12,7 +12,7 @@ from everest import mpi
 
 class Traverse(Counter, Task):
 
-    script = '''from planetengine.traverse import Traverse as CLASS'''
+    script = '''_script_from planetengine.traverse import Traverse as CLASS'''
 
     @staticmethod
     def _process_inputs(inputs):
@@ -46,7 +46,7 @@ class Traverse(Counter, Task):
         self.localObjects['traversee'] = self.systemHashID
         self.localObjects['vector'] = self.vectorHash
 
-        super().__init__(_iterator_initialise = False)
+        super().__init__()
 
         # Task attributes:
         self._task_initialise_fns.append(self._traverse_initialise)
@@ -88,4 +88,4 @@ class Traverse(Counter, Task):
         self.store()
         self.save()
         del self.traversee
-        for observer in observers: self.remove_promptee(observer)
+        for observer in self.observers: self.remove_promptee(observer)

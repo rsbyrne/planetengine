@@ -3,7 +3,7 @@ from planetengine.initials import IC
 
 class Constant(IC):
 
-    species = 'constant'
+    script = __file__
 
     def __init__(
             self,

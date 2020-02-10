@@ -8,6 +8,8 @@ from planetengine.initials import sinusoidal, constant
 
 class Isovisc(System):
 
+    script = __file__
+
     optionsKeys = {'res', 'f', 'aspect'}
     paramsKeys = {'Ra', 'urey'}
     configsKeys = {'temperatureField', 'temperatureDotField'}
