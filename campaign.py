@@ -2,6 +2,7 @@ import sys
 
 from everest.builts.container import Container
 from everest.builts._task import Task
+from everest.builts._task import TaskSubrunFailed
 from everest.vectorset import VectorSet
 
 from .traverse import Traverse
@@ -61,8 +62,11 @@ class Campaign(Container, Task):
             for ticket in self:
                 self._held_ticket = ticket
                 traverse = ticket()
-                traverse.subrun(self.hashID, self.cores)
-                self.complete(ticket)
+                try:
+                    traverse.subrun(self.hashID, self.cores)
+                    self.complete(ticket)
+                except TaskSubrunFailed:
+                    self.checkFailed(ticket)
                 self._held_ticket = None
             else:
                 self._campaign_halt_toggle = True
