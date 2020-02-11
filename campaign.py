@@ -63,7 +63,7 @@ class Campaign(Container, Task):
                 self._held_ticket = ticket
                 traverse = ticket()
                 try:
-                    traverse.subrun(self.hashID, self.cores)
+                    traverse.subrun(self.cores)
                     self.complete(ticket)
                 except TaskSubrunFailed:
                     self.checkFail(ticket)
