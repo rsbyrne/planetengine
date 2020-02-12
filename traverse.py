@@ -5,13 +5,14 @@ from everest.builts.states import State
 from everest.builts.states.threshold import Threshold
 from everest.builts._iterator import LoadFail
 from everest.builts._counter import Counter
+from everest._diskbased import DiskBased
 from everest.builts import check_global_anchor
 from everest.builts import _get_info
 from everest.weaklist import WeakList
 
 from everest import mpi
 
-class Traverse(Counter, Task):
+class Traverse(Counter, Task, DiskBased):
 
     script = '''_script_from planetengine.traverse import Traverse as CLASS'''
 
@@ -35,8 +36,6 @@ class Traverse(Counter, Task):
             observerClasses = [],
             **vector
             ):
-
-        check_global_anchor()
 
         self.systemClass, self.state, self.express, \
                 self.observerClasses, self.vector = \
@@ -94,4 +93,6 @@ class Traverse(Counter, Task):
         self.store()
         self.save()
         del self.traversee
-        for observer in self.observerClasses: self.remove_promptee(observer)
+        for observer in self.observerClasses:
+            observer.save()
+            self.remove_promptee(observer)
