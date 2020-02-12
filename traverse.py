@@ -5,7 +5,7 @@ from everest.builts.states import State
 from everest.builts.states.threshold import Threshold
 from everest.builts._iterator import LoadFail
 from everest.builts._counter import Counter
-from everest._diskbased import DiskBased
+from everest.builts._diskbased import DiskBased
 from everest.builts import check_global_anchor
 from everest.builts import _get_info
 from everest.weaklist import WeakList
