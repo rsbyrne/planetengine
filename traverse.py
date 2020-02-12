@@ -32,8 +32,8 @@ class Traverse(Counter, Task, DiskBased):
     def __init__(self,
             systemClass = None,
             state = None,
-            express = True,
             observerClasses = [],
+            express = True,
             **vector
             ):
 
@@ -73,6 +73,7 @@ class Traverse(Counter, Task, DiskBased):
             observer = observerClass(self.traversee)
             self.observers.append(observer)
             self.add_promptee(observer)
+            observer.store()
 
     def _traverse_iterate(self):
         self.traversee()
@@ -93,6 +94,8 @@ class Traverse(Counter, Task, DiskBased):
         self.store()
         self.save()
         del self.traversee
-        for observer in self.observerClasses:
+        for observer in self.observers:
+            observer.store()
             observer.save()
             self.remove_promptee(observer)
+        self.observers = []

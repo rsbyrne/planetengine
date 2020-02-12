@@ -66,8 +66,8 @@ class Campaign(Container, Task):
                 try:
                     traverse.subrun(self.cores)
                     self.complete(ticket)
-                except TaskSubrunFailed:
-                    self.checkFail(ticket)
+                except TaskSubrunFailed as e:
+                    self.checkFail(ticket, e)
                 self._held_ticket = None
             else:
                 self._campaign_halt_toggle = True

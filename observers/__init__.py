@@ -33,7 +33,6 @@ class Observer(Counter, Cycler):
         # Producer attributes:
         self._outFns.append(self._out)
         self.outkeys.extend(['chron', *sorted(observeDict.keys())])
-        self._pre_store_fns.append(self._observer_pre_store_fn)
 
         # Cycler attributes:
         self._cycle_fns.append(self._observer_cycle)
@@ -50,10 +49,8 @@ class Observer(Counter, Cycler):
         self.checkCondition = Condition(checkFreq, self)
         self.chron = chron
 
-    def _observer_pre_store_fn(self):
-        self.count.value = self.observee.count.value
-
     def _observer_cycle(self):
+        self.count.value = self.observee.count.value
         if self.checkCondition:
             self.store()
 
