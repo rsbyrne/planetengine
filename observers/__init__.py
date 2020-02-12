@@ -1,37 +1,34 @@
-from everest.builts.producer import Producer
+import numpy as np
 
-class Observer(Producer):
+from everest.builts._counter import Counter
+from everest.builts._cycler import Cycler
 
-    genus = 'observer'
+class Analyser:
+    def __init__(self):
+        pass
 
-    def __init__(
-            self,
-            script,
+class Observer(Counter, Cycler):
+
+    def __init__(self,
             system,
-            outDict
+            observeDict,
+            **kwargs
             ):
 
-        outDict['chron'] = system.chron
+        self.observeDict = observeDict
 
-        system.attach_observer(self)
+        super().__init__(**kwargs)
 
-        self.system = system
-        self.outDict = outDict
-        self.outkeys = [*sorted(self.outDict)]
-        self.orders = set()
+        self._outkeys = ['chron', *sorted(self.observeDict.keys())]
 
-        super().__init__(self.out, self.outkeys)
+        # Producer attributes:
+        self._outFns.append(self._out)
+        self.outkeys.extend(self._outkeys)
 
-    def update(self):
-        self.count.value = self.system.count()
+        # Cycler attributes:
+        self._cycle_fns.append(self.store)
 
-    def out(self):
-        outs = []
-        for key in self.outkeys:
-            outs.append(self.outDict[key].evaluate())
-        return outs
-
-    def prompt(self):
-        self.update()
-        if any(self.orders):
-            self.store()
+    def _out(self):
+        yield np.array(self.chron())
+        for name, analyser in sorted(self.observeDict.items()):
+            yield analyser()
