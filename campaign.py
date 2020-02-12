@@ -8,16 +8,17 @@ from everest.vectorset import VectorSet
 from .traverse import Traverse
 
 class CampaignIterable:
-    def __init__(self, system, state, observers, **vectorSets):
+    def __init__(self, systemClass, state, observers, **vectorSets):
+        self.systemClass, self.state, self.observers = \
+            systemClass, state, observers
         self.vectorSets = vectorSets
-        self.system, self.state, self.observers = system, state, observers
     def __iter__(self):
         self.vectors = iter(VectorSet(**self.vectorSets))
         return self
     def __next__(self):
         vector = next(self.vectors)
         out = Traverse(
-            self.system,
+            self.systemClass,
             self.state,
             self.observers,
             express = True,
@@ -30,7 +31,7 @@ class Campaign(Container, Task):
     script = '''_script_from planetengine.campaign import Campaign as CLASS'''
 
     def __init__(self,
-            system = None,
+            systemClass = None,
             state = None,
             observers = [],
             cores = 1,
@@ -40,7 +41,7 @@ class Campaign(Container, Task):
         self.cores = cores
 
         iterable = CampaignIterable(
-            system,
+            systemClass,
             state,
             observers,
             **vectorSets

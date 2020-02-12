@@ -28,7 +28,7 @@ class Traverse(Counter, Task):
                 )
 
     def __init__(self,
-            cosmos = None,
+            systemClass = None,
             state = None,
             express = True,
             observers = [],
@@ -37,11 +37,11 @@ class Traverse(Counter, Task):
 
         check_global_anchor()
 
-        self.cosmos, self.state, self.express, self.observers, self.vector = \
-            cosmos, state, express, observers, vector
+        self.systemClass, self.state, self.express, self.observers, self.vector = \
+            systemClass, state, express, observers, vector
 
         ignoreme1, self.vectorHash, ignoreme2, self.systemHashID = \
-            _get_info(cosmos, vector)
+            _get_info(systemClass, vector)
 
         self.localObjects['traversee'] = self.systemHashID
         self.localObjects['vector'] = self.vectorHash
@@ -56,7 +56,7 @@ class Traverse(Counter, Task):
 
     def _traverse_initialise(self):
         self.count.value = 0
-        self.traversee = self.cosmos(**self.vector)
+        self.traversee = self.systemClass(**self.vector)
         if self.express:
             try:
                 self.traversee.load(self.state)
