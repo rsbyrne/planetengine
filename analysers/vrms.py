@@ -1,23 +1,19 @@
 from planetengine.analysers import Analyser
-from planetengine.functions import integral, gradient
+from planetengine.functions import operations, integral, component
 
-class Nu(Analyser):
+class VRMS(Analyser):
 
     script = __file__
 
     def __init__(self,
             analysee,
-            key = 'temperatureField',
+            key = 'velocityField',
             **kwargs
             ):
 
         field = analysee.locals[key]
-        baseInt = integral.inner(field)
-        radGrad = gradient.rad(field)
-        surfInt = integral.outer(radGrad)
-        Nu = surfInt / baseInt
-
-        self.op = Nu
+        VRMS = operations.sqrt(integral.volume(component.sq(field)))
+        self.op = VRMS
 
         super().__init__(**kwargs)
 

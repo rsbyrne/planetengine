@@ -14,8 +14,6 @@ class Isovisc(System):
     optionsKeys = {'res', 'f', 'aspect'}
     paramsKeys = {'Ra', 'urey'}
     configsKeys = {'temperatureField', 'temperatureDotField'}
-    varsOfStateKeys = {'temperatureField', 'temperatureDotField'}
-    obsVarsKeys = {'temperatureField', 'velocityField'}
 
     def __init__(self,
             res = 64,
@@ -23,8 +21,8 @@ class Isovisc(System):
             aspect = 1.,
             Ra = 1e7,
             urey = 0.,
-            temperatureField = sinusoidal.CLASS(),
-            temperatureDotField = constant.CLASS(),
+            temperatureField = Sinusoidal(),
+            temperatureDotField = Constant(),
             **kwargs
             ):
 

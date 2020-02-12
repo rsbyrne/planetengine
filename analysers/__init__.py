@@ -1,13 +1,18 @@
 from everest.builts._callable import Callable
 
-class Analyser(Built):
+class Analyser(Callable):
 
     def __init__(self,
             **kwargs
             ):
 
         # Expects:
-        # self.evaluator
+        # self._evaluate
+
+        self.dataName = self.__class__.__name__
+        key = self.inputs['key']
+        if not key == self.defaultInps['key']:
+            self.dataName += '_' + key
 
         super().__init__(**kwargs)
 
@@ -20,7 +25,10 @@ class Analyser(Built):
         # to be overridden
         pass
     def evaluate(self):
-        return self.evaluator.evaluate()
+        return self._evaluate()
     def post_evaluate(self):
         # to be overridden
         pass
+
+    def __str__(self):
+        return str(self())

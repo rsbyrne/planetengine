@@ -90,10 +90,10 @@ class System(Iterator):
             self._sort_inputs(self.inputs)
         self.chron = Value(0.)
         self.varsOfState = {
-            key: self.locals[key] for key in self.varsOfStateKeys
+            key: self.locals[key] for key in self.configsKeys
             }
 
-        self._outkeys = ['chron', *sorted(self.varsOfStateKeys)]
+        self._outkeys = ['chron', *sorted(self.varsOfState.keys())]
 
         # Iterator expects:
         # self._initialise
