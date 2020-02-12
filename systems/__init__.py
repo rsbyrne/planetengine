@@ -18,7 +18,7 @@ def make(cls, **inputs):
     for key, val in sorted(inputs.items()):
         if key in cls.defaultInps:
             initDict[key] = val
-    system = cls.build(**initDict)
+    system = cls(**initDict)
     optionsDict = {}
     paramsDict = {}
     configsDict = {}
@@ -75,7 +75,7 @@ class System(Iterator):
             inputs = vector.inputs
         elif type(vector) is dict:
             inputs = vector
-        return cls.build(**inputs)
+        return cls(**inputs)
 
     def __init__(self, localsDict, **kwargs):
 

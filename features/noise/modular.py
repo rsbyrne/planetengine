@@ -26,7 +26,4 @@ class Modular(Noise):
         inArr[...] = clippedArr + np.random.random(clippedArr.shape) / ditherFactor
         np.random.seed()
 
-### IMPORTANT ###
-# from everest.builts import make_buildFn
 CLASS = Noise
-build, get = CLASS.build, CLASS.get

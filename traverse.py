@@ -7,6 +7,7 @@ from everest.builts._iterator import LoadFail
 from everest.builts._counter import Counter
 from everest.builts import check_global_anchor
 from everest.builts import _get_info
+from everest.weaklist import WeakList
 
 from everest import mpi
 
@@ -31,14 +32,16 @@ class Traverse(Counter, Task):
             systemClass = None,
             state = None,
             express = True,
-            observers = [],
+            observerClasses = [],
             **vector
             ):
 
         check_global_anchor()
 
-        self.systemClass, self.state, self.express, self.observers, self.vector = \
-            systemClass, state, express, observers, vector
+        self.systemClass, self.state, self.express, \
+                self.observerClasses, self.vector = \
+                    systemClass, state, express, observerClasses, vector
+        self.observers = []
 
         ignoreme1, self.vectorHash, ignoreme2, self.systemHashID = \
             _get_info(systemClass, vector)
@@ -67,7 +70,10 @@ class Traverse(Counter, Task):
         self.traversee.store()
         self.traversee.save()
         self._last_checkpoint_time = mpi.share(time.time())
-        for observer in self.observers: self.add_promptee(observer)
+        for observerClass in self.observerClasses:
+            observer = observerClass(self.traversee)
+            self.observers.append(observer)
+            self.add_promptee(observer)
 
     def _traverse_iterate(self):
         self.traversee()
@@ -88,4 +94,4 @@ class Traverse(Counter, Task):
         self.store()
         self.save()
         del self.traversee
-        for observer in self.observers: self.remove_promptee(observer)
+        for observer in self.observerClasses: self.remove_promptee(observer)

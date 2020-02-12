@@ -193,7 +193,4 @@ class RayleighTaylor(System):
             kwargs = kwargs
             )
 
-### IMPORTANT ###
-# from everest.builts import make_buildFn
 CLASS = RayleighTaylor
-build, get = CLASS.build, CLASS.get

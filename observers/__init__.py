@@ -10,11 +10,12 @@ class Analyser:
 class Observer(Counter, Cycler):
 
     def __init__(self,
-            system,
+            observee,
             observeDict,
             **kwargs
             ):
 
+        self.observee = observee
         self.observeDict = observeDict
 
         super().__init__(**kwargs)

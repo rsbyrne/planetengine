@@ -33,4 +33,3 @@ class Extents(IC):
         super().__init__(evaluate, **kwargs)
 
 CLASS = Extents
-build, get = CLASS.build, CLASS.get

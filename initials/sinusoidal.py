@@ -33,4 +33,3 @@ class Sinusoidal(IC):
         super().__init__(evaluate, **kwargs)
 
 CLASS = Sinusoidal
-build, get = CLASS.build, CLASS.get

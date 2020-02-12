@@ -7,7 +7,7 @@ class Analyser(Built):
             ):
 
         # Expects:
-        # self._evaluate
+        # self.evaluator
 
         super().__init__(**kwargs)
 
@@ -20,7 +20,7 @@ class Analyser(Built):
         # to be overridden
         pass
     def evaluate(self):
-        self._evaluate()
+        return self.evaluator.evaluate()
     def post_evaluate(self):
         # to be overridden
         pass

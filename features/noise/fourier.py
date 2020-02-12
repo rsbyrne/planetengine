@@ -60,7 +60,4 @@ class Fourier(Noise):
         dithering = self.waveFn.evaluate(substrate)
         var.data[:] *= dithering
 
-### IMPORTANT ###
-# from everest.builts import make_buildFn
 CLASS = Fourier
-build, get = CLASS.build, CLASS.get

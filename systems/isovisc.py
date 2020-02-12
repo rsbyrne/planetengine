@@ -4,7 +4,8 @@ import underworld as uw
 fn = uw.function
 
 from planetengine.systems import System
-from planetengine.initials import sinusoidal, constant
+from planetengine.initials.sinusoidal import Sinusoidal
+from planetengine.initials.constant import Constant
 
 class Isovisc(System):
 
@@ -22,8 +23,8 @@ class Isovisc(System):
             aspect = 1.,
             Ra = 1e7,
             urey = 0.,
-            temperatureField = sinusoidal.build(),
-            temperatureDotField = constant.build(),
+            temperatureField = sinusoidal.CLASS(),
+            temperatureDotField = constant.CLASS(),
             **kwargs
             ):
 
@@ -185,4 +186,3 @@ class Isovisc(System):
         super().__init__(locals(), **kwargs)
 
 CLASS = Isovisc
-build, get = CLASS.build, CLASS.get

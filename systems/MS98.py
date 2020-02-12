@@ -219,7 +219,4 @@ class MS98(System):
             localsDict = locals()
             )
 
-### IMPORTANT ###
-# from everest.builts import make_buildFn
 CLASS = MS98
-build, get = CLASS.build, CLASS.get

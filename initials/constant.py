@@ -17,4 +17,3 @@ class Constant(IC):
         super().__init__(evaluate, **kwargs)
 
 CLASS = Constant
-build, get = CLASS.build, CLASS.get

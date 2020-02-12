@@ -190,7 +190,4 @@ class Arrhenius(System):
             localsDict = locals()
             )
 
-### IMPORTANT ###
-# from everest.builts import make_buildFn
 CLASS = Arrhenius
-build, get = CLASS.build, CLASS.get
