@@ -19,3 +19,5 @@ class VRMS(Analyser):
 
     def _evaluate(self):
         return self.op.evaluate()[0][0]
+
+CLASS = VRMS
