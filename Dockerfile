@@ -10,13 +10,12 @@ RUN mkdir volume
 
 RUN apt-get update -y
 RUN apt-get install -y software-properties-common
+RUN apt-get install -y python3-venv
 RUN apt-get install -y git
 RUN apt-get install -y nano
+#RUN apt-get install -y ffmpeg
 RUN alias python=python3
 RUN apt-get install -y python3-pip
-
-RUN pip3 install --no-cache-dir scipy
-RUN pip3 install --no-cache-dir Pillow
 
 RUN export PYTHONPATH=$PYTHONPATH:$WORKSPACE
 
@@ -41,6 +40,15 @@ RUN ./compile.py
 RUN ./scons.py install
 RUN export PYTHONPATH=$PYTHONPATH:$WORKSPACE/underworld2
 RUN export PYTHONPATH=$PYTHONPATH:$WORKSPACE/underworld2/libUnderworld/build/lib
+
+RUN pip3 install --no-cache-dir scipy
+#RUN pip3 install --no-cache-dir pandas
+RUN pip3 install --no-cache-dir Pillow
+#RUN pip3 install --no-cache-dir bokeh
+#RUN pip3 install --no-cache-dir Flask
+#RUN pip3 install --no-cache-dir dask[complete]
+#RUN pip3 install --no-cache-dir scikit-learn
+#RUN pip3 install --no-cache-dir tensorflow
 
 RUN cd $WORKSPACE
 RUN git clone https://github.com/rsbyrne/everest.git
