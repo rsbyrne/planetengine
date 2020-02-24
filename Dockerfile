@@ -32,9 +32,9 @@ RUN apt-get install -y build-essential libgl1-mesa-dev libx11-dev zlib1g-dev
 RUN pip3 install --no-cache-dir lavavu
 
 RUN git clone https://github.com/underworldcode/underworld2.git
-RUN cd underworld2
+WORKDIR $WORKSPACE/underworld2
 RUN git checkout regionalMesh
-RUN cd libUnderworld
+WORKDIR $WORKSPACE/underworld2/libUnderworld
 RUN ./configure.py --prefix=/underworld/install/directory
 RUN ./compile.py
 RUN ./scons.py install
@@ -50,8 +50,8 @@ RUN pip3 install --no-cache-dir Pillow
 #RUN pip3 install --no-cache-dir scikit-learn
 #RUN pip3 install --no-cache-dir tensorflow
 
-RUN cd $WORKSPACE
+WORKDIR $WORKSPACE
 RUN git clone https://github.com/rsbyrne/everest.git
-RUN cd everest
+WORKDIR $WORKSPACE/everest
 RUN git checkout dev
-RUN cd $WORKSPACE
+WORKDIR $WORKSPACE
