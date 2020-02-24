@@ -14,7 +14,9 @@ from planetengine.systems.isovisc import Isovisc
 from planetengine.campaign import Campaign
 
 mycampaign = Campaign(
-    Isovisc, 10000,
+    schema = Isovisc,
+    state = 100,
+    cores = 1,
     res = 32,
     Ra = [10 ** (x / 2) for x in range(7, 13)],
     f = [x / 10. for x in range(5, 11)],
