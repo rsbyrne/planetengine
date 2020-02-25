@@ -6,7 +6,7 @@ import traceback
 
 from . import mpi
 
-workPath = '/workspace'
+workPath = '/home/jovyan/workspace'
 outPath = os.path.join(workPath, 'out')
 testPath = os.path.join(outPath, 'test')
 defaultPath = os.path.join(outPath, 'default')
