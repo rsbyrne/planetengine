@@ -16,7 +16,7 @@ from planetengine.campaign import Campaign
 mycampaign = Campaign(
     schema = Isovisc,
     state = 100,
-    cores = 1,
+    cores = 2,
     res = 32,
     Ra = [10 ** (x / 2) for x in range(7, 13)],
     f = [x / 10. for x in range(5, 11)],
