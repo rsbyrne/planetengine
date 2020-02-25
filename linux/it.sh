@@ -1,5 +1,4 @@
 #!/bin/bash
-WORKDIR='/home/jovyan/workspace/'
-IMAGE='underworldcode/uw2cylindrical:cylindrical'
-# IMAGE='rsbyrne/phd:latest'
-docker run -u 0 -v $PWD:$WORKDIR -it $IMAGE bash
+MOUNTTO='/workspace/mount'
+IMAGE='rsbyrne/planetengine:latest'
+docker run --init -v $PWD:$MOUNTTO -it $IMAGE bash
