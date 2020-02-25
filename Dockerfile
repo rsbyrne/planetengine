@@ -8,5 +8,3 @@ RUN pip install -U h5py
 USER $NB_USER
 
 RUN umask 0000
-
-CMD ["jupyter", "notebook", "--ip='0.0.0.0'", "--no-browser", '--allow-root']
