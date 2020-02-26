@@ -2,17 +2,17 @@ from everest.builts._callable import Callable
 
 class Analyser(Callable):
 
+    @staticmethod
+    def _process_inputs(inputs)
+        if inputs['name'] is None:
+            inputs['name'] = self.__class__.__name__ + '_' self.inputs['key']
+
     def __init__(self,
             **kwargs
             ):
 
         # Expects:
         # self._evaluate
-
-        self.dataName = self.__class__.__name__
-        key = self.inputs['key']
-        if not key == self.defaultInps['key']:
-            self.dataName += '_' + key
 
         super().__init__(**kwargs)
 

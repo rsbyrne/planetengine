@@ -8,11 +8,13 @@ class VRMS(Analyser):
     def __init__(self,
             analysee,
             key = 'velocityField',
+            name = None,
             **kwargs
             ):
 
         field = analysee.locals[key]
         VRMS = operations.sqrt(integral.volume(component.sq(field)))
+
         self.op = VRMS
 
         super().__init__(**kwargs)
