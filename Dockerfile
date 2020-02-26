@@ -5,6 +5,8 @@ USER root
 RUN easy_install pip
 RUN pip install --no-cache-dir -U h5py
 
+RUN apt-get update
+RUN apt-get install -y apt-utils
 RUN apt-get install -y nano
 RUN apt-get install -y ffmpeg
 
