@@ -3,8 +3,6 @@ from planetengine.initials import IC
 
 class Sinusoidal(IC):
 
-    script = __file__
-
     def __init__(
             self,
             pert = 0.2,
