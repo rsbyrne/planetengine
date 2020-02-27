@@ -2,37 +2,24 @@ import numpy as np
 
 from everest.builts._counter import Counter
 from everest.builts._cycler import Cycler
-from everest.builts.condition import Condition
 
 class Observer(Counter, Cycler):
 
-    script = '''from planetengine.observers import Observer as CLASS'''
+    _swapscript = '''from planetengine.observers import Observer as CLASS'''
 
-    @staticmethod
-    def _process_inputs(inputs):
-        if type(inputs['checkFreq']) is int:
-            from everest.builts.states.threshold import Threshold
-            inputs['checkFreq'] = Threshold('count', 'mod', 10, inv = True)
+    def __init__(self, **kwargs):
 
-    def __init__(self,
-            observee,
-            checkFreq = 10,
-            analyserClasses = [],
-            **kwargs
-            ):
+        # Expects:
+        # self.observee
+        # self.analysers
 
-        observeDict = dict()
-        for analyserClass in analyserClasses:
-            analyser = analyserClass(observee)
-            observeDict[analyser.dataName] = analyser
-
-        chron = observee.chron
+        self.check = lambda: True
 
         super().__init__(**kwargs)
 
         # Producer attributes:
         self._outFns.append(self._out)
-        self.outkeys.extend(['chron', *sorted(observeDict.keys())])
+        self.outkeys.extend(sorted(self.analysers.keys()))
 
         # Cycler attributes:
         self._cycle_fns.append(self._observer_cycle)
@@ -40,24 +27,21 @@ class Observer(Counter, Cycler):
         # Local attributes:
         self.allDict = {
             'count': self.count,
-            'chron': chron,
-            **observeDict
+            **self.analysers
             }
         self._max_keylen = max([len(key) for key in self.outkeys])
-        self.observeDict = observeDict
-        self.observee = observee
-        self.checkCondition = Condition(checkFreq, self)
-        self.chron = chron
+
+    def set_freq(self, condition):
+        self.check = condition
 
     def _observer_cycle(self):
         self.count.value = self.observee.count.value
-        if self.checkCondition:
+        if self.check():
             self.store()
 
     def _out(self):
-        yield np.array(self.chron())
-        for name, analyser in sorted(self.observeDict.items()):
-            yield analyser()
+        for name, analyser in sorted(self.analysers.items()):
+            yield analyser.evaluate()
 
     def __str__(self):
         return '\n'.join([

@@ -28,7 +28,7 @@ class CampaignIterable:
 
 class Campaign(Container, Task):
 
-    script = '''from planetengine.campaign import Campaign as CLASS'''
+    _swapscript = '''from planetengine.campaign import Campaign as CLASS'''
 
     def __init__(self,
             schema = None,
