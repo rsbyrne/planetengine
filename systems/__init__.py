@@ -12,28 +12,6 @@ def _make_locals(localsDict):
     del localsDict['self']
     return Grouper(localsDict)
 
-@classmethod
-def make(cls, **inputs):
-    initDict = {}
-    for key, val in sorted(inputs.items()):
-        if key in cls.defaultInps:
-            initDict[key] = val
-    system = cls(**initDict)
-    optionsDict = {}
-    paramsDict = {}
-    configsDict = {}
-    leftoversDict = {}
-    for key, val in sorted(inputs.items()):
-        if key in system.defaultOptions:
-            optionsDict[key] = val
-        elif key in system.defaultParams:
-            paramsDict[key] = val
-        elif key in system.defaultConfigs:
-            configsDict[key] = val
-        else:
-            leftoversDict[key] = val
-    return system(**optionsDict)(**paramsDict)(**configsDict)
-
 class System(Iterator):
 
     @classmethod
@@ -108,9 +86,10 @@ class System(Iterator):
 
     def _initialise(self):
         for key, IC in sorted(self.configs.items()):
-            IC.apply(self.locals[key])
-            self.chron.value = 0.
-            self._update()
+            if not IC is None:
+                IC.apply(self.locals[key])
+        self.chron.value = 0.
+        self._update()
 
     def _iterate(self):
         dt = self._integrate(_skipClips = True)
@@ -168,5 +147,3 @@ class System(Iterator):
                 nodes = var.mesh.data_nodegId
                 for index, gId in enumerate(nodes):
                     var.data[index] = loadData[gId]
-
-    # Other attributes:

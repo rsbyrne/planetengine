@@ -44,4 +44,4 @@ class Fig:
             assert os.path.isdir(path)
         self._save(path, name, ext)
     def show(self):
-        self._show()
+        return self._show()

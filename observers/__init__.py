@@ -13,7 +13,7 @@ class Observer(Counter, Cycler):
         # self.observee
         # self.analysers
 
-        self.check = lambda: True
+        self.check = lambda: False
 
         super().__init__(**kwargs)
 

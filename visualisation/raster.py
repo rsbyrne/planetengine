@@ -105,6 +105,7 @@ class Raster(fig.Fig):
         self.img.save(os.path.join(path, name + '.' + ext))
     def _show(self):
         self.update()
+        return self.img
     def evaluate(self):
         self.update()
         return self.data.copy()
