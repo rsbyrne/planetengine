@@ -14,7 +14,7 @@ from everest import mpi
 
 class Traverse(Counter, Task, DiskBased):
 
-    script = '''_script_from planetengine.traverse import Traverse as CLASS'''
+    script = '''from planetengine.traverse import Traverse as CLASS'''
 
     @staticmethod
     def _process_inputs(inputs):

@@ -3,8 +3,6 @@ from planetengine.functions import integral, gradient
 
 class Grad(Analyser):
 
-    script = __file__
-
     def __init__(self,
             analysee,
             key = 'temperatureField',

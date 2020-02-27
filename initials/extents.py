@@ -4,8 +4,6 @@ from planetengine.initials import IC
 
 class Extents(IC):
 
-    script = __file__
-
     def __init__(
             self,
             shapes = None,

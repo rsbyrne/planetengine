@@ -13,9 +13,6 @@ def build(*args, name = None, **kwargs):
 
 class Standard(_observer.Observer):
 
-    script = __file__
-    name = 'standard'
-
     def __init__(
             self,
             *args,

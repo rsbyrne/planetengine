@@ -6,7 +6,7 @@ from everest.builts.condition import Condition
 
 class Observer(Counter, Cycler):
 
-    script = '''_script_from planetengine.observers import Observer as CLASS'''
+    script = '''from planetengine.observers import Observer as CLASS'''
 
     @staticmethod
     def _process_inputs(inputs):

@@ -3,8 +3,6 @@ from planetengine.functions import operations, integral, component
 
 class VRMS(Analyser):
 
-    script = __file__
-
     def __init__(self,
             analysee,
             key = 'velocityField',
