@@ -4,7 +4,9 @@ outputPath = '.'
 from everest.builts import set_global_anchor
 set_global_anchor(name, outputPath, purge = True)
 
-from planetengine.systems.isovisc import Isovisc
+from planetengine.systems.MS98 import MS98
+from planetengine.observers.basic import Basic
 from planetengine.traverse import Traverse
 
-Traverse(Isovisc, 10)()
+vector = {}
+Traverse(MS98, 10, [Basic,], vector)()

@@ -96,6 +96,7 @@ class MS98(System):
 
         temperatureField = mesh.add_variable(1)
         temperatureDotField = mesh.add_variable(1)
+        temperatureRefField = mesh.add_variable(1)
         pressureField = mesh.subMesh.add_variable(1)
         velocityField = mesh.add_variable(2)
         vc = mesh.add_variable(2)
@@ -110,20 +111,21 @@ class MS98(System):
         left, right = specSets['MaxJ_VertexSet'], specSets['MinJ_VertexSet']
 
         if mesh.periodic[1]:
-            velBC = uw.conditions.RotatedDirichletCondition(
-                variable = velocityField,
-                indexSetsPerDof = (inner + outer, None),
-                basis_vectors = (mesh.bnd_vec_normal, mesh.bnd_vec_tangent)
-                )
+            bounded = (inner + outer, None)
         else:
-            velBC = uw.conditions.RotatedDirichletCondition(
-                variable = velocityField,
-                indexSetsPerDof = (inner + outer, left + right),
-                basis_vectors = (mesh.bnd_vec_normal, mesh.bnd_vec_tangent)
-                )
+            bounded = (inner + outer, left + right)
+        velBC = uw.conditions.RotatedDirichletCondition(
+            variable = velocityField,
+            indexSetsPerDof = bounded,
+            basis_vectors = (mesh.bnd_vec_normal, mesh.bnd_vec_tangent)
+            )
 
         tempBC = uw.conditions.DirichletCondition(
             variable = temperatureField,
+            indexSetsPerDof = (inner + outer,)
+            )
+        refTempBC = uw.conditions.DirichletCondition(
+            variable = temperatureRefField,
             indexSetsPerDof = (inner + outer,)
             )
 
@@ -152,10 +154,19 @@ class MS98(System):
             plasticViscFn = tau / (2. * secInvFn + 1e-18)
 
         viscosityFn = fn.misc.min(creepViscFn, plasticViscFn)
+        viscosityFn = fn.misc.min(eta0, fn.misc.max(viscosityFn, 1.))
         if nonLinear:
             viscosityFn = viscosityFn + 0. * velocityField[0]
 
         ### SYSTEMS ###
+
+        conductive = uw.systems.SteadyStateHeat(
+            temperatureField = temperatureRefField,
+            fn_diffusivity = diffusivityFn,
+            fn_heating = heatingFn,
+            conditions = [refTempBC,]
+            )
+        conductiveSolver = uw.systems.Solver(conductive)
 
         stokes = uw.systems.Stokes(
             velocityField = velocityField,
@@ -165,7 +176,6 @@ class MS98(System):
             fn_bodyforce = buoyancyFn * mesh.unitvec_r_Fn,
             _removeBCs = False,
             )
-
         solver = uw.systems.Solver(stokes)
         solver.set_inner_method(innerMethod)
         solver.set_inner_rtol(innerTol)
@@ -183,6 +193,10 @@ class MS98(System):
             )
 
         ### SOLVING ###
+
+        temperatureRefField.data[inner] = 1.
+        temperatureRefField.data[outer] = 0.
+        conductiveSolver.solve()
 
         vc_eqNum = uw.systems.sle.EqNumber(vc, False)
         vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)

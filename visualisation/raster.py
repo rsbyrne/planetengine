@@ -79,10 +79,7 @@ class Raster(fig.Fig):
             else:
                 raise Exception("Too many bands!")
         self.mode = mode
-        self.dataObjs = [
-            Data(band, size = size) \
-                for band in bands
-            ]
+        self.dataObjs = [Data(band, size = size) for band in bands]
         self.shape = [*size[::-1], len(self.dataObjs)]
         self.data = np.zeros(self.shape, dtype = 'uint8')
         super().__init__(**kwargs)

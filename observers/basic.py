@@ -9,22 +9,28 @@ class Basic(Observer):
     def __init__(self,
             observee,
             tempKey = 'temperatureField',
+            refTempKey = 'temperatureRefField',
             velKey = 'velocityField',
             viscKey = 'viscosityFn',
+            plasticViscKey = 'plasticViscFn',
             **kwargs
             ):
 
         analysers = dict()
 
         temp = observee.locals[tempKey]
-        baseInt = integral.inner(temp)
+        refTemp = observee.locals[refTempKey]
         radGrad = gradient.rad(temp)
         surfInt = integral.outer(radGrad)
-        Nu = surfInt / baseInt
-        if 'f' in observee.inputs: Nu /= observee.inputs['f']
+        radGradRef = gradient.rad(refTemp)
+        surfIntRef = integral.outer(radGradRef)
+        Nu = surfInt / surfIntRef
         analysers['Nu'] = self.Nu = Nu
         avT = integral.volume(temp)
+        avTRef = integral.volume(refTemp)
+        avTheta = avT - avTRef
         analysers['avT'] = self.avT = avT
+        analysers['avTheta'] = self.avTheta = avTheta
 
         vel = observee.locals[velKey]
         VRMS = operations.sqrt(integral.volume(component.sq(vel)))
@@ -38,11 +44,19 @@ class Basic(Observer):
         analysers['yielding'] = self.yielding = yielding
 
         velMag = component.mag(vel)
-        raster = Raster(temp, velMag, visc)
+
+        tempAnomaly = temp - refTemp
+        plasticViscFn = observee.locals[plasticViscKey]
+        logInvPlastic = operations.log(1. / plasticViscFn)
+        stress = visc * vel
+        logMagStress = operations.log(component.mag(stress))
+        raster = Raster(tempAnomaly, logInvPlastic, logMagStress)
         analysers['raster'] = self.raster = raster
 
         self.observee, self.analysers = observee, analysers
 
         super().__init__(**kwargs)
+
+        self.set_freq(10)
 
 CLASS = Basic

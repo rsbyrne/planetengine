@@ -33,8 +33,9 @@ class Traverse(Counter, Task, DiskBased):
             systemClass = None,
             state = None,
             observerClasses = [],
+            vector = dict(),
             express = True,
-            **vector
+            **kwargs
             ):
 
         self.systemClass, self.state, self.express, \
@@ -48,7 +49,7 @@ class Traverse(Counter, Task, DiskBased):
         self.localObjects['traversee'] = self.systemHashID
         self.localObjects['vector'] = self.vectorHash
 
-        super().__init__()
+        super().__init__(**kwargs)
 
         # Task attributes:
         self._task_initialise_fns.append(self._traverse_initialise)

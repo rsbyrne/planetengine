@@ -2,6 +2,9 @@ import numpy as np
 
 from everest.builts._counter import Counter
 from everest.builts._cycler import Cycler
+from everest.builts.states import State
+from everest.builts.states.threshold import Threshold
+from everest.builts.condition import Condition
 
 class Observer(Counter, Cycler):
 
@@ -31,7 +34,22 @@ class Observer(Counter, Cycler):
             }
         self._max_keylen = max([len(key) for key in self.outkeys])
 
-    def set_freq(self, condition):
+    def set_freq(self, freq):
+        if isinstance(freq, Condition):
+            condition = freq
+        else:
+            if isinstance(freq, State):
+                state = freq
+            else:
+                if type(freq) is int: prop = 'count'
+                elif type(freq) is float: prop = 'chron'
+                else: raise TypeError
+                state = Threshold(
+                    prop = prop,
+                    op = 'ge',
+                    val = freq
+                    )
+            condition = state(self.observee)
         self.check = condition
 
     def _observer_cycle(self):
