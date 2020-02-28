@@ -94,14 +94,10 @@ class Traverse(Counter, Task, DiskBased):
         time_since_last_checkpoint = time_now - self._last_checkpoint_time
         if self.check:
             self.traversee.store()
-            for observer in self.observers:
-                observer.store()
             self.store()
-        if time_since_last_checkpoint > checkpointInterval:
+        if time_since_last_checkpoint > self.checkpointInterval:
             if not self.check:
                 self.traversee.store()
-                for observer in self.observers:
-                    observer.store()
                 self.store()
             self.traversee.save()
             for observer in self.observers:

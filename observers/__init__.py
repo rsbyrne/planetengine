@@ -5,6 +5,7 @@ from everest.builts._cycler import Cycler
 from everest.builts.states import State
 from everest.builts.states.threshold import Threshold
 from everest.builts.condition import Condition
+from everest.writer import LinkTo
 
 class Observer(Counter, Cycler):
 
@@ -18,7 +19,7 @@ class Observer(Counter, Cycler):
 
         self.check = lambda: False
 
-        super().__init__(**kwargs)
+        super().__init__(observee = LinkTo(self.observee), **kwargs)
 
         # Producer attributes:
         self._outFns.append(self._out)
@@ -52,12 +53,16 @@ class Observer(Counter, Cycler):
             condition = Condition(state, self.observee)
         self.check = condition
 
-    def _observer_cycle(self):
+    def update(self):
         self.count.value = self.observee.count.value
-        if self.check():
+
+    def _observer_cycle(self):
+        self.update()
+        if self.check:
             self.store()
 
     def _out(self):
+        self.update()
         for name, analyser in sorted(self.analysers.items()):
             yield analyser.evaluate()
 
