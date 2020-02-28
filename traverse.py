@@ -2,6 +2,7 @@ import time
 
 from everest.builts._task import Task
 from everest.builts.states import State
+from everest.builts.condition import Condition
 from everest.builts.states.threshold import Threshold
 from everest.builts._iterator import LoadFail
 from everest.builts._counter import Counter
@@ -57,6 +58,15 @@ class Traverse(Counter, Task, DiskBased):
         self._task_stop_fns.append(self._traverse_stop)
         self._task_finalise_fns.append(self._traverse_finalise)
 
+        self.set_freq(100)
+        self.set_checkpoint_interval(300)
+
+    def set_freq(self, freq):
+        self.freq = freq
+
+    def set_checkpoint_interval(self, interval):
+        self.checkpointInterval = interval
+
     def _traverse_initialise(self):
         self.count.value = 0
         self.traversee = self.systemClass(**self.vector)
@@ -75,15 +85,28 @@ class Traverse(Counter, Task, DiskBased):
             self.observers.append(observer)
             self.add_promptee(observer)
             observer.store()
+        self.check = self._get_condition(self.traversee, self.freq)
 
     def _traverse_iterate(self):
         self.traversee()
         self.count += 1
         time_now = mpi.share(time.time())
         time_since_last_checkpoint = time_now - self._last_checkpoint_time
-        if time_since_last_checkpoint > 300.:
+        if self.check:
             self.traversee.store()
+            for observer in self.observers:
+                observer.store()
             self.store()
+        if time_since_last_checkpoint > checkpointInterval:
+            if not self.check:
+                self.traversee.store()
+                for observer in self.observers:
+                    observer.store()
+                self.store()
+            self.traversee.save()
+            for observer in self.observers:
+                observer.save()
+            self.save()
             self._last_checkpoint_time = time_now
 
     def _traverse_stop(self):
@@ -100,3 +123,21 @@ class Traverse(Counter, Task, DiskBased):
             observer.save()
             self.remove_promptee(observer)
         self.observers = []
+
+    @staticmethod
+    def _get_condition(traversee, freq):
+        if isinstance(freq, Condition):
+            return freq
+        else:
+            if isinstance(freq, State):
+                state = freq
+            else:
+                if type(freq) is int: prop = 'count'
+                else: raise TypeError
+                state = Threshold(
+                    prop = prop,
+                    op = 'mod',
+                    val = freq,
+                    inv = True
+                    )
+            return Condition(state, traversee)

@@ -42,14 +42,14 @@ class Observer(Counter, Cycler):
                 state = freq
             else:
                 if type(freq) is int: prop = 'count'
-                elif type(freq) is float: prop = 'chron'
                 else: raise TypeError
                 state = Threshold(
                     prop = prop,
-                    op = 'ge',
-                    val = freq
+                    op = 'mod',
+                    val = freq,
+                    inv = True
                     )
-            condition = state(self.observee)
+            condition = Condition(state, self.observee)
         self.check = condition
 
     def _observer_cycle(self):
