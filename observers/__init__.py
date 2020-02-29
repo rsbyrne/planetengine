@@ -9,8 +9,6 @@ from everest.writer import LinkTo
 
 class Observer(Counter, Cycler):
 
-    _swapscript = '''from planetengine.observers import Observer as CLASS'''
-
     def __init__(self, **kwargs):
 
         # Expects:

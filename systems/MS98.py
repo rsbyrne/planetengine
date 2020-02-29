@@ -239,4 +239,5 @@ from functools import partial
 isovisc = partial(MS98, eta0 = 1., tau0 = 1., tau1 = 0.)
 arrhenius = partial(MS98, tau0 = 1., tau1 = 0.)
 
+### ATTRIBUTES ###
 CLASS = MS98

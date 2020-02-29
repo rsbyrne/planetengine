@@ -8,12 +8,12 @@ from everest.vectorset import VectorSet
 from .traverse import Traverse
 
 class CampaignIterable:
-    def __init__(self, schema, state, observerClasses, **vectorSets):
+    def __init__(self, schema, state, observerClasses, **space):
         self.schema, self.state, self.observerClasses = \
             schema, state, observerClasses
-        self.vectorSets = vectorSets
+        self.space = space
     def __iter__(self):
-        self.vectors = iter(VectorSet(**self.vectorSets))
+        self.vectors = iter(VectorSet(**self.space))
         return self
     def __next__(self):
         vector = next(self.vectors)
@@ -33,9 +33,10 @@ class Campaign(Container, Task):
     def __init__(self,
             schema = None,
             state = None,
+            space = dict(),
             observerClasses = [],
             cores = 1,
-            **vectorSets
+            **kwargs
             ):
 
         self.cores = cores
@@ -44,13 +45,13 @@ class Campaign(Container, Task):
             schema,
             state,
             observerClasses,
-            **vectorSets
+            **space
             )
 
         self._campaign_halt_toggle = False
         self._held_ticket = None
 
-        super().__init__(iterable = iterable)
+        super().__init__(iterable = iterable, **kwargs)
 
         # Task attributes:
         self._task_initialise_fns.append(self.initialise)

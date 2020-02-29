@@ -26,31 +26,36 @@ class Basic(Observer):
         surfIntRef = integral.outer(radGradRef)
         Nu = surfInt / surfIntRef
         analysers['Nu'] = self.Nu = Nu
-        avT = integral.volume(temp)
-        avTRef = integral.volume(refTemp)
-        avTheta = avT - avTRef
-        analysers['avT'] = self.avT = avT
+        theta = temp - refTemp
+        avTheta = integral.volume(theta)
         analysers['avTheta'] = self.avTheta = avTheta
 
         vel = observee.locals[velKey]
         VRMS = operations.sqrt(integral.volume(component.sq(vel)))
         analysers['VRMS'] = self.VRMS = VRMS
 
-        visc = observee.locals[viscKey]
-        avVisc = integral.volume(visc)
-        analysers['avVisc'] = self.avVisc = avVisc
-        creep = observee.locals['creepViscFn']
-        yielding = integral.volume(visc < creep)
-        analysers['yielding'] = self.yielding = yielding
+        if viscKey in observee.locals.__dict__:
+            visc = observee.locals[viscKey]
+            avVisc = integral.volume(visc)
+            analysers['avVisc'] = self.avVisc = avVisc
+            creep = observee.locals['creepViscFn']
+            yielding = integral.volume(visc < creep)
+            analysers['yielding'] = self.yielding = yielding
 
-        velMag = component.mag(vel)
-
-        tempAnomaly = temp - refTemp
-        plasticViscFn = observee.locals[plasticViscKey]
-        logInvPlastic = operations.log(1. / plasticViscFn)
-        stress = visc * vel
-        logMagStress = operations.log(component.mag(stress))
-        raster = Raster(tempAnomaly, logInvPlastic, logMagStress)
+        rasterArgs = []
+        rasterArgs.append(theta)
+        if plasticViscKey in observee.locals.__dict__:
+            plasticViscFn = observee.locals[plasticViscKey]
+            logInvPlastic = operations.log(1. / plasticViscFn)
+            rasterArgs.append(logInvPlastic)
+        if viscKey in observee.locals.__dict__:
+            stress = visc * vel
+            logMagStress = operations.log(component.mag(stress))
+            rasterArgs.append(logMagStress)
+        else:
+            velMag = component.mag(vel)
+            rasterArgs.append(velMag)
+        raster = Raster(*rasterArgs)
         analysers['raster'] = self.raster = raster
 
         self.observee, self.analysers = observee, analysers
