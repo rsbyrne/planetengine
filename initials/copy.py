@@ -3,7 +3,6 @@ from .. import mapping
 from .. import utilities
 from ..systems import System
 from ..traverse import Traverse
-from everest.builts._task import Task
 from everest.builts import load
 from . import IC
 
@@ -13,31 +12,33 @@ class Copy(IC):
 
     @staticmethod
     def _process_inputs(inputs):
-        task = inputs['task']
-        if isinstance(task, Task):
+        traverse = inputs['traverse']
+        if isinstance(traverse, Traverse):
             pass
-        elif isinstance(task, System):
-            task = Traverse(
-                task.__class__,
-                task.inputs,
-                task.count(),
+        elif isinstance(traverse, System):
+            traverse = Traverse(
+                traverse.__class__,
+                traverse.inputs,
+                traverse.count(),
                 express = True
                 )
-            inputs['task'] = task
+            inputs['traverse'] = traverse
         else:
             raise TypeError
 
     def __init__(self,
-            task,
+            traverse,
             varName,
             **kwargs
             ):
 
-        self.task, self.varName = task, varName
+        self.traverse, self.varName = traverse, varName
 
         super().__init__(**kwargs)
 
     def evaluate(self, coordArray):
-        loaded = self.task.get_final()
+        self.traverse()
+        loaded = load(self.traverse.traverseeID)
+        loaded.load(self.traverse.state)
         var = loaded.locals[self.varName]
         return fieldops.safe_box_evaluate(var, coordArray)

@@ -10,9 +10,7 @@ from everest.builts._diskbased import DiskBased
 from everest.builts import \
     check_global_anchor, \
     _get_info, \
-    load, \
-    NotInFrameError, \
-    NotOnDiskError
+    load
 from everest.weaklist import WeakList
 from everest import mpi
 
@@ -71,10 +69,8 @@ class Traverse(Counter, Task, DiskBased):
         self.count.value = 0
         self.traversee = self.systemClass(**self.vector)
         if self.express:
-            try:
-                self.traversee.load(self.state)
-            except LoadFail:
-                pass
+            try: self.traversee.load(self.state)
+            except LoadFail: pass
         self.count.value = self.traversee.count()
         self.traversee.store()
         self.traversee.save()
@@ -136,12 +132,3 @@ class Traverse(Counter, Task, DiskBased):
                     inv = True
                     )
             return Condition(state, traversee)
-
-    def get_final(self):
-        try:
-            traversee = load(self.traverseeID)
-            traversee.load(self.state)
-            return traversee
-        except (NotOnDiskError, NotInFrameError, LoadFail):
-            self()
-            return self.get_final()
