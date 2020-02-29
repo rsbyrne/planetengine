@@ -3,31 +3,28 @@ from planetengine.initials import IC
 
 class Sinusoidal(IC):
 
-    def __init__(
-            self,
+    def __init__(self,
             pert = 0.2,
             freq = 1.,
             phase = 0.,
             **kwargs
             ):
 
-        valRange = (0., 1.)
-        freq = freq
-        phase = phase
-        pert = pert
+        self.pert, self.freq, self.phase = pert, freq, phase
 
-        def evaluate(coordArray):
-            valMin, valMax = valRange
-            deltaVal = valRange[1] - valRange[0]
-            pertArray = \
-                pert \
-                * np.cos(np.pi * (phase + freq * coordArray[:,0])) \
-                * np.sin(np.pi * coordArray[:,1])
-            outArray = valMin + deltaVal * (1. - coordArray[:,1]) + pertArray
-            outArray = np.clip(outArray, valMin, valMax)
-            outArray = np.array([[item] for item in outArray])
-            return outArray
+        super().__init__(**kwargs)
 
-        super().__init__(evaluate, **kwargs)
+    def evaluate(self, coordArray):
+        pert, phase, freq = self.pert, self.freq, self.phase
+        valMin, valMax = (0., 1.)
+        deltaVal = valMax - valMin
+        pertArray = \
+            pert \
+            * np.cos(np.pi * (phase + freq * coordArray[:,0])) \
+            * np.sin(np.pi * coordArray[:,1])
+        outArray = valMin + deltaVal * (1. - coordArray[:,1]) + pertArray
+        outArray = np.clip(outArray, valMin, valMax)
+        outArray = np.array([[item] for item in outArray])
+        return outArray
 
 CLASS = Sinusoidal

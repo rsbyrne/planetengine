@@ -19,10 +19,10 @@ class CampaignIterable:
         vector = next(self.vectors)
         out = Traverse(
             self.schema,
+            vector,
             self.state,
             self.observerClasses,
             express = True,
-            **vector
             )
         return out
 

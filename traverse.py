@@ -7,10 +7,13 @@ from everest.builts.states.threshold import Threshold
 from everest.builts._iterator import LoadFail
 from everest.builts._counter import Counter
 from everest.builts._diskbased import DiskBased
-from everest.builts import check_global_anchor
-from everest.builts import _get_info
+from everest.builts import \
+    check_global_anchor, \
+    _get_info, \
+    load, \
+    NotInFrameError, \
+    NotOnDiskError
 from everest.weaklist import WeakList
-
 from everest import mpi
 
 class Traverse(Counter, Task, DiskBased):
@@ -32,9 +35,9 @@ class Traverse(Counter, Task, DiskBased):
 
     def __init__(self,
             systemClass = None,
+            vector = dict(),
             state = None,
             observerClasses = [],
-            vector = dict(),
             express = True,
             **kwargs
             ):
@@ -44,11 +47,8 @@ class Traverse(Counter, Task, DiskBased):
                     systemClass, state, express, observerClasses, vector
         self.observers = []
 
-        ignoreme1, self.vectorHash, ignoreme2, self.systemHashID = \
+        ignoreme1, self.vectorHash, ignoreme2, self.traverseeID = \
             _get_info(systemClass, vector)
-
-        self.localObjects['traversee'] = self.systemHashID
-        self.localObjects['vector'] = self.vectorHash
 
         super().__init__(**kwargs)
 
@@ -74,8 +74,7 @@ class Traverse(Counter, Task, DiskBased):
             try:
                 self.traversee.load(self.state)
             except LoadFail:
-                if self.counts:
-                    self.traversee.load(max(self.counts))
+                pass
         self.count.value = self.traversee.count()
         self.traversee.store()
         self.traversee.save()
@@ -137,3 +136,12 @@ class Traverse(Counter, Task, DiskBased):
                     inv = True
                     )
             return Condition(state, traversee)
+
+    def get_final(self):
+        try:
+            traversee = load(self.traverseeID)
+            traversee.load(self.state)
+            return traversee
+        except (NotOnDiskError, NotInFrameError, LoadFail):
+            self()
+            return self.get_final()
