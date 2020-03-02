@@ -15,9 +15,8 @@ class Sinusoidal(IC):
         super().__init__(**kwargs)
 
     def evaluate(self, coordArray):
-        pert, phase, freq = self.pert, self.freq, self.phase
-        valMin, valMax = (0., 1.)
-        deltaVal = valMax - valMin
+        pert, freq, phase = self.pert, self.freq, self.phase
+        valMin, valMax, deltaVal = 0., 1., 1.
         pertArray = \
             pert \
             * np.cos(np.pi * (phase + freq * coordArray[:,0])) \

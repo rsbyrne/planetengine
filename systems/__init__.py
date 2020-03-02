@@ -15,6 +15,14 @@ def _make_locals(localsDict):
 class System(Iterator):
 
     @classmethod
+    def _process_inputs(cls, inputs):
+        for key, val in sorted(inputs.items()):
+            if key in cls.configsKeys:
+                if type(val) is cls:
+                    from ..initials.copy import Copy
+                    inputs[key] = Copy(val, key)
+
+    @classmethod
     def _make_defaults(cls, keys):
         outDict = {
             key: val \
