@@ -32,8 +32,8 @@ class Campaign(Container, Task):
 
     def __init__(self,
             schema = None,
-            state = None,
             space = dict(),
+            state = None,
             observerClasses = [],
             cores = 1,
             **kwargs

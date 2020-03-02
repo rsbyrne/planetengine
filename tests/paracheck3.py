@@ -20,6 +20,6 @@ space = {
     'aspect': [1., 1.2, 1.4, 1.6, 1.8, 2.]
     }
 
-mycampaign = Campaign(MS98, 10, space, [Basic,], 2)
+mycampaign = Campaign(MS98, space, 10, [Basic,], 2)
 
 mycampaign()

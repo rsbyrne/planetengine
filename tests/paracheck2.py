@@ -9,4 +9,4 @@ from planetengine.observers.basic import Basic
 from planetengine.traverse import Traverse
 
 vector = {}
-Traverse(MS98, 10, [Basic,], vector)()
+Traverse(MS98, vector, 10, [Basic,])()
