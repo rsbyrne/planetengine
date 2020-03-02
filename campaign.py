@@ -68,13 +68,13 @@ class Campaign(Container, Task):
                     traverse.subrun(self.cores)
                     self.complete(ticket)
                 except TaskSubrunFailed as e:
-                    self.checkFail(ticket, e)
+                    self.fail(ticket, e)
                 self._held_ticket = None
             else:
                 self._campaign_halt_toggle = True
         except:
             if not self._held_ticket is None:
-                self.checkBack(self._held_ticket)
+                self.relinquish(self._held_ticket)
             exc_type, exc_val = sys.exc_info()[:2]
             output = exc_type(exc_val)
             raise output
