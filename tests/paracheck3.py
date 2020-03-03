@@ -6,7 +6,7 @@ set_global_anchor(name, outputPath)
 # from everest.disk import purge_logs
 # purge_logs()
 
-from planetengine.systems.MS98 import MS98
+from planetengine.systems.viscoplastic import Viscoplastic
 from planetengine.observers.basic import Basic
 from planetengine.campaign import Campaign
 
@@ -20,6 +20,6 @@ space = {
     'aspect': [1., 1.2, 1.4, 1.6, 1.8, 2.]
     }
 
-mycampaign = Campaign(MS98, space, 10, [Basic,], 2)
+mycampaign = Campaign(Viscoplastic, space, 10, [Basic,], 2)
 
 mycampaign()
