@@ -136,7 +136,7 @@ def animate(datas, name, outputPath = '.', overwrite = False):
     try:
         for i, data in enumerate(datas):
             split = [data[:,:,i] for i in range(data.shape[-1])]
-            im = rasterise(*split, mode = 'L')
+            im = rasterise(*split)
             im.save(os.path.join(tempDir, str(i).zfill(8)) + '.jpg')
         cmd = [
             'ffmpeg',
