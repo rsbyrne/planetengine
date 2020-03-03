@@ -1,20 +1,13 @@
 import underworld as uw
-from underworld import function as _fn
+from underworld import function as fn
 import math
 import numpy as np
 
-from planetengine._system import System
-
-def build(*args, name = None, **kwargs):
-    built = RayleighTaylor(*args, **kwargs)
-    if type(name) == str:
-        built.name = name
-    return built
+from planetengine.systems import System
 
 class RayleighTaylor(System):
 
-    name = "rayleightaylor"
-    script = __file__
+    species = "rayleightaylor"
 
     def __init__(
         self,
@@ -29,17 +22,13 @@ class RayleighTaylor(System):
         **kwargs
         ):
 
-        ### HOUSEKEEPING: IMPORTANT! ###
-
-        inputs = locals().copy()
-
         ### MESH & MESH VARIABLES ###
 
-        maxf = 0.99999
+        maxf = 0.999
         if f == 'max' or f == 1.:
             f = maxf
         else:
-            assert f < maxf
+            assert f <= maxf
 
         length = 1.
         outerRad = 1. / (1. - f)
@@ -125,13 +114,13 @@ class RayleighTaylor(System):
         denseIndex = 0
         lightIndex = 1
         densityMap = {lightIndex: density_ratio * density_ref, denseIndex: density_ref}
-        densityFn = _fn.branching.map(fn_key = materialField, mapping = densityMap)
+        densityFn =fn.branching.map(fn_key = materialField, mapping = densityMap)
         buoyancyFn = densityFn * -1. * mesh.unitvec_r_Fn
 
         ### RHEOLOGY ###
 
         viscosityMap = {lightIndex: visc_ratio * visc_ref, denseIndex: visc_ref}
-        viscosityFn  = _fn.branching.map(fn_key = materialField, mapping = viscosityMap)
+        viscosityFn  =fn.branching.map(fn_key = materialField, mapping = viscosityMap)
 
         ### SYSTEMS ###
 
@@ -201,7 +190,7 @@ class RayleighTaylor(System):
             _integrate = integrate,
             _locals = locals(),
             args = args,
-            kwargs = kwargs,
-            inputs = inputs,
-            script = self.script
+            kwargs = kwargs
             )
+
+CLASS = RayleighTaylor

@@ -1,11 +1,9 @@
 import underworld as uw
-_fn = uw.function
-UWFn = _fn._function.Function
+fn = uw.function
+UWFn =fn._function.Function
 
 from . import _basetypes
 from . import _planetvar
-from .. import utilities
-hasher = utilities.hashToInt
 from .. import shapes
 from .. import mapping
 
@@ -15,13 +13,13 @@ class Shape(_basetypes.BaseTypes):
 
     def __init__(self, vertices, varName = None, *args, **kwargs):
 
-        shape = _fn.shape.Polygon(vertices)
+        shape =fn.shape.Polygon(vertices)
         self.vertices = vertices
         self.richvertices = vertices
         self.richvertices = shapes.interp_shape(self.vertices, num = 1000)
         self.morphs = {}
-        self._currenthash = hasher(self.vertices)
 
+        self._update_hash()
         self.defaultName = str(self._currenthash)
         self.varName = varName
 
@@ -36,14 +34,19 @@ class Shape(_basetypes.BaseTypes):
 
         super().__init__(**kwargs)
 
-    def _check_hash(self, **kwargs):
+    def _check_hash(self, lazy = False):
+        if not lazy:
+            self._update_hash()
         return self._currenthash
+
+    def _update_hash(self):
+        self._currenthash = hash(str(self.vertices))
 
     def morph(self, mesh):
         try:
             morphpoly = self.morphs[mesh]
         except:
             morphverts = mapping.unbox(mesh, self.richvertices)
-            morphpoly = _fn.shape.Polygon(morphverts)
+            morphpoly =fn.shape.Polygon(morphverts)
             self.morphs[mesh] = morphpoly
         return morphpoly

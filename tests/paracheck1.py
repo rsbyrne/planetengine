@@ -1,41 +1,15 @@
-import planetengine
+name = 'test'
+outputPath = '.'
 
-planetengine.paths.delete_testdir()
-outputPath = planetengine.paths.make_testdir()
+from planetengine.systems.isovisc import Isovisc
 
-system = planetengine.systems.arrhenius.build(
-    planetengine.systems.isovisc.build(),
-    Ra = 3e5,
-    res = 16,
-    f = 0.5
-    )
-initials = {
-    'temperatureField': planetengine.initials.sinusoidal.build(
-        planetengine.initials.sinusoidal.build(
-            freq = 2,
-            pert = 0.4
-            )
-        )
-    }
-
-model = planetengine.model.make_model(
-    system = system,
-    initials = initials,
-    outputPath = outputPath
-    )
-
-model.iterate()
-
-model.checkpoint()
-
-model.unarchive()
-
-model2 = planetengine.frame.load_frame(model.instanceID, outputPath)
-
-model2.checkpoint()
-
-model2.iterate()
-
-model2.checkpoint()
-
-model2.report()
+system = Isovisc()
+system.anchor(name, outputPath)
+system.store()
+system.iterate(3)
+system.store()
+system.iterate()
+system.load(3)
+system.save()
+system.iterate()
+system.load(3)

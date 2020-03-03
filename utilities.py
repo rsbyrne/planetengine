@@ -1,17 +1,11 @@
 import numpy as np
-import underworld as uw
-from underworld import function as _fn
-from underworld.function._function import Function as UWFn
-import math
 import time
 import os
 import itertools
-import inspect
-import hashlib
-import random
-import io
 
-from . import paths
+import underworld as uw
+from underworld import function as fn
+from underworld.function._function import Function as UWFn
 
 from . import mpi
 
@@ -20,58 +14,11 @@ def message(*args):
         if mpi.rank == 0:
             print(arg)
 
-def log(text, outputPath = None, outputName = 'diaglog.txt'):
-    if outputPath == None:
-        outputPath = paths.defaultPath
-
-    if mpi.rank == 0:
-        filename = os.path.join(outputPath, outputName)
-        if not os.path.exists(outputPath):
-            os.mkdir(outputPath)
-        if os.path.isfile(filename):
-            file = open(filename, 'a')
-        else:
-            file = open(filename, 'w')
-        file.write(text)
-        file.write('\n')
-        file.close()
-    # mpi.barrier()
-
-def check_reqs(obj):
-    for attrname in obj._required_attributes:
-        if not hasattr(obj, attrname):
-            raise Exception(
-                "Object requires attribute: '" + attrname + "'"
-                )
-
-def parallelise_set(setobj):
-    setlist = []
-    if mpi.rank == 0:
-        setlist = list(setobj)
-    setlist = mpi.comm.bcast(setlist, root = 0)
-    # mpi.barrier()
-    return setlist
-
-def unpack_var(*args):
-
-    if len(args) == 1 and type(args[0]) == tuple:
-        args = args[0]
-    substrate = 'notprovided'
-    if len(args) == 1:
-        var = args[0]
-        varName = 'anon'
-    elif len(args) == 2:
-        if type(args[0]) == str:
-            varName, var = args
-        else:
-            var, substrate = args
-            varName = 'anon'
-    elif len(args) == 3:
-        varName, var, substrate = args
-    else:
-        raise Exception("Input not understood.")
-
-    return var, varName, substrate
+class Grouper:
+    def __init__(self, grouperDict):
+        self.__dict__.update(grouperDict)
+    def __getitem__(self, key):
+        return getattr(self, key)
 
 def get_substrates(var):
     if type(var) == uw.mesh._meshvariable.MeshVariable:
@@ -92,6 +39,12 @@ def get_substrates(var):
             swarms.extend(under_swarms)
         meshes = list(set(meshes))
         swarms = list(set(swarms))
+    elif isinstance(var, uw.mesh.FeMesh):
+        meshes = [var,]
+        swarms = []
+    elif isinstance(var, uw.swarm.Swarm):
+        meshes = [var.mesh,]
+        swarms = [var,]
     else:
         raise Exception("Input not recognised.")
     meshes = list(sorted(meshes))
@@ -129,91 +82,20 @@ def get_varDim(var):
     varDim = sample_data.shape[-1]
     return varDim
 
-def check_uw(var):
-    if type(var) == uw.mesh._meshvariable.MeshVariable:
-        pass
-    elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
-        pass
-    elif isinstance(var, UWFn):
-        pass
-    else:
-        raise Exception("Not an underworld variable or function.")
+# def get_valSets(array):
+#     valSets = []
+#     assert len(array.shape) == 2
+#     for dimension in array.T:
+#         localVals = set(dimension)
+#         for item in list(localVals):
+#             if math.isnan(item):
+#                 localVals.remove(item)
+#         allValsGathered = mpi.comm.allgather(localVals)
+#         valSet = {val.item() for localVals in allValsGathered for val in localVals}
+#         valSets.append(valSet)
+#     return valSets
 
-def splitter(filename):
-    name, ext = os.path.splitext(filename)
-    while not ext == '':
-        name, ext = os.path.splitext(name)
-    return name
-
-# def get_toCheck(var):
-#     to_check = {}
-#     # try:
-#     #     to_check[var.__hash__()] = stringify(var)
-#     if hasattr(var, '_underlyingDataItems'):
-#         for subVar in list(var._underlyingDataItems):
-#             if not subVar is var:
-#                 sub_toCheck = get_toCheck(
-#                     subVar
-#                     )
-#                 to_check.update(sub_toCheck)
-#     if len(to_check) == 0:
-#         if hasattr(var, 'data'):
-#             to_check[var.__hash__()] = var.data
-#         elif hasattr(var, 'value'):
-#             to_check[var.__hash__()] = var.value
-#         elif hasattr(var, 'evaluate'):
-#             to_check[var.__hash__()] = var.evaluate()
-#         else:
-#             raise Exception
-#     if hasattr(var, 'mesh'):
-#         if not var.mesh is None:
-#             to_check[var.mesh.__hash__()] = var.mesh.data
-#     if hasattr(var, 'swarm'):
-#         to_check[var.swarm.__hash__()] = var.swarm.data
-#
-#     return to_check
-
-# def hash_var(
-#         var,
-#         global_eval = True,
-#         return_checked = False,
-#         **kwargs
-#         ):
-#     if 'checked' in kwargs:
-#         checked = kwargs['checked']
-#     else:
-#         checked = {}
-#     to_check = get_toCheck(var)
-#     hashVal = 0
-#     for key, val in to_check.items():
-#         if key in checked:
-#             hashVal += checked[key]
-#         else:
-#             hashVal += hash(stringify(val))
-#             checked[key] = hashVal
-#     assert not hashVal == 0, \
-#         "Not a valid var for hashing!"
-#     if global_eval:
-#         hashVal = sum(mpi.comm.allgather(hashVal))
-#     if return_checked:
-#         return hashVal, checked
-#     else:
-#         return hashVal
-
-def get_valSets(array):
-    valSets = []
-    assert len(array.shape) == 2
-    for dimension in array.T:
-        localVals = set(dimension)
-        for item in list(localVals):
-            if math.isnan(item):
-                localVals.remove(item)
-        allValsGathered = mpi.comm.allgather(localVals)
-        valSet = {val.item() for localVals in allValsGathered for val in localVals}
-        valSets.append(valSet)
-    return valSets
-
-def get_scales(array, valSets = None):
+def get_scales(array, valSets = None, local = False):
     if valSets is None:
         array = np.array(array)
         array = array.T
@@ -221,10 +103,14 @@ def get_scales(array, valSets = None):
         for component in array:
             minVal = np.nanmin(component)
             maxVal = np.nanmax(component)
-            minVals = mpi.comm.allgather(minVal)
-            maxVals = mpi.comm.allgather(maxVal)
-            minVals = [val for val in minVals if val < np.inf]
-            maxVals = [val for val in maxVals if val < np.inf]
+            if local:
+                minVals = [minVal,]
+                maxVals = [maxVal,]
+            else:
+                minVals = mpi.comm.allgather(minVal)
+                maxVals = mpi.comm.allgather(maxVal)
+                minVals = [val for val in minVals if val < np.inf]
+                maxVals = [val for val in maxVals if val < np.inf]
             assert len(minVals) > 0
             assert len(maxVals) > 0
             allmin = min(minVals)
@@ -241,51 +127,44 @@ def get_scales(array, valSets = None):
         scales = np.dstack([mins, maxs])[0]
         return scales
 
-def get_ranges(array, scales = None):
-    if scales is None:
-        scales = get_scales(array)
-    ranges = np.array([maxVal - minVal for minVal, maxVal in scales])
-    return ranges
+def globalise_array(inArray, sortArray):
+    local_nodeDict = {
+        sortNode: inNode \
+            for sortNode, inNode \
+                in zip(
+                    sortArray,
+                    inArray
+                    )
+        }
+    gathered = mpi.comm.allgather(local_nodeDict)
+    global_nodeDict = {}
+    for local_nodeDict in gathered:
+        global_nodeDict.update(local_nodeDict)
+    global_array = []
+    for sortNode, inNode in sorted(global_nodeDict.items()):
+        global_array.append(inNode)
+    return np.array(global_array)
 
-class Grouper:
-    def __init__(self, indict = {}):
-        self.selfdict = {}
-        self.SetDict(indict)
-    def __bunch__(self, adict):
-        self.__dict__.update(adict)
-    def SetVal(self, key, val):
-        self.selfdict[key] = val
-        self.__bunch__(self.selfdict)
-    def SetVals(self, dictionary):
-        for key in dictionary:
-            self.SetVal(key, dictionary[key])
-    def ClearAttr(self):
-        for key in self.selfdict:
-            delattr(self, key)
-        self.selfdict = {}
-    def SetDict(self, dict):
-        self.ClearAttr()
-        self.SetVals(dict)
-    def Out(self):
-        outstring = ""
-        for key in self.selfdict:
-            thing = self.selfdict[key]
-            if isinstance(thing, self):
-                thing.Out()
-            else:
-                outstring += key + ": " + thing
-        return outstring
+# def get_ranges(array, scales = None):
+#     if scales is None:
+#         scales = get_scales(array)
+#     ranges = np.array([maxVal - minVal for minVal, maxVal in scales])
+#     return ranges
 
-def expose(source, destination):
-    for key, value in source.__dict__.items():
-        destination[key] = value
+def interp_dicts(a, b, n):
+    keys = sorted(a.keys())
+    interps = [np.linspace(a[key], b[key], n) for key in keys]
+    combos = itertools.product(*interps)
+    for vals in combos:
+        yield dict(zip(keys, vals))
 
-def getDefaultKwargs(function):
-    argsignature = inspect.signature(function)
-    argbind = argsignature.bind()
-    argbind.apply_defaults()
-    argdict = dict(argbind.arguments)
-    return argdict
+def random_interp_dicts(a, b):
+    keys = sorted(a.keys())
+    vals = [
+        (b[key] - a[key]) * np.random.random_sample() + a[key] \
+            for key in keys
+        ]
+    return dict(zip(keys, vals))
 
 class ToOpen:
     def __init__(self, filepath):
@@ -298,70 +177,7 @@ class ToOpen:
         filedata = mpi.comm.bcast(filedata, root = 0)
         return filedata
 
-def stringify(*args):
-    outStr = '{'
-    if len(args) > 1:
-        for inputObject in args:
-            outStr += stringify(inputObject)
-        typeStr = 'tup'
-    else:
-        inputObject = args[0]
-        objType = type(inputObject)
-        if objType == str:
-            outStr += inputObject
-            typeStr = 'str'
-        elif objType == bool:
-            outStr += str(inputObject)
-            typeStr = 'boo'
-        elif objType == int:
-            outStr += str(inputObject)
-            typeStr = 'int'
-        elif objType == float:
-            outStr += str(inputObject)
-            typeStr = 'flt'
-        elif objType in [list, tuple]:
-            for item in inputObject:
-                outStr += stringify(item)
-            typeStr = 'tup'
-        elif objType == set:
-            for item in sorted(inputObject):
-                outStr += stringify(item)
-            typeStr = 'set'
-        elif objType == dict:
-            for key, val in sorted(inputObject.items()):
-                outStr += (stringify(key))
-                outStr += (stringify(val))
-            typeStr = 'dct'
-        elif objType == ToOpen:
-            outStr += inputObject()
-            typeStr = 'str'
-        elif objType == np.ndarray:
-            outStr += str(inputObject)
-            typeStr = 'arr'
-        else:
-            errormsg = "Type: " + str(type(inputObject)) + " not accepted."
-            raise Exception(errormsg)
-    outStr += '}'
-    # print(args)
-    # print(outStr)
-    outStr = typeStr + outStr
-    return outStr
-
-def hashstamp(inputObj):
-    local_inputStr = stringify(inputObj)
-    all_inputStrs = mpi.comm.allgather(local_inputStr)
-    global_inputStr = ''.join(all_inputStrs)
-    stamp = hashlib.md5(global_inputStr.encode()).hexdigest()
-    return stamp
-
-def hashToInt(inputObj):
-    stamp = hashstamp(inputObj)
-    random.seed(stamp)
-    hashVal = random.randint(1e18, 1e19 - 1)
-    random.seed()
-    return hashVal
-
-def var_check_hash(var):
+def hash_var(var):
     underlying_datas = [
         underlying.data \
             for underlying in sorted(list(var._underlyingDataItems))
@@ -371,10 +187,11 @@ def var_check_hash(var):
     underlying_datas.extend(
         [substrate.data for substrate in substrates]
         )
-    hashVal = hashToInt(
-        underlying_datas
-        )
-    return hashVal
+    str_underlying_datas = [str(data) for data in underlying_datas]
+    local_hash = hash(tuple(str_underlying_datas))
+    all_hashes = mpi.comm.allgather(local_hash)
+    global_hash = hash(tuple(all_hashes))
+    return global_hash
 
 def timestamp():
     stamp = time.strftime(

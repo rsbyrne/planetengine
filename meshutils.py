@@ -1,9 +1,9 @@
 from .utilities import get_scales
 # from .utilities import get_mesh
-from .utilities import var_check_hash
+from .utilities import hash_var
 
 import underworld as uw
-from underworld import function as _fn
+from underworld import function as fn
 
 import numpy as np
 import weakref
@@ -71,33 +71,39 @@ class MeshUtils:
                 }
             if mesh.dim == 2:
                 self.comps = {
-                    'x': _fn.misc.constant((1., 0.)),
-                    'y': _fn.misc.constant((0., 1.)),
-                    'ang': _fn.misc.constant((1., 0.)),
-                    'rad': _fn.misc.constant((0., -1.)),
+                    'x':fn.misc.constant((1., 0.)),
+                    'y':fn.misc.constant((0., 1.)),
+                    'ang':fn.misc.constant((1., 0.)),
+                    'rad':fn.misc.constant((0., -1.)),
                     }
             elif mesh.dim == 3:
                 self.comps = {
-                    'x': _fn.misc.constant((1., 0., 0.)),
-                    'y': _fn.misc.constant((0., 1., 0.)),
-                    'z': _fn.misc.constant((0., 0., 1.)),
-                    'ang': _fn.misc.constant((1., 0., 0.)),
-                    'coang': _fn.misc.constant((0., 1., 0.)),
-                    'rad': _fn.misc.constant((0., 0., -1.)),
+                    'x':fn.misc.constant((1., 0., 0.)),
+                    'y':fn.misc.constant((0., 1., 0.)),
+                    'z':fn.misc.constant((0., 0., 1.)),
+                    'ang':fn.misc.constant((1., 0., 0.)),
+                    'coang':fn.misc.constant((0., 1., 0.)),
+                    'rad':fn.misc.constant((0., 0., -1.)),
                     }
                 self.surfaces['front'] = mesh.specialSets['MinK_VertexSet']
                 self.surfaces['back'] = mesh.specialSets['MaxK_VertexSet']
 
         elif type(mesh) == uw.mesh.FeMesh_Annulus:
 
-            self.flip = [True, True] # left to right, bottom to top
-            _flip_cfs = [int(not boolean) * 2. - 1. for boolean in self.flip]
-
+            # self.flip = [True, False] # left to right, bottom to top
+            # _flip_cfs = [int(not boolean) * 2. - 1. for boolean in self.flip]
+            #
+            # self.comps = {
+            #     'x':fn.misc.constant((1., 0.)),
+            #     'y':fn.misc.constant((0., 1.)),
+            #     'ang': _flip_cfs[0] * mesh.unitvec_theta_Fn,
+            #     'rad': _flip_cfs[1] * mesh.unitvec_r_Fn,
+            #     }
             self.comps = {
-                'x': _fn.misc.constant((1., 0.)),
-                'y': _fn.misc.constant((0., 1.)),
-                'ang': _flip_cfs[0] * mesh.unitvec_theta_Fn,
-                'rad': _flip_cfs[1] * mesh.unitvec_r_Fn,
+                'x':fn.misc.constant((1., 0.)),
+                'y':fn.misc.constant((0., 1.)),
+                'ang': -mesh.unitvec_theta_Fn,
+                'rad':  mesh.unitvec_r_Fn,
                 }
             self.surfaces = {
                 'inner': mesh.specialSets['inner'],
@@ -227,7 +233,7 @@ class MeshUtils:
             _lasthash = 0,
             _update_lasthash = False
             ):
-        currenthash = var_check_hash(inFn)
+        currenthash = hash_var(inFn)
         if not currenthash == _lasthash:
             if meshVar.nodeDofCount == meshVar.mesh.dim:
                 projector = self.get_vectorProjector()

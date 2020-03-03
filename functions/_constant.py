@@ -1,13 +1,11 @@
 import numpy as np
 
 import underworld as uw
-_fn = uw.function
-UWFn = _fn._function.Function
+fn = uw.function
+UWFn =fn._function.Function
 
 from . import _basetypes
 from . import _planetvar
-from .. import utilities
-hasher = utilities.hashToInt
 
 class Constant(_basetypes.BaseTypes):
 
@@ -22,10 +20,6 @@ class Constant(_basetypes.BaseTypes):
             raise Exception
 
         self.value = var.evaluate()[0]
-        valString = utilities.stringify(
-            self.value
-            )
-        self._currenthash = hasher(self.value)
         self._hashVars = [var]
         # self.data = np.array([[val,] for val in self.value])
 
@@ -33,7 +27,7 @@ class Constant(_basetypes.BaseTypes):
         self.dType = _planetvar.get_dType(sample_data)
         self.varType = 'const'
 
-        self.stringVariants = {'val': valString}
+        self.stringVariants = {'val': str(self.value)}
         self.inVars = []
         self.parameters = []
         self.var = var
@@ -44,4 +38,4 @@ class Constant(_basetypes.BaseTypes):
         super().__init__(**kwargs)
 
     def _check_hash(self, **kwargs):
-        return self._currenthash
+        return hash((_planetvar._PLANETVAR_FLAG, self.opTag, str(self.value)))

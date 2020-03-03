@@ -1,25 +1,21 @@
 import numpy as np
 
-from underworld import function as _fn
-UWFn = _fn._function.Function
+from underworld import function as fn
+UWFn =fn._function.Function
 
 from . import _planetvar
 from . import _basetypes
 from . import vanilla
 from ._construct import _construct as _master_construct
-from .. import utilities
-message = utilities.message
 
 def _convert(var, varName = None):
 
     if isinstance(var, _planetvar.PlanetVar):
-        # message("Already a planetVar. Returning.")
         return var
 
     if hasattr(var, '_planetVar'):
         outVar  = var._planetVar()
         if isinstance(outVar, _planetvar.PlanetVar):
-            # message("Already has _planetVar. Returning.")
             return outVar
 
     if type(var) == np.ndarray:
@@ -27,7 +23,7 @@ def _convert(var, varName = None):
             stringVariants = {'varName': varName}
             varClass = _basetypes.Shape
         elif len(var.shape) == 1:
-            valString = utilities.stringify(var)
+            valString = str(var)
             stringVariants = {'val': valString}
             varClass = _basetypes.Constant
         else:
@@ -39,7 +35,7 @@ def _convert(var, varName = None):
             raise Exception
         if len(list(var._underlyingDataItems)) == 0:
             # hence is a constant!
-            valString = utilities.stringify(
+            valString = str(
                 var.evaluate()[0]
                 )
             stringVariants = {'val': valString}

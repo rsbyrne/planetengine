@@ -1,6 +1,6 @@
 import numpy as np
 
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _function
 from . import _convert
@@ -39,8 +39,8 @@ class Quantiles(_function.Function):
         clauses.append(
             (True, float(ntiles))
             )
-        rawvar = _fn.branching.conditional(clauses)
-        var = _fn.branching.conditional([
+        rawvar =fn.branching.conditional(clauses)
+        var =fn.branching.conditional([
             (inVar < np.inf, rawvar),
             (True, np.nan)
             ])

@@ -23,8 +23,9 @@ class Integral(_reduction.Reduction):
             raise Exception(
                 "Surface type not accepted; try Integral.auto method."
                 )
+        inVar = _convert.convert(inVar)
 
-        inVar = _handlenan.zeroes(inVar)
+        # inVar = _handlenan.zeroes(inVar)
 
         intMesh = inVar.meshUtils.integrals[surface]
         if surface == 'volume':

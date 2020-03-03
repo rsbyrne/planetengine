@@ -1,40 +1,22 @@
-from underworld import function as _fn
+from underworld import function as fn
 import numpy as np
-from planetengine._IC import IC
-
-def build(*args, name = None, **kwargs):
-    built = Extents(*args, **kwargs)
-    if type(name) == str:
-        built.name = name
-    return built
+from planetengine.initials import IC
 
 class Extents(IC):
 
-    script = __file__
-
-    def __init__(
-            self,
-            *args,
-            shapes = None,
+    def __init__(self,
+            shapes,
             **kwargs
             ):
 
-        # HOUSEKEEPING: this should always be here
-        inputs = locals().copy()
-
-        self.polygons = [(0, _fn.misc.constant(True))]
+        polygons = [(0, fn.misc.constant(True))]
         for val, vertices in shapes:
-            self.polygons.append(
-                (val, _fn.shape.Polygon(vertices))
+            polygons.append(
+                (val, fn.shape.Polygon(vertices))
                 )
+        self.polygons = polygons
 
-        super().__init__(
-            args = args,
-            kwargs = kwargs,
-            inputs = inputs,
-            script = self.script,
-            evaluate = self.evaluate
-            )
+        super().__init__(**kwargs)
 
     def evaluate(self, coordArray):
         outArray = np.zeros(
@@ -47,3 +29,5 @@ class Extents(IC):
                 outArray
                 )
         return outArray
+
+CLASS = Extents

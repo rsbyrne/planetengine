@@ -1,6 +1,6 @@
 import numpy as np
 
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _convert
 from . import _function
@@ -75,7 +75,7 @@ class Clip(_function.Function):
             del stringVariants['lower']
             del stringVariants['upper']
 
-        var = _fn.branching.conditional(clauses)
+        var =fn.branching.conditional(clauses)
 
         self.stringVariants = stringVariants
         self.inVars = list(inVars)

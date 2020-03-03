@@ -1,15 +1,15 @@
 import weakref
 
 import underworld as uw
-_fn = uw.function
-UWFn = _fn._function.Function
+fn = uw.function
+UWFn =fn._function.Function
 
 from . import _planetvar
 from . import _basetypes
 from . import vanilla
 from .. import utilities
-hasher = utilities.hashToInt
 from .. import meshutils
+from .. import mpi
 
 class Variable(_basetypes.BaseTypes):
 
@@ -78,15 +78,17 @@ class Variable(_basetypes.BaseTypes):
         self.parameters = []
         self.var = var
 
+        self._update_hash()
+
         super().__init__(**kwargs)
 
     def _check_hash(self, lazy = False):
-        if lazy and hasattr(self, '_currenthash'):
-            return self._currenthash
-        else:
-            currenthash = hasher(self.data)
-            self._currenthash = currenthash
-        return currenthash
+        if not lazy:
+            self._update_hash()
+        return self._currenthash
+
+    def _update_hash(self):
+        self._currenthash = utilities.hash_var(self.var)
 
     def _set_meshdata(self):
         self.meshdata = self.var.evaluate(self.mesh)

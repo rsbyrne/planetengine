@@ -1,9 +1,10 @@
 import numpy as np
 import math
 import underworld as uw
+fn = uw.function
 
-from . import meshutils
-get_meshUtils = meshutils.get_meshUtils
+from . import mpi
+from . import utilities
 
 def get_pureBoxDims(coordArray):
     pureBoxDims = ((0., 1.),) * coordArray.shape[1]
@@ -174,7 +175,7 @@ def shrink_box(
         boxDims = pureBoxDims
 
     # scale to unit box if necessary:
-    if not boxDims == pureBoxDims:
+    if not np.allclose(boxDims, pureBoxDims):
         outBox = rescale_array(
             coordArray,
             boxDims,
@@ -192,7 +193,7 @@ def shrink_box(
         )
 
     # return box to original dimensions:
-    if not boxDims == pureBoxDims:
+    if not np.allclose(boxDims, pureBoxDims):
         outBox = rescale_array(
             outBox,
             pureBoxDims,
@@ -209,8 +210,6 @@ def box(
         mirrored = None,
         ):
 
-    meshUtils = get_meshUtils(mesh)
-
     if coordArray is None:
         coordArray = mesh.data
 
@@ -225,7 +224,7 @@ def box(
             radialCoords,
             inScales,
             outScales,
-            flip = meshUtils.flip
+            flip = [True, False]
             )
     else:
         outArray = rescale_array(
@@ -250,20 +249,22 @@ def unbox(
         coordArray = None,
         boxDims = None,
         tolerance = 0.,
+        shrinkLocal = False
         ):
-
-    meshUtils = get_meshUtils(mesh)
 
     if coordArray is None:
         coordArray = mesh.data[:]
-    pureBoxDims = get_pureBoxDims(coordArray)
     if boxDims is None:
-        boxDims = pureBoxDims
+        boxDims = get_pureBoxDims(coordArray)
 
     inBox = coordArray
 
     if tolerance > 0.:
-        inBox = shrink_box(coordArray, boxDims, tolerance)
+        if shrinkLocal:
+            shrinkBox = utilities.get_scales(inBox, local = True)
+        else:
+            shrinkBox = boxDims
+        inBox = shrink_box(coordArray, shrinkBox, tolerance)
     else:
         inBox = coordArray
 
@@ -274,7 +275,7 @@ def unbox(
             inBox,
             boxDims,
             outBoxDims,
-            flip = meshUtils.flip
+            flip = [True, False]
             ),
         inverse = True
         )

@@ -1,5 +1,8 @@
 import numpy as np
 
+import underworld as uw
+fn = uw.function
+
 from . import _function
 from . import _convert
 from ._construct import _construct as _master_construct
@@ -20,6 +23,27 @@ class Surface(_function.Function):
             raise Exception
         if not hasattr(inVar, 'mesh'):
             raise Exception
+
+        # mesh = inVar.mesh
+        # if not type(mesh) == uw.mesh.FeMesh_Annulus:
+        #     raise Exception("Only supported for annulus at present.")
+        #
+        # radFn = \
+        #     (fn.math.dot(fn.input(), mesh.unitvec_r_Fn) - mesh.radialLengths[0]) \
+        #     / (mesh.radialLengths[1] - mesh.radialLengths[0])
+        #
+        # if surface == 'outer':
+        #     var = fn.branching.conditional([
+        #         (radFn >= 0.8, inVar),
+        #         (True, np.nan)
+        #         ])
+        # elif surface == 'inner':
+        #     var = fn.branching.conditional([
+        #         (radFn < 0.2, inVar),
+        #         (True, np.nan)
+        #         ])
+        # else:
+        #     raise Exception("That surface is not supported yet.")
 
         self._surface = \
             inVar.mesh.meshUtils.surfaces[surface]

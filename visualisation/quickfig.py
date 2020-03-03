@@ -1,4 +1,4 @@
-from underworld import function as _fn
+from underworld import function as fn
 import glucifer
 import numpy as np
 import os
@@ -9,14 +9,14 @@ from ..functions import convert
 from .. import functions as pfn
 from ..meshutils import get_meshUtils
 from .. import mpi
-from . import _fig
+from . import fig
 
 def quickShow(*args, **kwargs):
 
     quickFig = QuickFig(*args, **kwargs)
     quickFig.show()
 
-class QuickFig(_fig.Fig):
+class QuickFig(fig.Fig):
 
     def __init__(
             self,
@@ -165,7 +165,7 @@ class QuickFig(_fig.Fig):
         self.fig.append(
             glucifer.objects.Contours(
                 planetVar.mesh,
-                _fn.math.log2(normed),
+               fn.math.log2(normed),
                 colours = colours,
                 interval = 1.,
                 **kwargs
@@ -220,11 +220,11 @@ class QuickFig(_fig.Fig):
         for updateFunc in self.updateFuncs:
             updateFunc()
 
-    def show(self):
-        self._update()
+    def _show(self):
+        self.update()
         for var in self.fittedvars:
             message(var.varName)
         self.fig.show()
 
-    def _save(self, path, name, ext):
+    def _save(self, name, path, ext):
         self.fig.save(os.path.join(path, name + '.' + ext))

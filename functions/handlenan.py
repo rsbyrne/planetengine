@@ -1,6 +1,6 @@
 import numpy as np
 
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _convert
 from . import _function
@@ -25,7 +25,7 @@ class HandleNaN(_function.Function):
         compareVal = [
             np.inf for dim in range(inVar.varDim)
             ]
-        var = _fn.branching.conditional([
+        var =fn.branching.conditional([
             (inVar < compareVal, inVar),
             (True, handleVal),
             ])

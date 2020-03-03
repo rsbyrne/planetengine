@@ -2,13 +2,11 @@ import random
 import numpy as np
 
 import underworld as uw
-_fn = uw.function
-UWFn = _fn._function.Function
+fn = uw.function
+UWFn =fn._function.Function
 
 from . import _basetypes
 from . import _planetvar
-from .. import utilities
-hasher = utilities.hashToInt
 
 class Parameter(_basetypes.BaseTypes):
 
@@ -17,7 +15,7 @@ class Parameter(_basetypes.BaseTypes):
     def __init__(self, inFn, **kwargs):
 
         initialVal = inFn()
-        var = _fn.misc.constant(initialVal)
+        var =fn.misc.constant(initialVal)
         if not len(list(var._underlyingDataItems)) == 0:
             raise Exception
 
@@ -49,4 +47,4 @@ class Parameter(_basetypes.BaseTypes):
         self._update_attributes()
 
     def __hash__(self):
-        return self._hashval
+        return hash((_planetvar._PLANETVAR_FLAG, self.opTag, self._hashval))

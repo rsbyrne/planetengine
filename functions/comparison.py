@@ -1,4 +1,4 @@
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _convert
 from . import _function
@@ -19,7 +19,7 @@ class Comparison(_function.Function):
 
         inVar0, inVar1 = inVars = _convert.convert(inVar0, inVar1)
         boolOut = operation == 'equals'
-        var = _fn.branching.conditional([
+        var =fn.branching.conditional([
             (inVar0 < inVar1 - 1e-18, not boolOut),
             (inVar0 > inVar1 + 1e-18, not boolOut),
             (True, boolOut),

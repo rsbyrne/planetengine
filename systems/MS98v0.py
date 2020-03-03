@@ -1,20 +1,23 @@
 import math
 
 import underworld as uw
-fn, cd = uw.function, uw.conditions
+fn = uw.function
 
 from planetengine.systems import System
 from planetengine.initials.sinusoidal import Sinusoidal
 from planetengine.initials.constant import Constant
 
-class Viscoplastic(System):
+class MS98(System):
 
     optionsKeys = {
-        'res', 'courant', 'innerMethod', 'innerTol', 'outerTol', 'penalty',
+        'res', 'courant', 'innerMethod',
+        'innerTol', 'outerTol', 'penalty',
         'mgLevels'
         }
     paramsKeys = {
-        'alpha', 'aspect', 'eta0', 'f', 'flux', 'H', 'kappa', 'tau0', 'tau1'
+        'alpha', 'aspect', 'eta0',
+        'f', 'H', 'kappa',
+        'tau0', 'tau1'
         }
     configsKeys = {
         'temperatureField', 'temperatureDotField'
@@ -34,7 +37,6 @@ class Viscoplastic(System):
             aspect = 1.,
             eta0 = 3e4,
             f = 0.54,
-            flux = None,
             H = 0.,
             kappa = 1.,
             tau0 = 4e5,
@@ -99,34 +101,33 @@ class Viscoplastic(System):
         velocityField = mesh.add_variable(2)
         vc = mesh.add_variable(2)
 
+        temperatureField.scales = [[0., 1.]]
+        temperatureField.bounds = [[0., 1., '.', '.']]
+
         ### BOUNDARIES ###
 
         specSets = mesh.specialSets
         inner, outer = specSets['inner'], specSets['outer']
         left, right = specSets['MaxJ_VertexSet'], specSets['MinJ_VertexSet']
 
-        if mesh.periodic[1]: bounded = (inner + outer, None)
-        else: bounded = (inner + outer, left + right)
-        bndVecs = (mesh.bnd_vec_normal, mesh.bnd_vec_tangent)
-        velBC = cd.RotatedDirichletCondition(velocityField, bounded, bndVecs)
-        velBCs = [velBC,]
-
-        if flux is None:
-            scales, bounds = [[0., 1.]], [[0., 1., '.', '.']]
-            temperatureField.scales, temperatureField.bounds = scales, bounds
-            conductionField.data[outer], conductionField.data[inner] = 0., 1.
-            tempBC = cd.DirichletCondition(temperatureField, (inner + outer,))
-            condBC = cd.DirichletCondition(conductionField, (inner + outer,))
-            tempBCs, condBCs = [tempBC,], [condBC,]
+        if mesh.periodic[1]:
+            bounded = (inner + outer, None)
         else:
-            scales, bounds = [[0., None]], [[0., '.', '.', '.']]
-            temperatureField.scales, temperatureField.bounds = scales, bounds
-            conductionField.data[outer] = 1.
-            tempBC = cd.DirichletCondition(temperatureField, (outer,))
-            condBC = cd.DirichletCondition(conductionField, (outer,))
-            tempFluxBC = cd.NeumannCondition(temperatureField, (inner,), flux)
-            condFluxBC = cd.NeumannCondition(conductionField, (inner,), flux)
-            tempBCs, condBCs = [tempBC, tempFluxBC], [condBC, condFluxBC]
+            bounded = (inner + outer, left + right)
+        velBC = uw.conditions.RotatedDirichletCondition(
+            variable = velocityField,
+            indexSetsPerDof = bounded,
+            basis_vectors = (mesh.bnd_vec_normal, mesh.bnd_vec_tangent)
+            )
+
+        tempBC = uw.conditions.DirichletCondition(
+            variable = temperatureField,
+            indexSetsPerDof = (inner + outer,)
+            )
+        condBC = uw.conditions.DirichletCondition(
+            variable = conductionField,
+            indexSetsPerDof = (inner + outer,)
+            )
 
         ### FUNCTIONS ###
 
@@ -163,14 +164,14 @@ class Viscoplastic(System):
             temperatureField = conductionField,
             fn_diffusivity = diffusivityFn,
             fn_heating = heatingFn,
-            conditions = condBCs
+            conditions = [condBC,]
             )
         conductiveSolver = uw.systems.Solver(conductive)
 
         stokes = uw.systems.Stokes(
             velocityField = velocityField,
             pressureField = pressureField,
-            conditions = velBCs,
+            conditions = [velBC,],
             fn_viscosity = viscosityFn,
             fn_bodyforce = buoyancyFn * mesh.unitvec_r_Fn,
             _removeBCs = False,
@@ -188,11 +189,13 @@ class Viscoplastic(System):
             velocityField = vc,
             fn_diffusivity = diffusivityFn,
             fn_sourceTerm = heatingFn,
-            conditions = tempBCs
+            conditions = [tempBC,]
             )
 
         ### SOLVING ###
 
+        conductionField.data[inner] = 1.
+        conductionField.data[outer] = 0.
         conductiveSolver.solve()
 
         vc_eqNum = uw.systems.sle.EqNumber(vc, False)
@@ -231,5 +234,10 @@ class Viscoplastic(System):
 
         super().__init__(locals(), **kwargs)
 
+### PARTIALS ###
+from functools import partial
+isovisc = partial(MS98, eta0 = 1., tau0 = 1., tau1 = 0.)
+arrhenius = partial(MS98, tau0 = 1., tau1 = 0.)
+
 ### ATTRIBUTES ###
-CLASS = Viscoplastic
+CLASS = MS98

@@ -2,11 +2,10 @@ import weakref
 import numpy as np
 
 import underworld as uw
-_fn = uw.function
-UWFn = _fn._function.Function
+fn = uw.function
+UWFn =fn._function.Function
 
-from .. import utilities
-hasher = utilities.hashToInt
+_PLANETVAR_FLAG = 'planetVar'
 
 # MOST IMPORTS ARE AT THE BOTTOM
 # DUE TO CIRCULAR IMPORTS PROBLEM
@@ -38,9 +37,7 @@ def get_opHash(varClass, *hashVars, **stringVariants):
             if len(list(var._underlyingDataItems)) > 0:
                 raise Exception
             value = var.evaluate()[0]
-            valString = utilities.stringify(
-                value
-                )
+            valString = str(value)
             stringVariants = {'val': valString}
 
         elif varClass is _basetypes.Variable:
@@ -84,7 +81,8 @@ def get_opHash(varClass, *hashVars, **stringVariants):
     opTag = update_opTag(varClass.opTag, stringVariants)
 
     hashList.append(opTag)
-    hashVal = hasher(hashList)
+    str_hashList = [str(item) for item in hashList]
+    hashVal = hash(tuple(str_hashList))
 
     return hashVal
 
@@ -219,38 +217,49 @@ class PlanetVar(UWFn):
         if isinstance(self, _function.Function) \
                 or type(self) == _basetypes.Variable:
             if self.varDim == 1:
-                minmax = _fn.view.min_max(self.var)
+                minmax =fn.view.min_max(self.var)
             else:
-                fn_norm = _fn.math.sqrt(
-                    _fn.math.dot(
+                fn_norm =fn.math.sqrt(
+                   fn.math.dot(
                         self,
                         self
                         )
                     )
-                minmax = _fn.view.min_max(
+                minmax =fn.view.min_max(
                     self,
                     fn_norm = fn_norm
                     )
+            # def minFn():
+            #     allmins = mpi.comm.allgather(minmax.min_local())
+            #     return min(allmins)
+            # def maxFn():
+            #     allmaxs = mpi.comm.allgather(minmax.max_local())
+            #     return max(allmaxs)
             minFn = minmax.min_global
             maxFn = minmax.max_global
+            minmax.evaluate(self.substrate)
             self._minmax = minmax
             rangeFn = lambda: abs(minFn() - maxFn())
+            def scaleFn():
+                return [[minFn(), maxFn()] for dim in range(self.varDim)]
         elif isinstance(self, _reduction.Reduction) \
                 or type(self) == _basetypes.Constant:
             minFn = lambda: min(self.value)
             maxFn = lambda: max(self.value)
             rangeFn = lambda: maxFn() - minFn()
+            scaleFn = lambda: [minFn(), maxFn()]
         elif type(self) in {
                 _basetypes.Parameter,
                 _basetypes.Shape
                 }:
-            minFn = maxFn = rangeFn = lambda: None
+            minFn = maxFn = rangeFn = scaleFn = lambda: None
         else:
             raise Exception
 
         self._minFn = minFn
         self._maxFn = maxFn
         self._rangeFn = rangeFn
+        self._scaleFn = scaleFn
 
     def minFn(self):
         if not hasattr(self, '_minFn'):
@@ -264,6 +273,10 @@ class PlanetVar(UWFn):
         if not hasattr(self, '_rangeFn'):
             self._set_summary_stats()
         return self._rangeFn()
+    def scaleFn(self):
+        if not hasattr(self, '_maxFn'):
+            self._set_summary_stats()
+        return self._scaleFn()
 
     def _update_summary_stats(self):
         if (isinstance(self, _function.Function) \
@@ -379,5 +392,4 @@ from . import _reduction
 # from . import projection
 from . import gradient
 from . import operations
-from .. import utilities
 from .. import mpi

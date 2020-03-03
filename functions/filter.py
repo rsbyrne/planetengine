@@ -1,6 +1,6 @@
 import numpy as np
 
-from underworld import function as _fn
+from underworld import function as fn
 
 from . import _convert
 from . import _function
@@ -26,8 +26,8 @@ class Filter(_function.Function):
             outVar = _convert.convert(outVar)
             inVars = (*inVars, outVar)
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var = _fn.branching.conditional([
-            (_fn.math.abs(inVar - filterVal) < 1e-18, nullVal),
+        var =fn.branching.conditional([
+            (fn.math.abs(inVar - filterVal) < 1e-18, nullVal),
             (True, outVar)
             ])
 
