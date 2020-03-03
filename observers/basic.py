@@ -9,7 +9,7 @@ class Basic(Observer):
     def __init__(self,
             observee,
             tempKey = 'temperatureField',
-            refTempKey = 'temperatureRefField',
+            condKey = 'conductionField',
             velKey = 'velocityField',
             viscKey = 'viscosityFn',
             plasticViscKey = 'plasticViscFn',
@@ -19,14 +19,14 @@ class Basic(Observer):
         analysers = dict()
 
         temp = observee.locals[tempKey]
-        refTemp = observee.locals[refTempKey]
+        cond = observee.locals[condKey]
         radGrad = gradient.rad(temp)
         surfInt = integral.outer(radGrad)
-        radGradRef = gradient.rad(refTemp)
+        radGradRef = gradient.rad(cond)
         surfIntRef = integral.outer(radGradRef)
         Nu = surfInt / surfIntRef
         analysers['Nu'] = self.Nu = Nu
-        theta = temp - refTemp
+        theta = temp - cond
         avTheta = integral.volume(theta)
         analysers['avTheta'] = self.avTheta = avTheta
 

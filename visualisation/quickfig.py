@@ -226,5 +226,5 @@ class QuickFig(fig.Fig):
             message(var.varName)
         self.fig.show()
 
-    def _save(self, path, name, ext):
+    def _save(self, name, path, ext):
         self.fig.save(os.path.join(path, name + '.' + ext))

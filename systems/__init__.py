@@ -132,7 +132,7 @@ class System(Iterator):
     def clipVals(self):
         for varName, var in sorted(self.varsOfState.items()):
             if hasattr(var, 'scales'):
-                fieldops.clip_array(var, var.scales)
+                fieldops.clip_var(var, var.scales)
 
     def setBounds(self):
         for varName, var in sorted(self.varsOfState.items()):

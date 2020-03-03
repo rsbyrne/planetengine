@@ -67,21 +67,17 @@ def try_set_boundaries(variable, variable2 = None):
             pass
 
 def set_scales(variable, values = None):
-
-    if not hasattr(variable, 'data'):
-        raise Exception("Variable lacks 'data' attribute.")
-
     if values is None:
-        try:
-            values = variable.scales
-        except:
-            raise Exception
-
-    variable.data[:] = mapping.rescale_array(
-        variable.data,
-        utilities.get_scales(variable.data),
-        values
-        )
+        try: values = variable.scales
+        except: raise Exception
+    if None in [i for sl in values for i in sl]:
+        clip_var(variable)
+    else:
+        variable.data[:] = mapping.rescale_array(
+            variable.data,
+            utilities.get_scales(variable.data),
+            values
+            )
 
 def try_set_scales(variable, variable2 = None):
     if variable2 is None:
@@ -104,7 +100,10 @@ def normalise(variable, norm = [0., 1.]):
         ]
     set_scales(variable, scales)
 
-def clip_array(variable, scales):
+def clip_var(variable, scales = None):
+    if scales is None:
+        try: scales = variable.scales
+        except: raise Exception
     variable.data[:] = np.array([
         np.clip(subarr, *clipval) \
             for subarr, clipval in zip(

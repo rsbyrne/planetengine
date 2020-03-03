@@ -1,8 +1,13 @@
-import underworld as uw
 import numpy as np
 from scipy.interpolate import griddata
 import os
 from PIL import Image
+import shutil
+import subprocess
+from subprocess import PIPE
+
+from everest import disk
+from everest import mpi
 
 from .. import fieldops
 from .. import mapping
@@ -53,7 +58,7 @@ def split_imgArr(imgArr):
         ]
     return outArrs
 
-def rasterise(*datas, mode = 'RGB'):
+def rasterise(*datas):
     bands = []
     for data in datas:
         band = Image.fromarray(
@@ -61,28 +66,35 @@ def rasterise(*datas, mode = 'RGB'):
             mode = 'L',
             )
         bands.append(band)
+    mode, bands = get_mode(*bands)
     img = Image.merge(mode, bands)
     return img
 
-class Raster(fig.Fig):
+def get_mode(*bands):
     '''
     Modes: 1, L, P, RGB, RGBA, CMYK, YCbCr, LAB, HSV, I, F, RGBa, LA, RGBX
     '''
-    def __init__(self, *bands, mode = None, size = (256, 256), **kwargs):
-        if mode is None:
-            if len(bands) == 1:
-                mode = 'L'
-            elif len(bands) <= 3:
-                if len(bands) == 2:
-                    bands = [*bands, bands[-1]]
-                mode = 'RGB'
-            else:
-                raise Exception("Too many bands!")
-        self.mode = mode
+    if len(bands) == 1:
+        mode = 'L'
+    elif len(bands) <= 3:
+        if len(bands) == 2:
+            bands = [*bands, bands[-1]]
+        mode = 'RGB'
+    elif len(bands) == 4:
+        mode = 'CMYK'
+    else:
+        raise Exception("Too many bands!")
+    return mode, bands
+
+class Raster(fig.Fig):
+    def __init__(self, *bands, size = (256, 256), **kwargs):
+        mode, ignoreme = get_mode(*bands)
         self.dataObjs = [Data(band, size = size) for band in bands]
         self.shape = [*size[::-1], len(self.dataObjs)]
         self.data = np.zeros(self.shape, dtype = 'uint8')
-        super().__init__(**kwargs)
+        if mode == 'CMYK': ext = 'jpg'
+        else: ext = 'png'
+        super().__init__(ext = ext, **kwargs)
         self.update()
     def _update(self):
         self._update_data()
@@ -94,11 +106,8 @@ class Raster(fig.Fig):
             [dataObj.data for dataObj in self.dataObjs]
             )
     def _update_img(self):
-        self.img = rasterise(
-            *[dataObj.data for dataObj in self.dataObjs],
-            mode = self.mode
-            )
-    def _save(self, path, name, ext):
+        self.img = rasterise(*[dataObj.data for dataObj in self.dataObjs])
+    def _save(self, name, path, ext):
         self.img.save(os.path.join(path, name + '.' + ext))
     def _show(self):
         self.update()
@@ -112,3 +121,45 @@ class Raster(fig.Fig):
             )
     def resize(self, size = (256, 256)):
         return self.img.resize(size)
+
+@mpi.dowrap
+def animate(datas, name, outputPath = '.', overwrite = False):
+    outputPath = os.path.abspath(outputPath)
+    outputFilename = os.path.join(outputPath, name + '.mp4')
+    if not overwrite:
+        if os.path.exists(outputFilename):
+            raise Exception("Output file already exists!")
+    tempDir = os.path.join(outputPath, disk.tempname())
+    inputFilename = os.path.join(tempDir, '*.jpg')
+    shutil.rmtree(tempDir, ignore_errors = True)
+    os.makedirs(tempDir)
+    try:
+        for i, data in enumerate(datas):
+            split = [data[:,:,i] for i in range(data.shape[-1])]
+            im = rasterise(*split, mode = 'L')
+            im.save(os.path.join(tempDir, str(i).zfill(8)) + '.jpg')
+        cmd = [
+            'ffmpeg',
+            '-y',
+            '-pattern_type',
+            'glob',
+            '-i',
+            '"' + inputFilename + '"',
+            '-c:v',
+            'libx264',
+            '-pix_fmt',
+            'yuv420p',
+            '-movflags',
+            '+faststart',
+            outputFilename
+            ]
+        cmd = ' '.join(cmd)
+        completed = subprocess.run(
+            cmd,
+            stdout = PIPE,
+            stderr = PIPE,
+            shell = True,
+            check = True
+            )
+    finally:
+        shutil.rmtree(tempDir, ignore_errors = True)

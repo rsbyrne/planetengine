@@ -20,7 +20,7 @@ class Fig:
         self._update()
     def _save(self):
         pass
-    def save(self, path = '', name = None, add = None, ext = None):
+    def save(self, name, path = '.', add = None, ext = None):
         self.update()
         if name is None:
             name = self.name
@@ -42,6 +42,6 @@ class Fig:
             if not os.path.isdir(path):
                 os.makedirs(path)
             assert os.path.isdir(path)
-        self._save(path, name, ext)
+        self._save(name, path, ext)
     def show(self):
         return self._show()
