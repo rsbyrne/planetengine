@@ -127,19 +127,20 @@ class QuickFig(fig.Fig):
 
     def add_stipple(self, arg, **kwargs):
         planetVar = convert(arg)
-        if not planetVar.varDim == 1:
-            raise Exception
-        drawing = glucifer.objects.Drawing(
-            pointsize = 3.,
-            )
+        if not planetVar.varDim == 1: raise Exception
+        drawing = glucifer.objects.Drawing(pointsize = 3.)
         allCoords = planetVar.meshUtils.cartesianScope
-        for coord in allCoords:
-            try:
-                val = planetVar.evaluate(np.array([coord]))
-                if bool(val):
-                    drawing.point(coord)
-            except:
-                pass
+        def points():
+            drawing.resetDrawing()
+            for coord in allCoords:
+                try:
+                    val = planetVar.evaluate(np.array([coord]))
+                    if bool(val):
+                        drawing.point(coord)
+                except:
+                    pass
+        self.updateFuncs.append(points)
+        points()
         self.fig.append(drawing)
 
     def add_surface(self, arg, **kwargs):

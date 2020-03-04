@@ -27,9 +27,9 @@ class Viscoplastic(System):
             # OPTIONS
             res = 64,
             courant = 1.,
-            innerMethod = 'mg',
-            innerTol = 1e-6,
-            outerTol = 1e-5,
+            innerMethod = 'lu',
+            innerTol = None,
+            outerTol = None,
             penalty = None,
             mgLevels = None,
             # PARAMS
@@ -114,16 +114,19 @@ class Viscoplastic(System):
         velBC = cd.RotatedDirichletCondition(velocityField, bounded, bndVecs)
         velBCs = [velBC,]
 
+        if flux is None and H == 0.:
+            temperatureField.scales = [[0., 1.]]
+            temperatureField.bounds = [[0., 1., '.', '.']]
+        else:
+            temperatureField.scales = [[0., None]]
+            temperatureField.bounds = [[0., '.', '.', '.']]
+
         if flux is None:
-            scales, bounds = [[0., 1.]], [[0., 1., '.', '.']]
-            temperatureField.scales, temperatureField.bounds = scales, bounds
             conductionField.data[outer], conductionField.data[inner] = 0., 1.
             tempBC = cd.DirichletCondition(temperatureField, (inner + outer,))
             condBC = cd.DirichletCondition(conductionField, (inner + outer,))
             tempBCs, condBCs = [tempBC,], [condBC,]
         else:
-            scales, bounds = [[0., None]], [[0., '.', '.', '.']]
-            temperatureField.scales, temperatureField.bounds = scales, bounds
             conductionField.data[outer] = 1.
             tempBC = cd.DirichletCondition(temperatureField, (outer,))
             condBC = cd.DirichletCondition(conductionField, (outer,))
@@ -134,39 +137,27 @@ class Viscoplastic(System):
         ### FUNCTIONS ###
 
         buoyancyFn = alpha * temperatureField
-        diffusivityFn = kappa
-        heatingFn = H
 
         ### RHEOLOGY ###
 
-        if eta0 == 1.:
-            creepViscFn = 1.
-        else:
-            creepViscFn = fn.math.pow(eta0, 1. - temperatureField)
+        creepViscFn = fn.math.pow(eta0, 1. - temperatureField)
 
-        if tau1 == 0.:
-            nonLinear = False
-            plasticViscFn = tau0
-        else:
-            nonLinear = True
-            depthFn = mesh.radialLengths[1] - mesh.radiusFn
-            tau = tau0 + depthFn * tau1
-            symmetric = fn.tensor.symmetric(vc.fn_gradient)
-            secInvFn = fn.tensor.second_invariant(symmetric)
-            plasticViscFn = tau / (2. * secInvFn + 1e-18)
+        depthFn = mesh.radialLengths[1] - mesh.radiusFn
+        tau = tau0 + depthFn * tau1
+        symmetric = fn.tensor.symmetric(vc.fn_gradient)
+        secInvFn = fn.tensor.second_invariant(symmetric)
+        plasticViscFn = tau / (2. * secInvFn + 1e-18)
 
         viscosityFn = fn.misc.min(creepViscFn, plasticViscFn)
         viscosityFn = fn.misc.min(eta0, fn.misc.max(viscosityFn, 1.))
-        if nonLinear:
-            viscosityFn = viscosityFn + 0. * velocityField[0]
-            yieldingFn = viscosityFn < creepViscFn
+        viscosityFn = viscosityFn + 0. * velocityField[0]
 
         ### SYSTEMS ###
 
         conductive = uw.systems.SteadyStateHeat(
             temperatureField = conductionField,
-            fn_diffusivity = diffusivityFn,
-            fn_heating = heatingFn,
+            fn_diffusivity = kappa,
+            fn_heating = H,
             conditions = condBCs
             )
         conductiveSolver = uw.systems.Solver(conductive)
@@ -181,8 +172,8 @@ class Viscoplastic(System):
             )
         solver = uw.systems.Solver(stokes)
         solver.set_inner_method(innerMethod)
-        solver.set_inner_rtol(innerTol)
-        solver.set_outer_rtol(outerTol)
+        if not innerTol is None: solver.set_inner_rtol(innerTol)
+        if not outerTol is None: solver.set_outer_rtol(outerTol)
         if not penalty is None: solver.set_penalty(penalty)
         if not mgLevels is None: solver.set_mg_levels(mgLevels)
 
@@ -190,8 +181,8 @@ class Viscoplastic(System):
             phiField = temperatureField,
             phiDotField = temperatureDotField,
             velocityField = vc,
-            fn_diffusivity = diffusivityFn,
-            fn_sourceTerm = heatingFn,
+            fn_diffusivity = kappa,
+            fn_sourceTerm = H,
             conditions = tempBCs
             )
 
@@ -219,7 +210,7 @@ class Viscoplastic(System):
         def update():
             velocityField.data[:] = 0.
             solver.solve(
-                nonLinearIterate = nonLinear,
+                nonLinearIterate = True,
                 callback_post_solve = postSolve,
                 )
             uw.libUnderworld.Underworld.AXequalsX(

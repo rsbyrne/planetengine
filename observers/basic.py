@@ -16,7 +16,6 @@ class Basic(Observer):
             velKey = 'velocityField',
             viscKey = 'viscosityFn',
             plasticViscKey = 'plasticViscFn',
-            creepViscKey = 'creepViscFn',
             **kwargs
             ):
 
@@ -45,16 +44,15 @@ class Basic(Observer):
             visc = observee.locals[viscKey]
             avVisc = integral.volume(visc)
             analysers['avVisc'] = self.avVisc = avVisc
-            creep = observee.locals[creepViscKey]
-            self.yielding = yielding = visc < creep
-            yieldFrac = integral.volume(yielding)
-            analysers['yielding'] = self.yieldFrac = yieldFrac
 
         rasterArgs = []
         rasterArgs.append(theta)
         if plasticViscKey in observee.locals.__dict__:
-            plasticViscFn = observee.locals[plasticViscKey]
-            logInvPlastic = operations.log(1. / plasticViscFn)
+            plastic = observee.locals[plasticViscKey]
+            logInvPlastic = operations.log(1. / plastic)
+            self.yielding = yielding = plastic < visc
+            yieldFrac = integral.volume(yielding)
+            analysers['yielding'] = self.yieldFrac = yieldFrac
             rasterArgs.append(logInvPlastic)
         if viscKey in observee.locals.__dict__:
             stress = visc * vel
@@ -74,8 +72,6 @@ class Basic(Observer):
 
         visVars = [temp, vel]
         try: visVars.append(visc)
-        except NameError: pass
-        try: visVars.append(yielding)
         except NameError: pass
         self.fig = QuickFig(*visVars)
 
