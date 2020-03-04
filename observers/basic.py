@@ -3,7 +3,8 @@ from underworld import function as fn
 from everest import mpi
 
 from planetengine.observers import Observer
-from planetengine.functions import integral, gradient, operations, component
+from planetengine.functions import \
+    integral, gradient, operations, component, getstat
 from planetengine.visualisation.raster import Raster
 from planetengine.visualisation.quickfig import QuickFig
 
@@ -20,9 +21,12 @@ class Basic(Observer):
             ):
 
         analysers = dict()
+        baselines = dict()
+        rasterArgs = []
 
         temp = observee.locals[tempKey]
         cond = observee.locals[condKey]
+        baselines['condTemp'] = integral.volume(cond).evaluate()
         radGrad = gradient.rad(temp)
         surfInt = integral.outer(radGrad)
         radGradRef = gradient.rad(cond)
@@ -33,6 +37,9 @@ class Basic(Observer):
         avTemp = integral.volume(temp)
         avTheta = integral.volume(theta)
         analysers['avTheta'] = self.avTheta = avTheta
+        analysers['minTheta'] = getstat.mins(theta)
+        analysers['rangeTheta'] = getstat.ranges(theta)
+        rasterArgs.append(theta)
 
         vel = observee.locals[velKey]
         VRMS = operations.sqrt(integral.volume(component.sq(vel)))
@@ -45,18 +52,20 @@ class Basic(Observer):
             avVisc = integral.volume(visc)
             analysers['avVisc'] = self.avVisc = avVisc
 
-        rasterArgs = []
-        rasterArgs.append(theta)
         if plasticViscKey in observee.locals.__dict__:
             plastic = observee.locals[plasticViscKey]
-            logInvPlastic = operations.log(1. / plastic)
-            self.yielding = yielding = plastic < visc
+            yielding = plastic < visc
             yieldFrac = integral.volume(yielding)
             analysers['yielding'] = self.yieldFrac = yieldFrac
+            logInvPlastic = operations.log(1. / plastic)
+            analysers['minLogInvPlastic'] = getstat.mins(logInvPlastic)
+            analysers['rangeLogInvPlastic'] = getstat.ranges(logInvPlastic)
             rasterArgs.append(logInvPlastic)
         if viscKey in observee.locals.__dict__:
             stress = visc * vel
             logMagStress = operations.log(component.mag(stress))
+            analysers['minLogMagStress'] = getstat.mins(logMagStress)
+            analysers['rangeLogMagStress'] = getstat.ranges(logMagStress)
             rasterArgs.append(logMagStress)
         else:
             velMag = component.mag(vel)
@@ -66,9 +75,7 @@ class Basic(Observer):
 
         self.observee, self.analysers = observee, analysers
 
-        self.baselines = {
-            'condTemp': integral.volume(cond).evaluate()
-            }
+        self.baselines = baselines
 
         visVars = [temp, vel]
         try: visVars.append(visc)

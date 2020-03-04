@@ -181,3 +181,9 @@ class System(Iterator):
                 nodes = var.mesh.data_nodegId
                 for index, gId in enumerate(nodes):
                     var.data[index] = loadData[gId]
+
+# Aliases
+from functools import partial
+from .viscoplastic import Viscoplastic as viscoplastic
+from .arrhenius import Arrhenius as arrhenius
+from .isovisc import Isovisc as isovisc

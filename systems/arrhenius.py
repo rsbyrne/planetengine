@@ -8,7 +8,7 @@ from planetengine.initials.sinusoidal import Sinusoidal
 from planetengine.initials.constant import Constant
 from planetengine.observers.basic import Basic
 
-class Viscoplastic(System):
+class Arrhenius(System):
 
     optionsKeys = {
         'res', 'courant', 'innerMethod', 'innerTol', 'outerTol', 'penalty',
@@ -34,12 +34,10 @@ class Viscoplastic(System):
             alpha = 1e7,
             aspect = 1.,
             eta0 = 3e4,
-            f = 1.,
+            f = 0.54,
             flux = None,
             H = 0.,
             kappa = 1.,
-            tau0 = 4e5,
-            tau1 = 1e7,
             # CONFIGS
             temperatureField = Sinusoidal(),
             temperatureDotField = None,
@@ -138,17 +136,8 @@ class Viscoplastic(System):
 
         ### RHEOLOGY ###
 
-        creepViscFn = fn.math.pow(eta0, 1. - temperatureField)
-
-        depthFn = mesh.radialLengths[1] - mesh.radiusFn
-        tau = tau0 + depthFn * tau1
-        symmetric = fn.tensor.symmetric(vc.fn_gradient)
-        secInvFn = fn.tensor.second_invariant(symmetric)
-        plasticViscFn = tau / (2. * secInvFn + 1e-18)
-
-        viscosityFn = fn.misc.min(creepViscFn, plasticViscFn)
+        viscosityFn = fn.math.pow(eta0, 1. - temperatureField)
         viscosityFn = fn.misc.min(eta0, fn.misc.max(viscosityFn, 1.))
-        viscosityFn = viscosityFn + 0. * velocityField[0]
 
         ### SYSTEMS ###
 
@@ -208,7 +197,7 @@ class Viscoplastic(System):
         def update():
             velocityField.data[:] = 0.
             solver.solve(
-                nonLinearIterate = True,
+                nonLinearIterate = False,
                 callback_post_solve = postSolve,
                 )
             uw.libUnderworld.Underworld.AXequalsX(
@@ -227,4 +216,4 @@ class Viscoplastic(System):
     defaultObserver = (Basic, dict())
 
 ### ATTRIBUTES ###
-CLASS = Viscoplastic
+CLASS = Arrhenius
