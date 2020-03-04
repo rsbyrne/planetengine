@@ -1,5 +1,7 @@
 from underworld import function as fn
 
+from everest import mpi
+
 from planetengine.observers import Observer
 from planetengine.functions import integral, gradient, operations, component
 from planetengine.visualisation.raster import Raster
@@ -85,7 +87,26 @@ class Basic(Observer):
         self.fig.show()
 
     def report(self):
-
-        pass
+        outs = self.out()
+        outkeys = self.outkeys
+        def dot_aligned(seq):
+            snums = [str(n) for n in seq]
+            dots = [len(s.split('.', 1)[0]) for s in snums]
+            m = max(dots)
+            return [' '*(m - d) + s for s, d in zip(snums, dots)]
+        names, datas = [], []
+        for name, data in zip(outkeys, outs):
+            if data.shape == ():
+                if name == 'count':
+                    val = str(int(data))
+                else:
+                    val = "{:.2f}".format(data)
+                justname = name.ljust(max([len(key) for key in outkeys]))
+                names.append(justname)
+                datas.append(val)
+        datas = dot_aligned(datas)
+        outlist = [name + ' : ' + data for name, data in zip(names, datas)]
+        outstr = '\n'.join(outlist)
+        mpi.message(outstr)
 
 CLASS = Basic
