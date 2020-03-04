@@ -3,6 +3,8 @@ import numpy as np
 from everest.builts._iterator import Iterator
 from everest.value import Value
 from everest.builts.vector import Vector
+from everest.writer import FixedDataset
+from everest.builts import make_hash
 
 from .. import fieldops
 from ..utilities import hash_var
@@ -88,7 +90,24 @@ class System(Iterator):
         # self._outkeys
         # self._load
 
-        super().__init__(**kwargs)
+        self.baselines = {
+            'mesh': FixedDataset(
+                fieldops.get_global_var_data(self.locals.mesh)
+                )
+            }
+        dOptions, dParams, dConfigs = \
+            self.options.copy(), self.params.copy(), self.configs.copy()
+        dOptions['hash'] = make_hash(self.options)
+        dParams['hash'] = make_hash(self.params)
+        dConfigs['hash'] = make_hash(self.configs)
+
+        super().__init__(
+            baselines = self.baselines,
+            options = dOptions,
+            params = dParams,
+            configs = dConfigs,
+            **kwargs
+            )
 
     def add_observer(self, observerClass = None, observerInputs = None):
         if observerClass is None:
