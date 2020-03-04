@@ -321,7 +321,16 @@ class PlanetVar(UWFn):
         return evalInput
 
     def _output_processing(self, evalOutput):
-        return evalOutput
+        if all([
+                isinstance(inVar, _reduction.Reduction) \
+                    for inVar in self.inVars
+                ]):
+            val = evalOutput
+            for layer in evalOutput.shape:
+                val = val[0]
+            return np.array(val)
+        else:
+            return evalOutput
 
     def evaluate(self, evalInput = None, lazy = False):
         if not lazy:
