@@ -1,3 +1,5 @@
+import numpy as np
+
 from . import _planetvar
 
 class Reduction(_planetvar.PlanetVar):
@@ -15,3 +17,9 @@ class Reduction(_planetvar.PlanetVar):
         self._hashVars = self.inVars
 
         super().__init__(**kwargs)
+
+    def _output_processing(self, evalOutput):
+        val = evalOutput
+        for layer in evalOutput.shape:
+            val = val[0]
+        return np.array(val)

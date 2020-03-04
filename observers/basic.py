@@ -3,6 +3,7 @@ from underworld import function as fn
 from planetengine.observers import Observer
 from planetengine.functions import integral, gradient, operations, component
 from planetengine.visualisation.raster import Raster
+from planetengine.visualisation.quickfig import QuickFig
 
 class Basic(Observer):
 
@@ -13,6 +14,7 @@ class Basic(Observer):
             velKey = 'velocityField',
             viscKey = 'viscosityFn',
             plasticViscKey = 'plasticViscFn',
+            creepViscKey = 'creepViscFn',
             **kwargs
             ):
 
@@ -27,20 +29,24 @@ class Basic(Observer):
         Nu = surfInt / surfIntRef
         analysers['Nu'] = self.Nu = Nu
         theta = temp - cond
+        avTemp = integral.volume(temp)
         avTheta = integral.volume(theta)
         analysers['avTheta'] = self.avTheta = avTheta
 
         vel = observee.locals[velKey]
         VRMS = operations.sqrt(integral.volume(component.sq(vel)))
         analysers['VRMS'] = self.VRMS = VRMS
+        # angVel = component.ang(vel)
+        # surfVel = integral.outer(angVel)
 
         if viscKey in observee.locals.__dict__:
             visc = observee.locals[viscKey]
             avVisc = integral.volume(visc)
             analysers['avVisc'] = self.avVisc = avVisc
-            creep = observee.locals['creepViscFn']
-            yielding = integral.volume(visc < creep)
-            analysers['yielding'] = self.yielding = yielding
+            creep = observee.locals[creepViscKey]
+            self.yielding = yielding = visc < creep
+            yieldFrac = integral.volume(yielding)
+            analysers['yielding'] = self.yieldFrac = yieldFrac
 
         rasterArgs = []
         rasterArgs.append(theta)
@@ -60,8 +66,26 @@ class Basic(Observer):
 
         self.observee, self.analysers = observee, analysers
 
-        super().__init__(**kwargs)
+        self.baselines = {
+            'condTemp': integral.volume(cond).evaluate()
+            }
+
+        visVars = [temp, vel]
+        try: visVars.append(visc)
+        except NameError: pass
+        try: visVars.append(yielding)
+        except NameError: pass
+        self.fig = QuickFig(*visVars)
+
+        super().__init__(baselines = self.baselines, **kwargs)
 
         self.set_freq(10)
+
+    def show(self):
+        self.fig.show()
+
+    def report(self):
+
+        pass
 
 CLASS = Basic

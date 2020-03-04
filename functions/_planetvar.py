@@ -285,7 +285,7 @@ class PlanetVar(UWFn):
                 and hasattr(self, '_minmax'):
             self._minmax.evaluate(self.substrate)
         if isinstance(self, _reduction.Reduction):
-            self.value = self.evaluate(lazy = True)[0]
+            self.value = self.evaluate(lazy = True)
 
     def _set_weakref(self):
         self.var._planetVar = weakref.ref(self)
@@ -320,13 +320,18 @@ class PlanetVar(UWFn):
     def _input_processing(self, evalInput):
         return evalInput
 
+    def _output_processing(self, evalOutput):
+        return evalOutput
+
     def evaluate(self, evalInput = None, lazy = False):
         if not lazy:
             self.update()
         if evalInput is None:
             evalInput = self.substrate
         evalInput = self._input_processing(evalInput)
-        return self.var.evaluate(evalInput)
+        evaluated = self.var.evaluate(evalInput)
+        evalOutput = self._output_processing(evaluated)
+        return evalOutput
 
     def __call__(self):
         self.update()

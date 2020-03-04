@@ -49,3 +49,15 @@ def ang(*args, **kwargs):
 def coang(*args, **kwargs):
     gradVar = _construct(*args, **kwargs)
     return _component.coang(gradVar, **kwargs)
+
+def x(*args, **kwargs):
+    gradVar = _construct(*args, **kwargs)
+    return _component.x(gradVar, **kwargs)
+
+def y(*args, **kwargs):
+    gradVar = _construct(*args, **kwargs)
+    return _component.y(gradVar, **kwargs)
+
+def z(*args, **kwargs):
+    gradVar = _construct(*args, **kwargs)
+    return _component.z(gradVar, **kwargs)

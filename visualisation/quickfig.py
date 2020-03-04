@@ -3,7 +3,7 @@ import glucifer
 import numpy as np
 import os
 
-from .. import functions as pfn
+from ..functions import normalise
 from ..utilities import message
 from ..functions import convert
 from .. import functions as pfn
@@ -22,7 +22,7 @@ class QuickFig(fig.Fig):
             self,
             *args,
             onMesh = True,
-            facecolour = 'white',
+            facecolour = 'black',
             edgecolour = 'white',
             colourBar = False,
             quality = 3.,
@@ -222,8 +222,8 @@ class QuickFig(fig.Fig):
 
     def _show(self):
         self.update()
-        for var in self.fittedvars:
-            message(var.varName)
+        # for var in self.fittedvars:
+        #     message(var.varName)
         self.fig.show()
 
     def _save(self, name, path, ext):

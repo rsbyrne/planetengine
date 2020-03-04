@@ -90,7 +90,14 @@ class System(Iterator):
 
         super().__init__(**kwargs)
 
-    # Iterator attributes:
+    def add_observer(self, observerClass = None, observerInputs = None):
+        if observerClass is None:
+            observerClass, observerInputs = self.defaultObserver
+        self.observer = observerClass(self, **observerInputs)
+        try: self.show = self.observer.show
+        except NameError: pass
+        try: self.report = self.observer.report
+        except NameError: pass
 
     def _initialise(self):
         for key, IC in sorted(self.configs.items()):

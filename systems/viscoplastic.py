@@ -1,4 +1,5 @@
 import math
+from collections import OrderedDict
 
 import underworld as uw
 fn, cd = uw.function, uw.conditions
@@ -6,6 +7,8 @@ fn, cd = uw.function, uw.conditions
 from planetengine.systems import System
 from planetengine.initials.sinusoidal import Sinusoidal
 from planetengine.initials.constant import Constant
+from planetengine import quickShow
+from planetengine.observers.basic import Basic
 
 class Viscoplastic(System):
 
@@ -156,6 +159,7 @@ class Viscoplastic(System):
         viscosityFn = fn.misc.min(eta0, fn.misc.max(viscosityFn, 1.))
         if nonLinear:
             viscosityFn = viscosityFn + 0. * velocityField[0]
+            yieldingFn = viscosityFn < creepViscFn
 
         ### SYSTEMS ###
 
@@ -230,6 +234,8 @@ class Viscoplastic(System):
             return dt
 
         super().__init__(locals(), **kwargs)
+
+    defaultObserver = (Basic, dict())
 
 ### ATTRIBUTES ###
 CLASS = Viscoplastic
