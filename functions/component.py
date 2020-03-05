@@ -22,7 +22,9 @@ class Component(_function.Function):
             compVec = inVar
         else:
             compVec = inVar.meshUtils.comps[component]
-        var = fn.math.dot(inVar, inVar)
+        var = fn.math.dot(inVar, compVec)
+        if component == 'mag':
+            var = fn.math.sqrt(var)
 
         self.stringVariants = {'component': component}
         self.inVars = [inVar]
