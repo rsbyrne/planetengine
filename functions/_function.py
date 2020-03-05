@@ -9,8 +9,8 @@ class Function(_planetvar.PlanetVar):
         self._check_inVars()
         self._detect_substrates()
         self._detect_attributes()
-        if not self.varType == 'constFn':
-            self._detect_scales_bounds()
+        # if not self.varType == 'constFn':
+        #     self._detect_scales_bounds()
         self._hashVars = self.inVars
 
         super().__init__(**kwargs)
