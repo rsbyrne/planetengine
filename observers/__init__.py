@@ -20,13 +20,15 @@ class Observer(Counter, Cycler):
         super().__init__(observee = LinkTo(self.observee), **kwargs)
 
         # Producer attributes:
-        self._pre_out_fns.append(self.update)
         self._outFns.append(self._out)
         self.analysers['chron'] = self.observee.chron
         self.outkeys.extend(sorted(self.analysers.keys()))
 
         # Cycler attributes:
         self._cycle_fns.append(self._observer_cycle)
+
+        # Counter attributes:
+        self._count_update_fns.append(self.update)
 
     def set_freq(self, freq):
         if isinstance(freq, Condition):
