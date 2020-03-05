@@ -26,9 +26,6 @@ class Gradient(_function.Function):
         self.parameters = []
         self.var = var
 
-        self.scales = [['.', '.']] * inVar.mesh.dim ** 2
-        self.bounds = [['.'] * inVar.mesh.dim ** 2] * inVar.varDim
-
         super().__init__(**kwargs)
 
 def default(*args, **kwargs):

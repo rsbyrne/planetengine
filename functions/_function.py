@@ -78,58 +78,58 @@ class Function(_planetvar.PlanetVar):
                 raise Exception
         self.vector = vector
 
-    def _detect_scales_bounds(self):
-        fields = []
-        for inVar in self.inVars:
-            if type(inVar) == _basetypes.Variable:
-                fields.append(inVar)
-            elif isinstance(inVar, Function):
-                fields.append(inVar)
-        inscales = []
-        inbounds = []
-        for inVar in fields:
-            if hasattr(inVar, 'scales'):
-                if inVar.varDim == self.varDim:
-                    inscales.append(inVar.scales)
-                else:
-                    inscales.append(inVar.scales * self.varDim)
-            else:
-                inscales.append(
-                    [['.', '.']] * self.varDim
-                    ) # i.e. perfectly free
-            if hasattr(inVar, 'bounds'):
-                if inVar.varDim == self.varDim:
-                    inbounds.append(inVar.bounds)
-                else:
-                    inbounds.append(inVar.bounds * self.varDim)
-            else:
-                inbounds.append(
-                    [['.'] * self.mesh.dim ** 2] * self.varDim
-                    ) # i.e. perfectly free
-        scales = []
-        for varDim in range(self.varDim):
-            fixed = not any([
-                inscale[varDim] == ['.', '.'] \
-                    for inscale in inscales
-                ])
-            if fixed:
-                scales.append('!')
-            else:
-                scales.append('.')
-        bounds = []
-        for varDim in range(self.varDim):
-            dimBounds = []
-            for index in range(self.mesh.dim ** 2):
-                fixed = not any([
-                    inbound[varDim][index] == '.' \
-                        for inbound in inbounds
-                    ])
-                if fixed:
-                    dimBounds.append('!')
-                else:
-                    dimBounds.append('.')
-            bounds.append(dimBounds)
-        if not hasattr(self, 'scales'):
-            self.scales = scales
-        if not hasattr(self, 'bounds'):
-            self.bounds = bounds
+    # def _detect_scales_bounds(self):
+    #     fields = []
+    #     for inVar in self.inVars:
+    #         if type(inVar) == _basetypes.Variable:
+    #             fields.append(inVar)
+    #         elif isinstance(inVar, Function):
+    #             fields.append(inVar)
+    #     inscales = []
+    #     inbounds = []
+    #     for inVar in fields:
+    #         if hasattr(inVar, 'scales'):
+    #             if inVar.varDim == self.varDim:
+    #                 inscales.append(inVar.scales)
+    #             else:
+    #                 inscales.append(inVar.scales * self.varDim)
+    #         else:
+    #             inscales.append(
+    #                 [['.', '.']] * self.varDim
+    #                 ) # i.e. perfectly free
+    #         if hasattr(inVar, 'bounds'):
+    #             if inVar.varDim == self.varDim:
+    #                 inbounds.append(inVar.bounds)
+    #             else:
+    #                 inbounds.append(inVar.bounds * self.varDim)
+    #         else:
+    #             inbounds.append(
+    #                 [['.'] * self.mesh.dim ** 2] * self.varDim
+    #                 ) # i.e. perfectly free
+    #     scales = []
+    #     for varDim in range(self.varDim):
+    #         fixed = not any([
+    #             inscale[varDim] == ['.', '.'] \
+    #                 for inscale in inscales
+    #             ])
+    #         if fixed:
+    #             scales.append('!')
+    #         else:
+    #             scales.append('.')
+    #     bounds = []
+    #     for varDim in range(self.varDim):
+    #         dimBounds = []
+    #         for index in range(self.mesh.dim ** 2):
+    #             fixed = not any([
+    #                 inbound[varDim][index] == '.' \
+    #                     for inbound in inbounds
+    #                 ])
+    #             if fixed:
+    #                 dimBounds.append('!')
+    #             else:
+    #                 dimBounds.append('.')
+    #         bounds.append(dimBounds)
+    #     if not hasattr(self, 'scales'):
+    #         self.scales = scales
+    #     if not hasattr(self, 'bounds'):
+    #         self.bounds = bounds
