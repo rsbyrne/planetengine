@@ -129,7 +129,7 @@ def animate(datas, name, outputPath = '.', overwrite = False):
     if not overwrite:
         if os.path.exists(outputFilename):
             raise Exception("Output file already exists!")
-    tempDir = os.path.join(outputPath, disk.tempname())
+    tempDir = os.path.join(outputPath, disk.tempname(_mpiignore_ = True))
     inputFilename = os.path.join(tempDir, '*.jpg')
     shutil.rmtree(tempDir, ignore_errors = True)
     os.makedirs(tempDir)
