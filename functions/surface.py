@@ -3,15 +3,16 @@ import numpy as np
 import underworld as uw
 fn = uw.function
 
-from . import _function
 from . import _convert
+from . import _reduction
+from . import _basetypes
 from ._construct import _construct as _master_construct
 
 def _construct(*args, **kwargs):
     func = _master_construct(Surface, *args, **kwargs)
     return func
 
-class Surface(_function.Function):
+class Surface(_reduction.Reduction):
 
     opTag = 'Surface'
 
@@ -19,58 +20,23 @@ class Surface(_function.Function):
 
         inVar = _convert.convert(inVar)
 
-        if inVar.substrate is None:
-            raise Exception
         if not hasattr(inVar, 'mesh'):
             raise Exception
-
-        # mesh = inVar.mesh
-        # if not type(mesh) == uw.mesh.FeMesh_Annulus:
-        #     raise Exception("Only supported for annulus at present.")
-        #
-        # radFn = \
-        #     (fn.math.dot(fn.input(), mesh.unitvec_r_Fn) - mesh.radialLengths[0]) \
-        #     / (mesh.radialLengths[1] - mesh.radialLengths[0])
-        #
-        # if surface == 'outer':
-        #     var = fn.branching.conditional([
-        #         (radFn >= 0.8, inVar),
-        #         (True, np.nan)
-        #         ])
-        # elif surface == 'inner':
-        #     var = fn.branching.conditional([
-        #         (radFn < 0.2, inVar),
-        #         (True, np.nan)
-        #         ])
-        # else:
-        #     raise Exception("That surface is not supported yet.")
 
         self._surface = \
             inVar.mesh.meshUtils.surfaces[surface]
 
-        var = inVar.mesh.add_variable(
-            inVar.varDim,
-            inVar.dType
-            )
+        def evalFn():
+            val = inVar.evaluate(self._surface)
+            return val.flatten()
+        var = _basetypes.Parameter(evalFn)
 
         self.stringVariants = {'surface': surface}
         self.inVars = [inVar]
-        self.parameters = []
+        self.parameters = [var]
         self.var = var
 
         super().__init__(**kwargs)
-
-    def _partial_update(self):
-        self.var.data[:] = \
-            [np.nan for dim in range(self.inVar.varDim)]
-        self.var.data[self._surface] = \
-            np.round(
-                self.inVar.evaluate(
-                    self.inVar.mesh.data[self._surface],
-                    lazy = True
-                    ),
-                6
-                )
 
 def default(*args, **kwargs):
     return _construct(*args, **kwargs)

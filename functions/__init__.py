@@ -14,7 +14,7 @@
 # from . import operations
 # from . import projection
 # from . import quantiles
-# from . import range
+# from . import ranger
 # from . import region
 # from . import select
 # from . import split

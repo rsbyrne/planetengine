@@ -11,7 +11,7 @@ def _construct(*args, **kwargs):
     func = _master_construct(Range, *args, **kwargs)
     return func
 
-class Range(_function.Function):
+class Ranger(_function.Function):
 
     opTag = 'Range'
 

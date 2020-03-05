@@ -39,3 +39,6 @@ class Constant(_basetypes.BaseTypes):
 
     def _check_hash(self, **kwargs):
         return hash((_planetvar._PLANETVAR_FLAG, self.opTag, str(self.value)))
+
+    def _output_processing(self, evalOutput):
+        return evalOutput.flatten()

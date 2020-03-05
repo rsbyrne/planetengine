@@ -4,7 +4,7 @@ from everest import mpi
 
 from planetengine.observers import Observer
 from planetengine.functions import \
-    integral, gradient, operations, component, getstat
+    integral, gradient, operations, component, getstat, comparison
 from planetengine.visualisation.raster import Raster
 from planetengine.visualisation.quickfig import QuickFig
 
@@ -27,45 +27,54 @@ class Basic(Observer):
         temp = observee.locals[tempKey]
         cond = observee.locals[condKey]
         baselines['condTemp'] = integral.volume(cond).evaluate()
-        radGrad = gradient.rad(temp)
-        surfInt = integral.outer(radGrad)
-        radGradRef = gradient.rad(cond)
-        surfIntRef = integral.outer(radGradRef)
-        Nu = surfInt / surfIntRef
+        adiabatic = gradient.rad(temp)
+        conductive = gradient.rad(cond)
+        self.Nus = Nus = adiabatic / conductive
+        Nu = integral.outer(Nus)
         analysers['Nu'] = self.Nu = Nu
+        # surfInt = integral.outer(radGrad)
+        # surfIntRef = integral.outer(radGradRef)
+        # Nu = surfInt / surfIntRef
+
         theta = temp - cond
         avTemp = integral.volume(temp)
         avTheta = integral.volume(theta)
-        analysers['avTheta'] = self.avTheta = avTheta
-        analysers['minTheta'] = getstat.mins(theta)
-        analysers['rangeTheta'] = getstat.ranges(theta)
+        analysers['theta_av'] = self.avTheta = avTheta
+        analysers['theta_min'] = getstat.mins(theta)
+        analysers['theta_range'] = getstat.ranges(theta)
         rasterArgs.append(theta)
 
         vel = observee.locals[velKey]
+        velMag = component.mag(vel)
         VRMS = operations.sqrt(integral.volume(component.sq(vel)))
         analysers['VRMS'] = self.VRMS = VRMS
+        analysers['velMag_range'] = getstat.ranges(velMag)
         # angVel = component.ang(vel)
         # surfVel = integral.outer(angVel)
 
         if viscKey in observee.locals.__dict__:
             visc = observee.locals[viscKey]
             avVisc = integral.volume(visc)
-            analysers['avVisc'] = self.avVisc = avVisc
-
+            analysers['visc_av'] = self.avVisc = avVisc
+            minVisc, maxVisc = getstat.mins(visc), getstat.maxs(visc)
+            baselines['visc_min'] = minVisc.evaluate()
+            baselines['visc_max'] = maxVisc.evaluate()
         if plasticViscKey in observee.locals.__dict__:
             plastic = observee.locals[plasticViscKey]
-            yielding = plastic < visc
+            yielding = comparison.isequal(visc, plastic)
             yieldFrac = integral.volume(yielding)
-            analysers['yielding'] = self.yieldFrac = yieldFrac
+            analysers['yieldFrac'] = self.yieldFrac = yieldFrac
             logInvPlastic = operations.log(1. / plastic)
-            analysers['minLogInvPlastic'] = getstat.mins(logInvPlastic)
-            analysers['rangeLogInvPlastic'] = getstat.ranges(logInvPlastic)
+            analysers['logInvPlastic_av'] = integral.volume(logInvPlastic)
+            analysers['logInvPlastic_min'] = getstat.mins(logInvPlastic)
+            analysers['logInvPlastic_range'] = getstat.ranges(logInvPlastic)
             rasterArgs.append(logInvPlastic)
         if viscKey in observee.locals.__dict__:
             stress = visc * vel
             logMagStress = operations.log(component.mag(stress))
-            analysers['minLogMagStress'] = getstat.mins(logMagStress)
-            analysers['rangeLogMagStress'] = getstat.ranges(logMagStress)
+            analysers['logMagStress_av'] = integral.volume(logMagStress)
+            analysers['logMagStress_min'] = getstat.mins(logMagStress)
+            analysers['logMagStress_range'] = getstat.ranges(logMagStress)
             rasterArgs.append(logMagStress)
         else:
             velMag = component.mag(vel)

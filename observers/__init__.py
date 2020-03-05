@@ -21,17 +21,11 @@ class Observer(Counter, Cycler):
 
         # Producer attributes:
         self._outFns.append(self._out)
+        self.analysers['chron'] = self.observee.chron
         self.outkeys.extend(sorted(self.analysers.keys()))
 
         # Cycler attributes:
         self._cycle_fns.append(self._observer_cycle)
-
-        # Local attributes:
-        self.allDict = {
-            'count': self.count,
-            **self.analysers
-            }
-        self._max_keylen = max([len(key) for key in self.outkeys])
 
     def set_freq(self, freq):
         if isinstance(freq, Condition):
@@ -65,7 +59,12 @@ class Observer(Counter, Cycler):
             yield analyser.evaluate()
 
     def __str__(self):
+        allDict = {
+            'count': self.count,
+            **self.analysers
+            }
+        _max_keylen = max([len(key) for key in self.outkeys])
         return '\n'.join([
-            key.rjust(self._max_keylen) + ': ' + str(self.allDict[key]) \
+            key.rjust(_max_keylen) + ': ' + str(allDict[key]) \
                 for key in self.outkeys
             ])

@@ -19,7 +19,4 @@ class Reduction(_planetvar.PlanetVar):
         super().__init__(**kwargs)
 
     def _output_processing(self, evalOutput):
-        val = evalOutput
-        for layer in evalOutput.shape:
-            val = val[0]
-        return np.array(val)
+        return evalOutput.flatten()
