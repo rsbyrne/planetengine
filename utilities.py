@@ -47,8 +47,6 @@ def get_substrates(var):
         swarms = [var,]
     else:
         raise Exception("Input not recognised.")
-    meshes = list(sorted(meshes))
-    swarms = list(sorted(swarms))
     return meshes, swarms
 
 def get_prioritySubstrate(var):

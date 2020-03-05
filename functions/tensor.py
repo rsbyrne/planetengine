@@ -17,8 +17,7 @@ class Tensor(_function.Function):
     def __init__(self, inVar, *args, part = 'symmetric', **kwargs):
 
         inVar = _convert.convert(inVar)
-        if not inVar.varType == 'meshVar':
-            inVar = _projection.default(inVar)
+
         tensor = getattr(fn.tensor, part)
         var = tensor(inVar)
 

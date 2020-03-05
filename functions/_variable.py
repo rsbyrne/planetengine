@@ -50,6 +50,10 @@ class Variable(_basetypes.BaseTypes):
         else:
             raise Exception
 
+        if not hasattr(self.mesh, 'dim'): # hence is actually a submesh:
+            self.mesh.dim = len(self.mesh.data.shape)
+        self.meshUtils = meshutils.get_meshUtils(self.mesh)
+
         self._hashVars = [var]
 
         sample_data = self.data[0:1]
@@ -65,8 +69,6 @@ class Variable(_basetypes.BaseTypes):
             if not self.varDim == self.mesh.dim:
                 raise Exception
         self.vector = vector
-
-        self.meshUtils = meshutils.get_meshUtils(self.mesh)
 
         if hasattr(var, 'scales'):
             self.scales = var.scales

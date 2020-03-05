@@ -11,17 +11,11 @@ import random
 
 from . import mpi
 
-def get_meshUtils(var):
-    try:
-        mesh = var
-        if not hasattr(mesh, 'meshUtils'):
-            # POTENTIAL CIRCULAR REFERENCE
-            mesh.meshUtils = MeshUtils(mesh)
-        return mesh.meshUtils
-    except:
-        raise Exception("Not supported yet: provide mesh.")
-        # mesh = get_mesh(var)
-        # return get_meshUtils(mesh)
+def get_meshUtils(mesh):
+    if not hasattr(mesh, 'meshUtils'):
+        # POTENTIAL CIRCULAR REFERENCE
+        mesh.meshUtils = MeshUtils(mesh)
+    return mesh.meshUtils
 
 def makeLocalAnnulus(mesh):
     for proc in range(mpi.size):
@@ -59,6 +53,7 @@ class MeshUtils:
             ):
 
         if type(mesh) == uw.mesh.FeMesh_Cartesian:
+            meshtype = 'normal'
 
             self.flip = [False, False]
 
@@ -89,6 +84,7 @@ class MeshUtils:
                 self.surfaces['back'] = mesh.specialSets['MaxK_VertexSet']
 
         elif type(mesh) == uw.mesh.FeMesh_Annulus:
+            meshtype = 'normal'
 
             # self.flip = [True, False] # left to right, bottom to top
             # _flip_cfs = [int(not boolean) * 2. - 1. for boolean in self.flip]
@@ -113,68 +109,73 @@ class MeshUtils:
                 'all': mesh.specialSets['AllWalls_VertexSet']
                 }
         else:
-            raise Exception("That kind of mesh is not supported yet.")
+            meshtype = 'abnormal'
+            self.comps = {}
+            self.surfaces = {}
 
-        self.wallsList = [
-            self.surfaces['outer'],
-            self.surfaces['inner'],
-            self.surfaces['left'],
-            self.surfaces['right']
-            ]
-        try:
-            wallsList.append(self.surfaces['front'])
-            wallsList.append(self.surfaces['back'])
-        except:
-            pass
+        if meshtype == 'normal':
+            self.wallsList = [
+                self.surfaces['outer'],
+                self.surfaces['inner'],
+                self.surfaces['left'],
+                self.surfaces['right']
+                ]
+            try:
+                wallsList.append(self.surfaces['front'])
+                wallsList.append(self.surfaces['back'])
+            except:
+                pass
 
-        self.__dict__.update(self.comps)
-        self.__dict__.update(self.surfaces)
+            self.__dict__.update(self.comps)
+            self.__dict__.update(self.surfaces)
 
-        self.scales = get_scales(mesh.data)
+            self.scales = get_scales(mesh.data)
 
-        volInt = uw.utils.Integral(
-            1.,
-            mesh,
-            )
-        outerInt = uw.utils.Integral(
-            1.,
-            mesh,
-            integrationType = 'surface',
-            surfaceIndexSet = self.outer
-            )
-        innerInt = uw.utils.Integral(
-            1.,
-            mesh,
-            integrationType = 'surface',
-            surfaceIndexSet = self.inner
-            )
+            volInt = uw.utils.Integral(
+                1.,
+                mesh,
+                )
+            outerInt = uw.utils.Integral(
+                1.,
+                mesh,
+                integrationType = 'surface',
+                surfaceIndexSet = self.outer
+                )
+            innerInt = uw.utils.Integral(
+                1.,
+                mesh,
+                integrationType = 'surface',
+                surfaceIndexSet = self.inner
+                )
 
-        deformable = False # CHANGE WHEN DEFORMABLE MESHES SUPPORTED
-        if not deformable:
+            deformable = False # CHANGE WHEN DEFORMABLE MESHES SUPPORTED
+            if not deformable:
 
-            volIntVal = volInt.evaluate()[0]
-            outerIntVal = outerInt.evaluate()[0]
-            innerIntVal = innerInt.evaluate()[0]
+                volIntVal = volInt.evaluate()[0]
+                outerIntVal = outerInt.evaluate()[0]
+                innerIntVal = innerInt.evaluate()[0]
 
-            self.integral = lambda: volIntVal
-            self.integral_outer = lambda: outerIntVal
-            self.integral_inner = lambda: innerIntVal
+                self.integral = lambda: volIntVal
+                self.integral_outer = lambda: outerIntVal
+                self.integral_inner = lambda: innerIntVal
 
-        else:
+            else:
 
-            self.integral = lambda: volInt.evaluate()[0]
-            self.integral_outer = lambda: outerInt.evaluate()[0]
-            self.integral_inner = lambda: innerInt.evaluate()[0]
+                self.integral = lambda: volInt.evaluate()[0]
+                self.integral_outer = lambda: outerInt.evaluate()[0]
+                self.integral_inner = lambda: innerInt.evaluate()[0]
 
-        self.integrals = {
-            'inner': self.integral_inner,
-            'outer': self.integral_outer,
-            'volume': self.integral,
-            }
+            self.integrals = {
+                'inner': self.integral_inner,
+                'outer': self.integral_outer,
+                'volume': self.integral,
+                }
 
-        xs = np.linspace(mesh.data[:,0].min(), mesh.data[:,0].max(), 100)
-        ys = np.linspace(mesh.data[:,1].min(), mesh.data[:,1].max(), 100)
-        self.cartesianScope = np.array(np.meshgrid(xs, ys)).T.reshape([-1, 2])
+            xs = np.linspace(mesh.data[:,0].min(), mesh.data[:,0].max(), 100)
+            ys = np.linspace(mesh.data[:,1].min(), mesh.data[:,1].max(), 100)
+            self.cartesianScope = np.array(
+                np.meshgrid(xs, ys)).T.reshape([-1, 2]
+                )
 
         self.mesh = weakref.ref(mesh)
 
