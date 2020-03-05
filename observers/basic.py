@@ -1,10 +1,14 @@
+import numpy as np
+
 from underworld import function as fn
 
 from everest import mpi
 
 from planetengine.observers import Observer
 from planetengine.functions import \
-    integral, gradient, operations, component, getstat, comparison
+    integral, gradient, operations, \
+    component, getstat, comparison, \
+    surface, split, tensor
 from planetengine.visualisation.raster import Raster
 from planetengine.visualisation.quickfig import QuickFig
 
@@ -15,6 +19,8 @@ class Basic(Observer):
             tempKey = 'temperatureField',
             condKey = 'conductionField',
             velKey = 'velocityField',
+            vcKey = 'vc',
+            pressureKey = 'pressureField',
             viscKey = 'viscosityFn',
             plasticViscKey = 'plasticViscFn',
             **kwargs
@@ -27,58 +33,74 @@ class Basic(Observer):
         temp = observee.locals[tempKey]
         cond = observee.locals[condKey]
         baselines['condTemp'] = integral.volume(cond).evaluate()
-        adiabatic = gradient.rad(temp)
-        conductive = gradient.rad(cond)
-        self.Nus = Nus = adiabatic / conductive
-        Nu = integral.outer(Nus)
-        analysers['Nu'] = self.Nu = Nu
-        # surfInt = integral.outer(radGrad)
-        # surfIntRef = integral.outer(radGradRef)
-        # Nu = surfInt / surfIntRef
+        adiabatic, conductive = gradient.rad(temp), gradient.rad(cond)
+        thetaGrad = adiabatic / conductive
+        Nu = integral.outer(thetaGrad)
+        analysers['Nu'] = Nu
+        thetaGradOuter = surface.outer(thetaGrad)
+        analysers['Nu_min'] = getstat.mins(thetaGradOuter)
+        analysers['Nu_range'] = getstat.ranges(thetaGradOuter)
 
         theta = temp - cond
         avTemp = integral.volume(temp)
         avTheta = integral.volume(theta)
-        analysers['theta_av'] = self.avTheta = avTheta
+        analysers['theta_av'] = avTheta
         analysers['theta_min'] = getstat.mins(theta)
         analysers['theta_range'] = getstat.ranges(theta)
         rasterArgs.append(theta)
 
         vel = observee.locals[velKey]
+        vc = observee.locals[vcKey]
         velMag = component.mag(vel)
         VRMS = operations.sqrt(integral.volume(component.sq(vel)))
-        analysers['VRMS'] = self.VRMS = VRMS
+        analysers['VRMS'] = VRMS
         analysers['velMag_range'] = getstat.ranges(velMag)
-        # angVel = component.ang(vel)
-        # surfVel = integral.outer(angVel)
+        velAng = component.ang(vel)
+        velAngOuter = surface.outer(velAng)
+        analysers['velAng_outer_av'] = integral.outer(velAng)
+        analysers['velAng_outer_min'] = getstat.mins(velAngOuter)
+        analysers['velAng_outer_range'] = getstat.ranges(velAngOuter)
+        logVelMag = operations.log(velMag)
+        rasterArgs.append(logVelMag)
 
         if viscKey in observee.locals.__dict__:
             visc = observee.locals[viscKey]
             avVisc = integral.volume(visc)
-            analysers['visc_av'] = self.avVisc = avVisc
-            minVisc, maxVisc = getstat.mins(visc), getstat.maxs(visc)
-            baselines['visc_min'] = minVisc.evaluate()
-            baselines['visc_max'] = maxVisc.evaluate()
+            analysers['visc_av'] = avVisc
+            analysers['visc_min'] = minVisc
+            analysers['visc_max'] = maxVisc
+            logVisc = operations.log(visc)
+        else:
+            visc = 1.
         if plasticViscKey in observee.locals.__dict__:
             plastic = observee.locals[plasticViscKey]
             yielding = comparison.isequal(visc, plastic)
             yieldFrac = integral.volume(yielding)
-            analysers['yieldFrac'] = self.yieldFrac = yieldFrac
-            logInvPlastic = operations.log(1. / plastic)
-            analysers['logInvPlastic_av'] = integral.volume(logInvPlastic)
-            analysers['logInvPlastic_min'] = getstat.mins(logInvPlastic)
-            analysers['logInvPlastic_range'] = getstat.ranges(logInvPlastic)
-            rasterArgs.append(logInvPlastic)
-        if viscKey in observee.locals.__dict__:
-            stress = visc * vel
-            logMagStress = operations.log(component.mag(stress))
-            analysers['logMagStress_av'] = integral.volume(logMagStress)
-            analysers['logMagStress_min'] = getstat.mins(logMagStress)
-            analysers['logMagStress_range'] = getstat.ranges(logMagStress)
-            rasterArgs.append(logMagStress)
-        else:
-            velMag = component.mag(vel)
-            rasterArgs.append(velMag)
+            analysers['yieldFrac'] = yieldFrac
+
+        pressure = observee.locals[pressureKey]
+        stressRad = 2. * visc * gradient.rad(component.rad(vel)) - pressure
+        stressAng = 2. * visc * gradient.ang(component.ang(vel)) - pressure
+        stressMag = 2. * visc * gradient.ang(component.ang(vel)) - pressure
+        stressRadOuter = surface.outer(stressRad)
+        stressAngOuter = surface.outer(stressAng)
+        analysers['stressRad_outer_av'] = integral.outer(stressRad)
+        analysers['stressRad_outer_min'] = getstat.mins(stressRadOuter)
+        analysers['stressRad_outer_range'] = getstat.ranges(stressRadOuter)
+        analysers['stressAng_outer_av'] = integral.outer(stressAng)
+        analysers['stressAng_outer_min'] = getstat.mins(stressAngOuter)
+        analysers['stressAng_outer_range'] = getstat.ranges(stressAngOuter)
+
+        strainRate = 2. * tensor.second_invariant(
+            tensor.symmetric(gradient(vc))
+            )
+        strainRate_outer = surface.outer(strainRate)
+        analysers['strainRate_outer_av'] = integral.outer(strainRate)
+        analysers['strainRate_outer_min'] = getstat.mins(strainRate)
+        analysers['strainRate_outer_range'] = getstat.ranges(strainRate)
+        logStrainRate = operations.log(strainRate)
+        rasterArgs.append(strainRate)
+
         raster = Raster(*rasterArgs)
         analysers['raster'] = self.raster = raster
 
@@ -87,8 +109,8 @@ class Basic(Observer):
         self.baselines = baselines
 
         visVars = [temp, vel]
-        try: visVars.append(visc)
-        except NameError: pass
+        if not visc == 1:
+            visVars.append(visc)
         self.fig = QuickFig(*visVars)
 
         super().__init__(baselines = self.baselines, **kwargs)
