@@ -38,8 +38,13 @@ class Parameter(_basetypes.BaseTypes):
     def _check_hash(self, **kwargs):
         return random.randint(0, 1e18)
 
+    def _output_processing(self, evalOutput):
+        val = evalOutput.flatten()
+        if len(val) == 1: return val[0]
+        else: return val
+
     def _update_attributes(self):
-        self.value = self.var.evaluate()[0]
+        self.value = self.var.evaluate()
         # self.data = np.array([[val,] for val in self.value])
 
     def _partial_update(self):

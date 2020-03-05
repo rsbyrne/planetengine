@@ -19,4 +19,6 @@ class Reduction(_planetvar.PlanetVar):
         super().__init__(**kwargs)
 
     def _output_processing(self, evalOutput):
-        return evalOutput.flatten()
+        val = evalOutput.flatten()
+        if len(val) == 1: return val[0]
+        else: return val

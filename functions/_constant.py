@@ -41,4 +41,6 @@ class Constant(_basetypes.BaseTypes):
         return hash((_planetvar._PLANETVAR_FLAG, self.opTag, str(self.value)))
 
     def _output_processing(self, evalOutput):
-        return evalOutput.flatten()
+        val = evalOutput.flatten()
+        if len(val) == 1: return val[0]
+        else: return val

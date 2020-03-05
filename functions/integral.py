@@ -17,13 +17,14 @@ class Integral(_reduction.Reduction):
 
     def __init__(self, inVar, *args, surface = 'volume', **kwargs):
 
+        inVar = _convert.convert(inVar)
+
         if type(inVar) == _surface.Surface:
             raise Exception(
                 "Surface type not accepted; try Integral.auto method."
                 )
         elif isinstance(inVar, _reduction.Reduction):
             raise Exception
-        inVar = _convert.convert(inVar)
 
         # inVar = _handlenan.zeroes(inVar)
 
