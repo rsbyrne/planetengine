@@ -30,7 +30,8 @@ def _construct(
             **stringVariants
             )
     else:
-        message('Old object found - reusing.')
+        pass
+        # message('Old object found - reusing.')
 
     for inVar in inVars:
         try:

@@ -47,6 +47,15 @@ def get_substrates(var):
         swarms = [var,]
     else:
         raise Exception("Input not recognised.")
+    procmeshes = []
+    for mesh in meshes:
+        try:
+            subMesh = mesh.subMesh
+            procmeshes.append(mesh)
+        except AttributeError:
+            pass
+    if len(procmeshes) > 0:
+        meshes = procmeshes
     return meshes, swarms
 
 def get_prioritySubstrate(var):

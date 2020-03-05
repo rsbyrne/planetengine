@@ -8,7 +8,7 @@ from planetengine.observers import Observer
 from planetengine.functions import \
     integral, gradient, operations, \
     component, getstat, comparison, \
-    surface, split, tensor
+    surface, split, tensor, fourier
 from planetengine.visualisation.raster import Raster
 from planetengine.visualisation.quickfig import QuickFig
 
@@ -40,6 +40,8 @@ class Basic(Observer):
         thetaGradOuter = surface.outer(thetaGrad)
         analysers['Nu_min'] = getstat.mins(thetaGradOuter)
         analysers['Nu_range'] = getstat.ranges(thetaGradOuter)
+        NuFreq = fourier.default(thetaGradOuter)
+        analysers['Nu_freq'] = NuFreq
 
         theta = temp - cond
         avTemp = integral.volume(temp)
@@ -67,9 +69,8 @@ class Basic(Observer):
             visc = observee.locals[viscKey]
             avVisc = integral.volume(visc)
             analysers['visc_av'] = avVisc
-            analysers['visc_min'] = minVisc
-            analysers['visc_max'] = maxVisc
-            logVisc = operations.log(visc)
+            analysers['visc_min'] = getstat.mins(visc)
+            analysers['visc_range'] = getstat.ranges(visc)
         else:
             visc = 1.
         if plasticViscKey in observee.locals.__dict__:
@@ -92,7 +93,7 @@ class Basic(Observer):
         analysers['stressAng_outer_range'] = getstat.ranges(stressAngOuter)
 
         strainRate = 2. * tensor.second_invariant(
-            tensor.symmetric(gradient(vc))
+            tensor.symmetric(gradient.default(vc))
             )
         strainRate_outer = surface.outer(strainRate)
         analysers['strainRate_outer_av'] = integral.outer(strainRate)
