@@ -7,7 +7,7 @@ from . import component as _component
 from . import projection as _projection
 
 def _construct(*args, **kwargs):
-    func = _master_construct(Gradient, *args, **kwargs)
+    func = _master_construct(Tensor, *args, **kwargs)
     return func
 
 class Tensor(_function.Function):
