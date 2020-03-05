@@ -7,6 +7,7 @@ from . import _convert
 from . import _reduction
 from . import _basetypes
 from ._construct import _construct as _master_construct
+from ..utilities import globalise_array
 
 def _construct(*args, **kwargs):
     func = _master_construct(Surface, *args, **kwargs)
@@ -28,6 +29,7 @@ class Surface(_reduction.Reduction):
 
         def evalFn():
             val = inVar.evaluate(self._surface)
+            val = globalise_array(val, self._surface)
             return val.flatten()
         var = _basetypes.Parameter(evalFn)
 
