@@ -9,7 +9,7 @@ from planetengine.functions import \
     integral, gradient, operations, \
     component, getstat, comparison, \
     surface, split, tensor, \
-    fourier, stream
+    fourier, stream, conduction
 from planetengine.visualisation.raster import Raster
 from planetengine.visualisation.quickfig import QuickFig
 
@@ -18,12 +18,15 @@ class Basic(Observer):
     def __init__(self,
             observee,
             tempKey = 'temperatureField',
-            condKey = 'conductionField',
             velKey = 'velocityField',
             vcKey = 'vc',
             pressureKey = 'pressureField',
             viscKey = 'viscosityFn',
             plasticViscKey = 'plasticViscFn',
+            heatingKey = 'heatingFn',
+            diffKey = 'diffusivityFn',
+            aspectKey = 'aspect',
+            fluxKey = 'flux',
             **kwargs
             ):
 
@@ -32,7 +35,16 @@ class Basic(Observer):
         rasterArgs = []
 
         temp = observee.locals[tempKey]
-        cond = observee.locals[condKey]
+
+        mesh = temp.mesh
+        flux = observee.locals[fluxKey]
+        diff = observee.locals[diffKey]
+        heating = observee.locals[heatingKey]
+        if flux is None:
+            cond = conduction.default(temp, heating, diff)
+        else:
+            cond = conduction.inner(temp, heating, diff, flux)
+
         baselines['condTemp'] = integral.volume(cond).evaluate()
         adiabatic, conductive = gradient.rad(temp), gradient.rad(cond)
         thetaGrad = adiabatic / conductive
@@ -66,17 +78,19 @@ class Basic(Observer):
 
         if viscKey in observee.locals.__dict__:
             visc = observee.locals[viscKey]
-            avVisc = integral.volume(visc)
-            analysers['visc_av'] = avVisc
-            analysers['visc_min'] = getstat.mins(visc)
-            analysers['visc_range'] = getstat.ranges(visc)
+            if not type(visc) is fn.misc.constant:
+                avVisc = integral.volume(visc)
+                analysers['visc_av'] = avVisc
+                analysers['visc_min'] = getstat.mins(visc)
+                analysers['visc_range'] = getstat.ranges(visc)
         else:
             visc = 1.
         if plasticViscKey in observee.locals.__dict__:
             plastic = observee.locals[plasticViscKey]
-            yielding = comparison.isequal(visc, plastic)
-            yieldFrac = integral.volume(yielding)
-            analysers['yieldFrac'] = yieldFrac
+            if not type(plastic) is fn.misc.constant:
+                yielding = comparison.isequal(visc, plastic)
+                yieldFrac = integral.volume(yielding)
+                analysers['yieldFrac'] = yieldFrac
 
         pressure = observee.locals[pressureKey]
         stressRad = 2. * visc * gradient.rad(component.rad(vel)) - pressure
@@ -102,7 +116,8 @@ class Basic(Observer):
         streamFn = stream.default(vc)
         rasterArgs.append(streamFn)
 
-        raster = Raster(*rasterArgs, aspect = observee.locals.aspect)
+        aspect = observee.locals[aspectKey]
+        raster = Raster(*rasterArgs, aspect = aspect)
         analysers['raster'] = self.raster = raster
 
         self.observee, self.analysers = observee, analysers
