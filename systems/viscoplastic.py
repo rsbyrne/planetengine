@@ -122,21 +122,18 @@ class Viscoplastic(System):
             temperatureField.bounds = [[0., '.', '.', '.']]
 
         if flux is None:
-            conductionField.data[outer], conductionField.data[inner] = 0., 1.
-            tempBC = cd.DirichletCondition(temperatureField, (inner + outer,))
-            condBC = cd.DirichletCondition(conductionField, (inner + outer,))
-            tempBCs, condBCs = [tempBC,], [condBC,]
+            templasticViscKeypBC = cd.DirichletCondition(temperatureField, (inner + outer,))
+            tempBCs = [tempBC,]
         else:
-            conductionField.data[outer] = 1.
             tempBC = cd.DirichletCondition(temperatureField, (outer,))
-            condBC = cd.DirichletCondition(conductionField, (outer,))
             tempFluxBC = cd.NeumannCondition(temperatureField, (inner,), flux)
-            condFluxBC = cd.NeumannCondition(conductionField, (inner,), flux)
-            tempBCs, condBCs = [tempBC, tempFluxBC], [condBC, condFluxBC]
+            tempBCs = [tempBC, tempFluxBC]
 
         ### FUNCTIONS ###
 
         buoyancyFn = alpha * temperatureField
+        heatingFn = fn.misc.constant(H)
+        diffusivityFn = fn.misc.constant(kappa)
 
         ### RHEOLOGY ###
 
@@ -154,14 +151,6 @@ class Viscoplastic(System):
         viscosityFn = viscosityFn + 0. * velocityField[0]
 
         ### SYSTEMS ###
-
-        conductive = uw.systems.SteadyStateHeat(
-            temperatureField = conductionField,
-            fn_diffusivity = kappa,
-            fn_heating = H,
-            conditions = condBCs
-            )
-        conductiveSolver = uw.systems.Solver(conductive)
 
         stokes = uw.systems.Stokes(
             velocityField = velocityField,
@@ -182,14 +171,12 @@ class Viscoplastic(System):
             phiField = temperatureField,
             phiDotField = temperatureDotField,
             velocityField = vc,
-            fn_diffusivity = kappa,
-            fn_sourceTerm = H,
+            fn_diffusivity = diffusivityFn,
+            fn_sourceTerm = heatingFn,
             conditions = tempBCs
             )
 
         ### SOLVING ###
-
-        conductiveSolver.solve()
 
         vc_eqNum = uw.systems.sle.EqNumber(vc, False)
         vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
