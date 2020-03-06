@@ -15,7 +15,8 @@ class Viscoplastic(System):
         'mgLevels'
         }
     paramsKeys = {
-        'alpha', 'aspect', 'eta0', 'f', 'flux', 'H', 'kappa', 'tau0', 'tau1'
+        'alpha', 'aspect', 'etaDelta', 'etaRef', 'f', 'flux', 'H', 'kappa',
+        'tauDelta', 'tauRef'
         }
     configsKeys = {
         'temperatureField', 'temperatureDotField'
@@ -33,13 +34,14 @@ class Viscoplastic(System):
             # PARAMS
             alpha = 1e7,
             aspect = 1.,
-            eta0 = 3e4,
+            etaDelta = 3e4,
+            etaRef = 1.,
             f = 1.,
             flux = None,
             H = 0.,
             kappa = 1.,
-            tau0 = 4e5,
-            tau1 = 1e7,
+            tauDelta = 1e7,
+            tauRef = 4e5,
             # CONFIGS
             temperatureField = Sinusoidal(),
             temperatureDotField = None,
@@ -138,16 +140,17 @@ class Viscoplastic(System):
 
         ### RHEOLOGY ###
 
-        creepViscFn = fn.math.pow(eta0, 1. - temperatureField)
+        surfEta = etaRef + etaDelta
+        creepViscFn = etaRef + fn.math.pow(etaDelta, 1. - temperatureField)
 
         depthFn = mesh.radialLengths[1] - mesh.radiusFn
-        tau = tau0 + depthFn * tau1
+        tau = tauRef + depthFn * tauDelta
         symmetric = fn.tensor.symmetric(vc.fn_gradient)
         secInvFn = fn.tensor.second_invariant(symmetric)
         plasticViscFn = tau / (2. * secInvFn + 1e-18)
 
         viscosityFn = fn.misc.min(creepViscFn, plasticViscFn)
-        viscosityFn = fn.misc.min(eta0, fn.misc.max(viscosityFn, 1.))
+        viscosityFn = fn.misc.min(surfEta, fn.misc.max(viscosityFn, etaRef))
         viscosityFn = viscosityFn + 0. * velocityField[0]
 
         ### SYSTEMS ###

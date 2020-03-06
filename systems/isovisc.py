@@ -15,7 +15,7 @@ class Isovisc(System):
         'mgLevels'
         }
     paramsKeys = {
-        'alpha', 'aspect', 'eta0', 'f', 'flux', 'H', 'kappa', 'tau0', 'tau1'
+        'alpha', 'aspect', 'eta', 'f', 'flux', 'H', 'kappa'
         }
     configsKeys = {
         'temperatureField', 'temperatureDotField'
@@ -33,6 +33,7 @@ class Isovisc(System):
             # PARAMS
             alpha = 1e7,
             aspect = 1.,
+            eta = 1.,
             f = 1.,
             flux = None,
             H = 0.,
@@ -147,7 +148,7 @@ class Isovisc(System):
             velocityField = velocityField,
             pressureField = pressureField,
             conditions = velBCs,
-            fn_viscosity = 1.,
+            fn_viscosity = eta,
             fn_bodyforce = buoyancyFn * mesh.unitvec_r_Fn,
             _removeBCs = False,
             )

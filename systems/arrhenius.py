@@ -15,7 +15,7 @@ class Arrhenius(System):
         'mgLevels'
         }
     paramsKeys = {
-        'alpha', 'aspect', 'eta0', 'f', 'flux', 'H', 'kappa', 'tau0', 'tau1'
+        'alpha', 'aspect', 'etaDelta', 'etaRef', 'f', 'flux', 'H', 'kappa'
         }
     configsKeys = {
         'temperatureField', 'temperatureDotField'
@@ -33,7 +33,8 @@ class Arrhenius(System):
             # PARAMS
             alpha = 1e7,
             aspect = 1.,
-            eta0 = 3e4,
+            etaDelta = 3e4,
+            etaRef = 1.,
             f = 0.54,
             flux = None,
             H = 0.,
@@ -136,8 +137,9 @@ class Arrhenius(System):
 
         ### RHEOLOGY ###
 
-        viscosityFn = fn.math.pow(eta0, 1. - temperatureField)
-        viscosityFn = fn.misc.min(eta0, fn.misc.max(viscosityFn, 1.))
+        surfEta = etaRef + etaDelta
+        viscosityFn = etaRef + fn.math.pow(etaDelta, 1. - temperatureField)
+        viscosityFn = fn.misc.min(surfEta, fn.misc.max(viscosityFn, etaRef))
 
         ### SYSTEMS ###
 
