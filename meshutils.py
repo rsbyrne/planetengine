@@ -108,6 +108,12 @@ class MeshUtils:
                 'right': mesh.specialSets['MinJ_VertexSet'],
                 'all': mesh.specialSets['AllWalls_VertexSet']
                 }
+            self.surfaces['ang'] = \
+                self.surfaces['left'] \
+                + self.surfaces['right']
+            self.surfaces['rad'] = \
+                self.surfaces['inner'] \
+                + self.surfaces['outer']
         else:
             meshtype = 'abnormal'
             self.comps = {}
