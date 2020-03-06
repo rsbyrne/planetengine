@@ -87,7 +87,8 @@ def get_mode(*bands):
     return mode, bands
 
 class Raster(fig.Fig):
-    def __init__(self, *bands, size = (256, 256), **kwargs):
+    def __init__(self, *bands, aspect = 1., height = 256, **kwargs):
+        size = (int(aspect * height), height)
         mode, ignoreme = get_mode(*bands)
         self.dataObjs = [Data(band, size = size) for band in bands]
         self.shape = [*size[::-1], len(self.dataObjs)]
@@ -123,7 +124,9 @@ class Raster(fig.Fig):
         return self.img.resize(size)
 
 @mpi.dowrap
-def animate(datas, name, outputPath = '.', overwrite = False):
+def animate(datas, name = None, outputPath = '.', overwrite = False):
+    if name is None:
+        name = disk.tempname(_mpiignore_ = True)
     outputPath = os.path.abspath(outputPath)
     outputFilename = os.path.join(outputPath, name + '.mp4')
     if not overwrite:
@@ -163,3 +166,4 @@ def animate(datas, name, outputPath = '.', overwrite = False):
             )
     finally:
         shutil.rmtree(tempDir, ignore_errors = True)
+    return outputFilename

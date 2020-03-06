@@ -8,7 +8,8 @@ from planetengine.observers import Observer
 from planetengine.functions import \
     integral, gradient, operations, \
     component, getstat, comparison, \
-    surface, split, tensor, fourier
+    surface, split, tensor, \
+    fourier, stream
 from planetengine.visualisation.raster import Raster
 from planetengine.visualisation.quickfig import QuickFig
 
@@ -80,7 +81,6 @@ class Basic(Observer):
         pressure = observee.locals[pressureKey]
         stressRad = 2. * visc * gradient.rad(component.rad(vel)) - pressure
         stressAng = 2. * visc * gradient.ang(component.ang(vel)) - pressure
-        # stressMag = 2. * visc * gradient.mag(component.mag(vel)) - pressure
         stressRadOuter = surface.outer(stressRad)
         stressAngOuter = surface.outer(stressAng)
         analysers['stressRad_outer_av'] = integral.outer(stressRad)
@@ -89,7 +89,6 @@ class Basic(Observer):
         analysers['stressAng_outer_av'] = integral.outer(stressAng)
         analysers['stressAng_outer_min'] = getstat.mins(stressAngOuter)
         analysers['stressAng_outer_range'] = getstat.ranges(stressAngOuter)
-        rasterArgs.append(logVelMag)
 
         strainRate = 2. * tensor.second_invariant(
             tensor.symmetric(gradient.default(vc))
@@ -98,10 +97,12 @@ class Basic(Observer):
         analysers['strainRate_outer_av'] = integral.outer(strainRate)
         analysers['strainRate_outer_min'] = getstat.mins(strainRate)
         analysers['strainRate_outer_range'] = getstat.ranges(strainRate)
-        logStrainRate = operations.log(strainRate)
         rasterArgs.append(strainRate)
 
-        raster = Raster(*rasterArgs)
+        streamFn = stream.default(vc)
+        rasterArgs.append(streamFn)
+
+        raster = Raster(*rasterArgs, aspect = observee.locals.aspect)
         analysers['raster'] = self.raster = raster
 
         self.observee, self.analysers = observee, analysers
@@ -110,7 +111,7 @@ class Basic(Observer):
 
         visVars = [temp, vel]
         if not visc == 1:
-            visVars.append(visc)
+            visVars.append(operations.log(visc))
         self.fig = QuickFig(*visVars)
 
         super().__init__(baselines = self.baselines, **kwargs)
