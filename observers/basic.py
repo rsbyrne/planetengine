@@ -62,8 +62,6 @@ class Basic(Observer):
         analysers['velAng_outer_av'] = integral.outer(velAng)
         analysers['velAng_outer_min'] = getstat.mins(velAngOuter)
         analysers['velAng_outer_range'] = getstat.ranges(velAngOuter)
-        logVelMag = operations.log(velMag)
-        rasterArgs.append(logVelMag)
 
         if viscKey in observee.locals.__dict__:
             visc = observee.locals[viscKey]
@@ -82,7 +80,7 @@ class Basic(Observer):
         pressure = observee.locals[pressureKey]
         stressRad = 2. * visc * gradient.rad(component.rad(vel)) - pressure
         stressAng = 2. * visc * gradient.ang(component.ang(vel)) - pressure
-        stressMag = 2. * visc * gradient.ang(component.ang(vel)) - pressure
+        # stressMag = 2. * visc * gradient.mag(component.mag(vel)) - pressure
         stressRadOuter = surface.outer(stressRad)
         stressAngOuter = surface.outer(stressAng)
         analysers['stressRad_outer_av'] = integral.outer(stressRad)
@@ -91,6 +89,7 @@ class Basic(Observer):
         analysers['stressAng_outer_av'] = integral.outer(stressAng)
         analysers['stressAng_outer_min'] = getstat.mins(stressAngOuter)
         analysers['stressAng_outer_range'] = getstat.ranges(stressAngOuter)
+        rasterArgs.append(logVelMag)
 
         strainRate = 2. * tensor.second_invariant(
             tensor.symmetric(gradient.default(vc))
