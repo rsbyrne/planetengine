@@ -5,8 +5,8 @@ import os
 
 from ..functions import normalise
 from ..utilities import message
-from ..functions import convert
-from .. import functions as pfn
+from ..functions import convert, normalise, getstat
+# from .. import functions as pfn
 from ..meshutils import get_meshUtils
 from .. import mpi
 from . import fig
@@ -155,10 +155,14 @@ class QuickFig(fig.Fig):
                 )
             )
 
-    def add_contours(self, arg, colours = "red black", **kwargs):
+    def add_contours(self,
+            arg,
+            colours = "red black",
+            **kwargs
+            ):
         planetVar = convert(arg)
-        normed = pfn.normalise.default(
-            planetVar, [2., 1024.]
+        normed = normalise.default(
+            planetVar, [0., 16.]
             )
         self.updateFuncs.append(normed.update)
         if not planetVar.varDim == 1:
@@ -166,7 +170,7 @@ class QuickFig(fig.Fig):
         self.fig.append(
             glucifer.objects.Contours(
                 planetVar.mesh,
-               fn.math.log2(normed),
+                normed,
                 colours = colours,
                 interval = 1.,
                 **kwargs
