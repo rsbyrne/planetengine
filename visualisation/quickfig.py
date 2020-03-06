@@ -63,6 +63,8 @@ class QuickFig(fig.Fig):
             **kwargs
             )
 
+        self.objects = self.fig.objects
+
         super().__init__(**kwargs)
 
     def add_vars(self, *args, **kwargs):
@@ -103,10 +105,6 @@ class QuickFig(fig.Fig):
             if found:
                 self.fittedvars.append(planetVar)
         self.notfittedvars = [var for var in self.vars if not var in self.fittedvars]
-
-        # message(
-        #     "Fitted " + str(len(self.fittedvars)) + " variables to the figure."
-        #     )
 
     def add_grid(self, arg, **kwargs):
         self.fig.append(
