@@ -119,7 +119,7 @@ class Arrhenius(System):
             temperatureField.bounds = [[0., '.', '.', '.']]
 
         if flux is None:
-            templasticViscKeypBC = cd.DirichletCondition(temperatureField, (inner + outer,))
+            tempBC = cd.DirichletCondition(temperatureField, (inner + outer,))
             tempBCs = [tempBC,]
         else:
             tempBC = cd.DirichletCondition(temperatureField, (outer,))
