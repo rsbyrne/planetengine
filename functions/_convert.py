@@ -1,7 +1,7 @@
 import numpy as np
 
 from underworld import function as fn
-UWFn =fn._function.Function
+UWFn = fn._function.Function
 
 from . import _planetvar
 from . import _basetypes

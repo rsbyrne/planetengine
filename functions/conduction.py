@@ -17,6 +17,7 @@ class Conduction(_function.Function):
     opTag = 'Conduction'
 
     def __init__(self,
+            temperatureField,
             HFn,
             diffFn,
             *args,
@@ -25,9 +26,10 @@ class Conduction(_function.Function):
             ):
 
         inVars = []
+        temperatureField = _convert.convert(temperatureField)
         HFn = _convert.convert(HFn)
         diffFn = _convert.convert(diffFn)
-        inVars = [HFn, diffFn]
+        inVars = [temperatureField, HFn, diffFn]
 
         if len(args) == 2:
             raise Exception("Doesn't work yet!")
@@ -48,29 +50,24 @@ class Conduction(_function.Function):
         else:
             innerFluxFn = outerFluxFn = None
 
-        mesh = None
-        for var in inVars:
-            if hasattr(var, 'mesh'):
-                mesh = var.mesh
-                break
-        if mesh is None:
-            raise Exception("At least one arg must have an associated mesh!")
+        mesh = temperatureField.mesh
 
         conductionField = mesh.add_variable(1)
         inner, outer = mesh.specialSets['inner'], mesh.specialSets['outer']
         if innerFluxFn is None and outerFluxFn is None:
-            conductionField.data[outer], conductionField.data[inner] = 0., 1.
+            conductionField.data[outer] = temperatureField.var.data[outer]
+            conductionField.data[inner] = temperatureField.var.data[inner]
             condBC = cd.DirichletCondition(conductionField, (inner + outer,))
             condBCs = [condBC,]
         elif outerFluxFn is None:
-            conductionField.data[outer] = 0.
+            conductionField.data[outer] = temperatureField.var.data[outer]
             condBC = cd.DirichletCondition(conductionField, (outer,))
             condFluxBC = cd.NeumannCondition(
                 conductionField, (inner,), innerFluxFn
                 )
             condBCs = [condBC, condFluxBC]
         elif innerFluxFn is None:
-            conductionField.data[inner] = 1.
+            conductionField.data[inner] = temperatureField.var.data[inner]
             condBC = cd.DirichletCondition(conductionField, (inner,))
             condFluxBC = cd.NeumannCondition(
                 conductionField, (outer,), outerFluxFn
