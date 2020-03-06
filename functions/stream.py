@@ -15,26 +15,29 @@ class Stream(_function.Function):
 
     opTag = 'Stream'
 
-    def __init__(self, inVar, *args, periodic = False, **kwargs):
+    def __init__(self, inVar, *args, **kwargs):
 
         inVar = _convert.convert(inVar)
-        print(inVar, inVar.var, periodic)
 
         psiField = inVar.mesh.add_variable(1)
+        periodic = any(inVar.mesh.periodic)
         if periodic: walls = inVar.meshUtils.surfaces['rad']
         else: walls = inVar.meshUtils.surfaces['all']
         psiBC = cd.DirichletCondition(psiField, walls)
         psiBCs = [psiBC,]
         psiField.data[:] = 0.
 
-        vel = inVar.var
+        # vel = inVar.var
+        vel = inVar
         udy = _gradient.y(_component.x(vel))
         vdx = _gradient.x(_component.y(vel))
+        velDif = udy - vdx
+        inVar = velDif
 
         psiSystem = uw.systems.SteadyStateHeat(
             temperatureField = psiField,
             fn_diffusivity = 1.,
-            fn_heating = udy - vdx,
+            fn_heating = velDif,
             conditions = psiBCs
             )
         psiSolver = uw.systems.Solver(psiSystem)
@@ -44,6 +47,8 @@ class Stream(_function.Function):
         self.psiBCs = psiBCs
 
         self.psiSolver = psiSolver
+
+        # self.v
 
         self.stringVariants = {'periodic': str(periodic)}
         self.inVars = [inVar]
