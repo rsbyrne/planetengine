@@ -182,6 +182,13 @@ class System(Iterator):
                 for index, gId in enumerate(nodes):
                     var.data[index] = loadData[gId]
 
+    # def _getitem_class(self, inp):
+    #     pass
+    # def _getitem_system(self, inp):
+    #     if type(inp) is slice:
+    #         pass
+    #     else:
+
 # Aliases
 from functools import partial
 from .viscoplastic import Viscoplastic
