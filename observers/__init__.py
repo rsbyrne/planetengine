@@ -98,4 +98,7 @@ class Observer(Counter, Cycler):
         outstr = '\n'.join(outlist)
         mpi.message(outstr)
 
+    def show(self):
+        self.fig.show()
+
 from .basic import Basic
