@@ -184,6 +184,6 @@ class System(Iterator):
 
 # Aliases
 from functools import partial
-from .viscoplastic import Viscoplastic as viscoplastic
-from .arrhenius import Arrhenius as arrhenius
-from .isovisc import Isovisc as isovisc
+from .viscoplastic import Viscoplastic
+from .arrhenius import Arrhenius
+from .isovisc import Isovisc

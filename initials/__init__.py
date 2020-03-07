@@ -40,3 +40,8 @@ class IC(Applier):
             set_scales(var, var.scales)
         if hasattr(var, 'bounds'):
             set_boundaries(var, var.bounds)
+
+from .constant import Constant
+from .sinusoidal import Sinusoidal
+from .copy import Copy
+from .extents import Extents

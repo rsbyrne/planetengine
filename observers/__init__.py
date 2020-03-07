@@ -14,10 +14,13 @@ class Observer(Counter, Cycler):
         # Expects:
         # self.observee
         # self.analysers
+        # self.visVars
 
         self.check = lambda: False
 
         super().__init__(observee = LinkTo(self.observee), **kwargs)
+
+        self.fig = QuickFig(*self.visVars)
 
         # Producer attributes:
         self._outFns.append(self._out)
@@ -71,3 +74,28 @@ class Observer(Counter, Cycler):
             key.rjust(_max_keylen) + ': ' + str(allDict[key]) \
                 for key in self.outkeys
             ])
+
+    def report(self):
+        outs = self.out()
+        outkeys = self.outkeys
+        def dot_aligned(seq):
+            snums = [str(n) for n in seq]
+            dots = [len(s.split('.', 1)[0]) for s in snums]
+            m = max(dots)
+            return [' '*(m - d) + s for s, d in zip(snums, dots)]
+        names, datas = [], []
+        for name, data in zip(outkeys, outs):
+            if data.shape == ():
+                if name == 'count':
+                    val = str(int(data))
+                else:
+                    val = "{:.2f}".format(data)
+                justname = name.ljust(max([len(key) for key in outkeys]))
+                names.append(justname)
+                datas.append(val)
+        datas = dot_aligned(datas)
+        outlist = [name + ' : ' + data for name, data in zip(names, datas)]
+        outstr = '\n'.join(outlist)
+        mpi.message(outstr)
+
+from .basic import Basic
