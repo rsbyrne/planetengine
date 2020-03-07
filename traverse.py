@@ -7,12 +7,10 @@ from everest.builts.states.threshold import Threshold
 from everest.builts._iterator import LoadFail
 from everest.builts._counter import Counter
 from everest.builts._diskbased import DiskBased
-from everest.builts import \
-    check_global_anchor, \
-    _get_info, \
-    load
+from everest.builts import check_global_anchor, _get_info, load, Meta, Built
 from everest.weaklist import WeakList
 from everest import mpi
+from everest.globevars import _GHOSTTAG_
 
 class Traverse(Counter, Task, DiskBased):
 
@@ -20,33 +18,45 @@ class Traverse(Counter, Task, DiskBased):
 
     @staticmethod
     def _process_inputs(inputs):
-        state = inputs['state']
-        if not isinstance(state, State):
+        state = inputs['endState']
+        if not state is None and not isinstance(state, State):
             if type(state) is int: prop = 'count'
             elif type(state) is float: prop = 'chron'
             else: raise TypeError
-            inputs['state'] = Threshold(
+            inputs['endState'] = Threshold(
                 prop = prop,
                 op = 'ge',
                 val = state
                 )
+        system = inputs['system']
+        if type(system) is Meta:
+            pass
+        elif isinstance(system, Built):
+            assert not len(inputs['vector'])
+            inputs['system'] = system.__class__
+            inputs['vector'] = system.inputs
+            if inputs['initState'] is None:
+                inputs['initState'] = system.count.value
+            inputs[_GHOSTTAG_ + 'traversee'] = system
 
     def __init__(self,
-            systemClass = None,
+            system = None,
             vector = dict(),
-            state = None,
+            initState = None,
+            endState = None,
             observerClasses = [],
             express = True,
             **kwargs
             ):
 
-        self.systemClass, self.state, self.express, \
-                self.observerClasses, self.vector = \
-                    systemClass, state, express, observerClasses, vector
+        self.system, self.initState, self.endState, \
+        self.express, self.observerClasses, self.vector = \
+                system, initState, endState, \
+                express, observerClasses, vector
         self.observers = []
 
-        ignoreme1, self.vectorHash, ignoreme2, self.traverseeID = \
-            _get_info(systemClass, vector)
+        ignoreme1, ignoreme2, self.vectorHash, ignoreme3, self.traverseeID = \
+            _get_info(system, vector)
 
         super().__init__(**kwargs)
 
@@ -67,10 +77,25 @@ class Traverse(Counter, Task, DiskBased):
 
     def _traverse_initialise(self):
         self.count.value = 0
-        self.traversee = self.systemClass(**self.vector)
-        if self.express:
-            try: self.traversee.load(self.state)
-            except LoadFail: pass
+        try: self.traversee = self.ghosts['traversee']
+        except KeyError: self.traversee = self.system(**self.vector)
+        if not self.initState is None:
+            try:
+                self.traversee.load(self.initState)
+            except LoadFail:
+                preTraverse = self.__class__(
+                    system = self.traversee,
+                    endState = self.initState,
+                    observerClasses = [],
+                    express = True
+                    )
+                preTraverse()
+                self.traversee.load(self.initState)
+        if self.express and not self.endState is None:
+            try:
+                self.traversee.load(self.endState)
+            except LoadFail:
+                pass
         self.count.value = self.traversee.count()
         self.traversee.store()
         self.traversee.save()
@@ -101,7 +126,10 @@ class Traverse(Counter, Task, DiskBased):
             self._last_checkpoint_time = time_now
 
     def _traverse_stop(self):
-        return self.state(self.traversee)
+        if self.endState is None:
+            return False
+        else:
+            return self.endState(self.traversee)
 
     def _traverse_finalise(self):
         self.traversee.store()
