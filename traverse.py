@@ -28,6 +28,16 @@ class Traverse(Counter, Task, DiskBased):
                 op = 'ge',
                 val = state
                 )
+        freq = inputs['freq']
+        if not freq is None and not isinstance(freq, State):
+            if type(freq) is int: prop = 'count'
+            else: raise TypeError
+            inputs['freq'] = Threshold(
+                prop = prop,
+                op = 'mod',
+                val = freq,
+                inv = True
+                )
         system = inputs['system']
         if type(system) is Meta:
             pass
@@ -44,15 +54,15 @@ class Traverse(Counter, Task, DiskBased):
             vector = dict(),
             initState = None,
             endState = None,
+            freq = None,
             observerClasses = [],
-            express = True,
             **kwargs
             ):
 
         self.system, self.initState, self.endState, \
-        self.express, self.observerClasses, self.vector = \
+        self.freq, self.observerClasses, self.vector = \
                 system, initState, endState, \
-                express, observerClasses, vector
+                freq, observerClasses, vector
         self.observers = []
 
         ignoreme1, ignoreme2, self.vectorHash, ignoreme3, self.traverseeID = \
@@ -66,11 +76,7 @@ class Traverse(Counter, Task, DiskBased):
         self._task_stop_fns.append(self._traverse_stop)
         self._task_finalise_fns.append(self._traverse_finalise)
 
-        self.set_freq(100)
         self.set_checkpoint_interval(300)
-
-    def set_freq(self, freq):
-        self.freq = freq
 
     def set_checkpoint_interval(self, interval):
         self.checkpointInterval = interval
@@ -87,11 +93,10 @@ class Traverse(Counter, Task, DiskBased):
                     system = self.traversee,
                     endState = self.initState,
                     observerClasses = [],
-                    express = True
                     )
                 preTraverse()
                 self.traversee.load(self.initState)
-        if self.express and not self.endState is None:
+        if self.freq is None and not self.endState is None:
             try:
                 self.traversee.load(self.endState)
             except LoadFail:
@@ -145,18 +150,7 @@ class Traverse(Counter, Task, DiskBased):
 
     @staticmethod
     def _get_condition(traversee, freq):
-        if isinstance(freq, Condition):
-            return freq
-        else:
-            if isinstance(freq, State):
-                state = freq
-            else:
-                if type(freq) is int: prop = 'count'
-                else: raise TypeError
-                state = Threshold(
-                    prop = prop,
-                    op = 'mod',
-                    val = freq,
-                    inv = True
-                    )
-            return Condition(state, traversee)
+        if isinstance(freq, Condition): return freq
+        elif isinstance(freq, State): return Condition(freq, traversee)
+        elif freq is None: return False
+        else: assert False, ("Bad freq!", freq, type(freq))

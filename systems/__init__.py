@@ -1,6 +1,7 @@
 import numpy as np
 
-from everest.builts._iterator import Iterator
+from everest.builts import Built
+from everest.builts._iterator import Iterator, LoadFail
 from everest.value import Value
 from everest.builts.vector import Vector
 from everest.writer import FixedDataset
@@ -182,12 +183,37 @@ class System(Iterator):
                 for index, gId in enumerate(nodes):
                     var.data[index] = loadData[gId]
 
-    # def _getitem_class(self, inp):
-    #     pass
-    # def _getitem_system(self, inp):
-    #     if type(inp) is slice:
-    #         pass
-    #     else:
+    def __getitem__(self, indexer):
+        from ..traverse import Traverse
+        if type(indexer) is slice:
+            return Traverse(
+                system = self,
+                initState = indexer.start,
+                endState = indexer.stop,
+                freq = indexer.step,
+                observerClasses = []
+                )
+        elif type(indexer) is tuple:
+            raise TypeError
+        else:
+            try: self.load(indexer)
+            except LoadFail: self[:indexer]()
+            return self.out()
+
+# class Case(Built):
+#
+#     _swapscript = '''from planetengine.systems import Case as CLASS'''
+#
+#     @staticmethod
+#     def _process_inputs(inputs):
+#
+#
+#     def __init__(self,
+#             schema = None,
+#             **inps
+#             ):
+#
+#         super().__init__(**kwargs)
 
 # Aliases
 from functools import partial
