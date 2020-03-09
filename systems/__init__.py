@@ -192,9 +192,16 @@ class System(Iterator):
         elif type(indexer) is tuple:
             raise TypeError
         else:
-            try: self.load(indexer)
-            except LoadFail: self[:indexer]()
-            return self.out()
+            try:
+                with self.bounce(indexer):
+                    return self.out()
+            except LoadFail:
+                nowCount = self.count.value
+                self.store()
+                self[:indexer]()
+                out = self.out()
+                self.load(nowCount)
+                return out
 
     observers = []
 
