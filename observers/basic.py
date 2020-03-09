@@ -11,7 +11,6 @@ from planetengine.functions import \
     surface, split, tensor, \
     fourier, stream, conduction
 from planetengine.visualisation.raster import Raster
-from planetengine.visualisation.quickfig import QuickFig
 
 class Basic(Observer):
 

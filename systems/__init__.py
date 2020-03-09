@@ -11,6 +11,11 @@ from .. import fieldops
 from ..utilities import hash_var
 from ..utilities import Grouper
 
+from planetengine.exceptions import PlanetEngineException
+
+class ObserverNotFound(PlanetEngineException):
+    pass
+
 def _make_locals(localsDict):
     del localsDict['self']
     return Grouper(localsDict)
@@ -110,15 +115,6 @@ class System(Iterator):
             **kwargs
             )
 
-    def add_observer(self, observerClass = None, observerInputs = None):
-        if observerClass is None:
-            observerClass, observerInputs = self.defaultObserver
-        self.observer = observerClass(self, **observerInputs)
-        try: self.show = self.observer.show
-        except NameError: pass
-        try: self.report = self.observer.report
-        except NameError: pass
-
     def _initialise(self):
         for key, IC in sorted(self.configs.items()):
             if not IC is None:
@@ -199,6 +195,53 @@ class System(Iterator):
             try: self.load(indexer)
             except LoadFail: self[:indexer]()
             return self.out()
+
+    observers = []
+
+    def add_observer(self, observerClass = None, **observerInputs):
+        if observerClass is None:
+            observerClass, defaultObserverInputs = self.defaultObserver
+            observerInputs = {**defaultObserverInputs, **observerInputs}
+        observer = (observerClass(self, **observerInputs))
+        try: self.remove_observer(observer.hashID)
+        except ObserverNotFound: pass
+        self.observers.append(observer)
+
+    @property
+    def observer(self):
+        if len(self.observers) == 0:
+            raise ValueError("No observers added yet!")
+        elif len(self.observers) == 1:
+            return self.observers[0]
+        else:
+            raise ValueError("Multiple observers; specify one.")
+
+    def remove_observer(self, toRemove):
+        if type(toRemove) is int:
+            self.observers.pop(toRemove)
+        elif type(toRemove) is str:
+            zipped = zip(
+                [observer.hashID for observer in self.observers],
+                self.observers
+                )
+            remIndex = None
+            for index, (hashID, observer) in enumerate(zipped):
+                if hashID == toRemove:
+                    remIndex = index
+            if remIndex is None: raise ObserverNotFound
+            else: self.remove_observer(remIndex)
+        else:
+            self.observers.remove(toRemove)
+
+    def show(self):
+        for observer in self.observers:
+            try: observer.show()
+            except NameError: pass
+
+    def report(self):
+        for observer in self.observers:
+            try: observer.report()
+            except NameError: pass
 
 # class Case(Built):
 #

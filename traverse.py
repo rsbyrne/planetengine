@@ -19,15 +19,24 @@ class Traverse(Counter, Task):
 
     @staticmethod
     def _process_inputs(inputs):
-        state = inputs['endState']
-        if not state is None and not isinstance(state, State):
-            if type(state) is int: prop = 'count'
-            elif type(state) is float: prop = 'chron'
+        end = inputs['endState']
+        if not end is None and not isinstance(end, State):
+            if type(end) is int: prop = 'count'
+            elif type(end) is float: prop = 'chron'
             else: raise TypeError
+            if end < 0.:
+                system = inputs['system']
+                if isinstance(system, Built):
+                    end = end + getattr(system, prop).value
+                else:
+                    raise Exception(
+                        "Relative end state only acceptable" \
+                        + " when system provided."
+                        )
             inputs['endState'] = Threshold(
                 prop = prop,
                 op = 'ge',
-                val = state
+                val = end
                 )
         freq = inputs['freq']
         if not freq is None and not isinstance(freq, State):
@@ -49,6 +58,7 @@ class Traverse(Counter, Task):
             if inputs['initState'] is None:
                 inputs['initState'] = system.count.value
             inputs[_GHOSTTAG_ + 'traversee'] = system
+            inputs[_GHOSTTAG_ + 'observers'] = system.observers
 
     def __init__(self,
             system = None,
@@ -117,11 +127,16 @@ class Traverse(Counter, Task):
         self.traversee.store()
         if self.traversee.anchored: self.traversee.save()
         self._last_checkpoint_time = mpi.share(time.time())
+        try:
+            self.observers.extend(self.ghosts['observers'])
+        except KeyError:
+            pass
         for observerClass in self.observerClasses:
             observer = observerClass(self.traversee)
+            self.observers.append(observer)
+        for observer in self.observers:
             if self.anchored and not observer.anchored:
                 observer.anchor(self.name, self.path)
-            self.observers.append(observer)
             self.add_promptee(observer)
             observer.store()
         self.check = self._get_condition(self.traversee, self.freq)

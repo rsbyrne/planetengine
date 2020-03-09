@@ -7,6 +7,8 @@ from everest.builts.states.threshold import Threshold
 from everest.builts.condition import Condition
 from everest.writer import LinkTo
 
+from planetengine.visualisation.quickfig import QuickFig
+
 class Observer(Counter, Cycler):
 
     def __init__(self, **kwargs):
