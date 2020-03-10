@@ -4,6 +4,7 @@ from .. import utilities
 from ..systems import System
 from ..traverse import Traverse
 from everest.builts import load
+from everest.globevars import _GHOSTTAG_
 from . import IC
 
 class Copy(IC):
@@ -13,18 +14,12 @@ class Copy(IC):
     @staticmethod
     def _process_inputs(inputs):
         traverse = inputs['traverse']
-        if isinstance(traverse, Traverse):
-            pass
-        elif isinstance(traverse, System):
-            traverse = Traverse(
-                traverse.__class__,
-                traverse.inputs,
-                traverse.count(),
-                express = True
-                )
-            inputs['traverse'] = traverse
-        else:
-            raise TypeError
+        if isinstance(traverse, System):
+            system = traverse
+            traverse = system[:system.count()]
+            # inputs[_GHOSTTAG_ + 'system'] = system
+        elif not isinstance(traverse, Traverse): raise TypeError
+        inputs['traverse'] = traverse
 
     def __init__(self,
             traverse,
@@ -39,6 +34,6 @@ class Copy(IC):
     def evaluate(self, coordArray):
         self.traverse()
         loaded = load(self.traverse.traverseeID)
-        loaded.load(self.traverse.state)
+        loaded.load(self.traverse.endState)
         var = loaded.locals[self.varName]
         return fieldops.safe_box_evaluate(var, coordArray)
