@@ -1,8 +1,8 @@
 from underworld import function as fn
 import numpy as np
-from planetengine.initials import IC
+from planetengine.initials import Channel
 
-class Extents(IC):
+class Extents(Channel):
 
     def __init__(self,
             shapes,

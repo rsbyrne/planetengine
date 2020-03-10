@@ -82,6 +82,7 @@ class System(Iterator):
 
         self.options, self.params, self.configs, self.leftovers = \
             self._sort_inputs(self.inputs)
+        self.configuration
         self.chron = Value(0.)
         self.varsOfState = {
             key: self.locals[key] for key in self.configsKeys
@@ -116,9 +117,9 @@ class System(Iterator):
             )
 
     def _initialise(self):
-        for key, IC in sorted(self.configs.items()):
-            if not IC is None:
-                IC.apply(self.locals[key])
+        for key, channel in sorted(self.configs.items()):
+            if not channel is None:
+                channel.apply(self.locals[key])
         self.chron.value = 0.
         self._update()
 

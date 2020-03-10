@@ -5,9 +5,9 @@ from ..systems import System
 from ..traverse import Traverse
 from everest.builts import load
 from everest.globevars import _GHOSTTAG_
-from . import IC
+from . import Channel
 
-class Copy(IC):
+class Copy(Channel):
 
     _swapscript = '''from planetengine.initials.copy import Copy as CLASS'''
 
@@ -15,10 +15,16 @@ class Copy(IC):
     def _process_inputs(inputs):
         traverse = inputs['traverse']
         if isinstance(traverse, System):
-            system = traverse
-            traverse = system[:system.count()]
-            # inputs[_GHOSTTAG_ + 'system'] = system
-        elif not isinstance(traverse, Traverse): raise TypeError
+            traversee = traverse
+            traverse = traversee[:system.count()]
+        elif isinstance(traverse, Traverse):
+            try:
+                traversee = traverse.ghosts['traversee']
+            except KeyError:
+                traversee = traverse.system(traverse.vector)
+        else:
+            raise TypeError
+        inputs[_GHOSTTAG_ + 'traversee'] = traversee
         inputs['traverse'] = traverse
 
     def __init__(self,
@@ -33,6 +39,7 @@ class Copy(IC):
 
     def evaluate(self, coordArray):
         self.traverse()
+        traversee = self.ghosts['traversee']
         loaded = load(self.traverse.traverseeID)
         loaded.load(self.traverse.endState)
         var = loaded.locals[self.varName]

@@ -1,7 +1,7 @@
 import numpy as np
-from planetengine.initials import IC
+from planetengine.initials import Channel
 
-class Sinusoidal(IC):
+class Sinusoidal(Channel):
 
     def __init__(self,
             pert = 0.2,

@@ -1,7 +1,7 @@
 import numpy as np
-from planetengine.initials import IC
+from planetengine.initials import Channel
 
-class Constant(IC):
+class Constant(Channel):
 
     def __init__(self,
             value = 0.,
