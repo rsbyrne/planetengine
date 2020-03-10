@@ -105,8 +105,8 @@ class Traverse(Counter, Task):
                     )
             except (NotOnDiskError, NotInFrameError):
                 self.traversee = self.system(**self.vector)
-                if self.anchored and not self.traversee.anchored:
-                    self.traversee.anchor(self.name, self.path)
+        if self.anchored:
+            self.traversee.anchor(self.name, self.path)
         if not self.initState is None:
             try:
                 self.traversee.load(self.initState)
@@ -117,7 +117,6 @@ class Traverse(Counter, Task):
                     observerClasses = [],
                     )
                 preTraverse()
-                self.traversee.load(self.initState)
         if self.freq is None and not self.endState is None:
             try:
                 self.traversee.load(self.endState)
@@ -135,7 +134,7 @@ class Traverse(Counter, Task):
             observer = observerClass(self.traversee)
             self.observers.append(observer)
         for observer in self.observers:
-            if self.anchored and not observer.anchored:
+            if self.anchored:
                 observer.anchor(self.name, self.path)
             self.add_promptee(observer)
             observer.store()
@@ -169,12 +168,12 @@ class Traverse(Counter, Task):
         if self.traversee.anchored: self.traversee.save()
         self.store()
         if self.anchored: self.save()
-        del self.traversee
         for observer in self.observers:
             observer.store()
             if observer.anchored: observer.save()
             self.remove_promptee(observer)
         self.observers = []
+        del self.traversee
 
     @staticmethod
     def _get_condition(traversee, freq):
