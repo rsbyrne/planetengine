@@ -1,5 +1,6 @@
 import sys
 
+from everest.builts import Builder
 from everest.builts.container import Container
 from everest.builts._task import Task
 from everest.builts._task import TaskSubrunFailed
@@ -25,7 +26,7 @@ class CampaignIterable:
         return self
     def __next__(self):
         vector = next(self.vectors)
-        out = Traverse(
+        builder = Builder(Traverse,
             system = self.schema,
             vector = vector,
             initState = self.initState,
@@ -34,7 +35,7 @@ class CampaignIterable:
             observerClasses = self.observerClasses,
             express = True,
             )
-        return out
+        return builder
 
 class Campaign(Container, Task):
 
