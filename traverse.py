@@ -58,7 +58,6 @@ class Traverse(Counter, Task):
             if inputs['initState'] is None:
                 inputs['initState'] = system.count.value
             inputs[_GHOSTTAG_ + 'traversee'] = system
-            inputs[_GHOSTTAG_ + 'observers'] = system.observers
 
     def __init__(self,
             system = None,

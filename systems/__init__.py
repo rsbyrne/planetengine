@@ -82,6 +82,7 @@ class System(Iterator):
 
         self.options, self.params, self.configs, self.leftovers = \
             self._sort_inputs(self.inputs)
+        self.schema = self.__class__
         self.chron = Value(0.)
         self.varsOfState = {
             key: self.locals[key] for key in self.configsKeys
@@ -106,14 +107,26 @@ class System(Iterator):
         dOptions['hash'] = make_hash(self.options)
         dParams['hash'] = make_hash(self.params)
         dConfigs['hash'] = make_hash(self.configs)
+        case = make_hash((self.options, self.params))
 
         super().__init__(
             baselines = self.baselines,
             options = dOptions,
             params = dParams,
             configs = dConfigs,
+            schema = self.typeHash,
+            case = case,
             **kwargs
             )
+
+        # Cycler attributes:
+        self._post_cycle_fns.append(self.prompt_observers)
+
+        # Producer attributes:
+        self._post_save_fns.append(self.save_observers)
+
+        # Built attributes:
+        self._post_anchor_fns.append(self.anchor_observers)
 
     def _initialise(self):
         for key, channel in sorted(self.configs.items()):
@@ -240,6 +253,20 @@ class System(Iterator):
         else:
             self.observers.remove(toRemove)
 
+    def prompt_observers(self):
+        for observer in self.observers:
+            observer()
+
+    def save_observers(self):
+        for observer in self.observers:
+            observer.save()
+
+    def anchor_observers(self):
+        if not self.anchored:
+            raise Exception
+        for observer in self.observers:
+            observer.anchor(self.name, self.path)
+
     def show(self):
         for observer in self.observers:
             try: observer.show()
@@ -249,21 +276,6 @@ class System(Iterator):
         for observer in self.observers:
             try: observer.report()
             except NameError: pass
-
-# class Case(Built):
-#
-#     _swapscript = '''from planetengine.systems import Case as CLASS'''
-#
-#     @staticmethod
-#     def _process_inputs(inputs):
-#
-#
-#     def __init__(self,
-#             schema = None,
-#             **inps
-#             ):
-#
-#         super().__init__(**kwargs)
 
 # Aliases
 from functools import partial

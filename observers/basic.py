@@ -116,7 +116,7 @@ class Basic(Observer):
         analysers['psi_av'] = integral.volume(streamFn)
         analysers['psi_min'] = getstat.mins(streamFn)
         analysers['psi_range'] = getstat.ranges(streamFn)
-        rasterArgs.append(operations.abs(streamFn) * -1.)
+        rasterArgs.append(streamFn)
 
         aspect = observee.locals[aspectKey]
         raster = Raster(*rasterArgs, aspect = aspect)
