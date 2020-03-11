@@ -11,15 +11,15 @@ from planetengine.observers.basic import Basic
 from planetengine.campaign import Campaign
 
 space = {
+    'innerMethod': 'mg',
     'res': 32,
     'eta0': 1.,
     'tau0': 1.,
     'tau1': 0.,
-    'alpha': [10 ** (x / 2) for x in range(7, 13)],
-    'f': [x / 10. for x in range(5, 11)],
-    'aspect': [1., 1.2, 1.4, 1.6, 1.8, 2.]
+    'alpha': [10 ** (x / 2) for x in range(7, 10)],
+    'f': [x / 10. for x in range(5, 8)],
     }
 
-mycampaign = Campaign(Viscoplastic, space, 10, [Basic,], 2)
+mycampaign = Campaign(Viscoplastic, space, None, 10, 2, [Basic,], 2)
 
 mycampaign()

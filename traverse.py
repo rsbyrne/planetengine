@@ -141,7 +141,6 @@ class Traverse(Counter, Task):
         self.check = self._get_condition(self.traversee, self.freq)
 
     def _traverse_iterate(self):
-        print("Iterating")
         self.traversee()
         self.count += 1
         if self.check:
