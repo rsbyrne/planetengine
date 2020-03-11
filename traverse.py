@@ -141,6 +141,7 @@ class Traverse(Counter, Task):
         self.check = self._get_condition(self.traversee, self.freq)
 
     def _traverse_iterate(self):
+        print("Iterating")
         self.traversee()
         self.count += 1
         if self.check:
@@ -172,8 +173,14 @@ class Traverse(Counter, Task):
             observer.store()
             if observer.anchored: observer.save()
             self.remove_promptee(observer)
+        observers = [*self.observers]
         self.observers = []
+        traversee = self.traversee
         del self.traversee
+        if len(observers):
+            return traversee, observers
+        else:
+            return traversee
 
     @staticmethod
     def _get_condition(traversee, freq):

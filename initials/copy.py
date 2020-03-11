@@ -17,14 +17,8 @@ class Copy(Channel):
         if isinstance(traverse, System):
             traversee = traverse
             traverse = traversee[:system.count()]
-        elif isinstance(traverse, Traverse):
-            try:
-                traversee = traverse.ghosts['traversee']
-            except KeyError:
-                traversee = traverse.system(traverse.vector)
-        else:
+        elif not isinstance(traverse, Traverse):
             raise TypeError
-        inputs[_GHOSTTAG_ + 'traversee'] = traversee
         inputs['traverse'] = traverse
 
     def __init__(self,
@@ -38,9 +32,6 @@ class Copy(Channel):
         super().__init__(**kwargs)
 
     def evaluate(self, coordArray):
-        self.traverse()
-        traversee = self.ghosts['traversee']
-        loaded = load(self.traverse.traverseeID)
-        loaded.load(self.traverse.endState)
-        var = loaded.locals[self.varName]
+        traversee = self.traverse()
+        var = traversee.locals[self.varName]
         return fieldops.safe_box_evaluate(var, coordArray)

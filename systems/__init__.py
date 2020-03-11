@@ -82,7 +82,6 @@ class System(Iterator):
 
         self.options, self.params, self.configs, self.leftovers = \
             self._sort_inputs(self.inputs)
-        self.configuration
         self.chron = Value(0.)
         self.varsOfState = {
             key: self.locals[key] for key in self.configsKeys
