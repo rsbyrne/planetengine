@@ -16,10 +16,10 @@ space = {
     'eta0': 1.,
     'tau0': 1.,
     'tau1': 0.,
-    'alpha': [10 ** (x / 2) for x in range(7, 10)],
-    'f': [x / 10. for x in range(5, 8)],
+    'alpha': [10 ** (x / 2) for x in range(7, 13)],
+    'f': [x / 10. for x in range(5, 11)],
     }
 
-mycampaign = Campaign(Viscoplastic, space, None, 10, 2, [Basic,], 2)
+mycampaign = Campaign(Viscoplastic, space, None, 100, 10, [Basic,], 2)
 
 mycampaign()
