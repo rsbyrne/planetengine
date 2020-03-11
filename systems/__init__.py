@@ -126,7 +126,7 @@ class System(Iterator):
         self._post_save_fns.append(self.save_observers)
 
         # Built attributes:
-        self._post_anchor_fns.append(self.anchor_observers)
+        self._post_anchor_fns.insert(0, self.anchor_observers)
 
     def _initialise(self):
         for key, channel in sorted(self.configs.items()):

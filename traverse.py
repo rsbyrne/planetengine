@@ -13,7 +13,7 @@ from everest.weaklist import WeakList
 from everest import mpi
 from everest.globevars import _GHOSTTAG_
 
-class Traverse(Counter, Task):
+class Traverse(Task):
 
     _swapscript = '''from planetengine.traverse import Traverse as CLASS'''
 
@@ -86,13 +86,7 @@ class Traverse(Counter, Task):
         self._task_stop_fns.append(self._traverse_stop)
         self._task_finalise_fns.append(self._traverse_finalise)
 
-        self.set_checkpoint_interval(300)
-
-    def set_checkpoint_interval(self, interval):
-        self.checkpointInterval = interval
-
     def _traverse_initialise(self):
-        self.count.value = 0
         try:
             self.traversee = self.ghosts['traversee']
         except KeyError:
@@ -121,10 +115,6 @@ class Traverse(Counter, Task):
                 self.traversee.load(self.endState)
             except LoadFail:
                 pass
-        self.count.value = self.traversee.count()
-        self.traversee.store()
-        if self.traversee.anchored: self.traversee.save()
-        self._last_checkpoint_time = mpi.share(time.time())
         try:
             self.observers.extend(self.ghosts['observers'])
         except KeyError:
@@ -141,22 +131,8 @@ class Traverse(Counter, Task):
 
     def _traverse_iterate(self):
         self.traversee()
-        self.count += 1
         if self.check:
             self.traversee.store()
-            self.store()
-        if self.anchored:
-            time_now = mpi.share(time.time())
-            time_since_last_checkpoint = time_now - self._last_checkpoint_time
-            if time_since_last_checkpoint > self.checkpointInterval:
-                if not self.check:
-                    self.traversee.store()
-                    self.store()
-                self.traversee.save()
-                for observer in self.observers:
-                    observer.save()
-                self.save()
-                self._last_checkpoint_time = time_now
 
     def _traverse_stop(self):
         if self.endState is None: return False
@@ -164,12 +140,12 @@ class Traverse(Counter, Task):
 
     def _traverse_finalise(self):
         self.traversee.store()
-        if self.traversee.anchored: self.traversee.save()
-        self.store()
-        if self.anchored: self.save()
+        if self.traversee.anchored:
+            self.traversee.save()
         for observer in self.observers:
             observer.store()
-            if observer.anchored: observer.save()
+            if observer.anchored:
+                observer.save()
             self.remove_promptee(observer)
         observers = [*self.observers]
         self.observers = []
