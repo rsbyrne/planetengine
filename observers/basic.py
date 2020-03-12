@@ -61,7 +61,6 @@ class Basic(Observer):
         analysers['theta_av'] = avTheta
         analysers['theta_min'] = getstat.mins(theta)
         analysers['theta_range'] = getstat.ranges(theta)
-        rasterArgs.append(theta)
 
         vel = observee.locals[velKey]
         vc = observee.locals[vcKey]
@@ -110,19 +109,27 @@ class Basic(Observer):
         analysers['strainRate_outer_av'] = integral.outer(strainRate)
         analysers['strainRate_outer_min'] = getstat.mins(strainRate)
         analysers['strainRate_outer_range'] = getstat.ranges(strainRate)
-        rasterArgs.append(strainRate)
 
         streamFn = stream.default(vc)
         analysers['psi_av'] = integral.volume(streamFn)
         analysers['psi_min'] = getstat.mins(streamFn)
         analysers['psi_range'] = getstat.ranges(streamFn)
-        rasterArgs.append(streamFn)
 
         aspect = observee.locals[aspectKey]
-        raster = Raster(*rasterArgs, aspect = aspect)
+        raster = Raster(
+            theta,
+            operations.log(strainRate),
+            streamFn,
+            aspect = aspect
+            )
         analysers['raster'] = self.raster = raster
 
         self.observee, self.analysers = observee, analysers
+        self.strainRate = strainRate
+        self.streamFn = streamFn
+        self.yielding = yielding
+        self.velMag = velMag
+        self.theta = theta
 
         self.baselines = baselines
 
