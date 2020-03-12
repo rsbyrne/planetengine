@@ -90,6 +90,7 @@ class Basic(Observer):
                 yielding = comparison.isequal(visc, plastic)
                 yieldFrac = integral.volume(yielding)
                 analysers['yieldFrac'] = yieldFrac
+                self.yielding = yielding
 
         pressure = observee.locals[pressureKey]
         stressRad = 2. * visc * gradient.rad(component.rad(vel)) - pressure
@@ -128,7 +129,6 @@ class Basic(Observer):
         self.observee, self.analysers = observee, analysers
         self.strainRate = strainRate
         self.streamFn = streamFn
-        self.yielding = yielding
         self.velMag = velMag
         self.theta = theta
 
