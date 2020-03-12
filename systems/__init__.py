@@ -109,6 +109,8 @@ class System(Iterator):
         dConfigs['hash'] = make_hash(self.configs)
         case = make_hash((self.options, self.params))
 
+        self.observers = []
+
         super().__init__(
             baselines = self.baselines,
             options = dOptions,
@@ -215,8 +217,6 @@ class System(Iterator):
                 out = self.out()
                 self.load(nowCount)
                 return out
-
-    observers = []
 
     def add_observer(self, observerClass = None, **observerInputs):
         if observerClass is None:
