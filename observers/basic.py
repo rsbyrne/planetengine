@@ -9,7 +9,8 @@ from planetengine.functions import \
     integral, gradient, operations, \
     component, getstat, comparison, \
     surface, split, tensor, \
-    fourier, stream, conduction
+    fourier, stream, conduction, \
+    rebase
 from planetengine.visualisation.raster import Raster
 
 class Basic(Observer):
@@ -117,9 +118,9 @@ class Basic(Observer):
 
         aspect = observee.locals[aspectKey]
         raster = Raster(
-            theta,
+            rebase.zero(theta),
             operations.log(strainRate),
-            streamFn,
+            rebase.zero(streamFn),
             aspect = aspect
             )
         analysers['raster'] = self.raster = raster
