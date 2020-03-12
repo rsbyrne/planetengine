@@ -8,7 +8,10 @@ class BaseTypes(_planetvar.PlanetVar):
     def evaluate(self, evalInput = None, **kwargs):
         if evalInput is None:
             evalInput = self.substrate
-        return self.var.evaluate(evalInput)
+        evalInput = self._input_processing(evalInput)
+        evaluated = self.var.evaluate(evalInput)
+        evalOutput = self._output_processing(evaluated)
+        return evalOutput
 
     def __call__(self):
         return self.var
