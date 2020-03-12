@@ -126,8 +126,25 @@ class Raster(fig.Fig):
     def resize(self, size = (256, 256)):
         return self.img.resize(size)
 
+def interp_rasters(rasters, chrons, sampleFactor = 1):
+    nFrames = len(chrons) * sampleFactor
+    interpChrons = np.linspace(np.min(chrons), np.max(chrons), nFrames)
+    frames, rows, cols, channels = rasters.shape
+    interpRasters = np.zeros((nFrames, rows, cols, channels)).astype('uint8')
+    outs = []
+    for row in range(rows):
+        for col in range(cols):
+            for channel in range(channels):
+                pixelSeries = rasters[:, row, col, channel]
+                interpRasters[:, row, col, channel] = np.interp(
+                    interpChrons,
+                    chrons,
+                    pixelSeries
+                    )
+    return interpRasters
+
 @mpi.dowrap
-def animate(datas, name = None, outputPath = '.', overwrite = False):
+def animate(datas, name = None, outputPath = '.', overwrite = False, pts = 1.):
     if name is None:
         name = disk.tempname(_mpiignore_ = True)
     outputPath = os.path.abspath(outputPath)
@@ -151,12 +168,15 @@ def animate(datas, name = None, outputPath = '.', overwrite = False):
             'glob',
             '-i',
             '"' + inputFilename + '"',
+            '-filter:v',
+            '"setpts=' + str(pts) + '*PTS"',
             '-c:v',
             'libx264',
             '-pix_fmt',
             'yuv420p',
             '-movflags',
             '+faststart',
+            '-an',
             outputFilename
             ]
         cmd = ' '.join(cmd)
