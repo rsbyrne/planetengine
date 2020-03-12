@@ -225,6 +225,7 @@ class System(Iterator):
         observer = (observerClass(self, **observerInputs))
         try: self.remove_observer(observer.hashID)
         except ObserverNotFound: pass
+        observer()
         self.observers.append(observer)
 
     @property
