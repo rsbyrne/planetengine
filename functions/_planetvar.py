@@ -274,7 +274,7 @@ class PlanetVar(UWFn):
             self._set_summary_stats()
         return self._rangeFn()
     def scaleFn(self):
-        if not hasattr(self, '_maxFn'):
+        if not hasattr(self, '_scaleFn'):
             self._set_summary_stats()
         return self._scaleFn()
 
