@@ -70,6 +70,9 @@ def rasterise(*datas):
     img = Image.merge(mode, bands)
     return img
 
+def img(imgArr):
+    return rasterise(*split_imgArr(imgArr))
+
 def get_mode(*bands):
     '''
     Modes: 1, L, P, RGB, RGBA, CMYK, YCbCr, LAB, HSV, I, F, RGBa, LA, RGBX
