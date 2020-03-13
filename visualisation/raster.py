@@ -130,7 +130,7 @@ def interp_rasters(rasters, chrons, sampleFactor = 1):
     nFrames = len(chrons) * sampleFactor
     interpChrons = np.linspace(np.min(chrons), np.max(chrons), nFrames)
     frames, rows, cols, channels = rasters.shape
-    interpRasters = np.zeros((nFrames, rows, cols, channels)).astype('uint8')
+    interpRasters = np.zeros((nFrames, rows, cols, channels), dtype = 'uint8')
     outs = []
     for row in range(rows):
         for col in range(cols):
