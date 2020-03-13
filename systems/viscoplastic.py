@@ -25,12 +25,14 @@ class Viscoplastic(System):
     def __init__(self,
             # OPTIONS
             res = 64,
-            courant = 1.,
-            innerMethod = 'lu',
+            courant = 0.5,
+            innerMethod = 'superludist',
             innerTol = None,
             outerTol = None,
             penalty = None,
             mgLevels = None,
+            nonLinearTolerance = 1e-2,
+            nonLinearMaxIterations = 100,
             # PARAMS
             alpha = 1e7,
             aspect = 1.,
@@ -199,6 +201,8 @@ class Viscoplastic(System):
             velocityField.data[:] = 0.
             solver.solve(
                 nonLinearIterate = True,
+                nonLinearTolerance = nonLinearTolerance,
+                nonLinearMaxIterations = nonLinearMaxIterations,
                 callback_post_solve = postSolve,
                 )
             uw.libUnderworld.Underworld.AXequalsX(
