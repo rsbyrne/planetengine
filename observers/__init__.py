@@ -6,6 +6,7 @@ from everest.builts.states import State
 from everest.builts.states.threshold import Threshold
 from everest.builts.condition import Condition
 from everest.writer import LinkTo
+from everest import mpi
 
 from planetengine.visualisation.quickfig import QuickFig
 
