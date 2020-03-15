@@ -146,6 +146,7 @@ def interp_rasters(rasters, chrons, sampleFactor = 1):
 @mpi.dowrap
 def animate(
         datas,
+        chrons = None,
         name = None,
         outputPath = '.',
         overwrite = False,
@@ -156,6 +157,8 @@ def animate(
         datas = datas.copy()
         for i in [i for i in [0, 1, 2] if not i == select]:
             datas[:, :, :, i] = datas[:, :, :, select]
+    if not chrons is None:
+        datas = interp_rasters(dats, chrons)
     if name is None:
         name = disk.tempname(_mpiignore_ = True)
     outputPath = os.path.abspath(outputPath)
