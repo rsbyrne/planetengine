@@ -31,7 +31,8 @@ class Stream(_function.Function):
         vel = inVar
         udy = _gradient.y(_component.x(vel))
         vdx = _gradient.x(_component.y(vel))
-        velDif = udy - vdx
+        # velDif = udy - vdx
+        velDif = vdx - udy
         inVar = velDif
 
         psiSystem = uw.systems.SteadyStateHeat(
