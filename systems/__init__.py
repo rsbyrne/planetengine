@@ -6,6 +6,7 @@ from everest.value import Value
 from everest.builts.vector import Vector
 from everest.writer import FixedDataset
 from everest.builts import make_hash
+from everest.builts._iterator import _initialised
 
 from .. import fieldops
 from ..utilities import hash_var
@@ -24,11 +25,21 @@ class System(Iterator):
 
     @classmethod
     def _process_inputs(cls, inputs):
+        from .. import initials
+        from ..traverse import Traverse
         for key, val in sorted(inputs.items()):
             if key in cls.configsKeys:
-                if type(val) is cls:
-                    from ..initials.copy import Copy
-                    inputs[key] = Copy(val, key)
+                if val is None:
+                    newVal = val
+                elif isinstance(val, initials.Channel):
+                    newVal = val
+                elif isinstance(val, System) or isinstance(val, Traverse):
+                    newVal = initials.Copy(val, key)
+                elif type(val) is float:
+                    newVal = initials.Constant(val)
+                else:
+                    raise TypeError(type(val))
+                inputs[key] = newVal
 
     @classmethod
     def _make_defaults(cls, keys):
@@ -118,6 +129,7 @@ class System(Iterator):
             configs = dConfigs,
             schema = self.typeHash,
             case = case,
+            _iterator_initialise = False,
             **kwargs
             )
 
@@ -219,6 +231,7 @@ class System(Iterator):
                 self.load(nowCount)
                 return out
 
+    @_initialised
     def add_observer(self, observerClass = None, **observerInputs):
         if observerClass is None:
             observerClass, defaultObserverInputs = self.defaultObserver

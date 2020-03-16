@@ -55,6 +55,8 @@ class Observer(Counter, Cycler):
         self.check = condition
 
     def update(self):
+        if not self.observee.initialised:
+            self.observee.initialise()
         self.count.value = self.observee.count.value
 
     def _observer_cycle(self):

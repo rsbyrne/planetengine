@@ -185,12 +185,16 @@ def safe_box_evaluate(
 def copyField(
         fromField,
         toField,
-        maxTolerance = None
+        maxTolerance = None,
+        tiles = None,
+        mirrored = None
         ):
     toMesh = utilities.get_mesh(toField)
     boxCoords = mapping.box(
         toMesh,
-        toMesh.data
+        toMesh.data,
+        tiles = tiles,
+        mirrored = mirrored
         )
     copyData = safe_box_evaluate(
         fromField,
