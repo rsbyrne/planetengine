@@ -134,7 +134,7 @@ def rescale_array(
 def modulate(
         coordArray,
         boxDims = None,
-        freqs = None,
+        tiles = None,
         mirrored = None,
         ):
 
@@ -143,13 +143,13 @@ def modulate(
     if boxDims is None:
         boxDims = pureBoxDims
 
-    if freqs is None:
-        freqs = [1. for x in boxDims]
-    assert len(freqs) == len(boxDims)
+    if tiles is None:
+        tiles = [1. for x in boxDims]
+    assert len(tiles) == len(boxDims)
 
     outArray = coordArray.copy()
 
-    freqDims = (np.array(pureBoxDims).T * freqs).T
+    freqDims = (np.array(pureBoxDims).T * tiles).T
     outArray = rescale_array(outArray, boxDims, freqDims)
     outArray %= (1. + 1e-15)
     outArray = rescale_array(outArray, pureBoxDims, boxDims)
@@ -206,7 +206,7 @@ def box(
         mesh,
         coordArray = None,
         boxDims = None,
-        freqs = None,
+        tiles = None,
         mirrored = None,
         ):
 
@@ -234,11 +234,11 @@ def box(
             flip = [False, True]
             )
 
-    if (not freqs is None) or (not mirrored is None):
+    if (not tiles is None) or (not mirrored is None):
         outArray = modulate(
             outArray,
             boxDims,
-            freqs,
+            tiles,
             mirrored
             )
 

@@ -34,4 +34,5 @@ class Copy(Channel):
     def evaluate(self, coordArray):
         traversee = self.traverse()
         var = traversee.locals[self.varName]
-        return fieldops.safe_box_evaluate(var, coordArray)
+        outArr = fieldops.safe_box_evaluate(var, coordArray)
+        return outArr

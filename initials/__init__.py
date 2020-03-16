@@ -36,27 +36,42 @@ class Configuration(Applier):
 class Channel(Applier):
 
     def __init__(self,
+            boxDims = None,
+            tiles = None,
+            mirrored = None,
             **kwargs
             ):
 
         # Expects:
         # self.evaluate
 
+        self.boxDims, self.tiles, self.mirrored = \
+            boxDims, tiles, mirrored
+
         super().__init__(**kwargs)
 
         self._apply_fns.append(self._channel_apply_fn)
 
-    def _channel_get_data(self, var, boxDims):
+    def _channel_get_data(self, var):
         if type(var) == uw.mesh.MeshVariable:
-            box = mapping.box(var.mesh, var.mesh.data, boxDims)
+            mesh, data = var.mesh, var.mesh.data
         elif type(var) == uw.swarm.SwarmVariable:
-            box = mapping.box(var.swarm.mesh, var.swarm.data, boxDims)
-        channeldata = self.evaluate(box)
-        return channeldata
+            mesh, data = var.swarm.mesh, var.swarm.data
+        else:
+            raise TypeError
+        box = mapping.box(
+            mesh,
+            data,
+            boxDims = self.boxDims,
+            tiles = self.tiles,
+            mirrored = self.mirrored
+            )
+        channelData = self.evaluate(box)
+        return channelData
 
-    def _channel_apply_fn(self, var, boxDims = None):
+    def _channel_apply_fn(self, var):
         if hasattr(var, 'data'):
-            var.data[:] = self._channel_get_data(var, boxDims)
+            var.data[:] = self._channel_get_data(var)
         elif hasattr(var, 'value'):
             var.value = self.evaluate()
         else:
