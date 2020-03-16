@@ -59,6 +59,9 @@ class Basic(Observer):
         theta = temp - cond
         avTemp = integral.volume(temp)
         avTheta = integral.volume(theta)
+        analysers['temp_av'] = avTemp
+        analysers['temp_min'] = getstat.mins(temp)
+        analysers['temp_range'] = getstat.ranges(temp)
         analysers['theta_av'] = avTheta
         analysers['theta_min'] = getstat.mins(theta)
         analysers['theta_range'] = getstat.ranges(theta)
