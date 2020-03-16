@@ -14,7 +14,7 @@ class Copy(Channel):
     @staticmethod
     def _process_inputs(inputs):
         processed = dict()
-        procssed.update(inputs)
+        processed.update(inputs)
         traverse = inputs['traverse']
         if isinstance(traverse, System):
             traversee = traverse
