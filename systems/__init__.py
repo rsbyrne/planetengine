@@ -192,7 +192,7 @@ class System(Iterator):
                 fieldops.set_boundaries(var, var.bounds)
 
     def _out(self):
-        yield np.array(self.chron())
+        yield np.array(self.chron)
         for varName, var in sorted(self.varsOfState.items()):
             yield fieldops.get_global_var_data(var)
 

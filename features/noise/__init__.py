@@ -21,7 +21,7 @@ class Noise(Built):
         system = self.system
         for i, (vn, var) in enumerate(sorted(system.varsOfState.items())):
             self.preditherings[var] = var.data.copy()
-            self.apply(var, (system.count(), i))
+            self.apply(var, (system.count.value, i))
         system.clipVals()
         system.setBounds()
 
