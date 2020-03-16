@@ -158,7 +158,7 @@ def animate(
         for i in [i for i in [0, 1, 2] if not i == select]:
             datas[:, :, :, i] = datas[:, :, :, select]
     if not chrons is None:
-        datas = interp_rasters(dats, chrons)
+        datas = interp_rasters(datas, chrons)
     if name is None:
         name = disk.tempname(_mpiignore_ = True)
     outputPath = os.path.abspath(outputPath)
@@ -175,6 +175,10 @@ def animate(
             split = [data[:,:,i] for i in range(data.shape[-1])]
             im = rasterise(*split)
             im.save(os.path.join(tempDir, str(i).zfill(8)) + '.jpg')
+        filters = [
+            '"scale=trunc(iw/2)*2:trunc(ih/2)*2"',
+            '"setpts=' + str(pts) + '*PTS"'
+            ]
         cmd = [
             'ffmpeg',
             '-y',
@@ -182,8 +186,8 @@ def animate(
             'glob',
             '-i',
             '"' + inputFilename + '"',
-            '-filter:v',
-            '"setpts=' + str(pts) + '*PTS"',
+            '-filter',
+            ','.join(filters),
             '-c:v',
             'libx264',
             '-pix_fmt',
@@ -191,7 +195,7 @@ def animate(
             '-movflags',
             '+faststart',
             '-an',
-            outputFilename
+            '"' + outputFilename + '"'
             ]
         cmd = ' '.join(cmd)
         completed = subprocess.run(
