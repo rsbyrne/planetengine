@@ -12,6 +12,12 @@ from planetengine.visualisation.quickfig import QuickFig
 
 class Observer(Counter, Cycler):
 
+    @staticmethod
+    def _process_inputs(inputs):
+        observee = inputs['observee']
+        if not observee.initialised:
+            observee.initialise()
+
     def __init__(self, **kwargs):
 
         # Expects:

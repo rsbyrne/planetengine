@@ -233,7 +233,6 @@ class System(Iterator):
                 self.load(nowCount)
                 return out
 
-    @_initialised
     def add_observer(self, observerClass = None, **observerInputs):
         if observerClass is None:
             observerClass, defaultObserverInputs = self.defaultObserver

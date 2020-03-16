@@ -31,7 +31,6 @@ class Basic(Observer):
             ):
 
         analysers = dict()
-        baselines = dict()
         rasterArgs = []
 
         temp = observee.locals[tempKey]
@@ -45,7 +44,6 @@ class Basic(Observer):
         else:
             cond = conduction.inner(temp, heating, diff, flux)
 
-        baselines['condTemp'] = integral.volume(cond).evaluate()
         adiabatic, conductive = gradient.rad(temp), gradient.rad(cond)
         thetaGrad = adiabatic / conductive
         Nu = integral.outer(thetaGrad)
@@ -135,14 +133,12 @@ class Basic(Observer):
         self.velMag = velMag
         self.theta = theta
 
-        self.baselines = baselines
-
         visVars = [temp, vel]
         if not visc == 1:
             visVars.append(operations.log(visc))
         self.visVars = visVars
 
-        super().__init__(baselines = self.baselines, **kwargs)
+        super().__init__(**kwargs)
 
         self.set_freq(10)
 
