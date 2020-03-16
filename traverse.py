@@ -56,7 +56,11 @@ class Traverse(Task):
             inputs['system'] = system.__class__
             inputs['vector'] = system.inputs
             if inputs['initState'] is None:
-                inputs['initState'] = system.count.value
+                if system.count.value in {-1, 0}:
+                    initCount = 0
+                else:
+                    initCount = system.count.value
+                inputs['initState'] = initCount
             inputs[_GHOSTTAG_ + 'traversee'] = system
 
     def __init__(self,
