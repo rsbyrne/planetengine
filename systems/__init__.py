@@ -193,6 +193,7 @@ class System(Iterator):
                 nodes = var.mesh.data_nodegId
                 for index, gId in enumerate(nodes):
                     var.data[index] = loadData[gId]
+        self._update()
 
     def __getitem__(self, indexer):
         from ..traverse import Traverse
