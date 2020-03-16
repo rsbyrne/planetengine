@@ -13,13 +13,16 @@ class Copy(Channel):
 
     @staticmethod
     def _process_inputs(inputs):
+        processed = dict()
+        procssed.update(inputs)
         traverse = inputs['traverse']
         if isinstance(traverse, System):
             traversee = traverse
             traverse = traversee[:system.count()]
         elif not isinstance(traverse, Traverse):
             raise TypeError
-        inputs['traverse'] = traverse
+        processed['traverse'] = traverse
+        return processed
 
     def __init__(self,
             traverse,

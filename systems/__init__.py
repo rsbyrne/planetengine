@@ -27,6 +27,7 @@ class System(Iterator):
     def _process_inputs(cls, inputs):
         from .. import initials
         from ..traverse import Traverse
+        processed = dict()
         for key, val in sorted(inputs.items()):
             if key in cls.configsKeys:
                 if val is None:
@@ -39,7 +40,8 @@ class System(Iterator):
                     newVal = initials.Constant(val)
                 else:
                     raise TypeError(type(val))
-                inputs[key] = newVal
+                processed[key] = newVal
+        return processed
 
     @classmethod
     def _make_defaults(cls, keys):

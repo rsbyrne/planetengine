@@ -19,6 +19,8 @@ class Traverse(Task):
 
     @staticmethod
     def _process_inputs(inputs):
+        processed = dict()
+        processed.update(inputs)
         end = inputs['endState']
         if not end is None and not isinstance(end, State):
             if type(end) is int: prop = 'count'
@@ -33,7 +35,7 @@ class Traverse(Task):
                         "Relative end state only acceptable" \
                         + " when system provided."
                         )
-            inputs['endState'] = Threshold(
+            processed['endState'] = Threshold(
                 prop = prop,
                 op = 'ge',
                 val = end
@@ -42,7 +44,7 @@ class Traverse(Task):
         if not freq is None and not isinstance(freq, State):
             if type(freq) is int: prop = 'count'
             else: raise TypeError
-            inputs['freq'] = Threshold(
+            processed['freq'] = Threshold(
                 prop = prop,
                 op = 'mod',
                 val = freq,
@@ -53,15 +55,16 @@ class Traverse(Task):
             pass
         elif isinstance(system, Built):
             assert not len(inputs['vector'])
-            inputs['system'] = system.__class__
-            inputs['vector'] = system.inputs
+            processed['system'] = system.__class__
+            processed['vector'] = system.inputs
             if inputs['initState'] is None:
                 if system.count.value in {-1, 0}:
                     initCount = 0
                 else:
                     initCount = system.count.value
-                inputs['initState'] = initCount
-            inputs[_GHOSTTAG_ + 'traversee'] = system
+                processed['initState'] = initCount
+            processed[_GHOSTTAG_ + 'traversee'] = system
+        return processed
 
     def __init__(self,
             system = None,
