@@ -280,7 +280,6 @@ class System(Iterator):
             except NameError: pass
 
 # Aliases
-from functools import partial
 from .viscoplastic import Viscoplastic
 from .arrhenius import Arrhenius
 from .isovisc import Isovisc

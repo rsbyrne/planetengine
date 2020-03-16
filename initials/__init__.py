@@ -66,6 +66,7 @@ class Channel(Applier):
         if hasattr(var, 'bounds'):
             set_boundaries(var, var.bounds)
 
+# Aliases
 from .constant import Constant
 from .sinusoidal import Sinusoidal
 from .copy import Copy

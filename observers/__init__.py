@@ -104,4 +104,5 @@ class Observer(Counter, Cycler):
     def show(self):
         self.fig.show()
 
+# Aliases
 from .basic import Basic
