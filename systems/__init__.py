@@ -28,6 +28,7 @@ class System(Iterator):
         from .. import initials
         from ..traverse import Traverse
         processed = dict()
+        processed.update(inputs)
         for key, val in sorted(inputs.items()):
             if key in cls.configsKeys:
                 if val is None:
