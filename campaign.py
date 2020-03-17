@@ -11,15 +11,15 @@ from .traverse import Traverse
 class CampaignIterable:
     def __init__(self,
             schema,
-            initState,
-            endState,
+            start,
+            stop,
             freq,
             observerClasses,
             **space
             ):
-        self.schema, self.initState, self.endState, \
+        self.schema, self.start, self.stop, \
         self.freq, self.observerClasses = \
-            schema, initState, endState, freq, observerClasses
+            schema, start, stop, freq, observerClasses
         self.space = space
     def __iter__(self):
         self.vectors = iter(VectorSet(**self.space))
@@ -29,8 +29,8 @@ class CampaignIterable:
         builder = Builder(Traverse,
             system = self.schema,
             vector = vector,
-            initState = self.initState,
-            endState = self.endState,
+            start = self.start,
+            stop = self.stop,
             freq = self.freq,
             observerClasses = self.observerClasses,
             express = True,
@@ -44,8 +44,8 @@ class Campaign(Container, Task):
     def __init__(self,
             schema = None,
             space = dict(),
-            initState = None,
-            endState = None,
+            start = None,
+            stop = None,
             freq = None,
             observerClasses = [],
             cores = 1,
@@ -57,8 +57,8 @@ class Campaign(Container, Task):
 
         iterable = CampaignIterable(
             schema,
-            initState,
-            endState,
+            start,
+            stop,
             freq,
             observerClasses,
             **space

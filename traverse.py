@@ -21,7 +21,7 @@ class Traverse(Task):
     def _process_inputs(inputs):
         processed = dict()
         processed.update(inputs)
-        end = inputs['endState']
+        end = inputs['stop']
         if not end is None and not isinstance(end, State):
             if type(end) is int: prop = 'count'
             elif type(end) is float: prop = 'chron'
@@ -35,7 +35,7 @@ class Traverse(Task):
                         "Relative end state only acceptable" \
                         + " when system provided."
                         )
-            processed['endState'] = Threshold(
+            processed['stop'] = Threshold(
                 prop = prop,
                 op = 'ge',
                 val = end
@@ -57,28 +57,28 @@ class Traverse(Task):
             assert not len(inputs['vector'])
             processed['system'] = system.__class__
             processed['vector'] = system.inputs
-            if inputs['initState'] is None:
+            if inputs['start'] is None:
                 if system.count.value in {-1, 0}:
                     initCount = 0
                 else:
                     initCount = system.count.value
-                processed['initState'] = initCount
+                processed['start'] = initCount
             processed[_GHOSTTAG_ + 'traversee'] = system
         return processed
 
     def __init__(self,
             system = None,
             vector = dict(),
-            initState = None,
-            endState = None,
+            start = None,
+            stop = None,
             freq = None,
             observerClasses = [],
             **kwargs
             ):
 
-        self.system, self.initState, self.endState, \
+        self.system, self.start, self.stop, \
         self.freq, self.observerClasses, self.vector = \
-                system, initState, endState, \
+                system, start, stop, \
                 freq, observerClasses, vector
         self.observers = []
 
@@ -107,19 +107,19 @@ class Traverse(Task):
                 self.traversee = self.system(**self.vector)
         if self.anchored:
             self.traversee.anchor(self.name, self.path)
-        if not self.initState is None:
+        if not self.start is None:
             try:
-                self.traversee.load(self.initState)
+                self.traversee.load(self.start)
             except LoadFail:
                 preTraverse = self.__class__(
                     system = self.traversee,
-                    endState = self.initState,
+                    stop = self.start,
                     observerClasses = [],
                     )
                 preTraverse()
-        if self.freq is None and not self.endState is None:
+        if self.freq is None and not self.stop is None:
             try:
-                self.traversee.load(self.endState)
+                self.traversee.load(self.stop)
             except LoadFail:
                 pass
         try:
@@ -142,8 +142,8 @@ class Traverse(Task):
             self.traversee.store()
 
     def _traverse_stop(self):
-        if self.endState is None: return False
-        else: return self.endState(self.traversee)
+        if self.stop is None: return False
+        else: return self.stop(self.traversee)
 
     def _traverse_finalise(self):
         self.traversee.store()

@@ -224,8 +224,8 @@ class System(Iterator):
         if type(indexer) is slice:
             return Traverse(
                 system = self,
-                initState = indexer.start,
-                endState = indexer.stop,
+                start = indexer.start,
+                stop = indexer.stop,
                 freq = indexer.step,
                 observerClasses = []
                 )
