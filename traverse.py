@@ -13,24 +13,7 @@ from everest.weaklist import WeakList
 from everest import mpi
 from everest.globevars import _GHOSTTAG_
 
-from .utilities import LightBoolean
-
-class ChronCheck:
-    def __init__(self, value, interval):
-        self.interval = interval
-        self.value = value
-        self.previous = None
-    def __bool__(self):
-        if self.previous is None:
-            self.previous = self.value.value
-            return True
-        else:
-            target = self.previous + self.interval
-            if self.value >= self.previous + self.interval:
-                self.previous = target
-                return True
-            else:
-                return False
+from .utilities import LightBoolean, ChronCheck, _get_condition
 
 class Traverse(Task):
 
@@ -140,7 +123,7 @@ class Traverse(Task):
                 observer.anchor(self.name, self.path)
             self.add_promptee(observer)
             observer.store()
-        self.check = self._get_condition(self.traversee, self.freq)
+        self.check = _get_condition(self.traversee, self.freq)
 
     def _traverse_iterate(self):
         self.traversee()
@@ -178,17 +161,3 @@ class Traverse(Task):
             return traversee, observers
         else:
             return traversee
-
-    @staticmethod
-    def _get_condition(traversee, freq):
-        if isinstance(freq, Condition):
-            return freq
-        elif isinstance(freq, State):
-            return Condition(freq, traversee)
-        elif freq is None:
-            return False
-        elif type(freq) is int:
-            return LightBoolean(lambda: not traversee.count % freq)
-        elif type(freq) is float:
-            return ChronCheck(traversee.chron, freq)
-        else: assert False, ("Bad freq!", freq, type(freq))

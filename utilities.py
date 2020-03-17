@@ -8,6 +8,8 @@ from underworld import function as fn
 from underworld.function._function import Function as UWFn
 
 from everest import mpi
+from everest.builts.states import State
+from everest.builts.condition import Condition
 
 def message(*args):
     for arg in args:
@@ -25,6 +27,36 @@ class LightBoolean:
         self.fn = fn
     def __bool__(self):
         return bool(self.fn())
+
+class ChronCheck:
+    def __init__(self, value, interval):
+        self.interval = interval
+        self.value = value
+        self.previous = None
+    def __bool__(self):
+        if self.previous is None:
+            self.previous = self.value.value
+            return True
+        else:
+            target = self.previous + self.interval
+            if self.value >= self.previous + self.interval:
+                self.previous = target
+                return True
+            else:
+                return False
+
+def _get_condition(subject, freq):
+    if isinstance(freq, Condition):
+        return freq
+    elif isinstance(freq, State):
+        return Condition(freq, subject)
+    elif freq is None:
+        return False
+    elif type(freq) is int:
+        return LightBoolean(lambda: not subject.count % freq)
+    elif type(freq) is float:
+        return ChronCheck(subject.chron, freq)
+    else: assert False, ("Bad freq!", freq, type(freq))
 
 def get_substrates(var):
     if type(var) == uw.mesh._meshvariable.MeshVariable:
