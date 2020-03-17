@@ -15,7 +15,7 @@ class Parameter(_basetypes.BaseTypes):
     def __init__(self, inFn, **kwargs):
 
         initialVal = inFn()
-        var =fn.misc.constant(initialVal)
+        var = fn.misc.constant(initialVal)
         if not len(list(var._underlyingDataItems)) == 0:
             raise Exception
 

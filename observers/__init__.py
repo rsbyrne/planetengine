@@ -104,15 +104,18 @@ class Observer(Counter, Cycler):
         names, datas = [], []
         for name, data in zip(outkeys, outs):
             if data.shape == ():
-                if name == 'count':
+                if type(data) in {np.int32, np.int64}:
                     val = str(int(data))
+                elif type(data) in {np.float32, np.float64}:
+                    val = "{:.5f}".format(data)
                 else:
-                    val = "{:.2f}".format(data)
+                    val = str(data)
                 justname = name.ljust(max([len(key) for key in outkeys]))
                 names.append(justname)
                 datas.append(val)
         datas = dot_aligned(datas)
         outlist = [name + ' : ' + data for name, data in zip(names, datas)]
+        outlist.sort()
         outstr = '\n'.join(outlist)
         mpi.message(outstr)
 
@@ -121,3 +124,4 @@ class Observer(Counter, Cycler):
 
 # Aliases
 from .basic import Basic
+from .thermo import Thermo
