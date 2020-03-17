@@ -1,6 +1,6 @@
-from . import Zone
+from . import Terminal
 
-class SteadyState(Zone):
+class SteadyState(Terminal):
 
     def __init__(self,
             system

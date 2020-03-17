@@ -1,6 +1,6 @@
 from everest.builts._boolean import Boolean
 
-class Zone(Boolean):
+class Terminal(Boolean):
 
     def __init__(self,
             **kwargs
