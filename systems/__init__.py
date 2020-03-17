@@ -8,6 +8,7 @@ from everest.writer import FixedDataset
 from everest.builts import make_hash
 from everest.builts._iterator import _initialised
 from everest.globevars import _GHOSTTAG_
+from everest.builts._getter import Getter
 
 from .. import fieldops
 from ..utilities import hash_var
@@ -22,7 +23,7 @@ def _make_locals(localsDict):
     del localsDict['self']
     return Grouper(localsDict)
 
-class System(Iterator):
+class System(Iterator, Getter):
 
     @classmethod
     def _process_inputs(cls, inputs):
@@ -151,6 +152,9 @@ class System(Iterator):
         # Producer attributes:
         self._post_save_fns.append(self.save_observers)
 
+        # Getter attributes:
+        self._get_fns.append(self._system_get)
+
         # Built attributes:
         self._post_anchor_fns.insert(0, self.anchor_observers)
 
@@ -219,29 +223,33 @@ class System(Iterator):
                     var.data[index] = loadData[gId]
         self._update()
 
-    def __getitem__(self, indexer):
-        from ..traverse import Traverse
-        if type(indexer) is slice:
-            return Traverse(
-                system = self,
-                start = indexer.start,
-                stop = indexer.stop,
-                freq = indexer.step,
-                observerClasses = []
-                )
-        elif type(indexer) is tuple:
-            raise TypeError
+    def _system_get(self, arg):
+        if type(arg) is slice:
+            return self._system_get_slice(arg)
         else:
-            try:
-                with self.bounce(indexer):
-                    return self.out()
-            except LoadFail:
-                nowCount = self.count.value
-                self.store()
-                self[:indexer]()
-                out = self.out()
-                self.load(nowCount)
-                return out
+            return None
+
+    def _system_get_slice(self, indexer):
+        from ..traverse import Traverse
+        return Traverse(
+            system = self,
+            start = indexer.start,
+            stop = indexer.stop,
+            freq = indexer.step,
+            observerClasses = []
+            )
+
+    # def _system_get_count(self, indexer):
+    #     try:
+    #         with self.bounce(indexer):
+    #             return self.out()
+    #     except LoadFail:
+    #         nowCount = self.count.value
+    #         self.store()
+    #         self[:indexer]()
+    #         out = self.out()
+    #         self.load(nowCount)
+    #         return out
 
     def add_observer(self, observerClass = None, **observerInputs):
         if observerClass is None:
