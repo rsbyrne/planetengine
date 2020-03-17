@@ -1,6 +1,6 @@
-from . import Terminal
+from . import Final
 
-class SteadyState(Terminal):
+class SteadyState(Final):
 
     def __init__(self,
             system
