@@ -26,3 +26,4 @@ from . import systems
 from . import observers
 from . import initials
 from . import visualisation as vis
+from . import functions
