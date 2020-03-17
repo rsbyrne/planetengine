@@ -111,10 +111,6 @@ class Traverse(Task):
                 self.traversee.load(self.stop)
             except LoadFail:
                 pass
-        try:
-            self.observers.extend(self.ghosts['observers'])
-        except KeyError:
-            pass
         for observerClass in self.observerClasses:
             observer = observerClass(self.traversee)
             self.observers.append(observer)
