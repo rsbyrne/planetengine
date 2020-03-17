@@ -129,7 +129,7 @@ class System(Iterator):
 
         self.observers = []
 
-        if 'initialised' in self.ghosts:
+        if 'initialise' in self.ghosts:
             initialise = self.ghosts['initialise']
         else:
             initialise = False
