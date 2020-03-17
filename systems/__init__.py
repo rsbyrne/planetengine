@@ -133,8 +133,6 @@ class System(Iterator):
             initialise = self.ghosts['initialise']
         else:
             initialise = False
-        if initialise:
-            self.initialise()
 
         super().__init__(
             baselines = self.baselines,
