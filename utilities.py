@@ -20,6 +20,12 @@ class Grouper:
     def __getitem__(self, key):
         return getattr(self, key)
 
+class LightBoolean:
+    def __init__(self, fn):
+        self.fn = fn
+    def __bool__(self):
+        return bool(self.fn())
+
 def get_substrates(var):
     if type(var) == uw.mesh._meshvariable.MeshVariable:
         meshes = [var.mesh,]

@@ -13,6 +13,25 @@ from everest.weaklist import WeakList
 from everest import mpi
 from everest.globevars import _GHOSTTAG_
 
+from .utilities import LightBoolean
+
+class ChronCheck:
+    def __init__(self, value, interval):
+        self.interval = interval
+        self.value = value
+        self.previous = None
+    def __bool__(self):
+        if self.previous is None:
+            self.previous = self.value.value
+            return True
+        else:
+            target = self.previous + self.interval
+            if self.value >= self.previous + self.interval:
+                self.previous = target
+                return True
+            else:
+                return False
+
 class Traverse(Task):
 
     _swapscript = '''from planetengine.traverse import Traverse as CLASS'''
@@ -21,36 +40,23 @@ class Traverse(Task):
     def _process_inputs(inputs):
         processed = dict()
         processed.update(inputs)
-        end = inputs['stop']
-        if not end is None and not isinstance(end, State):
-            if type(end) is int: prop = 'count'
-            elif type(end) is float: prop = 'chron'
-            else: raise TypeError
-            if end < 0.:
-                system = inputs['system']
-                if isinstance(system, Built):
-                    end = end + getattr(system, prop).value
-                else:
+        stop = inputs['stop']
+        system = inputs['system']
+        if type(stop) in {int, float}:
+            if stop < 0:
+                if not isinstance(system, Built):
                     raise Exception(
                         "Relative end state only acceptable" \
                         + " when system provided."
                         )
-            processed['stop'] = Threshold(
-                prop = prop,
-                op = 'ge',
-                val = end
-                )
-        freq = inputs['freq']
-        if not freq is None and not isinstance(freq, State):
-            if type(freq) is int: prop = 'count'
-            else: raise TypeError
-            processed['freq'] = Threshold(
-                prop = prop,
-                op = 'mod',
-                val = freq,
-                inv = True
-                )
-        system = inputs['system']
+                if type(stop) is int:
+                    add = system.count.value
+                elif type(stop) is float:
+                    add = system.count.value
+                else:
+                    raise TypeError("Stop arg not recognised.")
+                stop = abs(stop) + add
+                processed['stop'] = stop
         if type(system) is Meta:
             pass
         elif isinstance(system, Built):
@@ -142,8 +148,18 @@ class Traverse(Task):
             self.traversee.store()
 
     def _traverse_stop(self):
-        if self.stop is None: return False
-        else: return self.stop(self.traversee)
+        if self.stop is None:
+            return False
+        elif type(self.stop) is int:
+            return self.traversee.count >= self.stop
+        elif type(self.stop) is float:
+            return self.traversee.chron >= self.stop
+        elif isinstance(self.stop, Condition):
+            return bool(self.stop)
+        elif isinstance(self.stop, State):
+            return self.stop(self.traversee)
+        else:
+            assert False, "Invalid stop argument."
 
     def _traverse_finalise(self):
         self.traversee.store()
@@ -165,7 +181,14 @@ class Traverse(Task):
 
     @staticmethod
     def _get_condition(traversee, freq):
-        if isinstance(freq, Condition): return freq
-        elif isinstance(freq, State): return Condition(freq, traversee)
-        elif freq is None: return False
+        if isinstance(freq, Condition):
+            return freq
+        elif isinstance(freq, State):
+            return Condition(freq, traversee)
+        elif freq is None:
+            return False
+        elif type(freq) is int:
+            return LightBoolean(lambda: not traversee.count % freq)
+        elif type(freq) is float:
+            return ChronCheck(traversee.chron, freq)
         else: assert False, ("Bad freq!", freq, type(freq))
