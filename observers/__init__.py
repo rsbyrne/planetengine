@@ -30,11 +30,6 @@ class Observer(Counter, Cycler):
 
         self.check = lambda: False
 
-        # self.initialise, self.reset, self.load, \
-        # self.iterate = \
-        #     self.observee.initialise, self.observee.reset, \
-        #     self.observee.load, self.observee.iterate, \
-
         super().__init__(observee = LinkTo(self.observee), **kwargs)
 
         self.fig = QuickFig(*self.visVars)
