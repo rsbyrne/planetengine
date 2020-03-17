@@ -132,7 +132,7 @@ class System(Iterator):
         if 'initialised' in self.ghosts:
             initialise = self.ghosts['initialise']
         else:
-            initialise = True
+            initialise = False
         if initialise:
             self.initialise()
 
