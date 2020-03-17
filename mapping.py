@@ -3,7 +3,7 @@ import math
 import underworld as uw
 fn = uw.function
 
-from . import mpi
+from everest import mpi
 from . import utilities
 
 def get_pureBoxDims(coordArray):

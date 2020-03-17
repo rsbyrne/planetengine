@@ -17,6 +17,7 @@ class Observer(Counter, Cycler):
         observee = inputs['observee']
         if not observee.initialised:
             observee.initialise()
+        return inputs
 
     def __init__(self, **kwargs):
 

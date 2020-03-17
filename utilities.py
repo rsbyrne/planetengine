@@ -7,7 +7,7 @@ import underworld as uw
 from underworld import function as fn
 from underworld.function._function import Function as UWFn
 
-from . import mpi
+from everest import mpi
 
 def message(*args):
     for arg in args:

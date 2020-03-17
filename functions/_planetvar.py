@@ -406,4 +406,4 @@ from . import _reduction
 # from . import projection
 from . import gradient
 from . import operations
-from .. import mpi
+from everest import mpi

@@ -9,7 +9,7 @@ import numpy as np
 import weakref
 import random
 
-from . import mpi
+from everest import mpi
 
 def get_meshUtils(mesh):
     if not hasattr(mesh, 'meshUtils'):
