@@ -61,14 +61,14 @@ class Traverse(Task):
             start = None,
             stop = None,
             freq = None,
-            observerClasses = [],
+            observers = [],
             **kwargs
             ):
 
         self.system, self.start, self.stop, \
-        self.freq, self.observerClasses, self.vector = \
+        self.freq, self.inObservers, self.vector = \
                 system, start, stop, \
-                freq, observerClasses, vector
+                freq, observers, vector
         self.observers = []
 
         ignoreme1, ignoreme2, self.vectorHash, ignoreme3, self.traverseeID = \
@@ -103,7 +103,7 @@ class Traverse(Task):
                 preTraverse = self.__class__(
                     system = self.traversee,
                     stop = self.start,
-                    observerClasses = [],
+                    observers = [],
                     )
                 preTraverse()
         if self.freq is None and not self.stop is None:
@@ -111,15 +111,37 @@ class Traverse(Task):
                 self.traversee.load(self.stop)
             except LoadFail:
                 pass
-        for observerClass in self.observerClasses:
-            observer = observerClass(self.traversee)
-            self.observers.append(observer)
+        self.observers = self._get_observers(self.traversee, self.inObservers)
         for observer in self.observers:
             if self.anchored:
                 observer.anchor(self.name, self.path)
             self.add_promptee(observer)
             observer.store()
         self.check = _get_condition(self.traversee, self.freq)
+
+    @staticmethod
+    def _get_observers(traversee, inObservers):
+        from planetengine.observers import Observer
+        observers = []
+        for item in inObservers:
+            if type(item) is tuple:
+                if not len(item) == 3:
+                    raise Exception("Inappropriate observer input.")
+                observerClass, observerInputs, observerFreq = item
+                observer = observerClass(traversee, **observerInputs)
+                observer.set_freq(observerFreq)
+            if isinstance(item, Observer):
+                if not item.observee is traversee:
+                    raise Exception("Mismatched observations.")
+                observer = item
+            elif issubclass(item, Observer):
+                observerClass = item
+                observer = observerClass(traversee)
+            observers.append(observer)
+        for observer in traversee.observers:
+            if not observer in observers:
+                observers.append(observer)
+        return observers
 
     def _traverse_iterate(self):
         self.traversee()
@@ -149,7 +171,9 @@ class Traverse(Task):
             if observer.anchored:
                 observer.save()
             self.remove_promptee(observer)
-        observers = [*self.observers]
+        observers = [
+            o for o in self.observers if not o in self.traversee.observers
+            ]
         self.observers = []
         traversee = self.traversee
         del self.traversee
