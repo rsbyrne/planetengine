@@ -7,6 +7,7 @@ from everest.builts.vector import Vector
 from everest.writer import FixedDataset
 from everest.builts import make_hash
 from everest.builts._iterator import _initialised
+from everest.globevars import _GHOSTTAG_
 
 from .. import fieldops
 from ..utilities import hash_var
@@ -42,6 +43,9 @@ class System(Iterator):
                 else:
                     raise TypeError(type(val))
                 processed[key] = newVal
+        if 'initialise' in inputs:
+            del processed['initialise']
+            processed[_GHOSTTAG_ + 'initialise'] = inputs['initialise']
         return processed
 
     @classmethod
@@ -125,6 +129,13 @@ class System(Iterator):
 
         self.observers = []
 
+        if 'initialised' in self.ghosts:
+            initialise = self.ghosts['initialise']
+        else:
+            initialise = True
+        if initialise:
+            self.initialise()
+
         super().__init__(
             baselines = self.baselines,
             options = dOptions,
@@ -132,7 +143,7 @@ class System(Iterator):
             configs = dConfigs,
             schema = self.typeHash,
             case = case,
-            _iterator_initialise = False,
+            _iterator_initialise = initialise,
             **kwargs
             )
 
