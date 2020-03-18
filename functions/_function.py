@@ -32,6 +32,12 @@ class Function(_planetvar.PlanetVar):
             if hasattr(inVar, 'substrate'):
                 if not inVar.substrate is None:
                     substrates.add(inVar.substrate)
+        subMeshes = set()
+        for mesh in meshes:
+            try: subMeshes.add(mesh.subMesh)
+            except AttributeError: pass
+        meshes = {m for m in meshes if not m in subMeshes}
+        substrates = {s for s in substrates if not s in subMeshes}
         if len(meshes) == 1:
             self.mesh = list(meshes)[0]
             self.meshUtils = meshutils.get_meshUtils(self.mesh)
