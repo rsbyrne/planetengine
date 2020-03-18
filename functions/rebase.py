@@ -24,16 +24,13 @@ class Rebase(_function.Function):
 
         super().__init__(**kwargs)
 
-    def scaleFn(self):
-        if not hasattr(self, '_scaleFn'):
-            self._set_summary_stats()
-        scales = self._scaleFn()
+    def _scaleFn(self):
+        scales = [self.min, self.max]
         ref = self.refVar.evaluate()
         outs = []
-        for dim in range(len(scales)):
-            maxVal = max([abs(item - ref) for item in scales[dim]])
-            outs.append([-maxVal, maxVal])
-        return outs
+        difference = max([abs(x - ref) for x in scales])
+        print("hello")
+        return [ref - difference, ref + difference]
 
 def default(*args, **kwargs):
     return _construct(*args, **kwargs)

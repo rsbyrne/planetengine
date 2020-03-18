@@ -38,9 +38,10 @@ class Data:
             self.var,
             self.grid
             )
+        inScale = self.var.scale
         data = mapping.rescale_array(
             data,
-            self.var._scaleFn(),
+            [inScale for dim in range(data.shape[-1])],
             [self.normInterval for dim in range(data.shape[-1])]
             )
         data = np.round(data).astype('uint8')
