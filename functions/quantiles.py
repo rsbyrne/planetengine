@@ -23,10 +23,10 @@ class Quantiles(_function.Function):
         #     raise Exception
 
         interval = _basetypes.Parameter(
-            lambda: inVar.rangeFn() / ntiles
+            lambda: inVar._rangeFn() / ntiles
             )
         minVal = _basetypes.Parameter(
-            inVar.minFn
+            inVar._minFn
             )
 
         clauses = []
@@ -39,8 +39,8 @@ class Quantiles(_function.Function):
         clauses.append(
             (True, float(ntiles))
             )
-        rawvar =fn.branching.conditional(clauses)
-        var =fn.branching.conditional([
+        rawvar = fn.branching.conditional(clauses)
+        var = fn.branching.conditional([
             (inVar < np.inf, rawvar),
             (True, np.nan)
             ])

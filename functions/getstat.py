@@ -21,11 +21,15 @@ class GetStat(_reduction.Reduction):
         inVar = _convert.convert(inVar)
 
         if stat == 'mins':
-            var = _basetypes.Parameter(inVar.minFn)
+            var = _basetypes.Parameter(inVar._minFn)
         elif stat == 'maxs':
-            var = _basetypes.Parameter(inVar.maxFn)
+            var = _basetypes.Parameter(inVar._maxFn)
         elif stat == 'ranges':
-            var = _basetypes.Parameter(inVar.rangeFn)
+            var = _basetypes.Parameter(inVar._rangeFn)
+        elif stat == 'scales':
+            var = _basetypes.Parameter(inVar._scaleFn)
+        else:
+            raise ValueError
 
         self.stringVariants = {'stat': stat}
         self.inVars = [inVar]
@@ -37,11 +41,14 @@ class GetStat(_reduction.Reduction):
 def default(*args, **kwargs):
     return _construct(*args, **kwargs)
 
-def mins(*args, **kwargs):
+def min(*args, **kwargs):
     return _construct(*args, stat = 'mins', **kwargs)
 
-def maxs(*args, **kwargs):
+def max(*args, **kwargs):
     return _construct(*args, stat = 'maxs', **kwargs)
 
-def ranges(*args, **kwargs):
+def range(*args, **kwargs):
     return _construct(*args, stat = 'ranges', **kwargs)
+
+def scale(*args, **kwargs):
+    return _construct(*args, stat = 'scales', **kwargs)

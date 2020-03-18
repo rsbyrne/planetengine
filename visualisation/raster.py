@@ -40,7 +40,7 @@ class Data:
             )
         data = mapping.rescale_array(
             data,
-            self.var.scaleFn(),
+            self.var._scaleFn(),
             [self.normInterval for dim in range(data.shape[-1])]
             )
         data = np.round(data).astype('uint8')

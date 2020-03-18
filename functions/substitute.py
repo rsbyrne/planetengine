@@ -18,7 +18,7 @@ class Substitute(_function.Function):
             inVar, fromVal, toVal
             )
 
-        var =fn.branching.conditional([
+        var = fn.branching.conditional([
             (fn.math.abs(inVar - fromVal) < 1e-18, toVal),
             (True, inVar),
             ])

@@ -26,8 +26,6 @@ class Integral(_reduction.Reduction):
         elif isinstance(inVar, _reduction.Reduction):
             raise Exception
 
-        # inVar = _handlenan.zeroes(inVar)
-
         intMesh = inVar.meshUtils.integrals[surface]
         if surface == 'volume':
             intField = uw.utils.Integral(

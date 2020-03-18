@@ -28,19 +28,19 @@ class Thermo(Observer):
         avTemp = pfn.integral.volume(temp)
         avTheta = pfn.integral.volume(theta)
         analysers['temp_av'] = avTemp
-        analysers['temp_min'] = pfn.getstat.mins(temp)
-        analysers['temp_range'] = pfn.getstat.ranges(temp)
+        analysers['temp_min'] = pfn.getstat.min(temp)
+        analysers['temp_range'] = pfn.getstat.range(temp)
         analysers['theta_av'] = avTheta
-        analysers['theta_min'] = pfn.getstat.mins(theta)
-        analysers['theta_range'] = pfn.getstat.ranges(theta)
+        analysers['theta_min'] = pfn.getstat.min(theta)
+        analysers['theta_range'] = pfn.getstat.range(theta)
 
         adiabatic, conductive = pfn.gradient.rad(temp), pfn.gradient.rad(cond)
         thetaGrad = adiabatic / conductive
         Nu = pfn.integral.outer(thetaGrad)
         analysers['Nu'] = Nu
         thetaGradOuter = pfn.surface.outer(thetaGrad)
-        analysers['Nu_min'] = pfn.getstat.mins(thetaGradOuter)
-        analysers['Nu_range'] = pfn.getstat.ranges(thetaGradOuter)
+        analysers['Nu_min'] = pfn.getstat.min(thetaGradOuter)
+        analysers['Nu_range'] = pfn.getstat.range(thetaGradOuter)
         NuFreq = pfn.fourier.default(thetaGradOuter)
         analysers['Nu_freq'] = NuFreq
 

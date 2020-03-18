@@ -3,7 +3,7 @@ import numpy as np
 
 import underworld as uw
 fn = uw.function
-UWFn =fn._function.Function
+UWFn = fn._function.Function
 
 from everest import mpi
 
@@ -218,12 +218,12 @@ class PlanetVar(UWFn):
         if isinstance(self, _function.Function) \
                 or type(self) == _basetypes.Variable:
             def minFn():
-                return min(mpi.comm.allgather(np.min(self.evaluate())))
+                return np.min(mpi.comm.allgather(np.min(self.evaluate())))
             def maxFn():
-                return max(mpi.comm.allgather(np.max(self.evaluate())))
+                return np.max(mpi.comm.allgather(np.max(self.evaluate())))
             rangeFn = lambda: abs(minFn() - maxFn())
             def scaleFn():
-                return [[minFn(), maxFn()] for dim in range(self.varDim)]
+                return [minFn(), maxFn()]
         elif isinstance(self, _reduction.Reduction) \
                 or type(self) == _basetypes.Constant:
             minFn = lambda: min(self.value)
@@ -242,19 +242,30 @@ class PlanetVar(UWFn):
         self._rangeFn = rangeFn
         self._scaleFn = scaleFn
 
-    def minFn(self):
+    @property
+    def min(self):
+        self.update()
         if not hasattr(self, '_minFn'):
             self._set_summary_stats()
         return self._minFn()
-    def maxFn(self):
+
+    @property
+    def max(self):
+        self.update()
         if not hasattr(self, '_maxFn'):
             self._set_summary_stats()
         return self._maxFn()
-    def rangeFn(self):
+
+    @property
+    def range(self):
+        self.update()
         if not hasattr(self, '_rangeFn'):
             self._set_summary_stats()
         return self._rangeFn()
-    def scaleFn(self):
+
+    @property
+    def scale(self):
+        self.update()
         if not hasattr(self, '_scaleFn'):
             self._set_summary_stats()
         return self._scaleFn()

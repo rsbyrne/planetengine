@@ -2,7 +2,7 @@ import weakref
 
 import underworld as uw
 fn = uw.function
-UWFn =fn._function.Function
+UWFn = fn._function.Function
 
 from . import _planetvar
 from . import _basetypes

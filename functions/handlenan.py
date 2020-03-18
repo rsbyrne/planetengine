@@ -25,7 +25,7 @@ class HandleNaN(_function.Function):
         compareVal = [
             np.inf for dim in range(inVar.varDim)
             ]
-        var =fn.branching.conditional([
+        var = fn.branching.conditional([
             (inVar < compareVal, inVar),
             (True, handleVal),
             ])
@@ -47,16 +47,16 @@ def _NaNFloat(inVar, handleFloat, **kwargs):
         ]
     return _construct(inVar, handleVal = handleVal, **kwargs)
 
-def zeroes(inVar, **kwargs):
+def zero(inVar, **kwargs):
     return _NaNFloat(inVar, 0., **kwargs)
 
-def units(inVar, **kwargs):
+def unit(inVar, **kwargs):
     return _NaNFloat(inVar, 1., **kwargs)
 
-def mins(inVar, **kwargs):
-    handleVal = _getstat.GetStat.mins(inVar)
+def min(inVar, **kwargs):
+    handleVal = _getstat.GetStat.min(inVar)
     return _NaNFloat(inVar, handleVal, **kwargs)
 
-def maxs(inVar, **kwargs):
-    handleVal = _getstat.GetStat.maxs(inVar)
+def max(inVar, **kwargs):
+    handleVal = _getstat.GetStat.max(inVar)
     return _NaNFloat(inVar, handleVal, **kwargs)

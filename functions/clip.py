@@ -38,7 +38,7 @@ class Clip(_function.Function):
             lBnd = _convert.convert(lBnd)
             if not lBnd in inVars:
                 inVars.append(lBnd)
-            lBnd = _basetypes.Parameter(lBnd.minFn)
+            lBnd = _basetypes.Parameter(lBnd._minFn)
             parameters.append(lBnd)
             if lClipVal is 'null':
                 lClipVal = nullVal
@@ -56,7 +56,7 @@ class Clip(_function.Function):
             uBnd = _convert.convert(uBnd)
             if not uBnd in inVars:
                 inVars.append(uBnd)
-            uBnd = _basetypes.Parameter(uBnd.maxFn)
+            uBnd = _basetypes.Parameter(uBnd._maxFn)
             parameters.append(uBnd)
             if uClipVal is 'null':
                 uClipVal = nullVal
@@ -75,7 +75,7 @@ class Clip(_function.Function):
             del stringVariants['lower']
             del stringVariants['upper']
 
-        var =fn.branching.conditional(clauses)
+        var = fn.branching.conditional(clauses)
 
         self.stringVariants = stringVariants
         self.inVars = list(inVars)

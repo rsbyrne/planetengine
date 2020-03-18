@@ -19,7 +19,7 @@ class Comparison(_function.Function):
 
         inVar0, inVar1 = inVars = _convert.convert(inVar0, inVar1)
         boolOut = operation == 'equals'
-        var =fn.branching.conditional([
+        var = fn.branching.conditional([
             (inVar0 < inVar1 - 1e-18, not boolOut),
             (inVar0 > inVar1 + 1e-18, not boolOut),
             (True, boolOut),

@@ -26,7 +26,7 @@ class Select(_function.Function):
             outVar = _convert.convert(outVar)
             inVars = tuple([*list(inVars), outVar])
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var =fn.branching.conditional([
+        var = fn.branching.conditional([
             (fn.math.abs(inVar - selectVal) < 1e-18, outVar),
             (True, nullVal)
             ])

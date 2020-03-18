@@ -26,7 +26,7 @@ class Filter(_function.Function):
             outVar = _convert.convert(outVar)
             inVars = (*inVars, outVar)
         nullVal = [np.nan for dim in range(inVar.varDim)]
-        var =fn.branching.conditional([
+        var = fn.branching.conditional([
             (fn.math.abs(inVar - filterVal) < 1e-18, nullVal),
             (True, outVar)
             ])

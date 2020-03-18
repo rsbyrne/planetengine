@@ -30,9 +30,9 @@ class Ranger(_function.Function):
         else:
             inVal = nullVal
             outVal = inVar0
-        lowerBounds = _basetypes.Parameter(inVars[1].minFn)
-        upperBounds = _basetypes.Parameter(inVars[1].maxFn)
-        var =fn.branching.conditional([
+        lowerBounds = _basetypes.Parameter(inVars[1]._minFn)
+        upperBounds = _basetypes.Parameter(inVars[1]._maxFn)
+        var = fn.branching.conditional([
             (inVar0 < lowerBounds, outVal),
             (inVar0 > upperBounds, outVal),
             (True, inVal),

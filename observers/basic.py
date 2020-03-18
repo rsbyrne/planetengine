@@ -43,8 +43,8 @@ class Basic(Observer):
         Nu = pfn.integral.outer(thetaGrad)
         analysers['Nu'] = Nu
         thetaGradOuter = pfn.surface.outer(thetaGrad)
-        analysers['Nu_min'] = pfn.getstat.mins(thetaGradOuter)
-        analysers['Nu_range'] = pfn.getstat.ranges(thetaGradOuter)
+        analysers['Nu_min'] = pfn.getstat.min(thetaGradOuter)
+        analysers['Nu_range'] = pfn.getstat.range(thetaGradOuter)
         NuFreq = pfn.fourier.default(thetaGradOuter)
         analysers['Nu_freq'] = NuFreq
 
@@ -52,31 +52,31 @@ class Basic(Observer):
         avTemp = pfn.integral.volume(temp)
         avTheta = pfn.integral.volume(theta)
         analysers['temp_av'] = avTemp
-        analysers['temp_min'] = pfn.getstat.mins(temp)
-        analysers['temp_range'] = pfn.getstat.ranges(temp)
+        analysers['temp_min'] = pfn.getstat.min(temp)
+        analysers['temp_range'] = pfn.getstat.range(temp)
         analysers['theta_av'] = avTheta
-        analysers['theta_min'] = pfn.getstat.mins(theta)
-        analysers['theta_range'] = pfn.getstat.ranges(theta)
+        analysers['theta_min'] = pfn.getstat.min(theta)
+        analysers['theta_range'] = pfn.getstat.range(theta)
 
         vel = observee.locals[velKey]
         vc = observee.locals[vcKey]
         velMag = pfn.component.mag(vel)
         VRMS = pfn.operations.sqrt(pfn.integral.volume(pfn.component.sq(vel)))
         analysers['VRMS'] = VRMS
-        analysers['velMag_range'] = pfn.getstat.ranges(velMag)
+        analysers['velMag_range'] = pfn.getstat.range(velMag)
         velAng = pfn.component.ang(vel)
         velAngOuter = pfn.surface.outer(velAng)
         analysers['velAng_outer_av'] = pfn.integral.outer(velAng)
-        analysers['velAng_outer_min'] = pfn.getstat.mins(velAngOuter)
-        analysers['velAng_outer_range'] = pfn.getstat.ranges(velAngOuter)
+        analysers['velAng_outer_min'] = pfn.getstat.min(velAngOuter)
+        analysers['velAng_outer_range'] = pfn.getstat.range(velAngOuter)
 
         if viscKey in observee.locals.__dict__:
             visc = observee.locals[viscKey]
             if not type(visc) is fn.misc.constant:
                 avVisc = pfn.integral.volume(visc)
                 analysers['visc_av'] = avVisc
-                analysers['visc_min'] = pfn.getstat.mins(visc)
-                analysers['visc_range'] = pfn.getstat.ranges(visc)
+                analysers['visc_min'] = pfn.getstat.min(visc)
+                analysers['visc_range'] = pfn.getstat.range(visc)
         else:
             visc = 1.
         if plasticViscKey in observee.locals.__dict__:
@@ -93,24 +93,24 @@ class Basic(Observer):
         stressRadOuter = pfn.surface.outer(stressRad)
         stressAngOuter = pfn.surface.outer(stressAng)
         analysers['stressRad_outer_av'] = pfn.integral.outer(stressRad)
-        analysers['stressRad_outer_min'] = pfn.getstat.mins(stressRadOuter)
-        analysers['stressRad_outer_range'] = pfn.getstat.ranges(stressRadOuter)
+        analysers['stressRad_outer_min'] = pfn.getstat.min(stressRadOuter)
+        analysers['stressRad_outer_range'] = pfn.getstat.range(stressRadOuter)
         analysers['stressAng_outer_av'] = pfn.integral.outer(stressAng)
-        analysers['stressAng_outer_min'] = pfn.getstat.mins(stressAngOuter)
-        analysers['stressAng_outer_range'] = pfn.getstat.ranges(stressAngOuter)
+        analysers['stressAng_outer_min'] = pfn.getstat.min(stressAngOuter)
+        analysers['stressAng_outer_range'] = pfn.getstat.range(stressAngOuter)
 
         strainRate = 2. * pfn.tensor.second_invariant(
             pfn.tensor.symmetric(pfn.gradient.default(vc))
             )
         strainRate_outer = pfn.surface.outer(strainRate)
         analysers['strainRate_outer_av'] = pfn.integral.outer(strainRate)
-        analysers['strainRate_outer_min'] = pfn.getstat.mins(strainRate)
-        analysers['strainRate_outer_range'] = pfn.getstat.ranges(strainRate)
+        analysers['strainRate_outer_min'] = pfn.getstat.min(strainRate)
+        analysers['strainRate_outer_range'] = pfn.getstat.range(strainRate)
 
         streamFn = pfn.stream.default(vc)
         analysers['psi_av'] = pfn.integral.volume(streamFn)
-        analysers['psi_min'] = pfn.getstat.mins(streamFn)
-        analysers['psi_range'] = pfn.getstat.ranges(streamFn)
+        analysers['psi_min'] = pfn.getstat.min(streamFn)
+        analysers['psi_range'] = pfn.getstat.range(streamFn)
 
         aspect = observee.locals[aspectKey]
         raster = Raster(

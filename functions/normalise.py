@@ -15,10 +15,10 @@ class Normalise(_function.Function):
 
         baseVar, normVar = inVars = _convert.convert(baseVar, normVar)
 
-        inMins = _basetypes.Parameter(baseVar.minFn)
-        inRanges = _basetypes.Parameter(baseVar.rangeFn)
-        normMins = _basetypes.Parameter(normVar.minFn)
-        normRanges = _basetypes.Parameter(normVar.rangeFn)
+        inMins = _basetypes.Parameter(baseVar._minFn)
+        inRanges = _basetypes.Parameter(baseVar._rangeFn)
+        normMins = _basetypes.Parameter(normVar._minFn)
+        normRanges = _basetypes.Parameter(normVar._rangeFn)
 
         var = (baseVar - inMins) / inRanges * normRanges + normMins
 

@@ -114,13 +114,13 @@ class RayleighTaylor(System):
         denseIndex = 0
         lightIndex = 1
         densityMap = {lightIndex: density_ratio * density_ref, denseIndex: density_ref}
-        densityFn =fn.branching.map(fn_key = materialField, mapping = densityMap)
+        densityFn = fn.branching.map(fn_key = materialField, mapping = densityMap)
         buoyancyFn = densityFn * -1. * mesh.unitvec_r_Fn
 
         ### RHEOLOGY ###
 
         viscosityMap = {lightIndex: visc_ratio * visc_ref, denseIndex: visc_ref}
-        viscosityFn  =fn.branching.map(fn_key = materialField, mapping = viscosityMap)
+        viscosityFn  = fn.branching.map(fn_key = materialField, mapping = viscosityMap)
 
         ### SYSTEMS ###
 

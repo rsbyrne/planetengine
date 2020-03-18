@@ -19,7 +19,7 @@ class Booleanise(_function.Function):
         if not inVar.varDim == 1:
             raise Exception
 
-        var =fn.branching.conditional([
+        var = fn.branching.conditional([
             (fn.math.abs(inVar) < 1e-18, False),
             (True, True),
             ])
