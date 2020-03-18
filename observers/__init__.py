@@ -10,7 +10,7 @@ from everest.writer import LinkTo
 from planetengine.visualisation.quickfig import QuickFig
 
 from ..utilities import _get_periodic_condition
-from .. import mpi
+from everest import mpi
 
 class Observer(Counter, Cycler):
 

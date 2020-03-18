@@ -8,7 +8,7 @@ from ..utilities import message
 from ..functions import convert, normalise, getstat
 # from .. import functions as pfn
 from ..meshutils import get_meshUtils
-from .. import mpi
+from everest import mpi
 from . import fig
 
 def quickShow(*args, **kwargs):

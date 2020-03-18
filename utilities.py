@@ -10,7 +10,7 @@ from underworld.function._function import Function as UWFn
 from everest.builts.states import State
 from everest.builts.condition import Condition
 
-from . import mpi
+from everest import mpi
 
 def message(*args):
     for arg in args:

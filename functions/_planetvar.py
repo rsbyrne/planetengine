@@ -5,7 +5,7 @@ import underworld as uw
 fn = uw.function
 UWFn =fn._function.Function
 
-from .. import mpi
+from everest import mpi
 
 _PLANETVAR_FLAG = 'planetVar'
 
@@ -196,7 +196,6 @@ class PlanetVar(UWFn):
         for parameter in self.parameters:
             parameter.update()
         self._partial_update()
-        self._update_summary_stats()
 
     def _check_hash(self, lazy = False):
         currenthash = 0
@@ -218,29 +217,10 @@ class PlanetVar(UWFn):
     def _set_summary_stats(self):
         if isinstance(self, _function.Function) \
                 or type(self) == _basetypes.Variable:
-            # if self.varDim == 1:
-            #     minmax = fn.view.min_max(self.var)
-            # else:
-            #     fn_norm = fn.math.sqrt(
-            #        fn.math.dot(
-            #             self,
-            #             self
-            #             )
-            #         )
-            #     minmax = fn.view.min_max(
-            #         self,
-            #         fn_norm = fn_norm
-            #         )
-            # def minFn():
-            #     allmins = mpi.comm.allgather(minmax.min_local())
-            #     return min(allmins)
-            # def maxFn():
-            #     allmaxs = mpi.comm.allgather(minmax.max_local())
-            #     return max(allmaxs)
-            # minFn = minmax.min_global
-            # maxFn = minmax.max_global
-            minmax.evaluate(self.substrate)
-            self._minmax = minmax
+            def minFn():
+                return min(mpi.comm.allgather(np.min(self.evaluate())))
+            def maxFn():
+                return max(mpi.comm.allgather(np.max(self.evaluate())))
             rangeFn = lambda: abs(minFn() - maxFn())
             def scaleFn():
                 return [[minFn(), maxFn()] for dim in range(self.varDim)]
@@ -257,7 +237,6 @@ class PlanetVar(UWFn):
             minFn = maxFn = rangeFn = scaleFn = lambda: None
         else:
             raise Exception
-
         self._minFn = minFn
         self._maxFn = maxFn
         self._rangeFn = rangeFn
@@ -280,44 +259,8 @@ class PlanetVar(UWFn):
             self._set_summary_stats()
         return self._scaleFn()
 
-    def _update_summary_stats(self):
-        if (isinstance(self, _function.Function) \
-                or type(self) == _basetypes.Variable
-                ) \
-                and hasattr(self, '_minmax'):
-            self._minmax.evaluate(self.substrate)
-        if isinstance(self, _reduction.Reduction):
-            self.value = self.evaluate(lazy = True)
-
     def _set_weakref(self):
         self.var._planetVar = weakref.ref(self)
-
-    # def _check_meshable(self):
-    #     if not any([
-    #             isinstance(self, _function.Function),
-    #             type(self) == _basetypes.Variable
-    #             ]):
-    #         raise Exception
-    #     if self.varType == 'constFn':
-    #         raise Exception
-
-    # def meshVar(self, update = True, returnvar = True):
-    #     self._check_meshable()
-    #     self.update()
-    #     if self.dType in ('int', 'boolean'):
-    #         rounding = 0
-    #     else:
-    #         rounding = 6
-    #     if type(self.var) == uw.mesh._meshvariable.MeshVariable:
-    #         outVar = self.var
-    #     else:
-    #         outVar = self.meshUtils.meshify(
-    #             self.var,
-    #             self.vector,
-    #             update = update
-    #             )
-    #     if returnvar:
-    #         return outVar
 
     def _input_processing(self, evalInput):
         return evalInput

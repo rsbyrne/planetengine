@@ -8,7 +8,7 @@ from underworld import function as fn
 from .meshutils import get_meshUtils
 from . import mapping
 from . import utilities
-from . import mpi
+from everest import mpi
 from . import exceptions
 message = utilities.message
 

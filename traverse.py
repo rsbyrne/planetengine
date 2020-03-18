@@ -13,7 +13,7 @@ from everest.weaklist import WeakList
 from everest.globevars import _GHOSTTAG_
 
 from .utilities import LightBoolean, ChronCheck, _get_periodic_condition
-from . import mpi
+from everest import mpi
 
 class Traverse(Task):
 
