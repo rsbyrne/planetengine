@@ -157,6 +157,8 @@ class PlanetVar(UWFn):
 
         self._update()
 
+        self._set_summary_stats()
+
         # if not self.__class__ is _basetypes.Constant:
         self._set_weakref() # is static
 
@@ -215,28 +217,20 @@ class PlanetVar(UWFn):
         return has_changed
 
     def _set_summary_stats(self):
-        if isinstance(self, _function.Function) \
-                or type(self) == _basetypes.Variable:
-            def minFn():
-                return np.min(mpi.comm.allgather(np.min(self.evaluate())))
-            def maxFn():
-                return np.max(mpi.comm.allgather(np.max(self.evaluate())))
-            rangeFn = lambda: abs(minFn() - maxFn())
-            def scaleFn():
-                return [minFn(), maxFn()]
-        elif isinstance(self, _reduction.Reduction) \
-                or type(self) == _basetypes.Constant:
-            minFn = lambda: min(self.value)
-            maxFn = lambda: max(self.value)
-            rangeFn = lambda: maxFn() - minFn()
-            scaleFn = lambda: [minFn(), maxFn()]
-        elif type(self) in {
+        if type(self) in {
                 _basetypes.Parameter,
                 _basetypes.Shape
                 }:
             minFn = maxFn = rangeFn = scaleFn = lambda: None
         else:
-            raise Exception
+            def minFn():
+                return np.min(mpi.comm.allgather(np.min(self.evaluate())))
+            def maxFn():
+                return np.max(mpi.comm.allgather(np.max(self.evaluate())))
+            def rangeFn():
+                return abs(minFn() - maxFn())
+            def scaleFn():
+                return [minFn(), maxFn()]
         self._minFn = minFn
         self._maxFn = maxFn
         self._rangeFn = rangeFn
@@ -244,26 +238,15 @@ class PlanetVar(UWFn):
 
     @property
     def min(self):
-        if not hasattr(self, '_minFn'):
-            self._set_summary_stats()
         return self._minFn()
-
     @property
     def max(self):
-        if not hasattr(self, '_maxFn'):
-            self._set_summary_stats()
         return self._maxFn()
-
     @property
     def range(self):
-        if not hasattr(self, '_rangeFn'):
-            self._set_summary_stats()
         return self._rangeFn()
-
     @property
     def scale(self):
-        if not hasattr(self, '_scaleFn'):
-            self._set_summary_stats()
         return self._scaleFn()
 
     def _set_weakref(self):

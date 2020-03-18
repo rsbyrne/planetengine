@@ -99,9 +99,9 @@ class Basic(Observer):
         analysers['stressAng_outer_min'] = pfn.getstat.min(stressAngOuter)
         analysers['stressAng_outer_range'] = pfn.getstat.range(stressAngOuter)
 
-        strainRate = 2. * pfn.tensor.second_invariant(
+        strainRate = pfn.tensor.second_invariant(
             pfn.tensor.symmetric(pfn.gradient.default(vc))
-            )
+            ) * 2.
         strainRate_outer = pfn.surface.outer(strainRate)
         analysers['strainRate_outer_av'] = pfn.integral.outer(strainRate)
         analysers['strainRate_outer_min'] = pfn.getstat.min(strainRate)
@@ -115,7 +115,7 @@ class Basic(Observer):
         aspect = observee.locals[aspectKey]
         raster = Raster(
             pfn.rebase.zero(theta),
-            pfn.operations.log(strainRate),
+            strainRate,
             pfn.rebase.zero(streamFn),
             aspect = aspect
             )
