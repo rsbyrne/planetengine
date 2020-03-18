@@ -244,28 +244,24 @@ class PlanetVar(UWFn):
 
     @property
     def min(self):
-        self.update()
         if not hasattr(self, '_minFn'):
             self._set_summary_stats()
         return self._minFn()
 
     @property
     def max(self):
-        self.update()
         if not hasattr(self, '_maxFn'):
             self._set_summary_stats()
         return self._maxFn()
 
     @property
     def range(self):
-        self.update()
         if not hasattr(self, '_rangeFn'):
             self._set_summary_stats()
         return self._rangeFn()
 
     @property
     def scale(self):
-        self.update()
         if not hasattr(self, '_scaleFn'):
             self._set_summary_stats()
         return self._scaleFn()
