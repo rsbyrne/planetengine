@@ -10,7 +10,7 @@ from everest import mpi
 
 from planetengine.visualisation.quickfig import QuickFig
 
-from ..utilities import _get_condition
+from ..utilities import _get_periodic_condition
 
 class Observer(Counter, Cycler):
 
@@ -46,7 +46,7 @@ class Observer(Counter, Cycler):
         self._count_update_fns.append(self.update)
 
     def set_freq(self, freq):
-        self.check = _get_condition(self.observee, freq)
+        self.check = _get_periodic_condition(self.observee, freq)
 
     def update(self):
         if not self.observee.initialised:

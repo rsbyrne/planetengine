@@ -13,7 +13,7 @@ from everest.weaklist import WeakList
 from everest import mpi
 from everest.globevars import _GHOSTTAG_
 
-from .utilities import LightBoolean, ChronCheck, _get_condition
+from .utilities import LightBoolean, ChronCheck, _get_periodic_condition
 
 class Traverse(Task):
 
@@ -117,7 +117,7 @@ class Traverse(Task):
                 observer.anchor(self.name, self.path)
             self.add_promptee(observer)
             observer.store()
-        self.check = _get_condition(self.traversee, self.freq)
+        self.check = _get_periodic_condition(self.traversee, self.freq)
 
     @staticmethod
     def _get_observers(traversee, inObservers):

@@ -45,8 +45,10 @@ class ChronCheck:
             else:
                 return False
 
-def _get_condition(subject, freq):
-    if isinstance(freq, Condition):
+def _get_periodic_condition(subject, freq):
+    if type(freq) is bool:
+        return freq
+    elif isinstance(freq, Condition):
         return freq
     elif isinstance(freq, State):
         return Condition(freq, subject)
@@ -56,7 +58,8 @@ def _get_condition(subject, freq):
         return LightBoolean(lambda: not subject.count % freq)
     elif type(freq) is float:
         return ChronCheck(subject.chron, freq)
-    else: assert False, ("Bad freq!", freq, type(freq))
+    else:
+        assert False, ("Bad freq!", freq, type(freq))
 
 def get_substrates(var):
     if type(var) == uw.mesh._meshvariable.MeshVariable:
