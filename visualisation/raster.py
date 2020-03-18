@@ -151,6 +151,7 @@ def animate(
         name = None,
         outputPath = '.',
         overwrite = False,
+        sampleFactor = 1,
         pts = 1.,
         select = None
         ):
@@ -159,7 +160,7 @@ def animate(
         for i in [i for i in [0, 1, 2] if not i == select]:
             datas[:, :, :, i] = datas[:, :, :, select]
     if not chrons is None:
-        datas = interp_rasters(datas, chrons)
+        datas = interp_rasters(datas, chrons, sampleFactor)
     if name is None:
         name = disk.tempname(_mpiignore_ = True)
     outputPath = os.path.abspath(outputPath)
