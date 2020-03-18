@@ -20,7 +20,7 @@ from .utilities import message
 from .visualisation import quickShow
 
 from everest import \
-    Reader, Writer, Fetch, Scope, set_global_anchor, load
+    Reader, Writer, Fetch, Scope, set_global_anchor, load, mpi
 
 from . import systems
 from . import observers

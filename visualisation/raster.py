@@ -7,8 +7,8 @@ import subprocess
 from subprocess import PIPE
 
 from everest import disk
-from everest import mpi
 
+from .. import mpi
 from .. import fieldops
 from .. import mapping
 from .. import utilities

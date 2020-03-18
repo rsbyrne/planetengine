@@ -2,8 +2,7 @@ import numpy as np
 
 from underworld import function as fn
 
-from everest import mpi
-
+from planetengine import mpi
 from planetengine.observers import Observer
 from planetengine import functions as pfn
 from planetengine.visualisation.raster import Raster

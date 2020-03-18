@@ -1,6 +1,6 @@
 import os
 
-from everest import mpi
+from .. import mpi
 
 class Fig:
 

@@ -9,7 +9,7 @@ from . import _basetypes
 from . import vanilla
 from .. import utilities
 from .. import meshutils
-from everest import mpi
+from .. import mpi
 
 class Variable(_basetypes.BaseTypes):
 

@@ -10,10 +10,10 @@ from everest.builts._counter import Counter
 # from everest.builts._diskbased import DiskBased
 from everest.builts import check_global_anchor, _get_info, load, Meta, Built
 from everest.weaklist import WeakList
-from everest import mpi
 from everest.globevars import _GHOSTTAG_
 
 from .utilities import LightBoolean, ChronCheck, _get_periodic_condition
+from . import mpi
 
 class Traverse(Task):
 
@@ -33,9 +33,9 @@ class Traverse(Task):
                         + " when system provided."
                         )
                 if type(stop) is int:
-                    add = system.count.value
+                    add = system.count.plain
                 elif type(stop) is float:
-                    add = system.count.value
+                    add = system.count.plain
                 else:
                     raise TypeError("Stop arg not recognised.")
                 stop = abs(stop) + add
@@ -43,14 +43,14 @@ class Traverse(Task):
         if type(system) is Meta:
             pass
         elif isinstance(system, Built):
-            assert not len(inputs['vector'])
+            # assert not len(inputs['vector']), inputs['vector']
             processed['system'] = system.__class__
             processed['vector'] = system.inputs
             if inputs['start'] is None:
                 if system.count.value in {-1, 0}:
                     initCount = 0
                 else:
-                    initCount = system.count.value
+                    initCount = system.count.plain
                 processed['start'] = initCount
             processed[_GHOSTTAG_ + 'traversee'] = system
         return processed

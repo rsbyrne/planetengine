@@ -5,6 +5,8 @@ import underworld as uw
 fn = uw.function
 UWFn =fn._function.Function
 
+from .. import mpi
+
 _PLANETVAR_FLAG = 'planetVar'
 
 # MOST IMPORTS ARE AT THE BOTTOM
@@ -216,27 +218,27 @@ class PlanetVar(UWFn):
     def _set_summary_stats(self):
         if isinstance(self, _function.Function) \
                 or type(self) == _basetypes.Variable:
-            if self.varDim == 1:
-                minmax =fn.view.min_max(self.var)
-            else:
-                fn_norm =fn.math.sqrt(
-                   fn.math.dot(
-                        self,
-                        self
-                        )
-                    )
-                minmax =fn.view.min_max(
-                    self,
-                    fn_norm = fn_norm
-                    )
+            # if self.varDim == 1:
+            #     minmax = fn.view.min_max(self.var)
+            # else:
+            #     fn_norm = fn.math.sqrt(
+            #        fn.math.dot(
+            #             self,
+            #             self
+            #             )
+            #         )
+            #     minmax = fn.view.min_max(
+            #         self,
+            #         fn_norm = fn_norm
+            #         )
             # def minFn():
             #     allmins = mpi.comm.allgather(minmax.min_local())
             #     return min(allmins)
             # def maxFn():
             #     allmaxs = mpi.comm.allgather(minmax.max_local())
             #     return max(allmaxs)
-            minFn = minmax.min_global
-            maxFn = minmax.max_global
+            # minFn = minmax.min_global
+            # maxFn = minmax.max_global
             minmax.evaluate(self.substrate)
             self._minmax = minmax
             rangeFn = lambda: abs(minFn() - maxFn())
@@ -406,4 +408,3 @@ from . import _reduction
 # from . import projection
 from . import gradient
 from . import operations
-from everest import mpi
