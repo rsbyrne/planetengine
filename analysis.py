@@ -5,11 +5,11 @@ def fft(data, t):
     length = len(data)
     av = np.average(data)
     norm = (data - av) / av
-    fft = abs((np.fft.fft(norm) / length)[range(int(length / 2))])[1:]
+    fft = abs((np.fft.fft(norm) / length)[range(int(length / 2))])
     values = np.arange(int(length / 2))
     samplingFrequency = t[1] - t[0]
     timePeriod = length / samplingFrequency
-    freqs = (values / timePeriod)[1:]
+    freqs = (values / timePeriod)
     return freqs, fft
 
 def time_smooth(x, y, sampleFactor, kind = 'linear'):
