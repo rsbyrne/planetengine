@@ -128,7 +128,7 @@ class Raster(fig.Fig):
         return self.img.resize(size)
 
 def interp_rasters(rasters, chrons, sampleFactor = 1):
-    nFrames = len(chrons) * sampleFactor
+    nFrames = round(len(chrons) * sampleFactor)
     interpChrons = np.linspace(np.min(chrons), np.max(chrons), nFrames)
     frames, rows, cols, channels = rasters.shape
     interpRasters = np.zeros((nFrames, rows, cols, channels), dtype = 'uint8')

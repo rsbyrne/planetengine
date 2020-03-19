@@ -88,8 +88,14 @@ class Basic(Observer):
                 self.yielding = yielding
 
         pressure = observee.locals[pressureKey]
-        stressRad = 2. * visc * pfn.gradient.rad(pfn.component.rad(vel)) - pressure
-        stressAng = 2. * visc * pfn.gradient.ang(pfn.component.ang(vel)) - pressure
+        stressRad = pfn.gradient.rad(pfn.component.rad(vel)) \
+            * visc \
+            * 2. \
+            - pressure
+        stressAng = pfn.gradient.ang(pfn.component.ang(vel)) \
+            * visc \
+            * 2. \
+            - pressure
         stressRadOuter = pfn.surface.outer(stressRad)
         stressAngOuter = pfn.surface.outer(stressAng)
         analysers['stressRad_outer_av'] = pfn.integral.outer(stressRad)
@@ -115,7 +121,7 @@ class Basic(Observer):
         aspect = observee.locals[aspectKey]
         raster = Raster(
             pfn.rebase.zero(theta),
-            strainRate,
+            pfn.operations.sqrt(strainRate),
             pfn.rebase.zero(streamFn),
             aspect = aspect
             )
