@@ -9,14 +9,14 @@ from ..functions import convert, normalise, getstat
 # from .. import functions as pfn
 from ..meshutils import get_meshUtils
 from everest import mpi
-from . import fig
+from everest.visualisation._fig import Fig
 
 def quickShow(*args, **kwargs):
 
     quickFig = QuickFig(*args, **kwargs)
     quickFig.show()
 
-class QuickFig(fig.Fig):
+class QuickFig(Fig):
 
     def __init__(
             self,
@@ -224,10 +224,7 @@ class QuickFig(fig.Fig):
             updateFunc()
 
     def _show(self):
-        self.update()
-        # for var in self.fittedvars:
-        #     message(var.varName)
         self.fig.show()
 
-    def _save(self, name, path, ext):
-        self.fig.save(os.path.join(path, name + '.' + ext))
+    def _save(self, filepath):
+        self.fig.save(filepath)

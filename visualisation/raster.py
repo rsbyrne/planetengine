@@ -13,7 +13,7 @@ from .. import fieldops
 from .. import mapping
 from .. import utilities
 from .. import functions as pfn
-from . import fig
+from everest.visualisation._fig import Fig
 
 STANDARD_SIZE = (256, 256)
 
@@ -90,13 +90,16 @@ def get_mode(*bands):
         raise Exception("Too many bands!")
     return mode, bands
 
-class Raster(fig.Fig):
+class Raster(Fig):
     def __init__(self, *bands, aspect = 1., height = 256, **kwargs):
         size = (int(aspect * height), height)
         mode, ignoreme = get_mode(*bands)
         self.dataObjs = [Data(band, size = size) for band in bands]
         self.shape = [*size[::-1], len(self.dataObjs)]
         self.data = np.zeros(self.shape, dtype = 'uint8')
+        self.bands = bands
+        self.aspect = aspect
+        self.height = height
         if mode == 'CMYK': ext = 'jpg'
         else: ext = 'png'
         super().__init__(ext = ext, **kwargs)
@@ -112,10 +115,9 @@ class Raster(fig.Fig):
             )
     def _update_img(self):
         self.img = rasterise(*[dataObj.data for dataObj in self.dataObjs])
-    def _save(self, name, path, ext):
-        self.img.save(os.path.join(path, name + '.' + ext))
+    def _save(self, filepath):
+        self.img.save(filepath)
     def _show(self):
-        self.update()
         return self.img
     def evaluate(self):
         self.update()
@@ -126,6 +128,12 @@ class Raster(fig.Fig):
             )
     def resize(self, size = (256, 256)):
         return self.img.resize(size)
+    def select(self, bandNo):
+        return self.__class__(
+            self.bands[bandNo],
+            aspect = self.aspect,
+            height = self.height
+            )
 
 def interp_rasters(rasters, chrons, sampleFactor = 1):
     nFrames = round(len(chrons) * sampleFactor)
@@ -163,6 +171,7 @@ def animate(
         datas = interp_rasters(datas, chrons, sampleFactor)
     if name is None:
         name = disk.tempname(_mpiignore_ = True)
+    pts *= 1. / sampleFactor
     outputPath = os.path.abspath(outputPath)
     outputFilename = os.path.join(outputPath, name + '.mp4')
     if not overwrite:

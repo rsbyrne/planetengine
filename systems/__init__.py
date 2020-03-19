@@ -258,6 +258,8 @@ class System(Iterator, Getter):
         observer = (observerClass(self, **observerInputs))
         try: self.remove_observer(observer.hashID)
         except ObserverNotFound: pass
+        if self.anchored:
+            observer.anchor(self.name, self.path)
         observer()
         self.observers.append(observer)
 
