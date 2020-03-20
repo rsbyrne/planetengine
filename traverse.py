@@ -96,21 +96,24 @@ class Traverse(Task):
                 self.traversee = self.system(**self.vector)
         if self.anchored:
             self.traversee.anchor(self.name, self.path)
-        if not self.start is None:
-            try:
-                self.traversee.load(self.start)
-            except LoadFail:
-                preTraverse = self.__class__(
-                    system = self.traversee,
-                    stop = self.start,
-                    observers = [],
-                    )
-                preTraverse()
         if self.freq is None and not self.stop is None:
             try:
+                # Skip straight to the end:
                 self.traversee.load(self.stop)
             except LoadFail:
-                pass
+                # Go to the beginning:
+                if self.start == 0:
+                    self.traversee.initialise()
+                else:
+                    try:
+                        self.traversee.load(self.start)
+                    except LoadFail:
+                        preTraverse = self.__class__(
+                            system = self.traversee,
+                            stop = self.start,
+                            observers = [],
+                            )
+                        preTraverse()
         self.observers = self._get_observers(self.traversee, self.inObservers)
         for observer in self.observers:
             if self.anchored:
