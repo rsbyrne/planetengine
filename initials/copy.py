@@ -18,7 +18,7 @@ class Copy(Channel):
         traverse = inputs['traverse']
         if isinstance(traverse, System):
             traversee = traverse
-            traverse = traversee[:system.count.value]
+            traverse = traversee[:traversee.count]
         elif not isinstance(traverse, Traverse):
             raise TypeError
         processed['traverse'] = traverse

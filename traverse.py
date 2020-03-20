@@ -11,6 +11,7 @@ from everest.builts._counter import Counter
 from everest.builts import check_global_anchor, _get_info, load, Meta, Built
 from everest.weaklist import WeakList
 from everest.globevars import _GHOSTTAG_
+from everest.value import Value
 
 from .utilities import LightBoolean, ChronCheck, _get_periodic_condition
 from everest import mpi
@@ -23,23 +24,26 @@ class Traverse(Task):
     def _process_inputs(inputs):
         processed = dict()
         processed.update(inputs)
-        stop = inputs['stop']
+        start, stop = inputs['start'], inputs['stop']
         system = inputs['system']
-        if type(stop) in {int, float}:
-            if stop < 0:
-                if not isinstance(system, Built):
-                    raise Exception(
-                        "Relative end state only acceptable" \
-                        + " when system provided."
-                        )
-                if type(stop) is int:
-                    add = system.count.plain
-                elif type(stop) is float:
-                    add = system.count.plain
-                else:
-                    raise TypeError("Stop arg not recognised.")
-                stop = abs(stop) + add
-                processed['stop'] = stop
+        for name, indexer in sorted({'start': start, 'stop': stop}.items()):
+            if type(indexer) is Value:
+                indexer = indexer.plain
+            if type(indexer) in {int, float}:
+                if indexer < 0:
+                    if not isinstance(system, Built):
+                        raise Exception(
+                            "Relative end state only acceptable" \
+                            + " when system provided."
+                            )
+                    if type(indexer) is int:
+                        add = system.count.plain
+                    elif type(indexer) is float:
+                        add = system.chron.plain
+                    else:
+                        raise TypeError("Stop arg not recognised.")
+                    indexer = abs(indexer) + add
+            processed[name] = indexer
         if type(system) is Meta:
             pass
         elif isinstance(system, Built):
@@ -47,12 +51,13 @@ class Traverse(Task):
             processed['system'] = system.__class__
             processed['vector'] = system.inputs
             if inputs['start'] is None:
-                if system.count.value in {-1, 0}:
+                if system.count.plain in {-1, 0}:
                     initCount = 0
                 else:
                     initCount = system.count.plain
                 processed['start'] = initCount
             processed[_GHOSTTAG_ + 'traversee'] = system
+        # assert not type(processed['stop']) is Value
         return processed
 
     def __init__(self,
@@ -114,6 +119,7 @@ class Traverse(Task):
                             observers = [],
                             )
                         preTraverse()
+        self.traversee.store()
         self.observers = self._get_observers(self.traversee, self.inObservers)
         for observer in self.observers:
             if self.anchored:
@@ -163,7 +169,7 @@ class Traverse(Task):
         elif isinstance(self.stop, State):
             return self.stop(self.traversee)
         else:
-            assert False, "Invalid stop argument."
+            assert False, ("Invalid stop argument.", self.stop, type(self.stop))
 
     def _traverse_finalise(self):
         self.traversee.store()

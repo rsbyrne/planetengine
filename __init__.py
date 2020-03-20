@@ -27,3 +27,4 @@ from . import observers
 from . import initials
 from . import visualisation as vis
 from . import functions
+from . import analysis
