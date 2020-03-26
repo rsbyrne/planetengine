@@ -260,24 +260,3 @@ class Canvas(_Fig):
     def _show(self):
         FigureCanvas(self.fig)
         return self.fig
-
-### OLD BUT GOOD ###
-
-# def _get_nice_interval(data, nTicks):
-#     nomInterval = np.max(data) / nTicks
-#     intervals = [
-#         base * 10. ** math.ceil(math.log10(nomInterval / base)) \
-#             for base in (1, 2, 5)
-#         ]
-#     interval = min(
-#         intervals,
-#         key = lambda interval: interval - nomInterval
-#         )
-#     return interval
-#
-# def _make_nice_ticks(data, nTicks):
-#     stop = np.max(data)
-#     step = _get_nice_interval(data, nTicks)
-#     start = np.min(data) - np.min(data) % step
-#     ticks = np.arange(start, start + (nTicks + 1) * step, step)
-#     return ticks
