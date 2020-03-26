@@ -22,7 +22,8 @@ def get_rectilinear_plot(
     if lims is None: lims = [[None, None] for arg in args]
     if labels is None: labels = ['' for arg in args]
     if size is None: size = [3 for arg in args]
-    if nTicks is None: nTicks = round(size[0] * 2.)
+    if nTicks is None: nTicks = round(size[0])
+    labels = list(labels)
     ticks = []
     ticklabels = []
     for i, arg in enumerate(args):
@@ -36,7 +37,7 @@ def get_rectilinear_plot(
         adjArgTicks, adjArgPower = _abbreviate_ticks(argTicks)
         ticklabels.append([str(tick) for tick in adjArgTicks])
         if abs(adjArgPower) > 0:
-            labels[i] = (labels[i] + ' (xE' + str(adjArgPower) + ')')
+            labels[i] += ' (E{0})'.format(adjArgPower)
     canvas = Canvas(size = size, **canvas_kws)
     plot = canvas.add_rectilinear(
         labels = labels,
