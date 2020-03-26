@@ -8,63 +8,99 @@ from everest.disk import tempname
 from ._fig import Fig as _Fig
 from .. import analysis
 
-def _rectilinear(
-        x,
-        y,
-        size = (3, 3),
-        nTicks = 5,
+def get_rectilinear_plot(
+        *args,
+        lims = None,
+        labels = None,
+        title = '',
+        size = None,
+        nTicks = None,
         slicer = slice(None, None, None),
-        fig_kws = {},
-        plot_kws = {},
-        **kwargs
+        canvas_kws = {},
+        plot_kws = {}
         ):
-    x, y = x[slicer], y[slicer]
-    aspect = size[0] / size[1]
-    nxticks, nyticks = round(aspect * nTicks), nTicks
-    xticks = _make_nice_ticks(x, nxticks, 0.)
-    yticks = _make_nice_ticks(y, nyticks - 1, 0.)
-    yticks = np.append(yticks, yticks[-1] + yticks[-1] - yticks[-2])
-    xticklabels = [str(val) for val in xticks]
-    yticklabels = [str(val) for val in yticks]
-    canvas = Canvas(size = size, **{**kwargs, **fig_kws})
+    if lims is None: lims = [[None, None] for arg in args]
+    if labels is None: labels = ['' for arg in args]
+    if size is None: size = [3 for arg in args]
+    if nTicks is None: nTicks = round(size[0] * 2.)
+    ticks = []
+    ticklabels = []
+    for i, arg in enumerate(args):
+        arg = arg[slicer]
+        minArg, maxArg, ptpArg = np.min(arg), np.max(arg), np.ptp(arg)
+        lims[i][0] = 0. if minArg >= 0 else minArg
+        lims[i][1] = 0. if maxArg <= 0 else maxArg
+        argNTicks = round(size[i] / size[0] * nTicks)
+        argTicks = _make_nice_ticks(arg, argNTicks, start = lims[i][0])
+        ticks.append(argTicks)
+        adjArgTicks, adjArgPower = _abbreviate_ticks(argTicks)
+        ticklabels.append([str(tick) for tick in adjArgTicks])
+        if abs(adjArgPower) > 0:
+            labels[i] = (labels[i] + ' (xE' + str(adjArgPower) + ')')
+    canvas = Canvas(size = size, **canvas_kws)
     plot = canvas.add_rectilinear(
-        labels = ('t', 'Nu'),
-        lims = ((0., np.max(x)), (0., np.max(y))),
-        ticks = (xticks, yticks),
-        ticklabels = (xticklabels, yticklabels),
-        **{**kwargs, **plot_kws}
+        labels = labels,
+        title = title,
+        lims = lims,
+        ticks = ticks,
+        ticklabels = ticklabels,
+        **plot_kws
         )
     return canvas, plot
 
-def line(*args, line_kws = dict(), **kwargs):
-    canvas, plot = _rectilinear(*args, **kwargs)
-    plot.plot(*args, **line_kws)
-    return canvas
+def line(*args, **kwargs):
+    return quickPlot(*args, variety = 'line', **kwargs)
+def scatter(*args, **kwargs):
+    return quickPlot(*args, variety = 'scatter', **kwargs)
 
-def scatter(*args, scatter_kws = dict(), **kwargs):
-    canvas, plot = _rectilinear(*args, **kwargs)
-    plot.scatter(*args, **scatter_kws)
+def quickPlot(
+        x,
+        y,
+        variety = 'line',
+        labels = ('', ''),
+        title = '',
+        size = (3., 3.),
+        nTicks = None,
+        **kwargs
+        ):
+    canvas, plot = get_rectilinear_plot(
+        x,
+        y,
+        labels = labels,
+        title = title,
+        size = size,
+        nTicks = nTicks
+        )
+    if variety == 'line':
+        plot.plot(x, y, **kwargs)
+    elif variety == 'scatter':
+        plot.scatter(x, y, **kwargs)
+    else:
+        raise ValueError("Plot variety not recognised.")
     return canvas
 
 def _get_nice_interval(data, nTicks):
     bases = {1, 2, 5}
-    maxNum = np.max(data)
-    nomInterval = maxNum / nTicks
-    checkDict = {base: math.log(nomInterval / base, 10.) % 1 for base in bases}
-    base = min(checkDict, key = checkDict.get)
-    power = round(math.log(nomInterval / base, 10.))
-    interval = base * 10. ** power
-    return interval
+    nomInterval = np.ptp(data) / nTicks
+    powers = [(base, math.log10(nomInterval / base)) for base in bases]
+    base, power = min(powers, key = lambda c: c[1] % 1)
+    return base * 10. ** round(power)
 
 def _make_nice_ticks(data, nTicks, start = None):
-    if start is None:
-        start = np.min(data)
-    stop = np.max(data)
+    minD, maxD = np.min(data), np.max(data)
     step = _get_nice_interval(data, nTicks)
-    ticks = np.arange(start, stop, step)
-    while ticks[-1] < stop:
-        ticks = np.append(ticks, ticks[-1] + step)
-    return ticks
+    if start is None:
+        start = minD - minD % step
+    ticks = [start,]
+    while ticks[-1] < maxD:
+        ticks.append(ticks[-1] + step)
+    return np.array(ticks)
+
+def _abbreviate_ticks(ticks):
+    maxLog10 = math.log10(np.max(np.abs(ticks)))
+    adjPower = - math.floor(maxLog10 / 3.) * 3
+    adjTicks = np.round(ticks * 10. ** adjPower, 2)
+    return adjTicks, -adjPower
 
 class Canvas(_Fig):
 
@@ -138,12 +174,12 @@ class Canvas(_Fig):
 
     def add_rectilinear(self,
             place = (0, 0), # (x, y) coords of plot on canvas
-            title = 'myplot', # the title to be printed on the plot
+            title = '', # the title to be printed on the plot
             position = None, # [left, bottom, width, height]
             margins = (0., 0.), # (xmargin, ymargin)
             lims = ((0., 1.), (0., 1.)), # ((float, float), (float, float))
             scales = ('linear', 'linear'), # (xaxis, yaxis)
-            labels = ('x', 'y'), # (xaxis, yaxis)
+            labels = ('', ''), # (xaxis, yaxis)
             grid = True,
             ticks = (
                 [i / 10. for i in range(0, 11, 2)],
@@ -223,3 +259,24 @@ class Canvas(_Fig):
     def _show(self):
         FigureCanvas(self.fig)
         return self.fig
+
+### OLD BUT GOOD ###
+
+# def _get_nice_interval(data, nTicks):
+#     nomInterval = np.max(data) / nTicks
+#     intervals = [
+#         base * 10. ** math.ceil(math.log10(nomInterval / base)) \
+#             for base in (1, 2, 5)
+#         ]
+#     interval = min(
+#         intervals,
+#         key = lambda interval: interval - nomInterval
+#         )
+#     return interval
+#
+# def _make_nice_ticks(data, nTicks):
+#     stop = np.max(data)
+#     step = _get_nice_interval(data, nTicks)
+#     start = np.min(data) - np.min(data) % step
+#     ticks = np.arange(start, start + (nTicks + 1) * step, step)
+#     return ticks
