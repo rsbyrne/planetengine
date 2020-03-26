@@ -7,13 +7,12 @@ import subprocess
 from subprocess import PIPE
 
 from everest import disk
-
 from everest import mpi
 from .. import fieldops
 from .. import mapping
 from .. import utilities
 from .. import functions as pfn
-from everest.visualisation._fig import Fig
+from ._fig import Fig as _Fig
 
 STANDARD_SIZE = (256, 256)
 
@@ -90,7 +89,7 @@ def get_mode(*bands):
         raise Exception("Too many bands!")
     return mode, bands
 
-class Raster(Fig):
+class Raster(_Fig):
     def __init__(self, *bands, aspect = 1., height = 256, **kwargs):
         size = (int(aspect * height), height)
         mode, ignoreme = get_mode(*bands)

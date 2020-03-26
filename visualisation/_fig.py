@@ -1,7 +1,7 @@
 import os
 
-from .. import mpi
-from .. import disk
+from everest import mpi
+from everest import disk
 
 class Fig:
 

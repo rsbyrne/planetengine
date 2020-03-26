@@ -1,24 +1,70 @@
+import numpy as np
+import math
+
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-from ..disk import tempname
+from everest.disk import tempname
 from ._fig import Fig as _Fig
-from . import analysis
+from .. import analysis
 
-def _rectilinear(fig_kws = {}, plot_kws = {}, **kwargs):
-    canvas = Canvas(**{**kwargs, **fig_kws})
-    plot = canvas.add_rectilinear(**{**kwargs, **plot_kws})
+def _rectilinear(
+        x,
+        y,
+        size = (3, 3),
+        nTicks = 5,
+        slicer = slice(None, None, None),
+        fig_kws = {},
+        plot_kws = {},
+        **kwargs
+        ):
+    x, y = x[slicer], y[slicer]
+    aspect = size[0] / size[1]
+    nxticks, nyticks = round(aspect * nTicks), nTicks
+    xticks = _make_nice_ticks(x, nxticks, 0.)
+    yticks = _make_nice_ticks(y, nyticks - 1, 0.)
+    yticks = np.append(yticks, yticks[-1] + yticks[-1] - yticks[-2])
+    xticklabels = [str(val) for val in xticks]
+    yticklabels = [str(val) for val in yticks]
+    canvas = Canvas(size = size, **{**kwargs, **fig_kws})
+    plot = canvas.add_rectilinear(
+        labels = ('t', 'Nu'),
+        lims = ((0., np.max(x)), (0., np.max(y))),
+        ticks = (xticks, yticks),
+        ticklabels = (xticklabels, yticklabels),
+        **{**kwargs, **plot_kws}
+        )
     return canvas, plot
 
-def line(*args, fig_kws = {}, plot_kws = {}, line_kws = {}, **kwargs):
-    canvas, plot = _rectilinear(fig_kws, plot_kws, **kwargs)
-    plot.plot(*args, **{**kwargs, **line_kws})
+def line(*args, line_kws = dict(), **kwargs):
+    canvas, plot = _rectilinear(*args, **kwargs)
+    plot.plot(*args, **line_kws)
     return canvas
 
-def scatter(*args, fig_kws = {}, plot_kws = {}, scatter_kws = {}, **kwargs):
-    canvas, plot = _rectilinear(fig_kws, plot_kws, **kwargs)
-    plot.scatter(*args, **{**kwargs, **scatter_kws})
+def scatter(*args, scatter_kws = dict(), **kwargs):
+    canvas, plot = _rectilinear(*args, **kwargs)
+    plot.scatter(*args, **scatter_kws)
     return canvas
+
+def _get_nice_interval(data, nTicks):
+    bases = {1, 2, 5}
+    maxNum = np.max(data)
+    nomInterval = maxNum / nTicks
+    checkDict = {base: math.log(nomInterval / base, 10.) % 1 for base in bases}
+    base = min(checkDict, key = checkDict.get)
+    power = round(math.log(nomInterval / base, 10.))
+    interval = base * 10. ** power
+    return interval
+
+def _make_nice_ticks(data, nTicks, start = None):
+    if start is None:
+        start = np.min(data)
+    stop = np.max(data)
+    step = _get_nice_interval(data, nTicks)
+    ticks = np.arange(start, stop, step)
+    while ticks[-1] < stop:
+        ticks = np.append(ticks, ticks[-1] + step)
+    return ticks
 
 class Canvas(_Fig):
 
@@ -103,6 +149,7 @@ class Canvas(_Fig):
                 [i / 10. for i in range(0, 11, 2)],
                 [i / 10. for i in range(0, 11, 2)],
                 ), # (ticks, ticks) OR ((ticks, labels), (ticks, labels))
+            ticklabels = ([], []),
             share = (None, None), # (sharex, sharey)
             name = None, # provide a name to the Python object
             zorder = 0., # determines what overlaps what
@@ -130,22 +177,8 @@ class Canvas(_Fig):
         else:
             ax.set_ylim(*lims[1])
 
-        ax.set_xticks([])
-        ax.set_xticklabels([])
-        ax.set_yticks([])
-        ax.set_yticklabels([])
-        procTicks = []
-        ticklabels = []
-        for tick in ticks:
-            if type(tick) is tuple:
-                ticklabels.append(tick[1])
-                procTicks.append(tick[0])
-            else:
-                ticklabels.append([str(val) for val in tick])
-                procTicks.append(tick)
-        ticks = procTicks
         ax.set_xticks(ticks[0])
-        ax.set_xticklabels(ticklabels[0])
+        ax.set_xticklabels(ticklabels[0], rotation = 'vertical')
         ax.set_yticks(ticks[1])
         ax.set_yticklabels(ticklabels[1])
 

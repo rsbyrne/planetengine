@@ -9,14 +9,14 @@ from ..functions import convert, normalise, getstat
 # from .. import functions as pfn
 from ..meshutils import get_meshUtils
 from everest import mpi
-from everest.visualisation._fig import Fig
+from ._fig import Fig as _Fig
 
 def quickShow(*args, **kwargs):
 
     quickFig = QuickFig(*args, **kwargs)
     quickFig.show()
 
-class QuickFig(Fig):
+class QuickFig(_Fig):
 
     def __init__(
             self,
