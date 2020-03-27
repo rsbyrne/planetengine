@@ -14,7 +14,7 @@ def get_rectilinear_plot(
         labels = None,
         title = '',
         size = None,
-        nTicks = None,
+        ticksPerInch = 1,
         slicer = slice(None, None, None),
         canvas_kws = {},
         plot_kws = {}
@@ -22,24 +22,17 @@ def get_rectilinear_plot(
     if lims is None: lims = [[None, None] for arg in args]
     if labels is None: labels = ['' for arg in args]
     if size is None: size = [3 for arg in args]
-    if nTicks is None: nTicks = round(size[0])
     labels = list(labels)
-    ticks = []
-    ticklabels = []
+    ticks = [None for arg in args]
+    ticklabels = [None for arg in args]
     for i, arg in enumerate(args):
         arg = arg[slicer]
-        minArg, maxArg, ptpArg = np.min(arg), np.max(arg), np.ptp(arg)
-        lims[i][0] = 0. if minArg >= 0 else minArg
-        lims[i][1] = 0. if maxArg <= 0 else maxArg
-        argNTicks = round(size[i] / size[0] * nTicks)
-        argTicks = _make_nice_ticks(arg, argNTicks, start = lims[i][0])
-        ticks.append(argTicks)
-        adjArgTicks, adjArgPower = _abbreviate_ticks(argTicks)
-        ticklabels.append([str(tick) for tick in adjArgTicks])
-        if abs(adjArgPower) > 0:
-            labels[i] += ' (E{0})'.format(adjArgPower)
+        nTicks = ticksPerInch * size[i]
+        ext, ticks[i], ticklabels[i], lims[i] = \
+            auto_axis_configs(arg, lims[i], nTicks)
+        labels[i] += '({0})'.format(ext)
     canvas = Canvas(size = size, **canvas_kws)
-    plot = canvas.add_rectilinear(
+    plot = canvas._add_blank_rectilinear(
         labels = labels,
         title = title,
         lims = lims,
@@ -57,21 +50,25 @@ def scatter(*args, **kwargs):
 def quickPlot(
         x,
         y,
+        # co_y = None,
+        lims = None,
         variety = 'line',
         labels = ('', ''),
         title = '',
         size = (3., 3.),
-        nTicks = None,
+        ticksPerInch = 1,
         **kwargs
         ):
     canvas, plot = get_rectilinear_plot(
         x,
         y,
+        lims = lims,
         labels = labels,
         title = title,
         size = size,
-        nTicks = nTicks
+        ticksPerInch = ticksPerInch
         )
+
     if variety == 'line':
         plot.plot(x, y, **kwargs)
     elif variety == 'scatter':
@@ -80,20 +77,22 @@ def quickPlot(
         raise ValueError("Plot variety not recognised.")
     return canvas
 
-def _get_nice_interval(data, nTicks):
+def _get_nice_interval(lims, nTicks):
     bases = {1, 2, 5}
-    nomInterval = np.ptp(data) / nTicks
+    nomInterval = (lims[1] - lims[0]) / nTicks
     powers = [(base, math.log10(nomInterval / base)) for base in bases]
     base, power = min(powers, key = lambda c: c[1] % 1)
     return base * 10. ** round(power)
 
-def _make_nice_ticks(data, nTicks, start = None):
+def _make_nice_ticks(data, nTicks, lims = (None, None)):
     minD, maxD = np.min(data), np.max(data)
-    step = _get_nice_interval(data, nTicks)
-    if start is None:
-        start = minD - minD % step
+    if lims[0] is None: lims[0] = minD
+    if lims[1] is None: lims[1] is maxD
+    step = _get_nice_interval(lims, nTicks)
+    start = lims[0] - lims[0] % step
+    stop = lims[1]
     ticks = [start,]
-    while ticks[-1] < maxD:
+    while ticks[-1] < stop + 0.5 * step:
         ticks.append(ticks[-1] + step)
     return np.array(ticks)
 
@@ -102,6 +101,21 @@ def _abbreviate_ticks(ticks):
     adjPower = - math.floor(maxLog10 / 3.) * 3
     adjTicks = np.round(ticks * 10. ** adjPower, 2)
     return adjTicks, -adjPower
+
+def auto_axis_configs(data, lims = (None, None), nTicks = 5):
+    minD, maxD = np.min(data), np.max(data)
+    minCon = minD >= 0 and maxD > 2. * minD
+    maxCon = maxD <= 0 and minD > 2. * maxD
+    lims = list(lims)
+    if lims[0] is None: lims[0] = 0. if minCon else minD
+    if lims[1] is None: lims[1] = 0. if maxCon else maxD
+    ticks = _make_nice_ticks(data, nTicks, lims)
+    adjTicks, adjDataPower = _abbreviate_ticks(ticks)
+    ticklabels = [str(tick) for tick in adjTicks]
+    label = ''
+    if abs(adjDataPower) > 0:
+        label += 'E{0}'.format(adjDataPower)
+    return label, ticks, ticklabels, lims
 
 class Canvas(_Fig):
 
@@ -142,7 +156,7 @@ class Canvas(_Fig):
     def _update_axeslist(self):
         self.axesList = [item for sublist in self.axes for item in sublist]
 
-    def add_plot(self,
+    def _add_blank_plot(self,
             place = (0, 0),
             projection = 'rectilinear',
             share = (None, None),
@@ -173,7 +187,7 @@ class Canvas(_Fig):
 
         return ax
 
-    def add_rectilinear(self,
+    def _add_blank_rectilinear(self,
             place = (0, 0), # (x, y) coords of plot on canvas
             title = '', # the title to be printed on the plot
             position = None, # [left, bottom, width, height]
@@ -193,7 +207,7 @@ class Canvas(_Fig):
             **kwargs # all other kwargs passed to axes constructor
             ):
 
-        ax = self.add_plot(
+        ax = self._add_blank_plot(
             place = place,
             projection = 'rectilinear',
             share = share,
@@ -235,6 +249,8 @@ class Canvas(_Fig):
         ax.set_title(title)
 
         return ax
+
+    # def add_
 
     def _calc_index(self, place):
         rowNo, colNo = place
