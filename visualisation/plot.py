@@ -30,7 +30,7 @@ def get_rectilinear_plot(
         nTicks = ticksPerInch * size[i]
         ext, ticks[i], ticklabels[i], lims[i] = \
             auto_axis_configs(arg, lims[i], nTicks)
-        labels[i] += '({0})'.format(ext)
+        if len(ext): labels[i] += '({0})'.format(ext)
     canvas = Canvas(size = size, **canvas_kws)
     plot = canvas._add_blank_rectilinear(
         labels = labels,
@@ -156,36 +156,14 @@ class Canvas(_Fig):
     def _update_axeslist(self):
         self.axesList = [item for sublist in self.axes for item in sublist]
 
-    def _add_blank_plot(self,
-            place = (0, 0),
-            projection = 'rectilinear',
-            share = (None, None),
-            name = None,
-            **kwargs
-            ):
-
-        if name is None:
-            name = tempname()
-
+    def ax(self, place = (0, 0), **kwargs):
         index = self._calc_index(place)
         if not self.axesList[index] is None:
             raise Exception("Already a plot at those coordinates.")
-
-        ax = self.fig.add_subplot(
-            self.nrows,
-            self.ncols,
-            index + 1,
-            projection = projection,
-            label = name,
-            sharex = share[0],
-            sharey = share[1],
-            **kwargs
-            )
-
-        self.axes[place[0]][place[1]] = ax
+        axObj = Ax(self, index = index, **kwargs)
+        self.axes[place[0]][place[1]] = axObj
         self._update_axeslist()
-
-        return ax
+        return axObj
 
     def _add_blank_rectilinear(self,
             place = (0, 0), # (x, y) coords of plot on canvas
@@ -207,14 +185,8 @@ class Canvas(_Fig):
             **kwargs # all other kwargs passed to axes constructor
             ):
 
-        ax = self._add_blank_plot(
-            place = place,
-            projection = 'rectilinear',
-            share = share,
-            zorder = zorder,
-            name = name,
-            **kwargs
-            )
+        axObj = self.ax(place)
+        ax = axObj.ax
 
         ax.set_xscale(scales[0])
         ax.set_yscale(scales[1])
@@ -250,8 +222,6 @@ class Canvas(_Fig):
 
         return ax
 
-    # def add_
-
     def _calc_index(self, place):
         rowNo, colNo = place
         if colNo >= self.shape[0] or rowNo >= self.shape[1]:
@@ -276,3 +246,32 @@ class Canvas(_Fig):
     def _show(self):
         FigureCanvas(self.fig)
         return self.fig
+
+class Ax:
+
+    def __init__(self,
+            canvas,
+            index = 0,
+            projection = 'rectilinear',
+            share = (None, None),
+            name = None,
+            **kwargs
+            ):
+
+        if name is None:
+            name = tempname()
+
+        ax = canvas.fig.add_subplot(
+            canvas.nrows,
+            canvas.ncols,
+            index + 1,
+            projection = projection,
+            label = name,
+            sharex = share[0],
+            sharey = share[1],
+            **kwargs
+            )
+
+        self.canvas, self.index, self.projection, self.share, self.name = \
+            canvas, index, projection, share, name
+        self.ax = ax
