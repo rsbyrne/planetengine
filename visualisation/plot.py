@@ -275,3 +275,79 @@ class Ax:
         self.canvas, self.index, self.projection, self.share, self.name = \
             canvas, index, projection, share, name
         self.ax = ax
+
+        self.set_margins()
+
+    def _autoconfigure_axis(self,
+            i,
+            data,
+            scale = 'linear',
+            lims = [None, None],
+            label = '',
+            ticksPerInch = 1,
+            alpha = 0.5
+            ):
+        nTicks = ticksPerInch * self.canvas.size[i]
+        ext, ticks, ticklabels = (data, lims, nTicks)
+        if len(ext): label[i] += '({0})'.format(ext)
+        tupFn = lambda val: (val, None) if i == 0 else (None, val)
+        self.set_scales(*tupFn(scale))
+        self.set_lims(*tupFn(lims))
+        self.set_ticks(*tupFn((ticks, ticklabels)))
+        self.set_grid(*tupFn(alpha))
+    def _autoconfigure_axis_x(self, *args, **kwargs):
+        self._autoconfigure_axis(0, *args, **kwargs)
+    def _autoconfigure_axis_y(self, *args, **kwargs):
+        self._autoconfigure_axis(1, *args, **kwargs)
+    # def
+
+    def clear(self):
+        self.ax.clear()
+
+    def set_scales(self, x = 'linear', y = 'linear'):
+        if not x is None: self.ax.set_xscale(x)
+        if not y is None: self.ax.set_yscale(y)
+
+    def set_lims(self, x = None, y = None):
+        if x is None: set_xlim(auto = True)
+        else: self.ax.set_xlim(x)
+        if y is None: set_ylim(auto = True)
+        else: self.ax.set_xlim(y)
+
+    def set_ticks(self, x = None, y = None):
+        if not x is None:
+            if type(x) is tuple:
+                xticks, xticklabels = x
+            else:
+                xticks = x
+                xticklabels = []
+            self.ax.set_xticks(xticks)
+            self.ax.set_xticklabels(xticklabels)
+        if not y is None:
+            if type(y) is tuple:
+                yticks, yticklabels = y
+            else:
+                yticks = y
+                yticklabels = []
+            self.ax.set_yticks(yticks)
+            self.ax.set_yticklabels(yticklabels)
+
+    def set_margins(self, x = 0., y = 0.):
+        self.ax.set_xmargin(x)
+        self.ax.set_ymargin(y)
+
+    def set_title(self, title = ''):
+        self.ax.set_title(title)
+
+    def set_grid(self, x = 0.5, y = 0.5, which = 'major'):
+        if not x is None:
+            self.ax.grid(alpha = x, axis = 'x', which = which)
+        if not y is None:
+            self.ax.grid(alpha = y, axis = 'y', which = which)
+
+    # def set_grid(self, alpha, which = 'major', axis = 'both'):
+    #     if which == 'both':
+    #         ax.grid(which = 'major', alpha = alpha, axis = axis)
+    #         ax.grid(which = 'minor', alpha = alpha / 2., axis = axis)
+    #     else:
+    #         ax.grid(which = which, alpha = alpha, axis = axis)
