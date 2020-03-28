@@ -79,24 +79,28 @@ def quickPlot(
         raise ValueError("Plot variety not recognised.")
     return canvas
 
-def _get_nice_interval(lims, nTicks):
+def _get_nice_interval(valRange, nTicks):
     bases = {1, 2, 5}
-    nomInterval = (lims[1] - lims[0]) / nTicks
+    nomInterval = valRange / nTicks
     powers = [(base, math.log10(nomInterval / base)) for base in bases]
     base, power = min(powers, key = lambda c: c[1] % 1)
     return base * 10. ** round(power)
 
-def _make_nice_ticks(data, nTicks, lims = (None, None)):
+def _make_nice_ticks(data, nTicks, lower = None, upper = None):
+    step = _get_nice_interval(np.ptp(data), nTicks)
     minD, maxD = np.min(data), np.max(data)
-    if lims[0] is None: lims[0] = minD
-    if lims[1] is None: lims[1] is maxD
-    step = _get_nice_interval(lims, nTicks)
-    start = lims[0] - lims[0] % step
-    stop = lims[1]
-    ticks = [start,]
-    while ticks[-1] < stop + 0.5 * step:
-        ticks.append(ticks[-1] + step)
-    return np.array(ticks)
+    if lower is None: lower = minD
+    if upper is None: upper = maxD
+    if lower % step:
+        lower -= lower % step
+        if minD < lower + 0.5 * step:
+            lower -= step
+    if upper % step:
+        upper += step - upper % step
+        if maxD > upper - 0.5 * step:
+            upper += step
+    ticks = np.arange(lower, upper + step, step)
+    return ticks
 
 def _abbreviate_ticks(ticks):
     maxLog10 = math.log10(np.max(np.abs(ticks)))
@@ -104,14 +108,15 @@ def _abbreviate_ticks(ticks):
     adjTicks = np.round(ticks * 10. ** adjPower, 2)
     return adjTicks, -adjPower
 
-def auto_axis_configs(data, lims = (None, None), nTicks = 5):
+def auto_axis_configs(data, lims = [None, None], nTicks = 5):
     minD, maxD = np.min(data), np.max(data)
     minCon = minD >= 0 and maxD > 2. * minD
     maxCon = maxD <= 0 and minD < 2. * maxD
-    lims = list(lims)
-    if lims[0] is None: lims[0] = 0. if minCon else minD
-    if lims[1] is None: lims[1] = 0. if maxCon else maxD
-    ticks = _make_nice_ticks(data, nTicks, lims)
+    lower, upper = lims
+    if lower is None: lower = 0. if minCon else minD
+    if upper is None: upper = 0. if maxCon else maxD
+    ticks = _make_nice_ticks(data, nTicks, lower, upper)
+    lims = [np.min(ticks), np.max(ticks)]
     adjTicks, adjDataPower = _abbreviate_ticks(ticks)
     ticklabels = [str(tick) for tick in adjTicks]
     label = ''
@@ -124,12 +129,10 @@ class Canvas(_Fig):
     def __init__(self,
             name = None,
             shape = (1, 1),
-            share = (False, False),
             size = (3, 3), # inches
             dpi = 100, # pixels per inch
             facecolour = 'white',
             edgecolour = 'black',
-            fig_kws = {},
             **kwargs
             ):
 
@@ -138,20 +141,19 @@ class Canvas(_Fig):
             dpi = dpi,
             facecolor = facecolour,
             edgecolor = edgecolour,
-            **{**kwargs, **fig_kws}
+            **kwargs
             )
 
         nrows, ncols = shape
-        axes = [[None for col in range(ncols)] for row in range(nrows)]
 
         self.shape = shape
         self.nrows, self.ncols = nrows, ncols
-        self.axes = axes
+        self.size = size
 
         self._updateFns = []
         self.fig = fig
 
-        self._update_axeslist()
+        self.clear()
 
         super().__init__()
 
@@ -167,6 +169,14 @@ class Canvas(_Fig):
         self._update_axeslist()
         return axObj
 
+    def clear(self):
+        self.fig.clf()
+        self.axes = [
+            [None for col in range(self.ncols)] \
+                for row in range(self.nrows)
+            ]
+        self._update_axeslist()
+
     def _add_blank_rectilinear(self,
             place = (0, 0), # (x, y) coords of plot on canvas
             title = '', # the title to be printed on the plot
@@ -181,7 +191,6 @@ class Canvas(_Fig):
                 [i / 10. for i in range(0, 11, 2)],
                 ), # (ticks, ticks) OR ((ticks, labels), (ticks, labels))
             ticklabels = ([], []),
-            share = (None, None), # (sharex, sharey)
             name = None, # provide a name to the Python object
             zorder = 0., # determines what overlaps what
             **kwargs # all other kwargs passed to axes constructor
@@ -226,7 +235,7 @@ class Canvas(_Fig):
 
     def _calc_index(self, place):
         rowNo, colNo = place
-        if colNo >= self.shape[0] or rowNo >= self.shape[1]:
+        if colNo >= self.shape[1] or rowNo >= self.shape[0]:
             raise ValueError("Prescribed row and col do not exist.")
         return (self.ncols * rowNo + colNo)
 
@@ -255,7 +264,6 @@ class Ax:
             canvas,
             index = 0,
             projection = 'rectilinear',
-            share = (None, None),
             name = None,
             **kwargs
             ):
@@ -269,13 +277,11 @@ class Ax:
             index + 1,
             projection = projection,
             label = name,
-            sharex = share[0],
-            sharey = share[1],
             **kwargs
             )
 
-        self.canvas, self.index, self.projection, self.share, self.name = \
-            canvas, index, projection, share, name
+        self.canvas, self.index, self.projection, self.name = \
+            canvas, index, projection, name
         self.ax = ax
 
         self.set_margins()
@@ -287,21 +293,34 @@ class Ax:
             lims = [None, None],
             label = '',
             ticksPerInch = 1,
-            alpha = 0.5
+            alpha = 0.5,
             ):
-        nTicks = ticksPerInch * self.canvas.size[i]
-        ext, ticks, ticklabels = (data, lims, nTicks)
-        if len(ext): label[i] += ' ({0})'.format(ext)
+        localSize = self.canvas.size[i] / self.canvas.shape[::-1][i]
+        nTicks = ticksPerInch * localSize
+        ext, ticks, ticklabels, lims = auto_axis_configs(data, lims, nTicks)
+        if len(ext): label += ' ({0})'.format(ext)
         tupFn = lambda val: (val, None) if i == 0 else (None, val)
         self.set_scales(*tupFn(scale))
         self.set_lims(*tupFn(lims))
         self.set_ticks(*tupFn((ticks, ticklabels)))
+        self.set_label(*tupFn(label))
         self.set_grid(*tupFn(alpha))
+
     def _autoconfigure_axis_x(self, *args, **kwargs):
         self._autoconfigure_axis(0, *args, **kwargs)
     def _autoconfigure_axis_y(self, *args, **kwargs):
         self._autoconfigure_axis(1, *args, **kwargs)
-    # def
+
+    def hide_axis_x(self):
+        self.ax.xaxis.label.set_visible(False)
+        for tic in self.ax.xaxis.get_major_ticks():
+            tic.tick1On = tic.tick2On = False
+            tic.label1On = tic.label2On = False
+    def hide_axis_y(self):
+        self.ax.yaxis.label.set_visible(False)
+        for tic in self.ax.yaxis.get_major_ticks():
+            tic.tick1On = tic.tick2On = False
+            tic.label1On = tic.label2On = False
 
     def clear(self):
         self.ax.clear()
@@ -311,28 +330,28 @@ class Ax:
         if not y is None: self.ax.set_yscale(y)
 
     def set_lims(self, x = None, y = None):
-        if x is None: set_xlim(auto = True)
-        else: self.ax.set_xlim(x)
-        if y is None: set_ylim(auto = True)
-        else: self.ax.set_xlim(y)
+        if not x is None: self.ax.set_xlim(x)
+        if not y is None: self.ax.set_ylim(y)
 
     def set_ticks(self, x = None, y = None):
         if not x is None:
             if type(x) is tuple:
                 xticks, xticklabels = x
             else:
-                xticks = x
-                xticklabels = []
-            self.ax.set_xticks(xticks)
-            self.ax.set_xticklabels(xticklabels)
+                xticks, xticklabels = x, None
+            if not xticks is None:
+                self.ax.set_xticks(xticks)
+            if not xticklabels is None:
+                self.ax.set_xticklabels(xticklabels, rotation = 'vertical')
         if not y is None:
             if type(y) is tuple:
                 yticks, yticklabels = y
             else:
-                yticks = y
-                yticklabels = []
-            self.ax.set_yticks(yticks)
-            self.ax.set_yticklabels(yticklabels)
+                yxticks, yticklabels = y, None
+            if not yticks is None:
+                self.ax.set_yticks(yticks)
+            if not yticklabels is None:
+                self.ax.set_yticklabels(yticklabels)
 
     def set_margins(self, x = 0., y = 0.):
         self.ax.set_xmargin(x)
@@ -347,9 +366,8 @@ class Ax:
         if not y is None:
             self.ax.grid(alpha = y, axis = 'y', which = which)
 
-    # def set_grid(self, alpha, which = 'major', axis = 'both'):
-    #     if which == 'both':
-    #         ax.grid(which = 'major', alpha = alpha, axis = axis)
-    #         ax.grid(which = 'minor', alpha = alpha / 2., axis = axis)
-    #     else:
-    #         ax.grid(which = which, alpha = alpha, axis = axis)
+    def set_label(self, x = '', y = ''):
+        if not x is None:
+            self.ax.set_xlabel(x)
+        if not y is None:
+            self.ax.set_ylabel(y)
