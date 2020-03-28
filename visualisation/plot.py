@@ -30,7 +30,7 @@ def get_rectilinear_plot(
         nTicks = ticksPerInch * size[i]
         ext, ticks[i], ticklabels[i], lims[i] = \
             auto_axis_configs(arg, lims[i], nTicks)
-        if len(ext): labels[i] += '({0})'.format(ext)
+        if len(ext): labels[i] += ' ({0})'.format(ext)
     canvas = Canvas(size = size, **canvas_kws)
     plot = canvas._add_blank_rectilinear(
         labels = labels,
@@ -52,6 +52,7 @@ def quickPlot(
         y,
         # co_y = None,
         lims = None,
+        slicer = slice(None, None, None),
         variety = 'line',
         labels = ('', ''),
         title = '',
@@ -66,7 +67,8 @@ def quickPlot(
         labels = labels,
         title = title,
         size = size,
-        ticksPerInch = ticksPerInch
+        ticksPerInch = ticksPerInch,
+        slicer = slicer
         )
 
     if variety == 'line':
@@ -105,7 +107,7 @@ def _abbreviate_ticks(ticks):
 def auto_axis_configs(data, lims = (None, None), nTicks = 5):
     minD, maxD = np.min(data), np.max(data)
     minCon = minD >= 0 and maxD > 2. * minD
-    maxCon = maxD <= 0 and minD > 2. * maxD
+    maxCon = maxD <= 0 and minD < 2. * maxD
     lims = list(lims)
     if lims[0] is None: lims[0] = 0. if minCon else minD
     if lims[1] is None: lims[1] = 0. if maxCon else maxD
@@ -289,7 +291,7 @@ class Ax:
             ):
         nTicks = ticksPerInch * self.canvas.size[i]
         ext, ticks, ticklabels = (data, lims, nTicks)
-        if len(ext): label[i] += '({0})'.format(ext)
+        if len(ext): label[i] += ' ({0})'.format(ext)
         tupFn = lambda val: (val, None) if i == 0 else (None, val)
         self.set_scales(*tupFn(scale))
         self.set_lims(*tupFn(lims))
