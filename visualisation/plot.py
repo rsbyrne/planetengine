@@ -99,8 +99,8 @@ def _make_nice_ticks(data, nTicks, lower = None, upper = None):
         upper += step - upper % step
         if maxD > upper - 0.5 * step:
             upper += step
-    ticks = np.arange(lower, upper + step, step)
-    return ticks
+    nTicks = int((upper - lower) / step) + 1
+    return np.linspace(lower, upper, nTicks)
 
 def _abbreviate_ticks(ticks):
     maxLog10 = math.log10(np.max(np.abs(ticks)))
