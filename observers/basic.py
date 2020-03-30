@@ -5,7 +5,8 @@ from underworld import function as fn
 from planetengine import mpi
 from planetengine.observers import Observer
 from planetengine import functions as pfn
-from planetengine.visualisation.raster import Raster
+from planetengine.fieldops import RegularData
+from window.raster import Raster
 
 class Basic(Observer):
 
@@ -119,12 +120,14 @@ class Basic(Observer):
         analysers['psi_range'] = pfn.getstat.range(streamFn)
 
         aspect = observee.locals[aspectKey]
-        raster = Raster(
+        rasterFns = [
             pfn.rebase.zero(theta),
             pfn.operations.sqrt(strainRate),
-            pfn.rebase.zero(streamFn),
-            aspect = aspect
-            )
+            pfn.rebase.zero(streamFn)
+            ]
+        size = [int(aspect) * 256, 256]
+        bands = [RegularData(fn, size) for fn in rasterFns]
+        raster = Raster(*bands)
         analysers['raster'] = self.raster = raster
 
         self.observee, self.analysers = observee, analysers

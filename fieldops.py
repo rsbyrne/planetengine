@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+from scipy import interpolate
 import weakref
 
 import underworld as uw
@@ -30,7 +31,7 @@ class RegularData:
         self.normInterval = normInterval
         self.update()
     def update(self):
-        data = fieldops.safe_box_evaluate(
+        data = safe_box_evaluate(
             self.var,
             self.grid
             )
@@ -48,7 +49,7 @@ def get_global_var_data(var, subMesh = False):
     substrate = utilities.get_prioritySubstrate(var)
     if subMesh:
         substrate = substrate.subMesh
-    if isinstance(var,fn._function.Function):
+    if isinstance(var, fn._function.Function):
         varData = var.evaluate(substrate)
     else:
         varData = var.data
@@ -165,7 +166,7 @@ def box_evaluate(
         tolerance = tolerance,
         shrinkLocal = True
         )
-    data = sp.interpolate.griddata(
+    data = interpolate.griddata(
         globalFromMesh,
         globalFromField,
         evalCoords,
