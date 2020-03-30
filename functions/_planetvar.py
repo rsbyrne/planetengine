@@ -199,6 +199,11 @@ class PlanetVar(UWFn):
             parameter.update()
         self._partial_update()
 
+    @property
+    def data(self):
+        return self.evaluate()
+
+
     def _check_hash(self, lazy = False):
         currenthash = 0
         for rootVar in self.rootVars:
@@ -256,16 +261,7 @@ class PlanetVar(UWFn):
         return evalInput
 
     def _output_processing(self, evalOutput):
-        if all([
-                isinstance(inVar, _reduction.Reduction) \
-                    for inVar in self.inVars
-                ]):
-            val = evalOutput
-            for layer in evalOutput.shape:
-                val = val[0]
-            return np.array(val)
-        else:
-            return evalOutput
+        return evalOutput
 
     def evaluate(self, evalInput = None, lazy = False):
         if not lazy:

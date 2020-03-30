@@ -35,11 +35,8 @@ class Variable(_basetypes.BaseTypes):
         if not type(var) in self.convertTypes:
             raise Exception
 
-        self.data = var.data
-
         if type(var) == uw.mesh._meshvariable.MeshVariable:
             self.substrate = self.mesh = var.mesh
-            self.meshdata = self.data
             self.meshbased = True
             self.varType = 'meshVar'
         elif type(var) == uw.swarm._swarmvariable.SwarmVariable:
@@ -56,9 +53,9 @@ class Variable(_basetypes.BaseTypes):
 
         self._hashVars = [var]
 
-        sample_data = self.data[0:1]
+        sample_data = var.data[0:1]
         self.dType = _planetvar.get_dType(sample_data)
-        self.varDim = self.data.shape[1]
+        self.varDim = var.data.shape[1]
 
         if vector is None:
             if not self.mesh is None:
@@ -92,11 +89,6 @@ class Variable(_basetypes.BaseTypes):
     def _update_hash(self):
         self._currenthash = utilities.hash_var(self.var)
 
-    def _set_meshdata(self):
-        self.meshdata = self.var.evaluate(self.mesh)
-
     def _partial_update(self):
         if hasattr(self.var, 'project'):
             self.var.project()
-        if not type(self.var) == uw.mesh._meshvariable.MeshVariable:
-            self._set_meshdata()

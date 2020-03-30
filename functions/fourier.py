@@ -21,7 +21,7 @@ class Fourier(_reduction.Reduction):
             raise Exception
 
         def evalFn():
-            data = inVar.evaluate()
+            data = inVar.data
             av = np.average(data)
             norm = (data - av) / av
             sp = np.abs(np.fft.rfft(norm)).real

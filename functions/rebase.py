@@ -26,10 +26,9 @@ class Rebase(_function.Function):
 
     def _scaleFn(self):
         scales = [self.min, self.max]
-        ref = self.refVar.evaluate()
+        ref = self.refVar.data
         outs = []
         difference = max([abs(x - ref) for x in scales])
-        print("hello")
         return [ref - difference, ref + difference]
 
 def default(*args, **kwargs):

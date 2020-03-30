@@ -1,5 +1,6 @@
 from . import _planetvar
 from . import _basetypes
+from . import _reduction
 from .. import meshutils
 
 class Function(_planetvar.PlanetVar):
@@ -83,6 +84,18 @@ class Function(_planetvar.PlanetVar):
             if not self.varDim == self.mesh.dim:
                 raise Exception
         self.vector = vector
+
+    def _output_processing(self, evalOutput):
+        if all([
+                isinstance(inVar, _reduction.Reduction) \
+                    for inVar in self.inVars
+                ]):
+            val = evalOutput
+            for layer in evalOutput.shape:
+                val = val[0]
+            return np.array(val)
+        else:
+            return evalOutput
 
     # def _detect_scales_bounds(self):
     #     fields = []

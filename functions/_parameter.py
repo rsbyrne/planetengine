@@ -45,7 +45,6 @@ class Parameter(_basetypes.BaseTypes):
 
     def _update_attributes(self):
         self.value = self.var.evaluate()
-        # self.data = np.array([[val,] for val in self.value])
 
     def _partial_update(self):
         self.var.value = self._paramfunc()

@@ -51,7 +51,7 @@ class Merge(_function.Function):
     def _partial_update(self):
         for index, inVar in enumerate(self.inVars):
             self.var.data[:, index] = \
-                inVar.evaluate()[:, 0]
+                inVar.data[:, 0]
 
 def default(*args, **kwargs):
     return _construct(*args, **kwargs)

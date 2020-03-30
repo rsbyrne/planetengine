@@ -41,7 +41,7 @@ class Split(_function.Function):
 
     def _partial_update(self):
         self.var.data[:, 0] = \
-            self.inVar.evaluate()[:, self.column]
+            self.inVar.data[:, self.column]
 
 def default(*args, **kwargs):
     return _construct(*args, **kwargs)
