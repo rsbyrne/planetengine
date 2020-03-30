@@ -12,6 +12,38 @@ from everest import mpi
 from . import exceptions
 message = utilities.message
 
+class RegularData:
+    def __init__(self, var, size, normInterval = [0.0001, 254.9999]):
+        from . import functions as pfn
+        self.var = pfn.convert(var)
+        if self.var.varDim > 1:
+            raise Exception
+        self.grid = np.vstack(
+            np.dstack(
+                np.meshgrid(
+                    np.linspace(0., 1., size[0]),
+                    np.linspace(1., 0., size[1])
+                    )
+                )
+            )
+        self.size = size
+        self.normInterval = normInterval
+        self.update()
+    def update(self):
+        data = fieldops.safe_box_evaluate(
+            self.var,
+            self.grid
+            )
+        inScale = self.var.scale
+        data = mapping.rescale_array(
+            data,
+            [inScale for dim in range(data.shape[-1])],
+            [self.normInterval for dim in range(data.shape[-1])]
+            )
+        data = np.round(data).astype('uint8')
+        data = np.reshape(data, self.size[::-1])
+        self.data = data
+
 def get_global_var_data(var, subMesh = False):
     substrate = utilities.get_prioritySubstrate(var)
     if subMesh:

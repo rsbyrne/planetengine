@@ -1,7 +1,8 @@
-from underworld import function as fn
-import glucifer
 import numpy as np
 import os
+
+from underworld import function as fn
+import glucifer
 
 from ..functions import normalise
 from ..utilities import message
