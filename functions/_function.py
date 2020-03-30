@@ -1,3 +1,5 @@
+import numpy as np
+
 from . import _planetvar
 from . import _basetypes
 from . import _reduction
