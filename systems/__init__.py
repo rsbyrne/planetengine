@@ -3,8 +3,6 @@ import numpy as np
 from everest.builts import Built
 from everest.builts._iterator import Iterator, LoadFail
 from everest.value import Value
-from everest.builts.vector import Vector
-from everest.writer import FixedDataset
 from everest.builts import make_hash
 from everest.builts._iterator import _initialised
 from everest.globevars import _GHOSTTAG_
@@ -82,14 +80,6 @@ class System(Iterator, Getter):
                 leftoversDict[key] = val
         return optionsDict, paramsDict, configsDict, leftoversDict
 
-    @classmethod
-    def vectorise(cls, vector):
-        if isinstance(vector, Vector):
-            inputs = vector.inputs
-        elif type(vector) is dict:
-            inputs = vector
-        return cls(**inputs)
-
     def __init__(self, localsDict, **kwargs):
 
         # Expects:
@@ -116,11 +106,7 @@ class System(Iterator, Getter):
         # self._outkeys
         # self._load
 
-        self.baselines = {
-            'mesh': FixedDataset(
-                fieldops.get_global_var_data(self.locals.mesh)
-                )
-            }
+        baselines = {'mesh': fieldops.get_global_var_data(self.locals.mesh)}
         dOptions, dParams, dConfigs = \
             self.options.copy(), self.params.copy(), self.configs.copy()
         dOptions['hash'] = make_hash(self.options)
@@ -136,7 +122,7 @@ class System(Iterator, Getter):
             initialise = False
 
         super().__init__(
-            baselines = self.baselines,
+            baselines = baselines,
             options = dOptions,
             params = dParams,
             configs = dConfigs,
