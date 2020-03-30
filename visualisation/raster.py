@@ -12,7 +12,7 @@ from .. import fieldops
 from .. import mapping
 from .. import utilities
 from .. import functions as pfn
-from ._fig import Fig as _Fig
+from quickvis import Fig as _Fig
 
 STANDARD_SIZE = (256, 256)
 

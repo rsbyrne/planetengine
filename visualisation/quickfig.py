@@ -9,7 +9,7 @@ from ..functions import convert, normalise, getstat
 # from .. import functions as pfn
 from ..meshutils import get_meshUtils
 from everest import mpi
-from ._fig import Fig as _Fig
+from quickvis import Fig as _Fig
 
 def quickShow(*args, **kwargs):
 
