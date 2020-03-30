@@ -1,5 +1,6 @@
 from planetengine.observers import Observer
 from planetengine import functions as pfn
+from planetengine import fieldops
 
 class Thermo(Observer):
 
@@ -33,6 +34,7 @@ class Thermo(Observer):
         analysers['theta_av'] = avTheta
         analysers['theta_min'] = pfn.getstat.min(theta)
         analysers['theta_range'] = pfn.getstat.range(theta)
+        analysers['theta'] = fieldops.RegularData(theta, size = (16, 16))
 
         adiabatic, conductive = pfn.gradient.rad(temp), pfn.gradient.rad(cond)
         thetaGrad = adiabatic / conductive

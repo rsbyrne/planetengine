@@ -31,6 +31,10 @@ class RegularData:
         self.normInterval = normInterval
         self.update()
     def update(self):
+        if self.var._has_changed():
+            print("updating")
+            self._update()
+    def _update(self):
         data = safe_box_evaluate(
             self.var,
             self.grid
@@ -43,7 +47,13 @@ class RegularData:
             )
         data = np.round(data).astype('uint8')
         data = np.reshape(data, self.size[::-1])
-        self.data = data
+        self._data = data
+    @property
+    def data(self):
+        self.update()
+        return self._data
+    def evaluate(self):
+        return self.data
 
 def get_global_var_data(var, subMesh = False):
     substrate = utilities.get_prioritySubstrate(var)
