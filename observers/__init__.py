@@ -30,7 +30,11 @@ class Observer(Counter, Cycler):
 
         self.check = lambda: False
 
-        super().__init__(observee = LinkTo(self.observee), **kwargs)
+        super().__init__(
+            observee = LinkTo(self.observee),
+            supertype = 'Observer',
+            **kwargs
+            )
 
         self.fig = QuickFig(*self.visVars)
 

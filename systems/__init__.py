@@ -129,6 +129,7 @@ class System(Iterator, Getter):
             schema = self.typeHash,
             case = case,
             _iterator_initialise = initialise,
+            supertype = 'System',
             **kwargs
             )
 
