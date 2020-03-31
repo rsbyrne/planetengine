@@ -99,7 +99,7 @@ class VelVisc(Observer):
         self.streamFn = streamFn
         self.velMag = velMag
 
-        visVars = [vel,]
+        visVars = [streamFn, vel,]
         if not visc == 1:
             visVars.append(pfn.operations.log(visc))
         self.visVars = visVars

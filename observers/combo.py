@@ -27,4 +27,7 @@ class Combo(Observer):
 
         self.set_freq(10)
 
+        # Producer attributes:
+        self._post_save_fns.append(self.save_observers)
+
 CLASS = Combo

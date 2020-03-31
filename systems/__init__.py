@@ -13,7 +13,7 @@ from ..utilities import hash_var
 from ..utilities import Grouper
 
 from ..exceptions import PlanetEngineException
-from .. import observers
+from .. import observers as observersModule
 
 class ObserverNotFound(PlanetEngineException):
     pass
@@ -239,17 +239,36 @@ class System(Iterator, Getter):
     #         self.load(nowCount)
     #         return out
 
-    def add_observer(self, observerClass = None, **observerInputs):
-        if observerClass is None:
-            observerClass, defaultObserverInputs = self.defaultObserver
-            observerInputs = {**defaultObserverInputs, **observerInputs}
-        observer = (observerClass(self, **observerInputs))
-        try: self.remove_observer(observer.hashID)
-        except ObserverNotFound: pass
-        if self.anchored:
-            observer.anchor(self.name, self.path)
-        observer()
-        self.observers.append(observer)
+    def add_observer(self, observer, **observerInputs):
+        if isinstance(observer, observersModule.Observer):
+            if len(observerInputs):
+                raise ValueError(
+                    "Cannot provide inputs \
+                    to already initialised observer."
+                    )
+            newObserver = False
+        elif issubclass(observer, observersModule.Observer):
+            observer = observer(self, **observerInputs)
+            newObserver = True
+        else:
+            raise TypeError("Input not recognised.")
+        if not observer in self.observers:
+            self.observers.append(observer)
+            if self.anchored:
+                observer.anchor(self.name, self.path)
+            observer()
+        if newObserver:
+            return observer
+
+    def add_observers(self, *args):
+        for arg in args:
+            if type(arg) is tuple:
+                self.add_observer(arg[0], **arg[1])
+            else:
+                self.add_observer(arg)
+
+    def add_default_observers(self):
+        self.add_observers(*self.defaultObservers)
 
     @property
     def observer(self):
@@ -301,10 +320,7 @@ class System(Iterator, Getter):
             try: observer.report()
             except NameError: pass
 
-    defaultObserver = (
-        observers.Combo,
-        {'observers': (observers.Thermo, observers.VelVisc)}
-        )
+    defaultObservers = [observersModule.Thermo, observersModule.VelVisc]
 
 # Aliases
 from .viscoplastic import Viscoplastic
