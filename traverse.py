@@ -12,6 +12,7 @@ from everest.value import Value
 from everest import mpi
 
 from .utilities import LightBoolean, ChronCheck, _get_periodic_condition
+from .finals import Final
 
 class Traverse(Task):
 
@@ -88,11 +89,6 @@ class Traverse(Task):
         self._task_stop_fns.append(self._traverse_stop)
         self._task_finalise_fns.append(self._traverse_finalise)
 
-    def _set_start_stop(self):
-        start, stop = self.inputs['start'], self.inputs['stop']
-
-
-
     def _traverse_initialise(self):
         try:
             self.traversee = self.ghosts['traversee']
@@ -111,6 +107,12 @@ class Traverse(Task):
         if type(stop) is tuple:
             stopClass, stopInputs = stop
             stop = stopClass(self.traversee, **stopInputs)
+        else:
+            try:
+                if issubclass(stop, Final):
+                    stop = stop(self.traversee)
+            except TypeError:
+                pass
         self.stop = stop
         if self.freq is None and not self.stop is None:
             try:
