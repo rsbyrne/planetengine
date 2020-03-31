@@ -78,8 +78,13 @@ class VelVisc(Observer):
         analysers['psi_min'] = pfn.getstat.min(streamFn)
         analysers['psi_range'] = pfn.getstat.range(streamFn)
 
-        analysers['epsilon'] = pfn.operations.sqrt(strainRate)
-        analysers['psi'] = pfn.rebase.zero(streamFn)
+        analysers['epsilon'] = fieldops.RegularData(
+            pfn.operations.sqrt(strainRate),
+            size = (16, 16),
+        analysers['psi'] = fieldops.RegularData(
+            pfn.rebase.zero(streamFn),
+            size = (16, 16)
+            )
 
         self.observee, self.analysers = observee, analysers
 
