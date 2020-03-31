@@ -42,6 +42,6 @@ class Flat(Final):
         chron, metric = analysis.time_smooth(chron, metric, sampleFactor = 2.)
         chron, metric = chron[1:-1], metric[1:-1]
         half = metric[np.where(chron > np.max(chron) - np.ptp(chron) / 2.)]
-        return np.ptp(half) < self.tolerance * np.average(half)
+        return np.ptp(half) < self.tolerance * np.abs(np.average(half))
 
 CLASS = Flat
