@@ -79,6 +79,11 @@ class Observer(Counter, Cycler):
             ])
 
     def report(self):
+        intTypes = {
+            np.int8, np.int16, np.int32, np.int64,
+            np.uint8, np.uint16, np.uint32, np.uint64
+            }
+        floatTypes = {np.float16, np.float32, np.float64}
         outs = self.out()
         outkeys = self.outkeys
         def dot_aligned(seq):
@@ -89,9 +94,9 @@ class Observer(Counter, Cycler):
         names, datas = [], []
         for name, data in zip(outkeys, outs):
             if data.shape == ():
-                if type(data) in {np.int32, np.int64}:
+                if type(data) in intTypes:
                     val = str(int(data))
-                elif type(data) in {np.float32, np.float64}:
+                elif type(data) in floatTypes:
                     val = "{:.5f}".format(data)
                 else:
                     val = str(data)
@@ -108,5 +113,6 @@ class Observer(Counter, Cycler):
         self.fig.show()
 
 # Aliases
-from .basic import Basic
 from .thermo import Thermo
+from .velvisc import VelVisc
+from .combo import Combo

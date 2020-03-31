@@ -1,63 +1,22 @@
-import numpy as np
-
 from underworld import function as fn
 
-from planetengine import mpi
 from planetengine.observers import Observer
 from planetengine import functions as pfn
-from planetengine.fieldops import RegularData
-from window.raster import Raster
+from planetengine import fieldops
 
-class Basic(Observer):
+class VelVisc(Observer):
 
     def __init__(self,
             observee,
-            tempKey = 'temperatureField',
             velKey = 'velocityField',
             vcKey = 'vc',
             pressureKey = 'pressureField',
             viscKey = 'viscosityFn',
             plasticViscKey = 'plasticViscFn',
-            heatingKey = 'heatingFn',
-            diffKey = 'diffusivityFn',
-            aspectKey = 'aspect',
-            fluxKey = 'flux',
             **kwargs
             ):
 
         analysers = dict()
-        rasterArgs = []
-
-        temp = observee.locals[tempKey]
-
-        mesh = temp.mesh
-        flux = observee.locals[fluxKey]
-        diff = observee.locals[diffKey]
-        heating = observee.locals[heatingKey]
-        if flux is None:
-            cond = pfn.conduction.default(temp, heating, diff)
-        else:
-            cond = pfn.conduction.inner(temp, heating, diff, flux)
-
-        adiabatic, conductive = pfn.gradient.rad(temp), pfn.gradient.rad(cond)
-        thetaGrad = adiabatic / conductive
-        Nu = pfn.integral.outer(thetaGrad)
-        analysers['Nu'] = Nu
-        thetaGradOuter = pfn.surface.outer(thetaGrad)
-        analysers['Nu_min'] = pfn.getstat.min(thetaGradOuter)
-        analysers['Nu_range'] = pfn.getstat.range(thetaGradOuter)
-        NuFreq = pfn.fourier.default(thetaGradOuter)
-        analysers['Nu_freq'] = NuFreq
-
-        theta = temp - cond
-        avTemp = pfn.integral.volume(temp)
-        avTheta = pfn.integral.volume(theta)
-        analysers['temp_av'] = avTemp
-        analysers['temp_min'] = pfn.getstat.min(temp)
-        analysers['temp_range'] = pfn.getstat.range(temp)
-        analysers['theta_av'] = avTheta
-        analysers['theta_min'] = pfn.getstat.min(theta)
-        analysers['theta_range'] = pfn.getstat.range(theta)
 
         vel = observee.locals[velKey]
         vc = observee.locals[vcKey]
@@ -119,24 +78,16 @@ class Basic(Observer):
         analysers['psi_min'] = pfn.getstat.min(streamFn)
         analysers['psi_range'] = pfn.getstat.range(streamFn)
 
-        aspect = observee.locals[aspectKey]
-        rasterFns = [
-            pfn.rebase.zero(theta),
-            pfn.operations.sqrt(strainRate),
-            pfn.rebase.zero(streamFn)
-            ]
-        size = [int(aspect) * 256, 256]
-        bands = [RegularData(fn, size) for fn in rasterFns]
-        raster = Raster(*bands)
-        analysers['raster'] = self.raster = raster
+        analysers['epsilon'] = pfn.operations.sqrt(strainRate)
+        analysers['psi'] = pfn.rebase.zero(streamFn)
 
         self.observee, self.analysers = observee, analysers
+
         self.strainRate = strainRate
         self.streamFn = streamFn
         self.velMag = velMag
-        self.theta = theta
 
-        visVars = [temp, vel]
+        visVars = [vel,]
         if not visc == 1:
             visVars.append(pfn.operations.log(visc))
         self.visVars = visVars
@@ -145,4 +96,4 @@ class Basic(Observer):
 
         self.set_freq(10)
 
-CLASS = Basic
+CLASS = VelVisc

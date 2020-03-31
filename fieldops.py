@@ -29,10 +29,9 @@ class RegularData:
             )
         self.size = size
         self.normInterval = normInterval
-        self.update()
+        self._update()
     def update(self):
         if self.var._has_changed():
-            print("updating")
             self._update()
     def _update(self):
         data = safe_box_evaluate(

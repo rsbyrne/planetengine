@@ -6,7 +6,6 @@ fn, cd = uw.function, uw.conditions
 from planetengine.systems import System
 from planetengine.initials.sinusoidal import Sinusoidal
 from planetengine.initials.constant import Constant
-from planetengine.observers.basic import Basic
 
 class Isovisc(System):
 
@@ -197,8 +196,6 @@ class Isovisc(System):
             return dt
 
         super().__init__(locals(), **kwargs)
-
-    defaultObserver = (Basic, dict())
 
 ### ATTRIBUTES ###
 CLASS = Isovisc

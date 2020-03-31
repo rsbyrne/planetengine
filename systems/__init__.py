@@ -12,7 +12,8 @@ from .. import fieldops
 from ..utilities import hash_var
 from ..utilities import Grouper
 
-from planetengine.exceptions import PlanetEngineException
+from ..exceptions import PlanetEngineException
+from .. import observers
 
 class ObserverNotFound(PlanetEngineException):
     pass
@@ -299,6 +300,11 @@ class System(Iterator, Getter):
         for observer in self.observers:
             try: observer.report()
             except NameError: pass
+
+    defaultObserver = (
+        observers.Combo,
+        {'observers': (observers.Thermo, observers.VelVisc)}
+        )
 
 # Aliases
 from .viscoplastic import Viscoplastic
