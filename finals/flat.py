@@ -12,10 +12,11 @@ class Flat(Final):
             observerClass = Thermo,
             observerKwargs = dict(),
             freq = 10,
-            check = 50,
             x = 'chron',
             y = ('Nu', 'theta_av'),
-            tolerance = 1e-3
+            tolerance = 1e-3,
+            horizon = 0.1,
+            check = 50,
             ):
 
         self.system = system
@@ -27,6 +28,7 @@ class Flat(Final):
         self.x = x
         self.y = y if type(y) is tuple else (y,)
         self.tolerance = tolerance
+        self.horizon = horizon
 
         super().__init__(check = check)
 
@@ -41,7 +43,8 @@ class Flat(Final):
     def _flat_condition(self, chron, metric):
         chron, metric = analysis.time_smooth(chron, metric, sampleFactor = 2.)
         chron, metric = chron[1:-1], metric[1:-1]
-        half = metric[np.where(chron > np.max(chron) - np.ptp(chron) / 2.)]
-        return np.ptp(half) < self.tolerance * np.abs(np.average(half))
+        indices = np.where(chron > np.max(chron) - self.horizon * np.ptp(chron))
+        interval = metric[indices]
+        return np.ptp(interval) < self.tolerance * np.abs(np.average(interval))
 
 CLASS = Flat
