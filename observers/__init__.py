@@ -2,8 +2,6 @@ import numpy as np
 
 from everest.builts._counter import Counter
 from everest.builts._cycler import Cycler
-from everest.builts.states import State
-from everest.builts.states.threshold import Threshold
 from everest.builts.condition import Condition
 from everest.writer import LinkTo
 

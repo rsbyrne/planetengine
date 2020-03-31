@@ -7,8 +7,7 @@ import underworld as uw
 from underworld import function as fn
 from underworld.function._function import Function as UWFn
 
-from everest.builts.states import State
-from everest.builts.condition import Condition
+from everest.builts._boolean import Boolean
 
 from everest import mpi
 
@@ -49,10 +48,8 @@ class ChronCheck:
 def _get_periodic_condition(subject, freq):
     if type(freq) is bool:
         return freq
-    elif isinstance(freq, Condition):
+    elif isinstance(freq, Boolean):
         return freq
-    elif isinstance(freq, State):
-        return Condition(freq, subject)
     elif freq is None:
         return False
     elif type(freq) is int:

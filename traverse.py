@@ -2,19 +2,15 @@ import time
 
 from everest.builts import load, NotOnDiskError, NotInFrameError
 from everest.builts._task import Task
-from everest.builts.states import State
-from everest.builts.condition import Condition
-from everest.builts.states.threshold import Threshold
+from everest.builts._boolean import Boolean
 from everest.builts._iterator import LoadFail
-from everest.builts._counter import Counter
-# from everest.builts._diskbased import DiskBased
 from everest.builts import check_global_anchor, _get_info, load, Meta, Built
 from everest.weaklist import WeakList
 from everest.globevars import _GHOSTTAG_
 from everest.value import Value
+from everest import mpi
 
 from .utilities import LightBoolean, ChronCheck, _get_periodic_condition
-from everest import mpi
 
 class Traverse(Task):
 
@@ -164,10 +160,8 @@ class Traverse(Task):
             return self.traversee.count >= self.stop
         elif type(self.stop) is float:
             return self.traversee.chron >= self.stop
-        elif isinstance(self.stop, Condition):
+        elif isinstance(self.stop, Boolean):
             return bool(self.stop)
-        elif isinstance(self.stop, State):
-            return self.stop(self.traversee)
         else:
             assert False, ("Invalid stop argument.", self.stop, type(self.stop))
 
