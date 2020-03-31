@@ -15,6 +15,7 @@ class Flat(Final):
             check = 50,
             x = 'chron',
             y = ('Nu', 'theta_av'),
+            tolerance = 1e-3
             ):
 
         self.system = system
@@ -23,7 +24,9 @@ class Flat(Final):
             **observerKwargs
             )
         ignoreme = self.observer.add_freq(freq)
-        self.x, self.y = x, y if type(y) is tuple else (y,)
+        self.x = x
+        self.y = y if type(y) is tuple else (y,)
+        self.tolerance = tolerance
 
         super().__init__(check = check)
 
@@ -36,9 +39,9 @@ class Flat(Final):
             return False
 
     def _flat_condition(self, chron, metric):
-        metric, chron = analysis.time_smooth(metric, chron, sampleFactor = 2.)
-        metric, chron = metric[1:-1], chron[1:-1]
+        chron, metric = analysis.time_smooth(chron, metric, sampleFactor = 2.)
+        chron, metric = chron[1:-1], metric[1:-1]
         half = metric[np.where(chron > np.max(chron) - np.ptp(chron) / 2.)]
-        return np.ptp(half) < 1e-3 * np.average(half)
+        return np.ptp(half) < self.tolerance * np.average(half)
 
 CLASS = Flat
