@@ -80,7 +80,8 @@ class VelVisc(Observer):
 
         analysers['epsilon'] = fieldops.RegularData(
             pfn.operations.sqrt(strainRate),
-            size = (16, 16),
+            size = (16, 16)
+            )
         analysers['psi'] = fieldops.RegularData(
             pfn.rebase.zero(streamFn),
             size = (16, 16)
