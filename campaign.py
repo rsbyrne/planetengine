@@ -47,7 +47,7 @@ class Campaign(Container, Task):
             start = None,
             stop = None,
             freq = None,
-            observerClasses = [],
+            observers = [],
             cores = 1,
             **kwargs
             ):

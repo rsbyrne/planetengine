@@ -29,7 +29,7 @@ from .observers import Observer
 from .initials import Channel
 from .finals import Final
 from .traverse import Traverse
-from .campaign import Campaign
+# from .campaign import Campaign
 
 from .utilities import message
 from .visualisation import quickShow
