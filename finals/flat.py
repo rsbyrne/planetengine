@@ -13,7 +13,7 @@ class Flat(Final):
             observerKwargs = dict(),
             freq = 10,
             x = 'chron',
-            y = ('Nu', 'theta_av'),
+            y = ('Nu', 'temp_av'),
             tolerance = 1e-3,
             horizon = 0.1,
             check = 50,
