@@ -1,3 +1,5 @@
+import numpy as np
+
 from window import analysis
 
 from . import Final
