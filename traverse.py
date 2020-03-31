@@ -3,6 +3,7 @@ import time
 from everest.builts import load, NotOnDiskError, NotInFrameError
 from everest.builts._task import Task
 from everest.builts._boolean import Boolean
+from everest.builts._state import State
 from everest.builts._iterator import LoadFail
 from everest.builts import check_global_anchor, _get_info, load, Meta, Built
 from everest.weaklist import WeakList
@@ -66,10 +67,14 @@ class Traverse(Task):
             **kwargs
             ):
 
-        self.system, self.start, self.stop, \
-        self.freq, self.inObservers, self.vector = \
-                system, start, stop, \
-                freq, observers, vector
+        try:
+            if start > stop:
+                raise ValueError("Start index must be earlier than stop index.")
+        except TypeError:
+            pass
+
+        self.system, self.freq, self.inObservers, self.vector = \
+            system, freq, observers, vector
         self.observers = []
 
         ignoreme1, ignoreme2, self.vectorHash, ignoreme3, self.traverseeID = \
@@ -82,6 +87,11 @@ class Traverse(Task):
         self._task_cycler_fns.append(self._traverse_iterate)
         self._task_stop_fns.append(self._traverse_stop)
         self._task_finalise_fns.append(self._traverse_finalise)
+
+    def _set_start_stop(self):
+        start, stop = self.inputs['start'], self.inputs['stop']
+
+
 
     def _traverse_initialise(self):
         try:
@@ -97,21 +107,26 @@ class Traverse(Task):
                 self.traversee = self.system(**self.vector)
         if self.anchored:
             self.traversee.anchor(self.name, self.path)
+        start, stop = self.inputs['start'], self.inputs['stop']
+        if type(stop) is tuple:
+            stopClass, stopInputs = stop
+            stop = stopClass(self.traversee, **stopInputs)
+        self.stop = stop
         if self.freq is None and not self.stop is None:
             try:
                 # Skip straight to the end:
                 self.traversee.load(self.stop)
             except LoadFail:
                 # Go to the beginning:
-                if self.start == 0:
+                if start == 0:
                     self.traversee.initialise()
                 else:
                     try:
-                        self.traversee.load(self.start)
+                        self.traversee.load(start)
                     except LoadFail:
                         preTraverse = self.__class__(
                             system = self.traversee,
-                            stop = self.start,
+                            stop = start,
                             observers = [],
                             )
                         preTraverse()
@@ -180,6 +195,7 @@ class Traverse(Task):
         self.observers = []
         traversee = self.traversee
         del self.traversee
+        del self.stop
         if len(observers):
             return traversee, observers
         else:
