@@ -28,7 +28,10 @@ class Flat(Final):
     def _zone_fn(self):
         chron = self.observer.data[self.x]
         metrics = self.observer.data[self.y]
-        return all([self._flat_condition(chron, m) for m in metrics])
+        if len(chron) > 10:
+            return all([self._flat_condition(chron, m) for m in metrics])
+        else:
+            return False
 
     def _flat_condition(self, chron, metric):
         metric, chron = analysis.time_smooth(metric, chron, sampleFactor = 2.)
