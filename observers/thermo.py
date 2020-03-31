@@ -10,16 +10,19 @@ class Thermo(Observer):
             heatingKey = 'heatingFn',
             diffKey = 'diffusivityFn',
             fluxKey = 'flux',
+            aspectKey = 'aspect',
+            res = 32,
             **kwargs
             ):
 
         analysers = dict()
 
+        aspect = observee.locals[aspectKey]
         temp = observee.locals[tempKey]
-        mesh = temp.mesh
         flux = observee.locals[fluxKey]
         diff = observee.locals[diffKey]
         heating = observee.locals[heatingKey]
+
         if flux is None:
             cond = pfn.conduction.default(temp, heating, diff)
         else:
@@ -34,9 +37,10 @@ class Thermo(Observer):
         analysers['theta_av'] = avTheta
         analysers['theta_min'] = pfn.getstat.min(theta)
         analysers['theta_range'] = pfn.getstat.range(theta)
+
         analysers['theta'] = fieldops.RegularData(
             pfn.rebase.zero(theta),
-            size = (16, 16)
+            size = (round(res * aspect), res)
             )
 
         adiabatic, conductive = pfn.gradient.rad(temp), pfn.gradient.rad(cond)

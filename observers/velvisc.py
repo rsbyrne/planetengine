@@ -13,13 +13,17 @@ class VelVisc(Observer):
             pressureKey = 'pressureField',
             viscKey = 'viscosityFn',
             plasticViscKey = 'plasticViscFn',
+            aspectKey = 'aspect',
+            res = 32,
             **kwargs
             ):
 
         analysers = dict()
 
+        aspect = observee.locals[aspectKey]
         vel = observee.locals[velKey]
         vc = observee.locals[vcKey]
+
         velMag = pfn.component.mag(vel)
         VRMS = pfn.operations.sqrt(pfn.integral.volume(pfn.component.sq(vel)))
         analysers['VRMS'] = VRMS
@@ -80,11 +84,11 @@ class VelVisc(Observer):
 
         analysers['epsilon'] = fieldops.RegularData(
             pfn.operations.sqrt(strainRate),
-            size = (16, 16)
+            size = (round(res * aspect), res)
             )
         analysers['psi'] = fieldops.RegularData(
             pfn.rebase.zero(streamFn),
-            size = (16, 16)
+            size = (round(res * aspect), res)
             )
 
         self.observee, self.analysers = observee, analysers
