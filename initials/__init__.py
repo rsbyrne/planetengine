@@ -48,7 +48,7 @@ class Channel(Applier):
         self.boxDims, self.tiles, self.mirrored = \
             boxDims, tiles, mirrored
 
-        super().__init__(**kwargs)
+        super().__init__(supertype = 'Channel', **kwargs)
 
         self._apply_fns.append(self._channel_apply_fn)
 

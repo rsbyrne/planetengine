@@ -13,7 +13,11 @@ class Final(Boolean):
 
         self._zone_check = _get_periodic_condition(self.system, check)
 
-        super().__init__(_bool_meta_fn = self._zone_meta_fn, **kwargs)
+        super().__init__(
+            supertype = 'Final',
+            _bool_meta_fn = self._zone_meta_fn,
+            **kwargs
+            )
 
         self._pre_bool_fns.extend(self._master_pre_zone_fn)
         self._bool_fns.extend(self._master_zone_fn)
