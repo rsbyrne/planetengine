@@ -12,6 +12,7 @@ class Thermo(Observer):
             fluxKey = 'flux',
             aspectKey = 'aspect',
             res = 32,
+            light = False,
             **kwargs
             ):
 
@@ -38,10 +39,11 @@ class Thermo(Observer):
         analysers['theta_min'] = pfn.getstat.min(theta)
         analysers['theta_range'] = pfn.getstat.range(theta)
 
-        analysers['theta'] = fieldops.RegularData(
-            pfn.rebase.zero(theta),
-            size = (round(res * aspect), res)
-            )
+        if not light:
+            analysers['theta'] = fieldops.RegularData(
+                pfn.rebase.zero(theta),
+                size = (round(res * aspect), res)
+                )
 
         adiabatic, conductive = pfn.gradient.rad(temp), pfn.gradient.rad(cond)
         thetaGrad = adiabatic / conductive

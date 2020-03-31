@@ -15,6 +15,7 @@ class VelVisc(Observer):
             plasticViscKey = 'plasticViscFn',
             aspectKey = 'aspect',
             res = 32,
+            light = False,
             **kwargs
             ):
 
@@ -82,14 +83,15 @@ class VelVisc(Observer):
         analysers['psi_min'] = pfn.getstat.min(streamFn)
         analysers['psi_range'] = pfn.getstat.range(streamFn)
 
-        analysers['epsilon'] = fieldops.RegularData(
-            pfn.operations.sqrt(strainRate),
-            size = (round(res * aspect), res)
-            )
-        analysers['psi'] = fieldops.RegularData(
-            pfn.rebase.zero(streamFn),
-            size = (round(res * aspect), res)
-            )
+        if not light:
+            analysers['epsilon'] = fieldops.RegularData(
+                pfn.operations.sqrt(strainRate),
+                size = (round(res * aspect), res)
+                )
+            analysers['psi'] = fieldops.RegularData(
+                pfn.rebase.zero(streamFn),
+                size = (round(res * aspect), res)
+                )
 
         self.observee, self.analysers = observee, analysers
 
