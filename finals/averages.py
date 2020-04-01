@@ -2,8 +2,8 @@ import numpy as np
 
 from window import analysis
 
-from . import Final
-from ..observers import Thermo
+from planetengine.finals import Final
+from planetengine.observers import Thermo
 
 class Averages(Final):
 
