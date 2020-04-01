@@ -155,12 +155,13 @@ class System(Iterator, Getter):
             if type(observers) is bool:
                 if observers:
                     self.add_default_observers()
-            if type(observers) in {tuple, list}:
-                if not type(observers[0]) in {tuple, list}:
-                    observers = [observers,]
             else:
-                observers = [observers,]
-            self.add_observers(*observers)
+                if type(observers) in {tuple, list}:
+                    if not type(observers[0]) in {tuple, list}:
+                        observers = [observers,]
+                else:
+                    observers = [observers,]
+                self.add_observers(*observers)
 
     def _initialise(self):
         for key, channel in sorted(self.configs.items()):
