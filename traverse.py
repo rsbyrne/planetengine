@@ -59,7 +59,7 @@ class Traverse(Task):
         if type(stop) is Value:
             stop = stop.plain
         if type(stop) in {int, float}:
-            stop = _process_negative_state(stop)
+            stop = _process_negative_state(stop, system)
         elif isinstance(stop, Final):
             processed[_GHOSTTAG_ + 'stop'] = stop
             copyInps = stop.inputs.copy()
