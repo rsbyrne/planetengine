@@ -14,6 +14,20 @@ from everest import mpi
 from .utilities import LightBoolean, ChronCheck, _get_periodic_condition
 from .finals import Final
 
+def _process_negative_state(state, system):
+    if state < 0:
+        if not isinstance(system, Built):
+            raise Exception(
+                "Relative state only acceptable" \
+                + " when system provided."
+                )
+        if type(state) is int:
+            add = system.count.plain
+        elif type(state) is float:
+            add = system.chron.plain
+        state = abs(state) + add
+    return state
+
 class Traverse(Task):
 
     _swapscript = '''from planetengine.traverse import Traverse as CLASS'''
@@ -22,40 +36,45 @@ class Traverse(Task):
     def _process_inputs(inputs):
         processed = dict()
         processed.update(inputs)
-        start, stop = inputs['start'], inputs['stop']
-        system = inputs['system']
-        for name, indexer in sorted({'start': start, 'stop': stop}.items()):
-            if type(indexer) is Value:
-                indexer = indexer.plain
-            if type(indexer) in {int, float}:
-                if indexer < 0:
-                    if not isinstance(system, Built):
-                        raise Exception(
-                            "Relative end state only acceptable" \
-                            + " when system provided."
-                            )
-                    if type(indexer) is int:
-                        add = system.count.plain
-                    elif type(indexer) is float:
-                        add = system.chron.plain
-                    else:
-                        raise TypeError("Stop arg not recognised.")
-                    indexer = abs(indexer) + add
-            processed[name] = indexer
+        start, stop, system = inputs['start'], inputs['stop'], inputs['system']
+        systemConfigs = None
+        # process start
+        if type(start) is Value:
+            start = start.plain
+        if type(start) in {int, float}:
+            start = _process_negative_state(start)
+        elif type(start) is dict:
+            self.systemConfigs = start
+            start = 0
+        elif start is None:
+            if isinstance(system, Built):
+                if system.count.plain in {-1, 0}:
+                    start = 0
+                else:
+                    start = system.count.plain
+            else:
+                start = 0
+        processed['start'] = start
+        # process stop
+        if type(stop) is Value:
+            stop = stop.plain
+        if type(stop) in {int, float}:
+            stop = _process_negative_state(stop)
+        elif isinstance(stop, Final):
+            processed[_GHOSTTAG_ + 'stop'] = stop
+            copyInps = stop.inputs.copy()
+            ignoreme = copyInps.pop('system')
+            stop = (stop.__class__, copyInps)
+        processed['stop'] = stop
+        # process system
         if type(system) is Meta:
             pass
         elif isinstance(system, Built):
-            # assert not len(inputs['vector']), inputs['vector']
             processed['system'] = system.__class__
             processed['vector'] = system.inputs
-            if inputs['start'] is None:
-                if system.count.plain in {-1, 0}:
-                    initCount = 0
-                else:
-                    initCount = system.count.plain
-                processed['start'] = initCount
+            if not systemConfigs is None:
+                processed['vector'].update(systemConfigs)
             processed[_GHOSTTAG_ + 'traversee'] = system
-        # assert not type(processed['stop']) is Value
         return processed
 
     def __init__(self,
@@ -104,15 +123,18 @@ class Traverse(Task):
         if self.anchored:
             self.traversee.anchor(self.name, self.path)
         start, stop = self.inputs['start'], self.inputs['stop']
-        if type(stop) is tuple:
-            stopClass, stopInputs = stop
-            stop = stopClass(self.traversee, **stopInputs)
-        else:
-            try:
-                if issubclass(stop, Final):
-                    stop = stop(self.traversee)
-            except TypeError:
-                pass
+        try:
+            stop = self.ghosts['stop']
+        except KeyError:
+            if type(stop) is tuple:
+                stopClass, stopInputs = stop
+                stop = stopClass(self.traversee, **stopInputs)
+            else:
+                try:
+                    if issubclass(stop, Final):
+                        stop = stop(self.traversee)
+                except TypeError:
+                    pass
         self.stop = stop
         if self.freq is None and not self.stop is None:
             try:
