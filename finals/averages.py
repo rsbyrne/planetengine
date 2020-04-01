@@ -14,8 +14,9 @@ class Averages(Final):
             freq = 10,
             x = 'chron',
             y = ('Nu', 'theta_av'),
-            tolerance = 1e-3,
-            horizon = 1. / np.e,
+            tolerance = 1e-2,
+            horizon = 1. / 2. ** 0.5,
+            depth = 3,
             check = 50,
             minlength = 50
             ):
@@ -31,6 +32,7 @@ class Averages(Final):
         self.tolerance = tolerance
         self.horizon = horizon
         self.minlength = minlength
+        self.depth = depth
 
         super().__init__(check = check)
 
@@ -45,10 +47,10 @@ class Averages(Final):
     def _final_condition(self, chron, metric):
         chron, metric = analysis.time_smooth(chron, metric, sampleFactor = 2.)
         chron, metric = chron[1:-1], metric[1:-1]
-        cutoff1 = np.max(chron) - self.horizon * np.ptp(chron)
-        cutoff2 = np.max(chron) - self.horizon **2. * np.ptp(chron)
-        av1 = np.average(metric[np.where(chron > cutoff1)])
-        av2 = np.average(metric[np.where(chron > cutoff2)])
-        return max([av1, av2]) / min([av1, av2]) <= 1. + self.tolerance
+        avs = []
+        for i in range(self.depth):
+            cutoff = np.max(chron) - self.horizon ** (i + 1) * np.ptp(chron)
+            avs.append(np.average(metric[np.where(chron > cutoff)]))
+        return max(avs) / min(avs) <= 1. + self.tolerance
 
 CLASS = Averages
