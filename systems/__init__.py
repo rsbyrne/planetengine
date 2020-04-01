@@ -43,6 +43,9 @@ class System(Iterator, Getter):
                 else:
                     raise TypeError(type(val))
                 processed[key] = newVal
+        if 'observers' in inputs:
+            processed[_GHOSTTAG_ + 'observers'] = processed['observers']
+            del processed['observers']
         if 'initialise' in inputs:
             del processed['initialise']
             processed[_GHOSTTAG_ + 'initialise'] = inputs['initialise']
@@ -145,6 +148,19 @@ class System(Iterator, Getter):
 
         # Built attributes:
         self._post_anchor_fns.insert(0, self.anchor_observers)
+
+        # Local operations:
+        if 'observers' in self.ghosts:
+            observers = self.ghosts['observers']
+            if type(observers) is bool:
+                if observers:
+                    self.add_default_observers()
+            if type(observers) in {tuple, list}:
+                if not type(observers[0]) in {tuple, list}:
+                    observers = [observers,]
+            else:
+                observers = [observers,]
+            self.add_observers(*observers)
 
     def _initialise(self):
         for key, channel in sorted(self.configs.items()):
