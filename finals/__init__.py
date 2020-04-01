@@ -49,3 +49,4 @@ class Final(Boolean, State):
         return self._post_zone_fn()
 
 from .flat import Flat
+from .averages import Averages
