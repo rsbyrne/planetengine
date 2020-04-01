@@ -14,9 +14,10 @@ class Flat(Final):
             freq = 10,
             x = 'chron',
             y = ('Nu', 'theta_av'),
-            tolerance = 1e-5,
-            horizon = 0.5,
+            tolerance = 1e-2,
+            horizon = 0.2,
             check = 50,
+            minlength = 50
             ):
 
         self.system = system
@@ -29,13 +30,14 @@ class Flat(Final):
         self.y = y if type(y) is tuple else (y,)
         self.tolerance = tolerance
         self.horizon = horizon
+        self.minlength = minlength
 
         super().__init__(check = check)
 
     def _zone_fn(self):
         chron = self.observer.data[self.x]
         metrics = self.observer.data[self.y]
-        if len(chron) > 10:
+        if len(chron) > self.minlength:
             return all([self._flat_condition(chron, m) for m in metrics])
         else:
             return False
