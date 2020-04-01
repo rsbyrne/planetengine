@@ -13,9 +13,9 @@ class Flat(Final):
             observerKwargs = dict(),
             freq = 10,
             x = 'chron',
-            y = ('Nu', 'temp_av'),
-            tolerance = 1e-3,
-            horizon = 0.1,
+            y = ('Nu', 'theta_av'),
+            tolerance = 1e-5,
+            horizon = 0.5,
             check = 50,
             ):
 
@@ -45,6 +45,10 @@ class Flat(Final):
         chron, metric = chron[1:-1], metric[1:-1]
         indices = np.where(chron > np.max(chron) - self.horizon * np.ptp(chron))
         interval = metric[indices]
-        return np.ptp(interval) < self.tolerance * np.abs(np.average(interval))
+        baseline = \
+            np.abs(np.average(interval)) \
+            - np.min(interval) \
+            + np.abs(np.min(interval))
+        return np.ptp(interval) <= self.tolerance * baseline
 
 CLASS = Flat
