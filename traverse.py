@@ -42,7 +42,7 @@ class Traverse(Task):
         if type(start) is Value:
             start = start.plain
         if type(start) in {int, float}:
-            start = _process_negative_state(start)
+            start = _process_negative_state(start, system)
         elif type(start) is dict:
             self.systemConfigs = start
             start = 0
