@@ -22,11 +22,8 @@ class Averages(Final):
             ):
 
         self.system = system
-        self.observer = self.system.add_observer(
-            observerClass,
-            **observerKwargs
-            )
-        ignoreme = self.observer.add_freq(freq)
+        self.observerClass, self.observerKwargs = observerClass, observerKwargs
+        self.freq = freq
         self.x = x
         self.y = y if type(y) is tuple else (y,)
         self.tolerance = tolerance
@@ -35,6 +32,13 @@ class Averages(Final):
         self.depth = depth
 
         super().__init__(check = check)
+
+    def _zone_initialise(self):
+        self.observer = self.observerClass(self.observerKwargs)
+        self._freqID = self.observer.add_freq(freq)
+
+    def _pre_zone_fn(self):
+        self.observer.prompt()
 
     def _zone_fn(self):
         chron = self.observer.data[self.x]
@@ -52,5 +56,9 @@ class Averages(Final):
             cutoff = np.max(chron) - self.horizon ** (i + 1) * np.ptp(chron)
             avs.append(np.average(metric[np.where(chron > cutoff)]))
         return max(avs) / min(avs) <= 1. + self.tolerance
+
+    def _zone_finalise(self):
+        self.observer.remove_freq(self._freqID)
+        del self.observer
 
 CLASS = Averages

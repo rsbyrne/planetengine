@@ -10,6 +10,7 @@ from planetengine.visualisation.quickfig import QuickFig
 from ..utilities import _get_periodic_condition
 from ..utilities import LightBoolean
 from everest import mpi
+from everest import disk
 
 class Observer(Counter, Cycler):
 
@@ -48,18 +49,19 @@ class Observer(Counter, Cycler):
         # Counter attributes:
         self._count_update_fns.append(self.update)
 
-        self.checkfreqs = set()
-        self.check = LightBoolean(lambda: any(self.checkfreqs))
+        self.checkfreqs = dict()
+        self.check = LightBoolean(lambda: any(self.checkfreqs.values()))
 
     def set_freq(self, freq):
         self.checkfreqs.clear()
         self.add_freq(freq)
     def add_freq(self, freq):
         newfreq = _get_periodic_condition(self.observee, freq)
-        self.checkfreqs.add(newfreq)
-        return newfreq
-    def remove_freq(self, freq):
-        self.checkfreq.remove(freq)
+        freqID = disk.tempname()
+        self.checkfreqs[freqID] = newfreq
+        return freqID
+    def remove_freq(self, freqID):
+        del self.checkfreq[freqID]
 
     def update(self):
         if not self.observee.initialised:
@@ -70,6 +72,9 @@ class Observer(Counter, Cycler):
         self.update()
         if self.check:
             self.store()
+
+    def prompt(self):
+        self()
 
     def _out(self):
         self.update()
