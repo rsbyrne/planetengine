@@ -167,14 +167,14 @@ class System(Iterator, Getter):
         for key, channel in sorted(self.configs.items()):
             if not channel is None:
                 channel.apply(self.locals[key])
+        self.clipVals()
+        self.setBounds()
         self.chron.value = 0.
         self._update()
 
     def _iterate(self):
         dt = self._integrate(_skipClips = True)
         self._update()
-        self.clipVals()
-        self.setBounds()
         self.chron += dt
 
     def _integrate(self, _skipClips = False):
@@ -185,20 +185,20 @@ class System(Iterator, Getter):
         return dt
 
     def _update(self):
-        if self.has_changed():
-            self.locals.update()
+        # if self.has_changed() or force:
+        self.locals.update()
 
-    def has_changed(self, reset = True):
-        if not hasattr(self, '_currenthash'):
-            self._currenthash = 0
-        latesthash = hash(tuple([
-            hash_var(var) \
-                for key, var in sorted(self.varsOfState.items())
-            ]))
-        changed = latesthash != self._currenthash
-        if reset:
-            self._currenthash = latesthash
-        return changed
+    # def has_changed(self, reset = True):
+    #     if not hasattr(self, '_currenthash'):
+    #         self._currenthash = 0
+    #     latesthash = hash(tuple([
+    #         hash_var(var) \
+    #             for key, var in sorted(self.varsOfState.items())
+    #         ]))
+    #     changed = latesthash != self._currenthash
+    #     if reset:
+    #         self._currenthash = latesthash
+    #     return changed
 
     def clipVals(self):
         for varName, var in sorted(self.varsOfState.items()):
@@ -343,3 +343,4 @@ class System(Iterator, Getter):
 from .viscoplastic import Viscoplastic
 from .arrhenius import Arrhenius
 from .isovisc import Isovisc
+from .conductive import Conductive
