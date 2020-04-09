@@ -13,6 +13,7 @@ class Annulus(Mesh):
             aspect = 1.,
             f = 1.,
             length = 1.,
+            partitioned = True
             ):
 
         if f == 1. and aspect == 'max':
@@ -54,7 +55,8 @@ class Annulus(Mesh):
             elementRes = elementRes,
             radialLengths = radii,
             angularExtent = angularExtent,
-            periodic = [False, periodic]
+            periodic = [False, periodic],
+            partitioned = partitioned
             )
 
         return mesh

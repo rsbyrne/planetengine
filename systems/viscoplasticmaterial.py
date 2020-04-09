@@ -75,7 +75,8 @@ class ViscoplasticMaterial(System):
             res = res * 8,
             aspect = aspect,
             f = f,
-            length = length
+            length = length,
+            partitioned = False
             )
 
         ### VARIABLES ###
