@@ -1,12 +1,18 @@
+import numpy as np
+
 import underworld as uw
 fn, cd = uw.function, uw.conditions
 
 from planetengine.systems import System
 from planetengine.initials import Sinusoidal
 from planetengine.initials import Constant
+from planetengine.initials import Extents
+from planetengine.shapes import trapezoid
 from planetengine.meshes import Annulus
 
-class Arrhenius(System):
+defaultExtents = Extents([(1., trapezoid(longwidth = 0.5)),], 0.)
+
+class ViscoplasticMaterial(System):
 
     optionsKeys = {
         'res', 'courant', 'innerMethod', 'innerTol', 'outerTol', 'penalty',
@@ -14,22 +20,24 @@ class Arrhenius(System):
         }
     paramsKeys = {
         'alpha', 'aspect', 'buoyRef', 'etaDelta', 'etaRef', 'f', 'flux', 'H',
-        'kappa', 'length', 'tempDelta', 'tempRef'
+        'kappa', 'length', 'tempDelta', 'tempRef', 'tauDelta', 'tauRef'
         }
     configsKeys = {
-        'temperatureField', 'temperatureDotField'
+        'temperatureField', 'temperatureDotField', 'materialField'
         }
 
     def __init__(self,
             # OPTIONS
             res = 64,
-            courant = 1.,
-            innerMethod = 'lu',
+            courant = 0.5,
+            innerMethod = 'superludist',
             innerTol = None,
             outerTol = None,
             penalty = None,
             mgLevels = None,
             meshClass = Annulus,
+            nonLinearTolerance = 1e-2,
+            nonLinearMaxIterations = 100,
             # PARAMS
             alpha = 1e7,
             aspect = 1.,
@@ -43,9 +51,12 @@ class Arrhenius(System):
             length = 1.,
             tempDelta = 1.,
             tempRef = 0.,
+            tauDelta = 1e7,
+            tauRef = 4e5,
             # CONFIGS
             temperatureField = Sinusoidal(),
             temperatureDotField = None,
+            materialField = Extents([(1., trapezoid(longwidth = 0.5)),], 0.),
             # META
             **kwargs
             ):
@@ -60,6 +71,12 @@ class Arrhenius(System):
             f = f,
             length = length
             )
+        meshFine = meshClass.make(
+            res = res * 8,
+            aspect = aspect,
+            f = f,
+            length = length
+            )
 
         ### VARIABLES ###
 
@@ -70,6 +87,20 @@ class Arrhenius(System):
         vc = mesh.add_variable(2)
 
         dimlessTempFn = (temperatureField - tempMin) / tempDelta
+
+        materialField = meshFine.add_variable(1)
+
+        ### SWARM ###
+
+        swarm = uw.swarm.Swarm(mesh, particleEscape = True)
+        materialSwarm = swarm.add_variable(
+            dataType = "int",
+            count = 1
+            )
+        swarmLayout = uw.swarm.layouts.PerCellSpaceFillerLayout(
+            swarm = swarm,
+            particlesPerCell = 20
+            )
 
         ### BOUNDARIES ###
 
@@ -107,8 +138,17 @@ class Arrhenius(System):
         ### RHEOLOGY ###
 
         surfEta = etaRef + etaDelta
-        viscosityFn = etaRef + fn.math.pow(etaDelta, 1. - dimlessTempFn)
+        creepViscFn = etaRef + fn.math.pow(etaDelta, 1. - temperatureField)
+
+        depthFn = mesh.radialLengths[1] - mesh.radiusFn
+        tau = tauRef + depthFn * tauDelta
+        symmetric = fn.tensor.symmetric(vc.fn_gradient)
+        secInvFn = fn.tensor.second_invariant(symmetric)
+        plasticViscFn = tau / (2. * secInvFn + 1e-18)
+
+        viscosityFn = fn.misc.min(creepViscFn, plasticViscFn)
         viscosityFn = fn.misc.min(surfEta, fn.misc.max(viscosityFn, etaRef))
+        viscosityFn = viscosityFn + 0. * velocityField[0]
 
         ### SYSTEMS ###
 
@@ -136,6 +176,12 @@ class Arrhenius(System):
             conditions = tempBCs
             )
 
+        advector = uw.systems.SwarmAdvector(
+            swarm = swarm,
+            velocityField = vc,
+            order = 2
+            )
+
         ### SOLVING ###
 
         vc_eqNum = uw.systems.sle.EqNumber(vc, False)
@@ -155,10 +201,22 @@ class Arrhenius(System):
                 stokes._vnsVec._cself
                 )
 
+        def update_swarm():
+            if swarm.particleGlobalCount:
+                swarmData = materialSwarm.evaluate(meshFine)
+                materialField.data[...] = np.round(1. * swarmData)
+                with swarm.deform_swarm():
+                    swarm.data[...] = [0., 0.]
+            swarm.populate_using_layout(swarmLayout)
+            materialSwarm.data[...] = np.round(materialField.evaluate(swarm))
+
         def update():
+            update_swarm()
             velocityField.data[:] = 0.
             solver.solve(
-                nonLinearIterate = False,
+                nonLinearIterate = True,
+                nonLinearTolerance = nonLinearTolerance,
+                nonLinearMaxIterations = nonLinearMaxIterations,
                 callback_post_solve = postSolve,
                 )
             uw.libUnderworld.Underworld.AXequalsX(
@@ -168,11 +226,12 @@ class Arrhenius(System):
                 )
 
         def integrate():
-            dt = courant * advDiff.get_max_dt()
+            dt = courant * min(advDiff.get_max_dt(), advector.get_max_dt())
+            advector.integrate(dt)
             advDiff.integrate(dt)
             return dt
 
         super().__init__(locals(), **kwargs)
 
 ### ATTRIBUTES ###
-CLASS = Arrhenius
+CLASS = ViscoplasticMaterial

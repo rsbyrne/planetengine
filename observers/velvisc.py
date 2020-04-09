@@ -53,14 +53,10 @@ class VelVisc(Observer):
                 self.yielding = yielding
 
         pressure = observee.locals[pressureKey]
-        stressRad = pfn.gradient.rad(pfn.component.rad(vel)) \
-            * visc \
-            * 2. \
-            - pressure
-        stressAng = pfn.gradient.ang(pfn.component.ang(vel)) \
-            * visc \
-            * 2. \
-            - pressure
+        radradVel = pfn.gradient.rad(pfn.component.rad(vel))
+        angangVel = pfn.gradient.ang(pfn.component.ang(vel))
+        stressRad = radradVel * visc * 2. - pressure
+        stressAng = angangVel * visc * 2. - pressure
         stressRadOuter = pfn.surface.outer(stressRad)
         stressAngOuter = pfn.surface.outer(stressAng)
         analysers['stressRad_outer_av'] = pfn.integral.outer(stressRad)
@@ -71,7 +67,11 @@ class VelVisc(Observer):
         analysers['stressAng_outer_range'] = pfn.getstat.range(stressAngOuter)
 
         strainRate = pfn.tensor.second_invariant(
-            pfn.tensor.symmetric(pfn.gradient.default(vc))
+            pfn.tensor.symmetric(
+                pfn.gradient.default(
+                    vc
+                    )
+                )
             ) * 2.
         strainRate_outer = pfn.surface.outer(strainRate)
         analysers['strainRate_outer_av'] = pfn.integral.outer(strainRate)

@@ -340,7 +340,8 @@ class System(Iterator, Getter):
     defaultObservers = [observersModule.Thermo, observersModule.VelVisc]
 
 # Aliases
-from .viscoplastic import Viscoplastic
-from .arrhenius import Arrhenius
-from .isovisc import Isovisc
 from .conductive import Conductive
+from .isovisc import Isovisc
+from .arrhenius import Arrhenius
+from .viscoplastic import Viscoplastic
+from .viscoplasticmaterial import ViscoplasticMaterial

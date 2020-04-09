@@ -1,20 +1,20 @@
-import math
-
 import underworld as uw
 fn, cd = uw.function, uw.conditions
 
 from planetengine.systems import System
-from planetengine.initials.sinusoidal import Sinusoidal
-from planetengine.initials.constant import Constant
+from planetengine.initials import Sinusoidal
+from planetengine.initials import Constant
+from planetengine.meshes import Annulus
 
 class Isovisc(System):
 
     optionsKeys = {
         'res', 'courant', 'innerMethod', 'innerTol', 'outerTol', 'penalty',
-        'mgLevels'
+        'mgLevels', 'meshClass'
         }
     paramsKeys = {
-        'alpha', 'aspect', 'eta', 'f', 'flux', 'H', 'kappa'
+        'alpha', 'aspect', 'buoyRef', 'eta', 'f', 'flux', 'H', 'kappa',
+        'length', 'tempDelta', 'tempRef'
         }
     configsKeys = {
         'temperatureField', 'temperatureDotField'
@@ -29,14 +29,19 @@ class Isovisc(System):
             outerTol = None,
             penalty = None,
             mgLevels = None,
+            meshClass = Annulus,
             # PARAMS
             alpha = 1e7,
             aspect = 1.,
+            buoyRef = 0.,
             eta = 1.,
             f = 1.,
             flux = None,
             H = 0.,
             kappa = 1.,
+            length = 1.,
+            tempDelta = 1.,
+            tempRef = 0.,
             # CONFIGS
             temperatureField = Sinusoidal(),
             temperatureDotField = None,
@@ -44,48 +49,15 @@ class Isovisc(System):
             **kwargs
             ):
 
+        tempMin, tempMax = tempRef, tempRef + tempDelta
+
         ### MESH ###
 
-        if f == 1. and aspect == 'max':
-            raise ValueError
-        maxf = 0.999
-        if f == 'max' or f == 1.:
-            f = maxf
-        else:
-            assert f <= maxf
-
-        length = 1.
-        outerRad = 1. / (1. - f)
-        radii = (outerRad - length, outerRad)
-
-        maxAspect = math.pi * sum(radii) / length
-        if aspect == 'max':
-            aspect = maxAspect
-            periodic = True
-        else:
-            assert aspect < maxAspect
-            periodic = False
-
-        width = length**2 * aspect * 2. / (radii[1]**2 - radii[0]**2)
-        midpoint = math.pi / 2.
-        angExtentRaw = (midpoint - 0.5 * width, midpoint + 0.5 * width)
-        angExtentDeg = [item * 180. / math.pi for item in angExtentRaw]
-        angularExtent = [
-            max(0., angExtentDeg[0]),
-            min(360., angExtentDeg[1] + abs(min(0., angExtentDeg[0])))
-            ]
-        angLen = angExtentRaw[1] - angExtentRaw[0]
-
-        assert res % 4 == 0
-        radRes = res
-        angRes = 4 * int(angLen * (int(radRes * radii[1] / length)) / 4)
-        elementRes = (radRes, angRes)
-
-        mesh = uw.mesh.FeMesh_Annulus(
-            elementRes = elementRes,
-            radialLengths = radii,
-            angularExtent = angularExtent,
-            periodic = [False, periodic]
+        mesh = meshClass.make(
+            res = res,
+            aspect = aspect,
+            f = f,
+            length = length
             )
 
         ### VARIABLES ###
@@ -95,6 +67,8 @@ class Isovisc(System):
         pressureField = mesh.subMesh.add_variable(1)
         velocityField = mesh.add_variable(2)
         vc = mesh.add_variable(2)
+
+        dimlessTempFn = (temperatureField - tempMin) / tempDelta
 
         ### BOUNDARIES ###
 
@@ -109,11 +83,11 @@ class Isovisc(System):
         velBCs = [velBC,]
 
         if flux is None and H == 0.:
-            temperatureField.scales = [[0., 1.]]
-            temperatureField.bounds = [[0., 1., '.', '.']]
+            temperatureField.scales = [[tempMin, tempMax]]
+            temperatureField.bounds = [[tempMin, tempMax, '.', '.']]
         else:
-            temperatureField.scales = [[0., None]]
-            temperatureField.bounds = [[0., '.', '.', '.']]
+            temperatureField.scales = [[tempMin, None]]
+            temperatureField.bounds = [[tempMin, '.', '.', '.']]
 
         if flux is None:
             tempBC = cd.DirichletCondition(temperatureField, (inner + outer,))
@@ -125,7 +99,7 @@ class Isovisc(System):
 
         ### FUNCTIONS ###
 
-        buoyancyFn = alpha * temperatureField
+        buoyancyFn = alpha * dimlessTempFn + buoyRef
         heatingFn = fn.misc.constant(H)
         diffusivityFn = fn.misc.constant(kappa)
 
