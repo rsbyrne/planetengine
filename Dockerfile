@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir dask[complete]
 RUN pip install --no-cache-dir scikit-learn
 RUN pip install --no-cache-dir tensorflow
 
+# Productivity
+RUN pip install --no-cache-dir jupyterlab
+
 ENV PYTHONPATH "${PYTHONPATH}:/home/jovyan/workspace"
 
 USER $NB_USER
