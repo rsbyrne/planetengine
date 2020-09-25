@@ -13,6 +13,41 @@ from ..utilities import LightBoolean
 from everest import mpi
 from everest import disk
 
+def process_observers(inObservers, system = None):
+    observers = []
+    if not type(inObservers) is list:
+        inObservers = [inObservers,]
+    for item in inObservers:
+        freq = None
+        observerInputs = dict()
+        if type(item) is tuple:
+            observer = item[0]
+            if type(item[1]) is dict:
+                observerInputs = item[1]
+                if len(item) == 3:
+                    freq = item[2]
+            else:
+                if len(item) > 2:
+                    raise ValueError("Observer input invalid.")
+                freq = item[1]
+        else:
+            observer = item
+        if isinstance(observer, Observer):
+            if system is None:
+                raise Exception("No system provided to observe.")
+            if not observer.observee is system:
+                raise Exception("Mismatched observations.")
+        elif issubclass(observer, Observer):
+            if system is None:
+                raise Exception("No system provided to observe.")
+            observer = observer(system, **observerInputs)
+        else:
+            raise ValueError("Observer input invalid.")
+        if not freq is None:
+            observer.set_freqs(freq)
+        observers.append(observer)
+    return observer
+
 class Observer(Counter, Cycler):
 
     @staticmethod
@@ -71,7 +106,7 @@ class Observer(Counter, Cycler):
         return freqID
     def add_freqs(self, freqs):
         if not type(freqs) is list:
-            freqs = [freq,]
+            freqs = [freqs,]
         for freq in freqs:
             self.add_freq(freq)
     def remove_freq(self, freqID):

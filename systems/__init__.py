@@ -11,6 +11,7 @@ from everest.builts._getter import Getter
 from .. import fieldops
 from ..utilities import hash_var
 from ..utilities import Grouper
+from ..observers import process_observers
 
 from ..exceptions import PlanetEngineException, NotYetImplemented
 from .. import observers as observersModule
@@ -154,17 +155,7 @@ class System(Iterator, Getter):
 
         # Local operations:
         if 'observers' in self.ghosts:
-            observers = self.ghosts['observers']
-            if type(observers) is bool:
-                if observers:
-                    self.add_default_observers()
-            else:
-                if type(observers) in {tuple, list}:
-                    if not type(observers[0]) in {tuple, list}:
-                        observers = [observers,]
-                else:
-                    observers = [observers,]
-                self.add_observers(*observers)
+            self.add_observers(self.ghosts['observers'], self)
 
     def _initialise(self):
         for key, channel in sorted(self.configs.items()):
@@ -260,33 +251,17 @@ class System(Iterator, Getter):
     #         self.load(nowCount)
     #         return out
 
-    def add_observer(self, observer, **observerInputs):
-        if isinstance(observer, observersModule.Observer):
-            if len(observerInputs):
-                raise ValueError(
-                    "Cannot provide inputs \
-                    to already initialised observer."
-                    )
-            newObserver = False
-        elif issubclass(observer, observersModule.Observer):
-            observer = observer(self, **observerInputs)
-            newObserver = True
-        else:
-            raise TypeError("Input not recognised.")
+    def add_observer(self, observer):
         if not observer in self.observers:
             self.observers.append(observer)
             if self.anchored:
                 observer.anchor(self.name, self.path)
             observer()
-        if newObserver:
-            return observer
 
-    def add_observers(self, *args):
-        for arg in args:
-            if type(arg) is tuple:
-                self.add_observer(arg[0], **arg[1])
-            else:
-                self.add_observer(arg)
+    def add_observers(self, inObservers):
+        observers = process_observers(inObservers)
+        for observer in observers:
+            self.add_observer(observer)
 
     def add_default_observers(self):
         self.add_observers(*self.defaultObservers)

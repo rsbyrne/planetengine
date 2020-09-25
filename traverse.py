@@ -13,6 +13,7 @@ from everest import mpi
 
 from .utilities import LightBoolean, ChronCheck, _get_periodic_condition
 from .finals import Final
+from ..observers import process_observers
 
 def _process_negative_state(state, system):
     if state < 0:
@@ -75,8 +76,6 @@ class Traverse(Task):
             if not systemConfigs is None:
                 processed['vector'].update(systemConfigs)
             processed[_GHOSTTAG_ + 'traversee'] = system
-        # process observers
-        # if hasattr(system, 'observers')
         return processed
 
     def __init__(self,
@@ -157,47 +156,13 @@ class Traverse(Task):
                             )
                         preTraverse()
         self.traversee.store()
-        self.observers = self._get_observers(self.traversee, self.inObservers)
+        self.observers = self.process_observers(self.inObservers, self.traversee)
         for observer in self.observers:
             if self.anchored:
                 observer.anchor(self.name, self.path)
             self.add_promptee(observer)
             observer.store()
         self.check = _get_periodic_condition(self.traversee, self.freq)
-
-    @staticmethod
-    def _get_observers(traversee, inObservers):
-        from planetengine.observers import Observer
-        observers = []
-        for item in inObservers:
-            freq = None
-            observerInputs = dict()
-            if type(item) is tuple:
-                observer = item[0]
-                if type(item[1]) is dict:
-                    observerInputs = item[1]
-                    if len(item) == 3:
-                        freq = item[2]
-                else:
-                    if len(item) > 2:
-                        raise ValueError("Observer input invalid.")
-                    freq = item[1]
-            else:
-                observer = item
-            if isinstance(observer, Observer):
-                if not observer.observee is traversee:
-                    raise Exception("Mismatched observations.")
-            elif issubclass(observer, Observer):
-                observer = observer(traversee, **observerInputs)
-            else:
-                raise ValueError("Observer input invalid.")
-            if not freq is None:
-                observer.set_freqs(freq)
-            observers.append(observer)
-        for observer in traversee.observers:
-            if not observer in observers:
-                observers.append(observer)
-        return observers
 
     def _traverse_iterate(self):
         self.traversee()
