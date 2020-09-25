@@ -34,7 +34,10 @@ class Averages(Final):
         super().__init__(check = check)
 
     def _zone_initialise(self):
-        self.observer = self.observerClass(self.observerKwargs)
+        self.observer = self.observerClass(
+            observee = system,
+            **self.observerKwargs
+            )
         self._freqID = self.observer.add_freq(freq)
 
     def _pre_zone_fn(self):

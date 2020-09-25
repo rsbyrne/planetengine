@@ -48,9 +48,9 @@ class Final(Boolean, State):
     def _master_pre_zone_fn(self):
         return self._pre_zone_fn()
     def _master_zone_fn(self):
-        self._master_pre_zone_fn()
         if not self.initialised:
             self._master_zone_initialise()
+        self._master_pre_zone_fn()
         if self._zone_check:
             self._state_stamp()
             boolOut = self._zone_fn()
