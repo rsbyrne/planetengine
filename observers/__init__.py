@@ -46,7 +46,7 @@ def process_observers(inObservers, system = None):
         if not freq is None:
             observer.set_freqs(freq)
         observers.append(observer)
-    return observer
+    return observers
 
 class Observer(Counter, Cycler):
 

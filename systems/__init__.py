@@ -155,7 +155,7 @@ class System(Iterator, Getter):
 
         # Local operations:
         if 'observers' in self.ghosts:
-            self.add_observers(self.ghosts['observers'], self)
+            self.add_observers(self.ghosts['observers'])
 
     def _initialise(self):
         for key, channel in sorted(self.configs.items()):
@@ -259,7 +259,7 @@ class System(Iterator, Getter):
             observer()
 
     def add_observers(self, inObservers):
-        observers = process_observers(inObservers)
+        observers = process_observers(inObservers, self)
         for observer in observers:
             self.add_observer(observer)
 

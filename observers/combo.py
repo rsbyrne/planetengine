@@ -25,8 +25,6 @@ class Combo(Observer):
 
         super().__init__(**kwargs)
 
-        self.set_freq(10)
-
         # Producer attributes:
         self._post_save_fns.append(self.save_observers)
 

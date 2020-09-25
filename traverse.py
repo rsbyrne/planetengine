@@ -13,7 +13,7 @@ from everest import mpi
 
 from .utilities import LightBoolean, ChronCheck, _get_periodic_condition
 from .finals import Final
-from ..observers import process_observers
+from .observers import process_observers
 
 def _process_negative_state(state, system):
     if state < 0:
@@ -156,13 +156,22 @@ class Traverse(Task):
                             )
                         preTraverse()
         self.traversee.store()
-        self.observers = self.process_observers(self.inObservers, self.traversee)
+        self.observers = process_observers(self.inObservers, self.traversee)
+        self._observers_store()
         for observer in self.observers:
+            if not observer in self.traversee.observers:
+                self.add_promptee(observer)
             if self.anchored:
                 observer.anchor(self.name, self.path)
-            self.add_promptee(observer)
-            observer.store()
+                observer.save()
         self.check = _get_periodic_condition(self.traversee, self.freq)
+
+    def _observers_store(self):
+        for observer in self.traversee.observers:
+            observer.store()
+        for observer in self.observers:
+            if not observer in self.traversee.observers:
+                observer.store()
 
     def _traverse_iterate(self):
         self.traversee()
@@ -183,13 +192,14 @@ class Traverse(Task):
 
     def _traverse_finalise(self):
         self.traversee.store()
+        self._observers_store()
         if self.traversee.anchored:
             self.traversee.save()
         for observer in self.observers:
-            observer.store()
-            if observer.anchored:
-                observer.save()
-            self.remove_promptee(observer)
+            if not observer in self.traversee.observers:
+                if self.anchored:
+                    observer.save()
+                self.remove_promptee(observer)
         observers = [
             o for o in self.observers if not o in self.traversee.observers
             ]

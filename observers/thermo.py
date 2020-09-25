@@ -66,6 +66,4 @@ class Thermo(Observer):
 
         super().__init__(**kwargs)
 
-        self.set_freq(10)
-
 CLASS = Thermo
