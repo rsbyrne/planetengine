@@ -173,9 +173,15 @@ class Traverse(Task):
             freq = None
             observerInputs = dict()
             if type(item) is tuple:
-                observer, observerInputs = item[0:2]
-                if len(item) == 3:
-                    freq = item[-1]
+                observer = item[0]
+                if type(item[1]) is dict:
+                    observerInputs = item[1]
+                    if len(item) == 3:
+                        freq = item[2]
+                else:
+                    if len(item) > 2:
+                        raise ValueError("Observer input invalid.")
+                    freq = item[1]
             else:
                 observer = item
             if isinstance(observer, Observer):
@@ -184,7 +190,7 @@ class Traverse(Task):
             elif issubclass(observer, Observer):
                 observer = observer(traversee, **observerInputs)
             else:
-                raise TypeError("Observer input invalid.")
+                raise ValueError("Observer input invalid.")
             if not freq is None:
                 observer.set_freqs(freq)
             observers.append(observer)
