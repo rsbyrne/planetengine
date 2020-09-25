@@ -12,7 +12,7 @@ from .. import fieldops
 from ..utilities import hash_var
 from ..utilities import Grouper
 
-from ..exceptions import PlanetEngineException
+from ..exceptions import PlanetEngineException, NotYetImplemented
 from .. import observers as observersModule
 
 class ObserverNotFound(PlanetEngineException):
@@ -138,7 +138,10 @@ class System(Iterator, Getter):
             )
 
         # Cycler attributes:
-        self._post_cycle_fns.append(self.prompt_observers)
+        # self._post_cycle_fns.append(self.prompt_observers)
+
+        # Iterator attributes:
+        self._changed_state_fns.append(self.prompt_observers)
 
         # Producer attributes:
         self._post_save_fns.append(self.save_observers)
@@ -232,7 +235,8 @@ class System(Iterator, Getter):
         if type(arg) is slice:
             return self._system_get_slice(arg)
         else:
-            return None
+            raise NotYetImplemented
+            # return None
 
     def _system_get_slice(self, indexer):
         from ..traverse import Traverse

@@ -4,6 +4,7 @@ from everest.builts._counter import Counter
 from everest.builts._cycler import Cycler
 from everest.builts.condition import Condition
 from everest.writer import LinkTo
+from everest.globevars import _GHOSTTAG_
 
 from planetengine.visualisation.quickfig import QuickFig
 
@@ -16,10 +17,15 @@ class Observer(Counter, Cycler):
 
     @staticmethod
     def _process_inputs(inputs):
-        observee = inputs['observee']
+        processed = dict()
+        processed.update(inputs)
+        observee = processed['observee']
         if not observee.initialised:
             observee.initialise()
-        return inputs
+        if 'freq' in inputs:
+            processed[_GHOSTTAG_ + 'freq'] = processed['freq']
+            del processed['freq']
+        return processed
 
     def __init__(self, **kwargs):
 
@@ -27,8 +33,6 @@ class Observer(Counter, Cycler):
         # self.observee
         # self.analysers
         # self.visVars
-
-        self.check = lambda: False
 
         super().__init__(
             observee = LinkTo(self.observee),
@@ -50,7 +54,12 @@ class Observer(Counter, Cycler):
         self._count_update_fns.append(self.update)
 
         self.checkfreqs = dict()
-        self.check = LightBoolean(lambda: any(self.checkfreqs.values()))
+        if 'freq' in self.ghosts:
+            self.add_freqs(self.ghosts['freq'])
+
+    @property
+    def check(self):
+        return any(self.checkfreqs.values())
 
     def set_freq(self, freq):
         self.checkfreqs.clear()
@@ -60,6 +69,11 @@ class Observer(Counter, Cycler):
         freqID = disk.tempname()
         self.checkfreqs[freqID] = newfreq
         return freqID
+    def add_freqs(self, freqs):
+        if not type(freqs) is list:
+            freqs = [freq,]
+        for freq in freqs:
+            self.add_freq(freq)
     def remove_freq(self, freqID):
         del self.checkfreq[freqID]
 

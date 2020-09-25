@@ -9,3 +9,7 @@ class NaNFound(PlanetEngineException):
 class AcceptableToleranceNotFound(PlanetEngineException):
     '''Acceptable tolerance could not be found.'''
     pass
+
+class NotYetImplemented(PlanetEngineException):
+    '''Feature not implemented yet.'''
+    pass

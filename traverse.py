@@ -75,6 +75,8 @@ class Traverse(Task):
             if not systemConfigs is None:
                 processed['vector'].update(systemConfigs)
             processed[_GHOSTTAG_ + 'traversee'] = system
+        # process observers
+        # if hasattr(system, 'observers')
         return processed
 
     def __init__(self,
@@ -168,19 +170,23 @@ class Traverse(Task):
         from planetengine.observers import Observer
         observers = []
         for item in inObservers:
+            freq = None
+            observerInputs = dict()
             if type(item) is tuple:
-                if not len(item) == 3:
-                    raise Exception("Inappropriate observer input.")
-                observerClass, observerInputs, observerFreq = item
-                observer = observerClass(traversee, **observerInputs)
-                observer.set_freq(observerFreq)
-            if isinstance(item, Observer):
-                if not item.observee is traversee:
-                    raise Exception("Mismatched observations.")
+                observer, observerInputs = item[0:2]
+                if len(item) == 3:
+                    freq = item[-1]
+            else:
                 observer = item
-            elif issubclass(item, Observer):
-                observerClass = item
-                observer = observerClass(traversee)
+            if isinstance(observer, Observer):
+                if not observer.observee is traversee:
+                    raise Exception("Mismatched observations.")
+            elif issubclass(observer, Observer):
+                observer = observer(traversee, **observerInputs)
+            else:
+                raise TypeError("Observer input invalid.")
+            if not freq is None:
+                observer.set_freqs(freq)
             observers.append(observer)
         for observer in traversee.observers:
             if not observer in observers:
