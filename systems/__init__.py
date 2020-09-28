@@ -1,16 +1,18 @@
 import numpy as np
 
 from everest.builts import Built
+from everest.builts import Meta
 from everest.builts._iterator import Iterator, LoadFail
 from everest.value import Value
-from everest.builts import make_hash
 from everest.builts._iterator import _initialised
 from everest.globevars import _GHOSTTAG_
 from everest.builts._getter import Getter
+from everest.builts import make_hash
+from everest import wordhash
+wHash = lambda x: wordhash.get_random_phrase(make_hash(x))
 
 from .. import fieldops
 from ..utilities import hash_var
-from ..utilities import Grouper
 from ..observers import process_observers
 
 from ..exceptions import PlanetEngineException, NotYetImplemented
@@ -19,31 +21,25 @@ from .. import observers as observersModule
 class ObserverNotFound(PlanetEngineException):
     pass
 
-def _make_locals(localsDict):
-    del localsDict['self']
-    return Grouper(localsDict)
+class Bunch:
+    def __init__(self, adict, dropkeys = {'o', 'p', 'c', 'self'}):
+        for key in dropkeys:
+            if key in adict:
+                del adict[key]
+        self.__dict__.update(adict)
 
-class System(Iterator, Getter):
+class System(Iterator):
 
     @classmethod
     def _process_inputs(cls, inputs):
-        from .. import initials
-        from ..traverse import Traverse
         processed = dict()
-        processed.update(inputs)
+        configs = {k: v for k, v in inputs.items() if k in cls.configsKeys}
+        configs = cls._process_configs(configs)
         for key, val in sorted(inputs.items()):
             if key in cls.configsKeys:
-                if val is None:
-                    newVal = val
-                elif isinstance(val, initials.Channel):
-                    newVal = val
-                elif isinstance(val, System) or isinstance(val, Traverse):
-                    newVal = initials.Copy(val, key)
-                elif type(val) is float:
-                    newVal = initials.Constant(val)
-                else:
-                    raise TypeError(type(val))
-                processed[key] = newVal
+                processed[_GHOSTTAG_ + key] = configs[key]
+            else:
+                processed[key] = val
         if 'observers' in inputs:
             processed[_GHOSTTAG_ + 'observers'] = processed['observers']
             del processed['observers']
@@ -53,28 +49,55 @@ class System(Iterator, Getter):
         return processed
 
     @classmethod
-    def _make_defaults(cls, keys):
-        outDict = {
-            key: val \
-                for key, val in sorted(cls.defaultInps.items()) \
-                    if key in keys
-            }
-        return outDict
+    def _process_configs(cls, inputs):
+        from .. import initials
+        from ..traverse import Traverse
+        if not type(inputs) is dict:
+            if not type(inputs) in {list, tuple}:
+                inputs = [inputs,]
+            inputs = dict(zip(cls.configsKeys, inputs))
+        configs = dict()
+        for key, val in sorted(inputs.items()):
+            if val is None:
+                newVal = val
+            elif type(val) is Meta:
+                if issubclass(val, initials.Channel):
+                    newVal = val()
+                else:
+                    raise TypeError
+            elif isinstance(val, initials.Channel):
+                newVal = val
+            elif isinstance(val, System) or isinstance(val, Traverse):
+                newVal = initials.Copy(val, key)
+            elif type(val) is float:
+                newVal = initials.Constant(val)
+            else:
+                raise TypeError(type(val))
+            configs[key] = newVal
+        for key in cls.configsKeys:
+            if not key in configs:
+                configs[key] = cls.defaultInps[key]
+        return configs
 
     @classmethod
     def _custom_cls_fn(cls):
-        if hasattr(cls, 'optionsKeys'):
-            cls.defaultOptions = cls._make_defaults(cls.optionsKeys)
-            cls.defaultParams = cls._make_defaults(cls.paramsKeys)
-            cls.defaultConfigs = cls._make_defaults(cls.configsKeys)
+        for key in {'options', 'params', 'configs'}:
+            if key in cls._sortedInputKeys:
+                inputKeys = cls._sortedInputKeys[key]
+                setattr(cls, key + 'Keys', inputKeys)
+                setattr(cls, 'default' + key.capitalize(), {
+                    key: val \
+                        for key, val in sorted(cls.defaultInps.items()) \
+                            if key in inputKeys
+                    })
 
     @classmethod
-    def _sort_inputs(cls, inputs):
+    def _sort_inputs(cls, inputs, ghosts):
         optionsDict = {**cls.defaultOptions}
         paramsDict = {**cls.defaultParams}
         configsDict = {**cls.defaultConfigs}
         leftoversDict = {}
-        for key, val in sorted(inputs.items()):
+        for key, val in [*sorted(inputs.items()), *sorted(ghosts.items())]:
             if key in cls.defaultOptions:
                 optionsDict[key] = val
             elif key in cls.defaultParams:
@@ -85,24 +108,19 @@ class System(Iterator, Getter):
                 leftoversDict[key] = val
         return optionsDict, paramsDict, configsDict, leftoversDict
 
-    def __init__(self, localsDict, **kwargs):
+    def __init__(self, **kwargs):
 
         # Expects:
         # self.locals
         # self.locals.update
         # self.locals.integrate
 
-        self.locals = _make_locals(localsDict)
+        self.locals = None
+        self.varsOfState = dict()
 
-        self.options, self.params, self.configs, self.leftovers = \
-            self._sort_inputs(self.inputs)
-        self.schema = self.__class__
-        self.chron = Value(0.)
-        self.varsOfState = {
-            key: self.locals[key] for key in self.configsKeys
-            }
+        self.chron = Value(float('NaN'))
 
-        self._outkeys = ['chron', *sorted(self.varsOfState.keys())]
+        self._outkeys = ['chron', *sorted(self.configsKeys)]
 
         # Iterator expects:
         # self._initialise
@@ -111,13 +129,25 @@ class System(Iterator, Getter):
         # self._outkeys
         # self._load
 
-        baselines = {'mesh': fieldops.get_global_var_data(self.locals.mesh)}
-        dOptions, dParams, dConfigs = \
-            self.options.copy(), self.params.copy(), self.configs.copy()
-        dOptions['hash'] = make_hash(self.options)
-        dParams['hash'] = make_hash(self.params)
-        dConfigs['hash'] = make_hash(self.configs)
-        case = make_hash((self.options, self.params))
+        self.options, self.params, self.configs, self.leftovers = \
+            self._sort_inputs(self.inputs, self.ghosts)
+        self.o, self.p, self.c = \
+            Bunch(self.options), Bunch(self.params), Bunch(self.configs)
+        self.schema = self.__class__
+        self.case = (self.schema, self.params)
+#         self.prevConfigs = dict()
+
+        self.schemaHash = make_hash(self.schema)
+        self.optionsHash = wHash(self.options)
+        self.paramsHash = wHash(self.params)
+        self.configsHash = wHash(self.configs)
+        self.schemaHash = wHash(self.schema)
+        self.caseHash = wHash(self.case)
+
+        dOptions = self.options.copy()
+        dOptions['hash'] = self.optionsHash
+        dParams = self.params.copy()
+        dParams['hash'] = self.paramsHash
 
         self.observers = []
 
@@ -127,12 +157,10 @@ class System(Iterator, Getter):
             initialise = False
 
         super().__init__(
-            baselines = baselines,
             options = dOptions,
             params = dParams,
-            configs = dConfigs,
             schema = self.typeHash,
-            case = case,
+            case = self.caseHash,
             _iterator_initialise = initialise,
             supertype = 'System',
             **kwargs
@@ -145,10 +173,11 @@ class System(Iterator, Getter):
         self._changed_state_fns.append(self.prompt_observers)
 
         # Producer attributes:
+        self._post_save_fns.append(self._iterator_post_save_fn)
         self._post_save_fns.append(self.save_observers)
 
         # Getter attributes:
-        self._get_fns.append(self._system_get)
+#         self._get_fns.append(self._system_get)
 
         # Built attributes:
         self._post_anchor_fns.insert(0, self.anchor_observers)
@@ -157,10 +186,28 @@ class System(Iterator, Getter):
         if 'observers' in self.ghosts:
             self.add_observers(self.ghosts['observers'])
 
+    def configure(self, configs):
+        configs = self._process_configs(configs)
+        self.configs = configs
+        self.configsHash = wHash(configs)
+        self.reroute_outputs(self.configsHash)
+        self.initialised = False
+        self.c = Bunch(self.configs)
+
+    def _iterator_post_save_fn(self):
+        self.writeouts.add_dict({'configs': self.configs})
+        self.writer.add_dict({'baselines': self.baselines})
+
     def _initialise(self):
+        if self.locals is None:
+            self.locals = Bunch(self.build_system(self.o, self.p, self.c))
+        self.varsOfState.update({
+            key: getattr(self.locals, key) for key in self.configsKeys
+            })
+        self.baselines = {'mesh': fieldops.get_global_var_data(self.locals.mesh)}
         for key, channel in sorted(self.configs.items()):
             if not channel is None:
-                channel.apply(self.locals[key])
+                channel.apply(getattr(self.locals, key))
         self.clipVals()
         self.setBounds()
         self.chron.value = 0.
@@ -214,7 +261,7 @@ class System(Iterator, Getter):
             if key == 'chron':
                 self.chron.value = loadData
             else:
-                var = self.locals[key]
+                var = getattr(self.locals, key)
                 assert hasattr(var, 'mesh'), \
                     'Only meshVar supported at present.'
                 nodes = var.mesh.data_nodegId
@@ -222,12 +269,15 @@ class System(Iterator, Getter):
                     var.data[index] = loadData[gId]
         self._update()
 
-    def _system_get(self, arg):
-        if type(arg) is slice:
+    def __getitem__(self, arg):
+        if type(arg) is tuple:
+            raise NotYetImplemented
+        elif type(arg) is slice:
             return self._system_get_slice(arg)
         else:
-            raise NotYetImplemented
-            # return None
+            out = self.__class__(**self.inputs)
+            out.configure(arg)
+            return out
 
     def _system_get_slice(self, indexer):
         from ..traverse import Traverse

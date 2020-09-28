@@ -8,18 +8,6 @@ from planetengine.meshes import Annulus
 
 class Isovisc(System):
 
-    optionsKeys = {
-        'res', 'courant', 'innerMethod', 'innerTol', 'outerTol', 'penalty',
-        'mgLevels', 'meshClass'
-        }
-    paramsKeys = {
-        'alpha', 'aspect', 'buoyRef', 'eta', 'f', 'flux', 'H', 'kappa',
-        'length', 'tempDelta', 'tempRef'
-        }
-    configsKeys = {
-        'temperatureField', 'temperatureDotField'
-        }
-
     def __init__(self,
             # OPTIONS
             res = 64,
@@ -48,16 +36,19 @@ class Isovisc(System):
             # META
             **kwargs
             ):
+        super().__init__(**kwargs)
 
-        tempMin, tempMax = tempRef, tempRef + tempDelta
+    def build_system(self, o, p, c):
+
+        tempMin, tempMax = p.tempRef, p.tempRef + p.tempDelta
 
         ### MESH ###
 
-        mesh = meshClass.make(
-            res = res,
-            aspect = aspect,
-            f = f,
-            length = length
+        mesh = o.meshClass.make(
+            res = o.res,
+            aspect = p.aspect,
+            f = p.f,
+            length = p.length
             )
 
         ### VARIABLES ###
@@ -68,7 +59,7 @@ class Isovisc(System):
         velocityField = mesh.add_variable(2)
         vc = mesh.add_variable(2)
 
-        dimlessTempFn = (temperatureField - tempMin) / tempDelta
+        dimlessTempFn = (temperatureField - tempMin) / p.tempDelta
 
         ### BOUNDARIES ###
 
@@ -82,30 +73,30 @@ class Isovisc(System):
         velBC = cd.RotatedDirichletCondition(velocityField, bounded, bndVecs)
         velBCs = [velBC,]
 
-        if flux is None and H == 0.:
+        if p.flux is None and p.H == 0.:
             temperatureField.scales = [[tempMin, tempMax]]
             temperatureField.bounds = [[tempMin, tempMax, '.', '.']]
         else:
             temperatureField.scales = [[tempMin, None]]
             temperatureField.bounds = [[tempMin, '.', '.', '.']]
 
-        if flux is None:
+        if p.flux is None:
             tempBC = cd.DirichletCondition(temperatureField, (inner + outer,))
             tempBCs = [tempBC,]
         else:
             tempBC = cd.DirichletCondition(temperatureField, (outer,))
-            tempFluxBC = cd.NeumannCondition(temperatureField, (inner,), flux)
+            tempFluxBC = cd.NeumannCondition(temperatureField, (inner,), p.flux)
             tempBCs = [tempBC, tempFluxBC]
 
         ### FUNCTIONS ###
 
-        buoyancyFn = alpha * dimlessTempFn + buoyRef
-        heatingFn = fn.misc.constant(H)
-        diffusivityFn = fn.misc.constant(kappa)
+        buoyancyFn = p.alpha * dimlessTempFn + p.buoyRef
+        heatingFn = fn.misc.constant(p.H)
+        diffusivityFn = fn.misc.constant(p.kappa)
 
         ### RHEOLOGY ###
 
-        viscosityFn = fn.misc.constant(eta)
+        viscosityFn = fn.misc.constant(p.eta)
 
         ### SYSTEMS ###
 
@@ -118,11 +109,11 @@ class Isovisc(System):
             _removeBCs = False,
             )
         solver = uw.systems.Solver(stokes)
-        solver.set_inner_method(innerMethod)
-        if not innerTol is None: solver.set_inner_rtol(innerTol)
-        if not outerTol is None: solver.set_outer_rtol(outerTol)
-        if not penalty is None: solver.set_penalty(penalty)
-        if not mgLevels is None: solver.set_mg_levels(mgLevels)
+        solver.set_inner_method(o.innerMethod)
+        if not o.innerTol is None: solver.set_inner_rtol(o.innerTol)
+        if not o.outerTol is None: solver.set_outer_rtol(o.outerTol)
+        if not o.penalty is None: solver.set_penalty(o.penalty)
+        if not o.mgLevels is None: solver.set_mg_levels(o.mgLevels)
 
         advDiff = uw.systems.AdvectionDiffusion(
             phiField = temperatureField,
@@ -165,11 +156,11 @@ class Isovisc(System):
                 )
 
         def integrate():
-            dt = courant * advDiff.get_max_dt()
+            dt = o.courant * advDiff.get_max_dt()
             advDiff.integrate(dt)
             return dt
 
-        super().__init__(locals(), **kwargs)
+        return locals()
 
 ### ATTRIBUTES ###
 CLASS = Isovisc
