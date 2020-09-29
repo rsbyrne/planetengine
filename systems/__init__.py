@@ -2,11 +2,9 @@ import numpy as np
 
 from everest.builts import Built
 from everest.builts import Meta
-from everest.builts._iterator import Iterator, LoadFail
+from everest.builts._wanderer import Wanderer, LoadFail
 from everest.value import Value
-from everest.builts._iterator import _initialised
 from everest.globevars import _GHOSTTAG_
-from everest.builts._getter import Getter
 from everest.builts import make_hash
 from everest import wordhash
 wHash = lambda x: wordhash.get_random_phrase(make_hash(x))
@@ -27,8 +25,10 @@ class Bunch:
             if key in adict:
                 del adict[key]
         self.__dict__.update(adict)
+    def __getitem__(self, arg):
+        return self.__dict__[arg]
 
-class System(Iterator):
+class System(Wanderer):
 
     @classmethod
     def _process_inputs(cls, inputs):
@@ -116,13 +116,12 @@ class System(Iterator):
         # self.locals.integrate
 
         self.locals = None
-        self.varsOfState = dict()
 
         self.chron = Value(float('NaN'))
 
         self._outkeys = ['chron', *sorted(self.configsKeys)]
 
-        # Iterator expects:
+        # Voyager expects:
         # self._initialise
         # self._iterate
         # self._out
@@ -140,7 +139,6 @@ class System(Iterator):
         self.schemaHash = make_hash(self.schema)
         self.optionsHash = wHash(self.options)
         self.paramsHash = wHash(self.params)
-        self.configsHash = wHash(self.configs)
         self.schemaHash = wHash(self.schema)
         self.caseHash = wHash(self.case)
 
@@ -161,23 +159,17 @@ class System(Iterator):
             params = dParams,
             schema = self.typeHash,
             case = self.caseHash,
-            _iterator_initialise = initialise,
+            _voyager_initialise = initialise,
             supertype = 'System',
             **kwargs
             )
 
-        # Cycler attributes:
-        # self._post_cycle_fns.append(self.prompt_observers)
-
-        # Iterator attributes:
+        # Voyager attributes:
         self._changed_state_fns.append(self.prompt_observers)
 
         # Producer attributes:
-        self._post_save_fns.append(self._iterator_post_save_fn)
+        self._post_save_fns.append(self._voyager_post_save_fn)
         self._post_save_fns.append(self.save_observers)
-
-        # Getter attributes:
-#         self._get_fns.append(self._system_get)
 
         # Built attributes:
         self._post_anchor_fns.insert(0, self.anchor_observers)
@@ -186,24 +178,19 @@ class System(Iterator):
         if 'observers' in self.ghosts:
             self.add_observers(self.ghosts['observers'])
 
-    def configure(self, configs):
-        configs = self._process_configs(configs)
-        self.configs = configs
-        self.configsHash = wHash(configs)
-        self.reroute_outputs(self.configsHash)
-        self.initialised = False
+    def _configure(self):
         self.c = Bunch(self.configs)
 
-    def _iterator_post_save_fn(self):
-        self.writeouts.add_dict({'configs': self.configs})
+    def _voyager_post_save_fn(self):
         self.writer.add_dict({'baselines': self.baselines})
 
     def _initialise(self):
         if self.locals is None:
             self.locals = Bunch(self.build_system(self.o, self.p, self.c))
-        self.varsOfState.update({
+        self.permutables.update({
             key: getattr(self.locals, key) for key in self.configsKeys
             })
+        self.observables.update(self.locals.__dict__)
         self.baselines = {'mesh': fieldops.get_global_var_data(self.locals.mesh)}
         for key, channel in sorted(self.configs.items()):
             if not channel is None:
@@ -226,34 +213,21 @@ class System(Iterator):
         return dt
 
     def _update(self):
-        # if self.has_changed() or force:
         self.locals.update()
 
-    # def has_changed(self, reset = True):
-    #     if not hasattr(self, '_currenthash'):
-    #         self._currenthash = 0
-    #     latesthash = hash(tuple([
-    #         hash_var(var) \
-    #             for key, var in sorted(self.varsOfState.items())
-    #         ]))
-    #     changed = latesthash != self._currenthash
-    #     if reset:
-    #         self._currenthash = latesthash
-    #     return changed
-
     def clipVals(self):
-        for varName, var in sorted(self.varsOfState.items()):
+        for varName, var in sorted(self.permutables.items()):
             if hasattr(var, 'scales'):
                 fieldops.clip_var(var, var.scales)
 
     def setBounds(self):
-        for varName, var in sorted(self.varsOfState.items()):
+        for varName, var in sorted(self.permutables.items()):
             if hasattr(var, 'bounds'):
                 fieldops.set_boundaries(var, var.bounds)
 
     def _out(self):
         yield self.chron.value
-        for varName, var in sorted(self.varsOfState.items()):
+        for varName, var in sorted(self.permutables.items()):
             yield fieldops.get_global_var_data(var)
 
     def _load(self, loadDict):
@@ -268,38 +242,6 @@ class System(Iterator):
                 for index, gId in enumerate(nodes):
                     var.data[index] = loadData[gId]
         self._update()
-
-    def __getitem__(self, arg):
-        if type(arg) is tuple:
-            raise NotYetImplemented
-        elif type(arg) is slice:
-            return self._system_get_slice(arg)
-        else:
-            out = self.__class__(**self.inputs)
-            out.configure(arg)
-            return out
-
-    def _system_get_slice(self, indexer):
-        from ..traverse import Traverse
-        return Traverse(
-            system = self,
-            start = indexer.start,
-            stop = indexer.stop,
-            freq = indexer.step,
-            observerClasses = []
-            )
-
-    # def _system_get_count(self, indexer):
-    #     try:
-    #         with self.bounce(indexer):
-    #             return self.out()
-    #     except LoadFail:
-    #         nowCount = self.count.value
-    #         self.store()
-    #         self[:indexer]()
-    #         out = self.out()
-    #         self.load(nowCount)
-    #         return out
 
     def add_observer(self, observer):
         if not observer in self.observers:
@@ -367,6 +309,39 @@ class System(Iterator):
             except NameError: pass
 
     defaultObservers = [observersModule.Thermo, observersModule.VelVisc]
+
+    #
+    # def __getitem__(self, arg):
+    #     if type(arg) is tuple:
+    #         raise NotYetImplemented
+    #     elif type(arg) is slice:
+    #         return self._system_get_slice(arg)
+    #     else:
+    #         out = self.__class__(**self.inputs)
+    #         out.configure(arg)
+    #         return out
+    #
+    # def _system_get_slice(self, indexer):
+    #     from ..traverse import Traverse
+    #     return Traverse(
+    #         system = self,
+    #         start = indexer.start,
+    #         stop = indexer.stop,
+    #         freq = indexer.step,
+    #         observerClasses = []
+    #         )
+
+    # def _system_get_count(self, indexer):
+    #     try:
+    #         with self.bounce(indexer):
+    #             return self.out()
+    #     except LoadFail:
+    #         nowCount = self.count.value
+    #         self.store()
+    #         self[:indexer]()
+    #         out = self.out()
+    #         self.load(nowCount)
+    #         return out
 
 # Aliases
 from .conductive import Conductive

@@ -3,8 +3,7 @@ import time
 from everest.builts import load, NotOnDiskError, NotInFrameError
 from everest.builts._task import Task
 from everest.builts._boolean import Boolean
-from everest.builts._state import State
-from everest.builts._iterator import LoadFail
+from everest.builts._voyager import LoadFail
 from everest.builts import check_global_anchor, _get_info, load, Meta, Built
 from everest.weaklist import WeakList
 from everest.globevars import _GHOSTTAG_
