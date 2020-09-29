@@ -110,11 +110,6 @@ class System(Wanderer):
 
     def __init__(self, **kwargs):
 
-        # Expects:
-        # self.locals
-        # self.locals.update
-        # self.locals.integrate
-
         self.locals = None
 
         self.chron = Value(float('NaN'))
@@ -178,6 +173,8 @@ class System(Wanderer):
         if 'observers' in self.ghosts:
             self.add_observers(self.ghosts['observers'])
 
+        self.configure(self.configs)
+
     def _configure(self):
         self.c = Bunch(self.configs)
 
@@ -185,16 +182,24 @@ class System(Wanderer):
         self.writer.add_dict({'baselines': self.baselines})
 
     def _initialise(self):
-        if self.locals is None:
+        if not self.initialised:
             self.locals = Bunch(self.build_system(self.o, self.p, self.c))
-        self.permutables.update({
-            key: getattr(self.locals, key) for key in self.configsKeys
-            })
-        self.observables.update(self.locals.__dict__)
-        self.baselines = {'mesh': fieldops.get_global_var_data(self.locals.mesh)}
-        for key, channel in sorted(self.configs.items()):
-            if not channel is None:
-                channel.apply(getattr(self.locals, key))
+            self.permutables.clear()
+            self.permutables.update({
+                key: getattr(self.locals, key) for key in self.configsKeys
+                })
+            self.observables.clear()
+            self.observables.update(self.locals.__dict__)
+            self.baselines.clear()
+            self.baselines.update(
+                {'mesh': fieldops.get_global_var_data(self.locals.mesh)}
+                )
+        try:
+            self.load(0)
+        except LoadFail:
+            for key, channel in sorted(self.configs.items()):
+                if not channel is None:
+                    channel.apply(getattr(self.locals, key))
         self.clipVals()
         self.setBounds()
         self.chron.value = 0.
