@@ -11,14 +11,16 @@ RUN apt-get install -y nano
 RUN apt-get install -y ffmpeg
 
 RUN pip install --no-cache-dir pandas
-RUN pip install --no-cache-dir bokeh
-RUN pip install --no-cache-dir Flask
 RUN pip install --no-cache-dir dask[complete]
 RUN pip install --no-cache-dir scikit-learn
-RUN pip install --no-cache-dir tensorflow
 
 # Productivity
 RUN pip install --no-cache-dir jupyterlab
+
+# Programming
+RUN apt-get install -y graphviz
+RUN pip install --no-cache-dir objgraph
+RUN pip install --no-cache-dir xdot
 
 ENV PYTHONPATH "${PYTHONPATH}:/home/jovyan/workspace"
 
