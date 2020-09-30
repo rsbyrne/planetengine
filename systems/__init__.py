@@ -199,7 +199,7 @@ class System(Wanderer):
         except LoadFail:
             for key, channel in sorted(self.configs.items()):
                 if not channel is None:
-                    channel.apply(getattr(self.locals, key))
+                    channel.apply(self.permutables[key])
         self.clipVals()
         self.setBounds()
         self.chron.value = 0.
