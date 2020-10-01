@@ -8,6 +8,7 @@ from everest.globevars import _GHOSTTAG_
 from everest.builts import make_hash
 from everest import wordhash
 wHash = lambda x: wordhash.get_random_phrase(make_hash(x))
+from everest.utilities import Grouper
 
 from .. import fieldops
 from ..utilities import hash_var
@@ -18,15 +19,6 @@ from .. import observers as observersModule
 
 class ObserverNotFound(PlanetEngineException):
     pass
-
-class Bunch:
-    def __init__(self, adict, dropkeys = {'o', 'p', 'c', 'self'}):
-        for key in dropkeys:
-            if key in adict:
-                del adict[key]
-        self.__dict__.update(adict)
-    def __getitem__(self, arg):
-        return self.__dict__[arg]
 
 class System(Wanderer):
 
@@ -114,8 +106,6 @@ class System(Wanderer):
 
         self.chron = Value(float('NaN'))
 
-        self._outkeys = ['chron', *sorted(self.configsKeys)]
-
         # Voyager expects:
         # self._initialise
         # self._iterate
@@ -126,7 +116,7 @@ class System(Wanderer):
         self.options, self.params, self.configs, self.leftovers = \
             self._sort_inputs(self.inputs, self.ghosts)
         self.o, self.p, self.c = \
-            Bunch(self.options), Bunch(self.params), Bunch(self.configs)
+            Grouper(self.options), Grouper(self.params), Grouper(self.configs)
         self.schema = self.__class__
         self.case = (self.schema, self.params)
 #         self.prevConfigs = dict()
@@ -175,21 +165,23 @@ class System(Wanderer):
 
         self.configure(self.configs)
 
+    def _outkeys(self):
+        return ['chron', *sorted(self.configsKeys)]
+
     def _configure(self):
-        self.c = Bunch(self.configs)
+        self.c = Grouper(self.configs)
 
     def _voyager_post_save_fn(self):
         self.writer.add_dict({'baselines': self.baselines})
 
     def _initialise(self):
         if not self.initialised:
-            self.locals = Bunch(self.build_system(self.o, self.p, self.c))
+            self.locals = Grouper(self.build_system(self.o, self.p, self.c))
             self.permutables.clear()
             self.permutables.update({
                 key: getattr(self.locals, key) for key in self.configsKeys
                 })
-            self.observables.clear()
-            self.observables.update(self.locals.__dict__)
+            self.observables = self.locals
             self.baselines.clear()
             self.baselines.update(
                 {'mesh': fieldops.get_global_var_data(self.locals.mesh)}
