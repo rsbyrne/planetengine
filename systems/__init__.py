@@ -102,8 +102,6 @@ class System(Wanderer):
 
     def __init__(self, **kwargs):
 
-        self.locals = None
-
         self.chron = Value(float('NaN'))
 
         # Voyager expects:
@@ -153,8 +151,7 @@ class System(Wanderer):
         self._changed_state_fns.append(self.prompt_observers)
 
         # Producer attributes:
-        self._post_save_fns.append(self._voyager_post_save_fn)
-        self._post_save_fns.append(self.save_observers)
+        # self._post_save_fns.append(self.save_observers)
 
         # Built attributes:
         self._post_anchor_fns.insert(0, self.anchor_observers)
@@ -165,17 +162,14 @@ class System(Wanderer):
 
         self.configure(self.configs)
 
-    def _outkeys(self):
+    def _voyager_outkeys(self):
         return ['chron', *sorted(self.configsKeys)]
 
     def _configure(self):
         self.c = Grouper(self.configs)
 
-    def _voyager_post_save_fn(self):
-        self.writer.add_dict({'baselines': self.baselines})
-
     def _initialise(self):
-        if not self.initialised:
+        if not hasattr(self, 'locals'):
             self.locals = Grouper(self.build_system(self.o, self.p, self.c))
             self.permutables.clear()
             self.permutables.update({
@@ -186,12 +180,9 @@ class System(Wanderer):
             self.baselines.update(
                 {'mesh': fieldops.get_global_var_data(self.locals.mesh)}
                 )
-        try:
-            self.load(0)
-        except LoadFail:
-            for key, channel in sorted(self.configs.items()):
-                if not channel is None:
-                    channel.apply(self.permutables[key])
+        for key, channel in sorted(self.configs.items()):
+            if not channel is None:
+                channel.apply(self.permutables[key])
         self.clipVals()
         self.setBounds()
         self.chron.value = 0.
@@ -222,7 +213,7 @@ class System(Wanderer):
             if hasattr(var, 'bounds'):
                 fieldops.set_boundaries(var, var.bounds)
 
-    def _out(self):
+    def _voyager_out(self):
         yield self.chron.value
         for varName, var in sorted(self.permutables.items()):
             yield fieldops.get_global_var_data(var)
