@@ -17,7 +17,7 @@ import os
 planetengineDir = os.path.abspath(os.path.dirname(__file__))
 
 from everest import \
-    H5Manager, Reader, Writer, Fetch, Scope, set_global_anchor, load, mpi, disk
+    H5Manager, Reader, Writer, Fetch, Scope, load, mpi, disk
 
 from . import systems
 from . import observers

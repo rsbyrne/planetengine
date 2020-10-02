@@ -130,7 +130,7 @@ class System(Wanderer):
         dParams = self.params.copy()
         dParams['hash'] = self.paramsHash
 
-        self.observers = []
+        # self.observers = []
 
         if 'initialise' in self.ghosts:
             initialise = self.ghosts['initialise']
@@ -148,17 +148,17 @@ class System(Wanderer):
             )
 
         # Voyager attributes:
-        self._changed_state_fns.append(self.prompt_observers)
+        # self._changed_state_fns.append(self.prompt_observers)
 
         # Producer attributes:
         # self._post_save_fns.append(self.save_observers)
 
         # Built attributes:
-        self._post_anchor_fns.insert(0, self.anchor_observers)
+        # self._post_anchor_fns.insert(0, self.anchor_observers)
 
         # Local operations:
-        if 'observers' in self.ghosts:
-            self.add_observers(self.ghosts['observers'])
+        # if 'observers' in self.ghosts:
+        #     self.add_observers(self.ghosts['observers'])
 
         self.configure(self.configs)
 
@@ -230,73 +230,73 @@ class System(Wanderer):
                 for index, gId in enumerate(nodes):
                     var.data[index] = loadData[gId]
         self._update()
-
-    def add_observer(self, observer):
-        if not observer in self.observers:
-            self.observers.append(observer)
-            if self.anchored:
-                observer.anchor(self.name, self.path)
-            observer()
-
-    def add_observers(self, inObservers):
-        observers = process_observers(inObservers, self)
-        for observer in observers:
-            self.add_observer(observer)
-
-    def add_default_observers(self):
-        self.add_observers(*self.defaultObservers)
-
-    @property
-    def observer(self):
-        if len(self.observers) == 0:
-            raise ValueError("No observers added yet!")
-        elif len(self.observers) == 1:
-            return self.observers[0]
-        else:
-            raise ValueError("Multiple observers; specify one.")
-
-    def remove_observer(self, toRemove):
-        if type(toRemove) is int:
-            self.observers.pop(toRemove)
-        elif type(toRemove) is str:
-            zipped = zip(
-                [observer.hashID for observer in self.observers],
-                self.observers
-                )
-            remIndex = None
-            for index, (hashID, observer) in enumerate(zipped):
-                if hashID == toRemove:
-                    remIndex = index
-            if remIndex is None: raise ObserverNotFound
-            else: self.remove_observer(remIndex)
-        else:
-            self.observers.remove(toRemove)
-
-    def prompt_observers(self):
-        for observer in self.observers:
-            observer()
-
-    def save_observers(self):
-        for observer in self.observers:
-            observer.save()
-
-    def anchor_observers(self):
-        if not self.anchored:
-            raise Exception
-        for observer in self.observers:
-            observer.anchor(self.name, self.path)
-
-    def show(self):
-        for observer in self.observers:
-            try: observer.show()
-            except NameError: pass
-
-    def report(self):
-        for observer in self.observers:
-            try: observer.report()
-            except NameError: pass
-
-    defaultObservers = [observersModule.Thermo, observersModule.VelVisc]
+    #
+    # def add_observer(self, observer):
+    #     if not observer in self.observers:
+    #         self.observers.append(observer)
+    #         if self.anchored:
+    #             observer.anchor(self.name, self.path)
+    #         observer()
+    #
+    # def add_observers(self, inObservers):
+    #     observers = process_observers(inObservers, self)
+    #     for observer in observers:
+    #         self.add_observer(observer)
+    #
+    # def add_default_observers(self):
+    #     self.add_observers(*self.defaultObservers)
+    #
+    # @property
+    # def observer(self):
+    #     if len(self.observers) == 0:
+    #         raise ValueError("No observers added yet!")
+    #     elif len(self.observers) == 1:
+    #         return self.observers[0]
+    #     else:
+    #         raise ValueError("Multiple observers; specify one.")
+    #
+    # def remove_observer(self, toRemove):
+    #     if type(toRemove) is int:
+    #         self.observers.pop(toRemove)
+    #     elif type(toRemove) is str:
+    #         zipped = zip(
+    #             [observer.hashID for observer in self.observers],
+    #             self.observers
+    #             )
+    #         remIndex = None
+    #         for index, (hashID, observer) in enumerate(zipped):
+    #             if hashID == toRemove:
+    #                 remIndex = index
+    #         if remIndex is None: raise ObserverNotFound
+    #         else: self.remove_observer(remIndex)
+    #     else:
+    #         self.observers.remove(toRemove)
+    #
+    # def prompt_observers(self):
+    #     for observer in self.observers:
+    #         observer()
+    #
+    # def save_observers(self):
+    #     for observer in self.observers:
+    #         observer.save()
+    #
+    # def anchor_observers(self):
+    #     if not self.anchored:
+    #         raise Exception
+    #     for observer in self.observers:
+    #         observer.anchor(self.name, self.path)
+    #
+    # def show(self):
+    #     for observer in self.observers:
+    #         try: observer.show()
+    #         except NameError: pass
+    #
+    # def report(self):
+    #     for observer in self.observers:
+    #         try: observer.report()
+    #         except NameError: pass
+    #
+    # defaultObservers = [observersModule.Thermo, observersModule.VelVisc]
 
     #
     # def __getitem__(self, arg):
