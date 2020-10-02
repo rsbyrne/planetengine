@@ -20,13 +20,21 @@ from .. import observers as observersModule
 class ObserverNotFound(PlanetEngineException):
     pass
 
+class Mutable:
+    def __init__(self, var):
+        self.var = var
+    def __setitem__(self, arg1, arg2):
+        if not arg1 is Ellipsis:
+            raise TypeError
+        arg2.apply(arg1)
+
 class System(Wanderer):
 
     @classmethod
     def _process_inputs(cls, inputs):
         processed = dict()
         configs = {k: v for k, v in inputs.items() if k in cls.configsKeys}
-        configs = cls._process_configs(configs)
+        configs = cls._process_configs(**configs)
         for key, val in sorted(inputs.items()):
             if key in cls.configsKeys:
                 processed[_GHOSTTAG_ + key] = configs[key]
@@ -41,7 +49,7 @@ class System(Wanderer):
         return processed
 
     @classmethod
-    def _process_configs(cls, inputs):
+    def _process_configs(cls, **inputs):
         from .. import initials
         from ..traverse import Traverse
         if not type(inputs) is dict:
@@ -147,6 +155,12 @@ class System(Wanderer):
             **kwargs
             )
 
+        # Wanderer attributes:
+        self._wanderer_configure_post_fns.append(
+            self._system_configure_post_fn
+            )
+        self.configure(self.configs)
+
         # Voyager attributes:
         # self._changed_state_fns.append(self.prompt_observers)
 
@@ -160,13 +174,14 @@ class System(Wanderer):
         # if 'observers' in self.ghosts:
         #     self.add_observers(self.ghosts['observers'])
 
-        self.configure(self.configs)
-
     def _voyager_outkeys(self):
         return ['chron', *sorted(self.configsKeys)]
 
-    def _configure(self):
+    def _system_configure_post_fn(self):
         self.c = Grouper(self.configs)
+        if self.initialised:
+            self.clipVals()
+            self.setBounds()
 
     def _initialise(self):
         if not hasattr(self, 'locals'):
@@ -175,16 +190,13 @@ class System(Wanderer):
             self.mutables.update({
                 key: getattr(self.locals, key) for key in self.configsKeys
                 })
-            self.observables = self.locals
+            self.observables.clear()
+            self.observables.update(self.locals)
             self.baselines.clear()
             self.baselines.update(
                 {'mesh': fieldops.get_global_var_data(self.locals.mesh)}
                 )
-        for key, channel in sorted(self.configs.items()):
-            if not channel is None:
-                channel.apply(self.mutables[key])
-        self.clipVals()
-        self.setBounds()
+        self._configure()
         self.chron.value = 0.
         self._update()
 
