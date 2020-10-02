@@ -19,7 +19,7 @@ class Noise(Built):
 
     def __enter__(self):
         system = self.system
-        for i, (vn, var) in enumerate(sorted(system.permutables.items())):
+        for i, (vn, var) in enumerate(sorted(system.mutables.items())):
             self.preditherings[var] = var.data.copy()
             self.apply(var, (system.count.value, i))
         system.clipVals()
@@ -31,7 +31,7 @@ class Noise(Built):
         if exc_type is not None:
             traceback.print_exception(exc_type, exc_value, tb)
             return False
-        for var in system.permutables.values():
+        for var in system.mutables.values():
             var.data[:] = self.preditherings[var]
             del self.preditherings[var]
         return True

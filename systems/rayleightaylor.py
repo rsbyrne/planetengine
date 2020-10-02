@@ -184,7 +184,7 @@ class RayleighTaylor(System):
         velocityField.varName = 'velocity'
 
         super().__init__(
-            permutables = {'materialField': materialField},
+            mutables = {'materialField': materialField},
             obsVars = {'stress': stress, 'material': materialField},
             _update = update,
             _integrate = integrate,

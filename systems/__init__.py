@@ -171,8 +171,8 @@ class System(Wanderer):
     def _initialise(self):
         if not hasattr(self, 'locals'):
             self.locals = Grouper(self.build_system(self.o, self.p, self.c))
-            self.permutables.clear()
-            self.permutables.update({
+            self.mutables.clear()
+            self.mutables.update({
                 key: getattr(self.locals, key) for key in self.configsKeys
                 })
             self.observables = self.locals
@@ -182,7 +182,7 @@ class System(Wanderer):
                 )
         for key, channel in sorted(self.configs.items()):
             if not channel is None:
-                channel.apply(self.permutables[key])
+                channel.apply(self.mutables[key])
         self.clipVals()
         self.setBounds()
         self.chron.value = 0.
@@ -204,18 +204,18 @@ class System(Wanderer):
         self.locals.update()
 
     def clipVals(self):
-        for varName, var in sorted(self.permutables.items()):
+        for varName, var in sorted(self.mutables.items()):
             if hasattr(var, 'scales'):
                 fieldops.clip_var(var, var.scales)
 
     def setBounds(self):
-        for varName, var in sorted(self.permutables.items()):
+        for varName, var in sorted(self.mutables.items()):
             if hasattr(var, 'bounds'):
                 fieldops.set_boundaries(var, var.bounds)
 
     def _voyager_out(self):
         yield self.chron.value
-        for varName, var in sorted(self.permutables.items()):
+        for varName, var in sorted(self.mutables.items()):
             yield fieldops.get_global_var_data(var)
 
     def _load(self, loadDict):
