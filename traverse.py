@@ -1,6 +1,6 @@
 import time
 
-from everest.builts import load, NotOnDiskError, NotInFrameError
+from everest.builts import load, NotOnDiskError
 from everest.builts._task import Task
 from everest.builts._boolean import Boolean
 from everest.builts._voyager import LoadFail
@@ -118,7 +118,7 @@ class Traverse(Task):
                     self.name,
                     self.path
                     )
-            except (NotOnDiskError, NotInFrameError):
+            except NotOnDiskError:
                 self.traversee = self.system(**self.vector)
         if self.anchored:
             self.traversee.anchor(self.name, self.path)
