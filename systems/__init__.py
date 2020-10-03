@@ -186,9 +186,10 @@ class System(Wanderer):
     def _initialise(self):
         if not hasattr(self, 'locals'):
             self.locals = Grouper(self.build_system(self.o, self.p, self.c))
+            del self.locals.self
             self.mutables.clear()
             self.mutables.update({
-                key: getattr(self.locals, key) for key in self.configsKeys
+                key: self.locals[key] for key in self.configsKeys
                 })
             self.observables.clear()
             self.observables.update(self.locals)
