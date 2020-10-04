@@ -86,7 +86,7 @@ class Observer(Counter, Cycler):
         self._cycle_fns.append(self._observer_cycle)
 
         # Counter attributes:
-        self._count_update_fns.append(self.update)
+        # self._count_update_fns.append(self.update)
 
         self.checkfreqs = dict()
         if 'freq' in self.ghosts:
