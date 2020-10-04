@@ -1,14 +1,11 @@
 import numpy as np
 
-from everest.builts import Built
+from everest.builts import Built, w_hash
 from everest.builts import Meta
 from everest.builts._wanderer import Wanderer, LoadFail
 from everest.value import Value
 from everest.globevars import _GHOSTTAG_
-from everest.builts import make_hash
-from everest import wordhash
-wHash = lambda x: wordhash.get_random_phrase(make_hash(x))
-from everest.utilities import Grouper
+from everest.utilities import Grouper, make_hash
 
 from .. import fieldops
 from ..utilities import hash_var
@@ -128,10 +125,10 @@ class System(Wanderer):
 #         self.prevConfigs = dict()
 
         self.schemaHash = make_hash(self.schema)
-        self.optionsHash = wHash(self.options)
-        self.paramsHash = wHash(self.params)
-        self.schemaHash = wHash(self.schema)
-        self.caseHash = wHash(self.case)
+        self.optionsHash = w_hash(self.options)
+        self.paramsHash = w_hash(self.params)
+        self.schemaHash = w_hash(self.schema)
+        self.caseHash = w_hash(self.case)
 
         dOptions = self.options.copy()
         dOptions['hash'] = self.optionsHash
