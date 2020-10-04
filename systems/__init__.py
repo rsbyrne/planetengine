@@ -108,8 +108,6 @@ class System(Chroner, Wanderer):
 
     def __init__(self, **kwargs):
 
-        self.chron = Value(float('NaN'))
-
         # Voyager expects:
         # self._initialise
         # self._iterate
@@ -199,7 +197,7 @@ class System(Chroner, Wanderer):
     def _iterate(self):
         dt = self._integrate(_skipClips = True)
         self._update()
-        self.chron.value += dt
+        self.chron += dt
 
     def _integrate(self, _skipClips = False):
         dt = self.locals.integrate()
