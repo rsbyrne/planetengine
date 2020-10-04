@@ -2,7 +2,8 @@ import numpy as np
 
 from everest.builts import Built, w_hash
 from everest.builts import Meta
-from everest.builts._wanderer import Wanderer, LoadFail
+from everest.builts._wanderer import Wanderer
+from everest.builts._chroner import Chroner
 from everest.value import Value
 from everest.globevars import _GHOSTTAG_
 from everest.utilities import Grouper, make_hash
@@ -25,7 +26,7 @@ class Mutable:
             raise TypeError
         arg2.apply(arg1)
 
-class System(Wanderer):
+class System(Chroner, Wanderer):
 
     @classmethod
     def _process_inputs(cls, inputs):
@@ -171,9 +172,6 @@ class System(Wanderer):
         # if 'observers' in self.ghosts:
         #     self.add_observers(self.ghosts['observers'])
 
-    def _voyager_outkeys(self):
-        return ['chron', *sorted(self.configsKeys)]
-
     def _system_configure_post_fn(self):
         self.c = Grouper(self.configs)
         if self.initialised:
@@ -201,7 +199,7 @@ class System(Wanderer):
     def _iterate(self):
         dt = self._integrate(_skipClips = True)
         self._update()
-        self.chron += dt
+        self.chron.value += dt
 
     def _integrate(self, _skipClips = False):
         dt = self.locals.integrate()
@@ -223,22 +221,20 @@ class System(Wanderer):
             if hasattr(var, 'bounds'):
                 fieldops.set_boundaries(var, var.bounds)
 
+    def _voyager_outkeys(self):
+        for o in self.configsKeys: yield o
     def _voyager_out(self):
-        yield self.chron.value
         for varName, var in sorted(self.mutables.items()):
             yield fieldops.get_global_var_data(var)
 
-    def _load(self, loadDict):
+    def _voyager_load_update(self, loadDict):
         for key, loadData in sorted(loadDict.items()):
-            if key == 'chron':
-                self.chron.value = loadData
-            else:
-                var = getattr(self.locals, key)
-                assert hasattr(var, 'mesh'), \
-                    'Only meshVar supported at present.'
-                nodes = var.mesh.data_nodegId
-                for index, gId in enumerate(nodes):
-                    var.data[index] = loadData[gId]
+            var = getattr(self.locals, key)
+            assert hasattr(var, 'mesh'), \
+                'Only meshVar supported at present.'
+            nodes = var.mesh.data_nodegId
+            for index, gId in enumerate(nodes):
+                var.data[index] = loadData[gId]
         self._update()
 
 # Aliases
