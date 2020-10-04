@@ -2,7 +2,6 @@ import underworld as uw
 fn, cd = uw.function, uw.conditions
 
 from planetengine.systems import System
-from planetengine.initials import Sinusoidal
 from planetengine.initials import Constant
 from planetengine.meshes import Annulus
 
@@ -31,8 +30,8 @@ class Isovisc(System):
             tempDelta = 1.,
             tempRef = 0.,
             # CONFIGS
-            temperatureField = Sinusoidal(),
-            temperatureDotField = None,
+            temperatureField = float('NaN'),
+            temperatureDotField = float('NaN'),
             # META
             **kwargs
             ):

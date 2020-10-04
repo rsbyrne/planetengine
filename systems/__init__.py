@@ -59,7 +59,7 @@ class System(Wanderer):
         configs = dict()
         for key, val in sorted(inputs.items()):
             if val is None:
-                newVal = val
+                raise ValueError
             elif type(val) is Meta:
                 if issubclass(val, initials.Channel):
                     newVal = val()
@@ -69,8 +69,8 @@ class System(Wanderer):
                 newVal = val
             elif isinstance(val, System) or isinstance(val, Traverse):
                 newVal = initials.Copy(val, key)
-            elif type(val) is float:
-                newVal = initials.Constant(val)
+            elif type(val) in {int, float}:
+                newVal = val
             else:
                 raise TypeError(type(val))
             configs[key] = newVal
@@ -159,7 +159,7 @@ class System(Wanderer):
         self._wanderer_configure_post_fns.append(
             self._system_configure_post_fn
             )
-        self.configure(self.configs)
+        self.configure({k: self.ghosts[k] for k in self.configsKeys})
 
         # Voyager attributes:
         # self._changed_state_fns.append(self.prompt_observers)
