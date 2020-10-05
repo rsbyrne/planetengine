@@ -82,7 +82,7 @@ class Channel(Applier):
             set_boundaries(var, var.bounds)
 
 # Aliases
-from .constant import Constant
+# from .constant import Constant
 from .sinusoidal import Sinusoidal
-from .copy import Copy
-from .extents import Extents
+# from .copy import Copy
+# from .extents import Extents

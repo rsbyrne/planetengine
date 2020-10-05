@@ -2,7 +2,6 @@ import underworld as uw
 fn, cd = uw.function, uw.conditions
 
 from planetengine.systems import System
-from planetengine.initials import Constant
 from planetengine.meshes import Annulus
 
 class Isovisc(System):
@@ -29,15 +28,13 @@ class Isovisc(System):
             length = 1.,
             tempDelta = 1.,
             tempRef = 0.,
-            # CONFIGS
+            # CONFIGS (_ghost_)
             temperatureField = float('NaN'),
-            temperatureDotField = float('NaN'),
-            # META
-            **kwargs
+            temperatureDotField = float('NaN')
             ):
-        super().__init__(**kwargs)
+        super().__init__()
 
-    def build_system(self, o, p, c):
+    def _system_construct(self, o, p, c):
 
         tempMin, tempMax = p.tempRef, p.tempRef + p.tempDelta
 
@@ -159,7 +156,7 @@ class Isovisc(System):
             advDiff.integrate(dt)
             return dt
 
-        return locals()
+        return super()._system_construct(locals())
 
 ### ATTRIBUTES ###
 CLASS = Isovisc
