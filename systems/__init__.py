@@ -1,4 +1,5 @@
 import numpy as np
+from collections import OrderedDict
 
 from everest.builts import Built, w_hash
 from everest.builts import Meta
@@ -15,7 +16,16 @@ from ..observers import process_observers
 from ..exceptions import PlanetEngineException, NotYetImplemented
 from .. import observers as observersModule
 
-class ObserverNotFound(PlanetEngineException):
+from everest.builts import \
+    BuiltException, MissingMethod, MissingAttribute, MissingKwarg
+
+class SystemExceptions(BuiltException, PlanetEngineException):
+    pass
+class SystemMissingMethod(MissingMethod, PlanetEngineException):
+    pass
+class SystemMissingAttribute(MissingAttribute, PlanetEngineException):
+    pass
+class SystemMissingKwarg(MissingKwarg, PlanetEngineException):
     pass
 
 class Mutable:
@@ -30,6 +40,7 @@ class System(Chroner, Wanderer):
 
     @classmethod
     def _process_inputs(cls, inputs):
+        inputs = super()._process_inputs(inputs)
         processed = dict()
         configs = {k: v for k, v in inputs.items() if k in cls.configsKeys}
         configs = cls._process_configs(**configs)
@@ -38,13 +49,12 @@ class System(Chroner, Wanderer):
                 processed[_GHOSTTAG_ + key] = configs[key]
             else:
                 processed[key] = val
-        if 'observers' in inputs:
-            processed[_GHOSTTAG_ + 'observers'] = processed['observers']
-            del processed['observers']
-        if 'initialise' in inputs:
-            del processed['initialise']
-            processed[_GHOSTTAG_ + 'initialise'] = inputs['initialise']
         return processed
+    @classmethod
+    def _process_ghosts(cls, ghosts):
+        configs = {k: v for k, v in inputs.items() if k in cls.configsKeys}
+        configs = cls._process_configs(**configs)
+        return ghosts
 
     @classmethod
     def _process_configs(cls, **inputs):
@@ -83,7 +93,7 @@ class System(Chroner, Wanderer):
             if key in cls._sortedInputKeys:
                 inputKeys = cls._sortedInputKeys[key]
                 setattr(cls, key + 'Keys', inputKeys)
-                setattr(cls, 'default' + key.capitalize(), {
+                setattr(cls, '_default' + key.capitalize() + 'Inputs', {
                     key: val \
                         for key, val in sorted(cls.defaultInps.items()) \
                             if key in inputKeys
@@ -91,9 +101,9 @@ class System(Chroner, Wanderer):
 
     @classmethod
     def _sort_inputs(cls, inputs, ghosts):
-        optionsDict = {**cls.defaultOptions}
-        paramsDict = {**cls.defaultParams}
-        configsDict = {**cls.defaultConfigs}
+        optionsDict = cls._defaultOptionsInputs.copy()
+        paramsDict = cls._defaultParamsInputs.copy()
+        configsDict = {cls._defaultConfigsInputs.copy()}
         leftoversDict = {}
         for key, val in [*sorted(inputs.items()), *sorted(ghosts.items())]:
             if key in cls.defaultOptions:
@@ -108,6 +118,9 @@ class System(Chroner, Wanderer):
 
     def __init__(self, **kwargs):
 
+        if configsKeys is None:
+            raise SystemMissingKwarg
+
         # Voyager expects:
         # self._initialise
         # self._iterate
@@ -115,60 +128,34 @@ class System(Chroner, Wanderer):
         # self._outkeys
         # self._load
 
-        self.options, self.params, self.configs, self.leftovers = \
-            self._sort_inputs(self.inputs, self.ghosts)
-        self.o, self.p, self.c = \
-            Grouper(self.options), Grouper(self.params), Grouper(self.configs)
+        si = self._sortedInputKeys['options']
+        options = Grouper(OrderedDict([k, self.inputs[k] for k in si]))
+        si = self._sortedInputKeys['params']
+        params = Grouper(OrderedDict([k, self.inputs[k] for k in si]))
+        si = self._sortedInputKeys['params']
+        configs = Grouper(OrderedDict([k, self.inputs[k] for k in si]))
+
         self.schema = self.__class__
-        self.case = (self.schema, self.params)
-#         self.prevConfigs = dict()
+        self.case = (self.schema, params)
+        self.schemaHash = w_hash(schema)
+        self.caseHash = w_hash(case)
 
-        self.schemaHash = make_hash(self.schema)
-        self.optionsHash = w_hash(self.options)
-        self.paramsHash = w_hash(self.params)
-        self.schemaHash = w_hash(self.schema)
-        self.caseHash = w_hash(self.case)
-
-        dOptions = self.options.copy()
-        dOptions['hash'] = self.optionsHash
-        dParams = self.params.copy()
-        dParams['hash'] = self.paramsHash
-
-        # self.observers = []
-
-        if 'initialise' in self.ghosts:
-            initialise = self.ghosts['initialise']
-        else:
-            initialise = False
+        dOptions = options.copy()
+        dOptions['hash'] = options.hashID
+        dParams = params.copy()
+        dParams['hash'] = params.hashID
 
         super().__init__(
             options = dOptions,
             params = dParams,
             schema = self.typeHash,
             case = self.caseHash,
-            _voyager_initialise = initialise,
+            _defaultConfigs = configs,
             supertype = 'System',
             **kwargs
             )
 
-        # Wanderer attributes:
-        self._wanderer_configure_post_fns.append(
-            self._system_configure_post_fn
-            )
-        self.configure(**{k: self.ghosts[k] for k in self.configsKeys})
-
-        # Voyager attributes:
-        # self._changed_state_fns.append(self.prompt_observers)
-
-        # Producer attributes:
-        # self._post_save_fns.append(self.save_observers)
-
-        # Built attributes:
-        # self._post_anchor_fns.insert(0, self.anchor_observers)
-
-        # Local operations:
-        # if 'observers' in self.ghosts:
-        #     self.add_observers(self.ghosts['observers'])
+        self.params, self.options = params, options
 
     def _system_configure_post_fn(self):
         self.c = Grouper(self.configs)
