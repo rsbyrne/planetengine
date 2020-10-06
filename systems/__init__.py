@@ -127,20 +127,13 @@ class System(Chroner, Wanderer):
         super()._save()
         self.writer.add_dict(self.baselines, 'baselines')
 
-    def _voyager_load_update(self, outs):
-        outs = super()._load_process(outs)
-        for key in outs:
-            val = outs.pop(key)
-            var = self.mutables[key]
-            assert hasattr(var, 'mesh'), \
-                'Only meshVar supported at present.'
-            nodes = var.mesh.data_nodegId
-            for index, gId in enumerate(nodes):
-                var.data[index] = loadData[gId]
+    def _load_process(self, outs):
+        for key, var in self.mutables.items():
+            var.data[...] = outs.pop(key)[var.mesh.data_nodegId.flatten()]
         self._system_clipVals()
         self._system_setBounds()
         self.locals.update()
-        return outs
+        return super()._load_process(outs)
 
 # Aliases
 # from .conductive import Conductive
