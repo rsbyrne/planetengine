@@ -83,45 +83,38 @@ class System(Chroner, Wanderer):
         del localObj.self
         return localObj
 
-    def _system_clipVals(self):
-        for varName, var in sorted(self.mutables.items()):
-            if hasattr(var, 'scales'):
-                fieldops.clip_var(var, var.scales)
-    def _system_setBounds(self):
-        for varName, var in sorted(self.mutables.items()):
-            if hasattr(var, 'bounds'):
-                fieldops.set_boundaries(var, var.bounds)
+    # def _system_clipVals(self):
+    #     for varName, var in self.mutables.items():
+    #         if hasattr(var, 'scales'):
+    #             fieldops.clip_var(var, var.scales)
+    # def _system_setBounds(self):
+    #     for varName, var in self.mutables.items():
+    #         if hasattr(var, 'bounds'):
+    #             fieldops.set_boundaries(var, var.bounds)
 
     @_system_construct_if_necessary
     def _configure(self):
         super()._configure()
-        self._system_clipVals()
-        self._system_setBounds()
-        self._nullify_chron()
+        # self._system_clipVals()
+        # self._system_setBounds()
 
     def _initialise(self):
         super()._initialise()
         self.locals.update()
-        self.chron.value = 0.
 
     def _iterate(self):
         dt = self.locals.integrate()
-        self._system_clipVals()
-        self._system_setBounds()
+        # self._system_clipVals()
+        # self._system_setBounds()
         self.locals.update()
-        self.chron += dt
+        self.indices.chron.value += dt
         super()._iterate()
 
-    def _outkeys(self):
-        for o in super()._outkeys():
-            yield o
-        for o in self.configs.keys():
-            yield o
     def _out(self):
-        for o in super()._out():
-            yield o
-        for varName, var in sorted(self.mutables.items()):
-            yield fieldops.get_global_var_data(var)
+        outs = super()._out()
+        for varName, var in self.mutables.items():
+            outs[varName] = fieldops.get_global_var_data(var)
+        return outs
 
     def _save(self):
         super()._save()
@@ -130,8 +123,8 @@ class System(Chroner, Wanderer):
     def _load_process(self, outs):
         for key, var in self.mutables.items():
             var.data[...] = outs.pop(key)[var.mesh.data_nodegId.flatten()]
-        self._system_clipVals()
-        self._system_setBounds()
+        # self._system_clipVals()
+        # self._system_setBounds()
         self.locals.update()
         return super()._load_process(outs)
 
