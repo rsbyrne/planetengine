@@ -3,6 +3,7 @@ from functools import wraps
 
 from everest.utilities import w_hash, Grouper
 from everest.builts._wanderer import Wanderer
+from everest.builts._producer import OutsNull
 from everest.builts._chroner import Chroner
 
 from .. import fieldops
@@ -40,11 +41,6 @@ class System(Chroner, Wanderer):
         si = self._sortedGhostKeys['configs']
         configs = Grouper(OrderedDict([(k, self.ghosts[k]) for k in si]))
 
-        self.schema = self.__class__
-        self.case = (self.schema, params)
-        self.schemaHash = w_hash(self.schema)
-        self.caseHash = w_hash(self.case)
-
         dOptions = options.copy()
         dOptions['hash'] = options.hashID
         dParams = params.copy()
@@ -53,8 +49,6 @@ class System(Chroner, Wanderer):
         super().__init__(
             options = dOptions,
             params = dParams,
-            schema = self.typeHash,
-            case = self.caseHash,
             _defaultConfigs = configs,
             supertype = 'System',
             **kwargs
@@ -112,14 +106,21 @@ class System(Chroner, Wanderer):
 
     def _out(self):
         outs = super()._out()
-        for varName, var in self.mutables.items():
-            outs[varName] = fieldops.get_global_var_data(var)
+        if hasattr(self, 'locals'):
+            add = {
+                vn: fieldops.get_global_var_data(v)
+                    for vn, v in self.mutables.items()
+                }
+        else:
+            add = {vn: OutsNull for vn in self.configs.keys()}
+        outs.update(add)
         return outs
 
     def _save(self):
         super()._save()
         self.writer.add_dict(self.baselines, 'baselines')
 
+    @_system_construct_if_necessary
     def _load_process(self, outs):
         for key, var in self.mutables.items():
             var.data[...] = outs.pop(key)[var.mesh.data_nodegId.flatten()]
