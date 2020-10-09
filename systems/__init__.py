@@ -89,18 +89,13 @@ class System(Chroner, Wanderer):
     @_system_construct_if_necessary
     def _configure(self):
         super()._configure()
-        # self._system_clipVals()
-        # self._system_setBounds()
 
-    def _initialise(self):
-        super()._initialise()
+    def _voyager_changed_state_hook(self):
+        super()._voyager_changed_state_hook()
         self.locals.update()
 
     def _iterate(self):
         dt = self.locals.integrate()
-        # self._system_clipVals()
-        # self._system_setBounds()
-        self.locals.update()
         self.indices.chron.value += dt
         super()._iterate()
 
@@ -122,12 +117,10 @@ class System(Chroner, Wanderer):
 
     @_system_construct_if_necessary
     def _load_process(self, outs):
+        outs = super()._load_process(outs)
         for key, var in self.mutables.items():
             var.data[...] = outs.pop(key)[var.mesh.data_nodegId.flatten()]
-        # self._system_clipVals()
-        # self._system_setBounds()
-        self.locals.update()
-        return super()._load_process(outs)
+        return outs
 
 # Aliases
 # from .conductive import Conductive
