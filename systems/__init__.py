@@ -77,14 +77,14 @@ class System(Chroner, Wanderer):
         del localObj.self
         return localObj
 
-    # def _system_clipVals(self):
-    #     for varName, var in self.mutables.items():
-    #         if hasattr(var, 'scales'):
-    #             fieldops.clip_var(var, var.scales)
-    # def _system_setBounds(self):
-    #     for varName, var in self.mutables.items():
-    #         if hasattr(var, 'bounds'):
-    #             fieldops.set_boundaries(var, var.bounds)
+    def _system_clipVals(self):
+        for varName, var in self.mutables.items():
+            if hasattr(var, 'scales'):
+                fieldops.clip_var(var, var.scales)
+    def _system_setBounds(self):
+        for varName, var in self.mutables.items():
+            if hasattr(var, 'bounds'):
+                fieldops.set_boundaries(var, var.bounds)
 
     @_system_construct_if_necessary
     def _configure(self):
@@ -92,6 +92,8 @@ class System(Chroner, Wanderer):
 
     def _voyager_changed_state_hook(self):
         super()._voyager_changed_state_hook()
+        self._system_clipVals()
+        self._system_setBounds()
         self.locals.update()
 
     def _iterate(self):

@@ -1,39 +1,12 @@
 import underworld as uw
 
-from everest.builts._applier import Applier
+from everest.builts._configurator import Configurator
 
 from ..fieldops import set_scales
 from ..fieldops import set_boundaries
 from .. import mapping
 
-from types import ModuleType
-
-class Configuration(Applier):
-
-    _swapscript = '''from planetengine.initials import Configuration as CLASS'''
-
-    def __init__(self,
-            **channels
-            ):
-
-        for key, val in sorted(channels.items()):
-            if not isinstance(val, Applier):
-                raise TypeError
-
-        self.channels = channels
-
-        super().__init__()
-
-        self._apply_fns.append(self._configuration_apply_fn)
-
-    def _configuration_apply_fn(self, obj, mapping = {}):
-        for key, val in sorted(self.channels.items()):
-            try: toKey = mapping[key]
-            except KeyError: toKey = key
-            var = obj.locals[toKey]
-            val.apply(var)
-
-class Channel(Applier):
+class Channel(Configurator):
 
     def __init__(self,
             boxDims = None,

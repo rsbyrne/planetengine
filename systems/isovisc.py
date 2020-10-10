@@ -30,7 +30,7 @@ class Isovisc(System):
             tempRef = 0.,
             # CONFIGS (_ghost_)
             temperatureField = float('NaN'),
-            temperatureDotField = float('NaN')
+            temperatureDotField = ...,
             ):
         super().__init__()
 
