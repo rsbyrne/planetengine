@@ -8,6 +8,8 @@ from everest.builts._wanderer import Wanderer
 from everest.builts._producer import OutsNull
 from everest.builts._chroner import Chroner
 from everest.builts._mutable import Mutant
+from everest.builts._configurable import Config
+from everest.prop import Prop
 
 from .. import fieldops, mapping
 
@@ -50,9 +52,14 @@ def copy(fromVar, toVar, boxDims = None, tiles = None, mirrored = None):
     set_scales(toVar)
     set_boundaries(toVar)
 
-class StateVar(Mutant):
+class StateVar(Config, Mutant):
     def __init__(self, target, *props):
+        self._varProp = Prop(target, *props)
         super().__init__(target, *props)
+    def _name(self):
+        return self._varProp.props[-1]
+    def _var(self):
+        return self._varProp()
     def _data(self):
         return fieldops.get_global_var_data(self.var)
     def _mutate(self, data):
@@ -65,6 +72,8 @@ class StateVar(Mutant):
         var = self.var
         set_scales(var)
         set_boundaries(var)
+    def _hashID(self):
+        return self._varProp._hashID()
 
 def _system_construct_if_necessary(func):
     @wraps(func)
@@ -107,10 +116,8 @@ class System(Chroner, Wanderer):
             self.configs
             )
         self.mutables.clear()
-        self.mutables.update({
-            key: StateVar(self, 'locals', key)
-                for key in self.configs.keys()
-            })
+        for k in self.configs.keys():
+            self.mutables[k] = StateVar(self, 'locals', k)
         self.observables.clear()
         self.observables.update(self.locals)
         self.baselines.clear()

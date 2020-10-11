@@ -32,7 +32,7 @@ class Channel(Configurator):
         elif type(var) == uw.swarm.SwarmVariable:
             mesh, data = var.swarm.mesh, var.swarm.data
         else:
-            raise TypeError
+            raise TypeError(var, type(var))
         box = mapping.box(
             mesh,
             data,
