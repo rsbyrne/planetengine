@@ -1,12 +1,15 @@
 from collections import OrderedDict
 from functools import wraps
 
+import underworld as uw
+
 from everest.utilities import w_hash, Grouper
 from everest.builts._wanderer import Wanderer
 from everest.builts._producer import OutsNull
 from everest.builts._chroner import Chroner
+from everest.builts._mutable import Mutant
 
-from .. import fieldops
+from .. import fieldops, mapping
 
 from ..exceptions import PlanetEngineException, NotYetImplemented
 from everest.builts import \
@@ -21,6 +24,47 @@ class SystemMissingKwarg(MissingKwarg, PlanetEngineException):
     pass
 class SystemNotConstructed(SystemException):
     pass
+
+def get_mesh_data(var):
+    if type(var) == uw.mesh.MeshVariable:
+        return var.mesh, var.mesh.data
+    elif type(var) == uw.swarm.SwarmVariable:
+        return var.swarm.mesh, var.swarm.data
+    else:
+        raise TypeError
+def set_scales(var):
+    if hasattr(var, 'scales'):
+        fieldops.clip_var(var, var.scales)
+def set_boundaries(var):
+    if hasattr(var, 'bounds'):
+        fieldops.set_boundaries(var, var.bounds)
+
+def copy(fromVar, toVar, boxDims = None, tiles = None, mirrored = None):
+    toCoords = mapping.box(
+        *get_mesh_data(toVar),
+        boxDims = boxDims,
+        tiles = tiles,
+        mirrored = mirrored
+        )
+    toVar.data[...] = fieldops.safe_box_evaluate(fromVar, toCoords)
+    set_scales(toVar)
+    set_boundaries(toVar)
+
+class StateVar(Mutant):
+    def __init__(self, target, *props):
+        super().__init__(target, *props)
+    def _data(self):
+        return fieldops.get_global_var_data(self.var)
+    def _mutate(self, data):
+        var = self.var
+        var.data[...] = data[var.mesh.data_nodegId.flatten()]
+        self.update
+    def _imitate(self, fromVar):
+        copy(fromVar.var, self.var)
+    def update(self):
+        var = self.var
+        set_scales(var)
+        set_boundaries(var)
 
 def _system_construct_if_necessary(func):
     @wraps(func)
@@ -64,7 +108,8 @@ class System(Chroner, Wanderer):
             )
         self.mutables.clear()
         self.mutables.update({
-            key: self.locals[key] for key in self.configs.keys()
+            key: StateVar(self, 'locals', key)
+                for key in self.configs.keys()
             })
         self.observables.clear()
         self.observables.update(self.locals)
@@ -77,23 +122,14 @@ class System(Chroner, Wanderer):
         del localObj.self
         return localObj
 
-    def _system_clipVals(self):
-        for varName, var in self.mutables.items():
-            if hasattr(var, 'scales'):
-                fieldops.clip_var(var, var.scales)
-    def _system_setBounds(self):
-        for varName, var in self.mutables.items():
-            if hasattr(var, 'bounds'):
-                fieldops.set_boundaries(var, var.bounds)
-
     @_system_construct_if_necessary
     def _configure(self):
         super()._configure()
 
     def _voyager_changed_state_hook(self):
         super()._voyager_changed_state_hook()
-        self._system_clipVals()
-        self._system_setBounds()
+        for var in self.mutables.values():
+            var.update()
         self.locals.update()
 
     def _iterate(self):
@@ -104,10 +140,7 @@ class System(Chroner, Wanderer):
     def _out(self):
         outs = super()._out()
         if hasattr(self, 'locals'):
-            add = {
-                vn: fieldops.get_global_var_data(v)
-                    for vn, v in self.mutables.items()
-                }
+            add = {vn: mut.data for vn, mut in self.mutables.items()}
         else:
             add = {vn: OutsNull for vn in self.configs.keys()}
         outs.update(add)
@@ -120,8 +153,8 @@ class System(Chroner, Wanderer):
     @_system_construct_if_necessary
     def _load_process(self, outs):
         outs = super()._load_process(outs)
-        for key, var in self.mutables.items():
-            var.data[...] = outs.pop(key)[var.mesh.data_nodegId.flatten()]
+        for key, mut in self.mutables.items():
+            mut.mutate(outs.pop(key))
         return outs
 
 # Aliases

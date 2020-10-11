@@ -1,6 +1,7 @@
 import underworld as uw
 
 from everest.builts._configurator import Configurator
+from everest.builts._mutable import Mutant
 
 from ..fieldops import set_scales
 from ..fieldops import set_boundaries
@@ -43,6 +44,11 @@ class Channel(Configurator):
         return channelData
 
     def _channel_apply_fn(self, var):
+
+        assert isinstance(var, Mutant)
+
+        var = var.var
+
         if hasattr(var, 'data'):
             var.data[:] = self._channel_get_data(var)
         elif hasattr(var, 'value'):
