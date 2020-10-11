@@ -1,6 +1,8 @@
 import underworld as uw
 fn, cd = uw.function, uw.conditions
 
+from everest.builts import ClassProxy
+
 from planetengine.systems import System
 from planetengine.meshes import Annulus
 
@@ -15,7 +17,7 @@ class Isovisc(System):
             outerTol = None,
             penalty = None,
             mgLevels = None,
-            meshClass = Annulus,
+            meshClass = ClassProxy(Annulus),
             # PARAMS
             alpha = 1e7,
             aspect = 1.,
