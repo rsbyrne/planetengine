@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from functools import wraps
+import numpy as np
 
 import underworld as uw
 
@@ -56,16 +57,27 @@ class StateVar(Config, Mutant):
     def __init__(self, target, *props):
         self._varProp = Prop(target, *props)
         super().__init__(target, *props)
+        var = self.var
+        self.shape = (var.mesh.nodesGlobal, var.nodeDofCount)
     def _name(self):
         return self._varProp.props[-1]
     def _var(self):
         return self._varProp()
     def _data(self):
+        return self.var.data
+    def _out(self):
         return fieldops.get_global_var_data(self.var)
-    def _mutate(self, data):
+    def _mutate(self, vals, indices = Ellipsis):
         var = self.var
-        var.data[...] = data[var.mesh.data_nodegId.flatten()]
-        self.update
+        vals = np.array(vals)
+        if indices is Ellipsis:
+            if vals.shape == self.shape:
+                vals = vals[var.mesh.data_nodegId.flatten()]
+        else:
+            nodes = var.mesh.data_nodegId.flatten().aslist()
+            indices = [nodes.index(i) for i in indices]
+        var.data[indices] = vals
+        self.update()
     def _imitate(self, fromVar):
         copy(fromVar.var, self.var)
     def update(self):
@@ -132,6 +144,9 @@ class System(Chroner, Wanderer):
     @_system_construct_if_necessary
     def _configure(self):
         super()._configure()
+        for k, v in self.configs.items():
+            if v is Ellipsis:
+                self.mutables[k].var.data[...] = 0. # May be problematic
 
     def _voyager_changed_state_hook(self):
         super()._voyager_changed_state_hook()
