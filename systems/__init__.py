@@ -50,8 +50,6 @@ def copy(fromVar, toVar, boxDims = None, tiles = None, mirrored = None):
         mirrored = mirrored
         )
     toVar.data[...] = fieldops.safe_box_evaluate(fromVar, toCoords)
-    set_scales(toVar)
-    set_boundaries(toVar)
 
 class StateVar(Config, Mutant):
     def __init__(self, target, *props):
@@ -79,7 +77,11 @@ class StateVar(Config, Mutant):
         var.data[indices] = vals
         self.update()
     def _imitate(self, fromVar):
-        copy(fromVar.var, self.var)
+        if hasattr(fromVar, 'var'):
+            copy(fromVar.var, self.var)
+        else:
+            self.mutate(fromVar)
+        self.update()
     def update(self):
         var = self.var
         set_scales(var)
@@ -141,6 +143,10 @@ class System(Chroner, Wanderer):
         del localObj.self
         return localObj
 
+    @property
+    def constructed(self):
+        return hasattr(self, 'locals')
+
     @_system_construct_if_necessary
     def _configure(self):
         super()._configure()
@@ -150,6 +156,7 @@ class System(Chroner, Wanderer):
 
     def _voyager_changed_state_hook(self):
         super()._voyager_changed_state_hook()
+        assert self.constructed
         for var in self.mutables.values():
             var.update()
         self.locals.update()
