@@ -53,6 +53,7 @@ def copy(fromVar, toVar, boxDims = None, tiles = None, mirrored = None):
 
 class StateVar(Config, Mutant):
     def __init__(self, target, *props):
+        self.host = target
         self._varProp = Prop(target, *props)
         super().__init__(target, *props)
         var = self.var
