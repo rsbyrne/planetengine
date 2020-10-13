@@ -13,6 +13,7 @@ from everest.builts._configurable import Config
 from everest.prop import Prop
 
 from .. import fieldops, mapping
+from ..visualisation import QuickFig
 
 from ..exceptions import PlanetEngineException, NotYetImplemented
 from everest.builts import \
@@ -139,6 +140,10 @@ class System(Chroner, Wanderer):
         self.baselines.update(
             {'mesh': fieldops.get_global_var_data(self.locals.mesh)}
             )
+        if hasattr(self.locals, 'obsVars'):
+            self._fig = QuickFig(*self.locals.obsVars)
+        else:
+            self._fig = QuickFig(self.mutables.values()[0])
     def _system_construct(self, locals):
         localObj = Grouper(locals)
         del localObj.self
@@ -186,6 +191,14 @@ class System(Chroner, Wanderer):
         for key, mut in self.mutables.items():
             mut.mutate(outs.pop(key))
         return outs
+
+    @property
+    def fig(self):
+        if self._indexers_isnull or not hasattr(self, 'locals'):
+            raise Exception("Nothing to show yet.")
+        return self._fig
+    def show(self):
+        self.fig.show()
 
 # Aliases
 # from .conductive import Conductive

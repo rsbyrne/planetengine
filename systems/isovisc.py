@@ -158,6 +158,8 @@ class Isovisc(System):
             advDiff.integrate(dt)
             return dt
 
+        obsVars = [temperatureField, velocityField]
+
         return super()._system_construct(locals())
 
 ### ATTRIBUTES ###
