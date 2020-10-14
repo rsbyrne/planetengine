@@ -186,7 +186,6 @@ class System(Observable, Chroner, Wanderer):
             add = {vn: OutsNull for vn in self.configs.keys()}
         return add
 
-    @_observation_mode
     def _save(self):
         super()._save()
         self.writer.add_dict(self.baselines, 'baselines')
