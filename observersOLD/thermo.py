@@ -1,12 +1,11 @@
-from collections import OrderedDict
-
+from planetengine.observers import Observer
 from planetengine import functions as pfn
 from planetengine import fieldops
-from . import PlanetObserver
 
-class Thermo(PlanetObserver):
+class Thermo(Observer):
 
     def __init__(self,
+            observee,
             tempKey = 'temperatureField',
             heatingKey = 'heatingFn',
             diffKey = 'diffusivityFn',
@@ -16,19 +15,14 @@ class Thermo(PlanetObserver):
             light = False,
             **kwargs
             ):
-        super().__init__(**kwargs)
 
-    def _construct(self, observables):
+        analysers = dict()
 
-        i = self.inputs
-
-        analysers = OrderedDict()
-
-        aspect = observables.p[i.aspectKey]
-        temp = observables[i.tempKey]
-        flux = observables.p[i.fluxKey]
-        diff = observables[i.diffKey]
-        heating = observables[i.heatingKey]
+        aspect = observee.locals[aspectKey]
+        temp = observee.locals[tempKey]
+        flux = observee.locals[fluxKey]
+        diff = observee.locals[diffKey]
+        heating = observee.locals[heatingKey]
 
         if flux is None:
             cond = pfn.conduction.default(temp, heating, diff)
@@ -45,10 +39,10 @@ class Thermo(PlanetObserver):
         analysers['theta_min'] = pfn.getstat.min(theta)
         analysers['theta_range'] = pfn.getstat.range(theta)
 
-        if not i.light:
+        if not light:
             analysers['theta'] = fieldops.RegularData(
                 pfn.rebase.zero(theta),
-                size = (round(i.res * aspect), i.res)
+                size = (round(res * aspect), res)
                 )
 
         adiabatic, conductive = pfn.gradient.rad(temp), pfn.gradient.rad(cond)
@@ -61,12 +55,15 @@ class Thermo(PlanetObserver):
         NuFreq = pfn.fourier.default(thetaGradOuter)
         analysers['Nu_freq'] = NuFreq
 
-        visVars = [temp]
+        self.theta = theta
+        self.cond = cond
+        self.thetaGrad = thetaGrad
+        self.thetaGradOuter = thetaGradOuter
 
-        def evaluate():
-            return OrderedDict((k, an.evaluate()) for k, an in analysers.items())
+        self.observee, self.analysers = observee, analysers
 
-        return locals()
+        self.visVars = [temp]
 
+        super().__init__(**kwargs)
 
 CLASS = Thermo

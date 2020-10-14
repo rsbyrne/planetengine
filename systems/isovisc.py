@@ -141,7 +141,7 @@ class Isovisc(System):
                 stokes._vnsVec._cself
                 )
 
-        def update():
+        def solve():
             velocityField.data[:] = 0.
             solver.solve(
                 nonLinearIterate = False,

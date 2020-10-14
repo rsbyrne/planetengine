@@ -13,3 +13,6 @@ class AcceptableToleranceNotFound(PlanetEngineException):
 class NotYetImplemented(PlanetEngineException):
     '''Feature not implemented yet.'''
     pass
+
+class MissingMethod(PlanetEngineException):
+    pass

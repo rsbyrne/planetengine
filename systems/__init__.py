@@ -6,6 +6,7 @@ import underworld as uw
 
 from everest.utilities import w_hash, Grouper
 from everest.builts._wanderer import Wanderer
+from everest.builts._observable import Observable, _observation_mode
 from everest.builts._producer import OutsNull
 from everest.builts._chroner import Chroner
 from everest.builts._mutable import Mutant
@@ -99,7 +100,7 @@ def _system_construct_if_necessary(func):
         return func(self, *args, **kwargs)
     return wrapper
 
-class System(Chroner, Wanderer):
+class System(Observable, Chroner, Wanderer):
 
     def __init__(self, **kwargs):
 
@@ -145,9 +146,9 @@ class System(Chroner, Wanderer):
         else:
             self._fig = QuickFig(self.mutables.values()[0])
     def _system_construct(self, locals):
-        localObj = Grouper(locals)
-        del localObj.self
-        return localObj
+        grouper = Grouper({})
+        grouper.update(locals, silent = True)
+        return grouper
 
     @property
     def constructed(self):
@@ -165,7 +166,7 @@ class System(Chroner, Wanderer):
         assert self.constructed
         for var in self.mutables.values():
             var.update()
-        self.locals.update()
+        self.locals.solve()
 
     def _iterate(self):
         dt = self.locals.integrate()
@@ -174,13 +175,18 @@ class System(Chroner, Wanderer):
 
     def _out(self):
         outs = super()._out()
+        add = self.evaluate()
+        outs.update(add)
+        return outs
+    @_observation_mode
+    def evaluate(self):
         if hasattr(self, 'locals'):
             add = {vn: mut.data for vn, mut in self.mutables.items()}
         else:
             add = {vn: OutsNull for vn in self.configs.keys()}
-        outs.update(add)
-        return outs
+        return add
 
+    @_observation_mode
     def _save(self):
         super()._save()
         self.writer.add_dict(self.baselines, 'baselines')
