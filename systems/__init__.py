@@ -5,7 +5,7 @@ import numpy as np
 import underworld as uw
 
 from everest.utilities import w_hash, Grouper
-from everest.builts._wanderer import Wanderer
+from everest.builts._wanderer import Wanderer, StateVar
 from everest.builts._observable import Observable, _observation_mode
 from everest.builts._producer import OutsNull
 from everest.builts._chroner import Chroner
@@ -53,17 +53,11 @@ def copy(fromVar, toVar, boxDims = None, tiles = None, mirrored = None):
         )
     toVar.data[...] = fieldops.safe_box_evaluate(fromVar, toCoords)
 
-class StateVar(Config, Mutant):
+class SystemVar(StateVar):
     def __init__(self, target, *props):
-        self.host = target
-        self._varProp = Prop(target, *props)
         super().__init__(target, *props)
         var = self.var
         self.shape = (var.mesh.nodesGlobal, var.nodeDofCount)
-    def _name(self):
-        return self._varProp.props[-1]
-    def _var(self):
-        return self._varProp()
     def _data(self):
         return self.var.data
     def _out(self):
@@ -80,17 +74,12 @@ class StateVar(Config, Mutant):
         var.data[indices] = vals
         self.update()
     def _imitate(self, fromVar):
-        if hasattr(fromVar, 'var'):
-            copy(fromVar.var, self.var)
-        else:
-            self.mutate(fromVar)
+        copy(fromVar.var, self.var)
         self.update()
     def update(self):
         var = self.var
         set_scales(var)
         set_boundaries(var)
-    def _hashID(self):
-        return self._varProp._hashID()
 
 def _system_construct_if_necessary(func):
     @wraps(func)
