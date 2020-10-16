@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from planetengine import functions as pfn
 from planetengine import fieldops
-from . import PlanetObserver
+from planetengine.observers import PlanetObserver
 
 class Thermo(PlanetObserver):
 
@@ -18,9 +18,8 @@ class Thermo(PlanetObserver):
             ):
         super().__init__(**kwargs)
 
-    def _construct(self, observables):
-
-        i = self.inputs
+    @staticmethod
+    def _construct(observables, i):
 
         analysers = OrderedDict()
 
@@ -63,10 +62,6 @@ class Thermo(PlanetObserver):
 
         visVars = [temp]
 
-        def evaluate():
-            return OrderedDict((k, an.evaluate()) for k, an in analysers.items())
-
         return locals()
-
 
 CLASS = Thermo

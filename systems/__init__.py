@@ -11,7 +11,7 @@ from everest.builts._producer import OutsNull
 from everest.builts._chroner import Chroner
 from everest.builts._mutable import Mutant
 from everest.builts._configurable import Config
-from everest.prop import Prop
+from everest.quantity import Prop
 
 from .. import fieldops, mapping
 from ..visualisation import QuickFig
