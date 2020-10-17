@@ -7,7 +7,7 @@ from everest.builts._voyager import LoadFail
 from everest.builts import _get_info, load, Meta, Built # check_global_anchor,
 from everest.weaklist import WeakList
 from everest.globevars import _GHOSTTAG_
-from everest.function import Value
+from everest.functions import Function
 from everest import mpi
 
 from .utilities import LightBoolean, ChronCheck, _get_periodic_condition

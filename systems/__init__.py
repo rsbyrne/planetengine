@@ -166,8 +166,7 @@ class System(Observable, Chroner, Wanderer):
         add = self.evaluate()
         outs.update(add)
         return outs
-    @_observation_mode
-    def evaluate(self):
+    def _evaluate(self):
         if hasattr(self, 'locals'):
             add = {vn: mut.data for vn, mut in self.mutables.items()}
         else:
