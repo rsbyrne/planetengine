@@ -5,6 +5,7 @@ from everest.builts import ClassProxy
 
 from planetengine.systems import System
 from planetengine.meshes import Annulus
+from planetengine.observers import Thermo
 
 class Isovisc(System):
 
@@ -33,10 +34,13 @@ class Isovisc(System):
             # CONFIGS (_ghost_)
             temperatureField = None,
             temperatureDotField = ...,
+            # OBSERVERS (_ghost_)
+            observers = [Thermo,]
             ):
         super().__init__()
 
-    def _system_construct(self, o, p, c):
+    @staticmethod
+    def _system_construct(o, p, c):
 
         tempMin, tempMax = p.tempRef, p.tempRef + p.tempDelta
 
@@ -160,7 +164,7 @@ class Isovisc(System):
 
         obsVars = [temperatureField, velocityField]
 
-        return super()._system_construct(locals())
+        return locals()
 
 ### ATTRIBUTES ###
 CLASS = Isovisc

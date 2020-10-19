@@ -21,6 +21,8 @@ class Thermo(PlanetObserver):
     @staticmethod
     def _construct(observables, i):
 
+        print("thermo construct called")
+
         analysers = OrderedDict()
 
         aspect = observables.p[i.aspectKey]

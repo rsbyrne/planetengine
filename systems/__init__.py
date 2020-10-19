@@ -5,7 +5,7 @@ import numpy as np
 import underworld as uw
 
 from everest.utilities import w_hash, Grouper
-from everest.builts._wanderer import Wanderer, StateVar
+from everest.builts._wanderer import Wanderer
 from everest.builts._observable import Observable, _observation_mode
 from everest.builts._producer import OutsNull
 from everest.builts._chroner import Chroner
@@ -52,9 +52,9 @@ def copy(fromVar, toVar, boxDims = None, tiles = None, mirrored = None):
         )
     toVar.data[...] = fieldops.safe_box_evaluate(fromVar, toCoords)
 
-class SystemVar(StateVar):
-    def __init__(self, target, *props):
-        super().__init__(target, *props)
+class SystemVar(Mutant):
+    def __init__(self, var, name):
+        super().__init__(var, name)
         var = self.var
         self.shape = (var.mesh.nodesGlobal, var.nodeDofCount)
     def _data(self):
@@ -104,10 +104,13 @@ class System(Observable, Chroner, Wanderer):
         dParams = params.copy()
         dParams['hash'] = params.hashID
 
+        # self._systemObserverClasses = self.ghosts['observers']
+
         super().__init__(
             options = dOptions,
             params = dParams,
             _defaultConfigs = configs,
+            # _observerClasses = self._systemObserverClasses,
             supertype = 'System',
             **kwargs
             )
@@ -115,14 +118,14 @@ class System(Observable, Chroner, Wanderer):
         self.params, self.options = params, options
 
     def system_construct(self):
-        self.locals = self._system_construct(
+        self.locals = Grouper(self._system_construct(
             self.options,
             self.params,
             self.configs
-            )
+            ))
         self.mutables.clear()
         for k in self.configs.keys():
-            self.mutables[k] = StateVar(self, 'locals', k)
+            self.mutables[k] = SystemVar(self.locals[k], k)
         self.observables.clear()
         self.observables.update(self.locals)
         self.baselines.clear()
@@ -133,10 +136,6 @@ class System(Observable, Chroner, Wanderer):
             self._fig = QuickFig(*self.locals.obsVars)
         else:
             self._fig = QuickFig(self.mutables.values()[0])
-    def _system_construct(self, locals):
-        grouper = Grouper({})
-        grouper.update(locals, silent = True)
-        return grouper
 
     @property
     def constructed(self):

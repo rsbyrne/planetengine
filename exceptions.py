@@ -16,3 +16,6 @@ class NotYetImplemented(PlanetEngineException):
 
 class MissingMethod(PlanetEngineException):
     pass
+
+class MissingAsset(PlanetEngineException):
+    pass
