@@ -6,10 +6,10 @@ import underworld as uw
 
 from everest.utilities import w_hash, Grouper
 from everest.builts._wanderer import Wanderer
-from everest.builts._observable import Observable, _observation_mode
+from everest.builts._observable import Observable #, _observation_mode
 from everest.builts._producer import OutsNull
 from everest.builts._chroner import Chroner
-from everest.builts._mutable import Mutant
+from everest.builts._stateful import State, Statelet
 from everest.builts._configurable import Config
 
 from .. import fieldops, mapping
@@ -52,11 +52,12 @@ def copy(fromVar, toVar, boxDims = None, tiles = None, mirrored = None):
         )
     toVar.data[...] = fieldops.safe_box_evaluate(fromVar, toCoords)
 
-class SystemVar(Mutant):
+class SystemVar(Statelet):
     def __init__(self, var, name):
         super().__init__(var, name)
         var = self.var
         self.shape = (var.mesh.nodesGlobal, var.nodeDofCount)
+        self._initialData = var.data[...]
     def _data(self):
         return self.var.data
     def _out(self):
@@ -109,8 +110,6 @@ class System(Observable, Chroner, Wanderer):
         super().__init__(
             options = dOptions,
             params = dParams,
-            _defaultConfigs = configs,
-            # _observerClasses = self._systemObserverClasses,
             supertype = 'System',
             **kwargs
             )
@@ -123,9 +122,9 @@ class System(Observable, Chroner, Wanderer):
             self.params,
             self.configs
             ))
-        self.mutables.clear()
+        self.state.clear()
         for k in self.configs.keys():
-            self.mutables[k] = SystemVar(self.locals[k], k)
+            self.state[k] = SystemVar(self.locals[k], k)
         self.observables.clear()
         self.observables.update(self.locals)
         self.baselines.clear()
@@ -135,23 +134,21 @@ class System(Observable, Chroner, Wanderer):
         if hasattr(self.locals, 'obsVars'):
             self._fig = QuickFig(*self.locals.obsVars)
         else:
-            self._fig = QuickFig(self.mutables.values()[0])
+            self._fig = QuickFig(self.state[0])
 
     @property
     def constructed(self):
         return hasattr(self, 'locals')
 
-    @_system_construct_if_necessary
-    def _configure(self):
-        super()._configure()
+    def _configurable_changed_state_hook(self):
         for k, v in self.configs.items():
             if v is Ellipsis:
-                self.mutables[k].var.data[...] = 0. # May be problematic
+                self.state[k].var.data[...] = self.state[k]._initialData
 
     def _voyager_changed_state_hook(self):
         super()._voyager_changed_state_hook()
         assert self.constructed
-        for var in self.mutables.values():
+        for var in self.state:
             var.update()
         self.locals.solve()
 
@@ -167,7 +164,7 @@ class System(Observable, Chroner, Wanderer):
         return outs
     def _evaluate(self):
         if hasattr(self, 'locals'):
-            add = {vn: mut.data for vn, mut in self.mutables.items()}
+            add = {vn: mut.data for vn, mut in self.state.items()}
         else:
             add = {vn: OutsNull for vn in self.configs.keys()}
         return add
@@ -179,17 +176,22 @@ class System(Observable, Chroner, Wanderer):
     @_system_construct_if_necessary
     def _load_process(self, outs):
         outs = super()._load_process(outs)
-        for key, mut in self.mutables.items():
+        for key, mut in self.state.items():
             mut.mutate(outs.pop(key))
         return outs
 
     @property
     def fig(self):
-        if self._indexers_isnull or not hasattr(self, 'locals'):
+        if self.indices.isnull or not hasattr(self, 'locals'):
             raise Exception("Nothing to show yet.")
         return self._fig
     def show(self):
         self.fig.show()
+
+    def _observation_mode_hook(self):
+        if self.indices.isnull:
+            self.initialise()
+        super()._observation_mode_hook()
 
 # Aliases
 # from .conductive import Conductive
