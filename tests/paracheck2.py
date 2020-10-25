@@ -1,7 +1,7 @@
 name = 'test'
 outputPath = '.'
 
-from everest.builts import set_global_anchor
+from everest.frames import set_global_anchor
 set_global_anchor(name, outputPath, purge = True)
 
 from planetengine.systems.MS98 import MS98

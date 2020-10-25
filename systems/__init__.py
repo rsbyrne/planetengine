@@ -4,19 +4,20 @@ import numpy as np
 
 import underworld as uw
 
-from everest.utilities import w_hash, Grouper
-from everest.builts._wanderer import Wanderer
-from everest.builts._observable import Observable #, _observation_mode
-from everest.builts._producer import OutsNull
-from everest.builts._chroner import Chroner
-from everest.builts._stateful import State, Statelet
-from everest.builts._configurable import Config
+from grouper import Grouper
+from wordhash import w_hash
+from everest.frames._wanderer import Wanderer
+from everest.frames._observable import Observable #, _observation_mode
+from everest.frames._producer import OutsNull
+from everest.frames._chroner import Chroner
+from everest.frames._stateful import State, Statelet
+from everest.frames._configurable import Config
 
 from .. import fieldops, mapping
 from ..visualisation import QuickFig
 
 from ..exceptions import PlanetEngineException, NotYetImplemented
-from everest.builts import \
+from everest.frames import \
     BuiltException, MissingMethod, MissingAttribute, MissingKwarg
 class SystemException(BuiltException, PlanetEngineException):
     pass

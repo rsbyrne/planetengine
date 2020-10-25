@@ -3,7 +3,7 @@ from .. import mapping
 from .. import utilities
 from ..systems import System
 from ..traverse import Traverse
-from everest.builts import load
+from everest.frames import load
 from everest.globevars import _GHOSTTAG_
 from . import Channel
 

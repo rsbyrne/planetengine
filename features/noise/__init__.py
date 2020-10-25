@@ -1,4 +1,4 @@
-from everest.builts import Built
+from everest.frames import Built
 
 class Noise(Built):
 

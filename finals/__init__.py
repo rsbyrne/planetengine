@@ -1,5 +1,5 @@
-from everest.builts._boolean import Boolean
-from everest.builts._state import State
+from everest.frames._boolean import Boolean
+from everest.frames._state import State
 from ..utilities import _get_periodic_condition
 
 class Final(Boolean, State):

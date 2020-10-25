@@ -7,7 +7,7 @@ import underworld as uw
 from underworld import function as fn
 from underworld.function._function import Function as UWFn
 
-from everest.builts._boolean import Boolean
+from everest.frames._boolean import Boolean
 
 from everest import mpi
 
@@ -15,12 +15,6 @@ def message(*args):
     for arg in args:
         if mpi.rank == 0:
             print(arg)
-
-class Grouper:
-    def __init__(self, grouperDict):
-        self.__dict__.update(grouperDict)
-    def __getitem__(self, key):
-        return getattr(self, key)
 
 class LightBoolean:
     def __init__(self, fn):

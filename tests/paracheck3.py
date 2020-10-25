@@ -1,7 +1,7 @@
 name = 'paracheck3'
 outputPath = '.'
 
-from everest.builts import set_global_anchor
+from everest.frames import set_global_anchor
 set_global_anchor(name, outputPath)
 # from everest.disk import purge_logs
 # purge_logs()

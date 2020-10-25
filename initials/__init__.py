@@ -1,7 +1,7 @@
 import underworld as uw
 
-from everest.builts._configurator import Configurator
-from everest.builts._mutable import Mutant
+from everest.frames._configurator import Configurator
+from everest.frames._mutable import Mutant
 
 from ..fieldops import set_scales
 from ..fieldops import set_boundaries

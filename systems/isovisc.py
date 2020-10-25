@@ -1,7 +1,7 @@
 import underworld as uw
 fn, cd = uw.function, uw.conditions
 
-from everest.builts import ClassProxy
+from everest.frames import ClassProxy
 
 from planetengine.systems import System
 from planetengine.meshes import Annulus
