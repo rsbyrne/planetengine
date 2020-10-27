@@ -10,7 +10,7 @@ from everest.frames._wanderer import Wanderer
 from everest.frames._observable import Observable #, _observation_mode
 from everest.frames._producer import OutsNull
 from everest.frames._chroner import Chroner
-from everest.frames._stateful import State, Statelet
+from everest.frames._stateful import State, StateVar
 from everest.frames._configurable import Config
 
 from .. import fieldops, mapping
@@ -53,7 +53,7 @@ def copy(fromVar, toVar, boxDims = None, tiles = None, mirrored = None):
         )
     toVar.data[...] = fieldops.safe_box_evaluate(fromVar, toCoords)
 
-class SystemVar(Statelet):
+class SystemVar(StateVar):
     def __init__(self, var, name):
         super().__init__(var, name)
         var = self.var
